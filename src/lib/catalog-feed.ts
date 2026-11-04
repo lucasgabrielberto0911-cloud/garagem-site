@@ -1,3 +1,4 @@
+import { PHOTO_STORAGE_ORIGIN } from "./public-photo-url";
 /**
  * Feed CSV do estoque para o catálogo de VEÍCULOS da Meta (Automotive Inventory Ads).
  * Colunas iguais ao CSV manual do Commerce Manager.
@@ -335,7 +336,7 @@ export function catalogFeedImageUrl(
   const url = photo.url.trim();
   if (!url) return "";
   const ext = extensionFromPhotoUrl(url);
-  if (ext === "jpg" || ext === "png") return url.split("#")[0]?.split("?")[0] ?? url;
+  if ((ext === "jpg" || ext === "png") && !url.startsWith(PHOTO_STORAGE_ORIGIN + "/")) return url.split("#")[0]?.split("?")[0] ?? url;
   if (!photo.id) return "";
   return new URL(catalogPhotoJpgPath(vehicleId, photo.id), origin).toString();
 }

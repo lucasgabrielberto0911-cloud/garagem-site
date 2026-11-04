@@ -6,11 +6,13 @@ import { formatAdminMoney, moneySum } from "./admin-money";
 import { type ContractPaymentItem, formatContractPaymentRow, sumContractPayments } from "./admin-commercial";
 import { expectedMargin, extrasTotal, hasCostBasis, investedTotal, VEHICLE_COST_KINDS } from "./vehicle-ops";
 import { moneyInWords } from "./money-words";
-import { SEO_LOCAL_CITY } from "./seo-local";
+import { LEGACY_COMMERCIAL_STORE, PDF_STORE, type CommercialStore } from "./commercial-store";
+export { PDF_STORE } from "./commercial-store";
 import { site } from "./site";
 
 /** Campos opcionais não existem em documentos antigos; nesse caso a coluna/linha é omitida. */
 export type DocumentSnapshot = {
+  store?: CommercialStore;
   customer: string; cpf: string; phone: string; vehicle: string; plate: string; amount: number; payment: string; conditions: string; seller: string; date: string;
   year?: number; yearModel?: number; color?: string; km?: number; total?: number;
   /** Só contrato: dados que o cadastro ainda não tem saem como linha em branco para preencher à mão. */
@@ -25,20 +27,6 @@ export type DocumentSnapshot = {
   /** Prazo de entrega em dias úteis após a quitação (padrão: 5). */
   deliveryDays?: number;
 };
-
-/**
- * DADOS DA LOJA NOS PDFs (contrato e recibo). Único lugar para trocar.
- * Para a loja de Vitória: ajuste razão social, CNPJ, endereço e cidade abaixo.
- * `address` vazio = o cabeçalho omite o endereço; `registeredAddress` identifica a sede no contrato.
- */
-export const PDF_STORE = {
-  legalName: site.legalName, // razão social
-  cnpj: site.cnpj,
-  address: "", // endereço opcional do cabeçalho dos PDFs
-  registeredAddress: "Avenida Castro Alves, 48, Loja 2, Interlagos, Linhares - ES, CEP 29.903-168",
-  city: SEO_LOCAL_CITY, // cidade usada em "Cidade/UF, data" acima das assinaturas
-  stateCode: site.stateCode,
-} as const;
 
 const ADDRESS_PLACEHOLDER = "[ENDEREÇO DA SEDE — PREENCHER]";
 
@@ -72,12 +60,14 @@ const RECEIPT_TERMS = [
 ];
 
 export async function commercialPdf(kind: string, input: DocumentSnapshot, id: string, number?: number) {
+  const store = input.store ?? LEGACY_COMMERCIAL_STORE;
+  const isProposal = kind === "proposta";
   const isReceipt = kind === "recibo";
   let data = input;
   // Recibo é compacto: 1 página, ou 2 se a observação for longa.
   const SECTION_GAP = isReceipt ? 10 : 30; // espaço antes de toda seção
   const LEAD = isReceipt ? 12.5 : 15; // entrelinha dos textos
-  const docTitle = isReceipt ? "Recibo de sinal" : "Contrato de compra e venda";
+  const docTitle = isReceipt ? "Recibo de sinal" : isProposal ? "Proposta comercial" : "Contrato de compra e venda";
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const [titleBytes, regularBytes, semiBytes, logoBytes] = await Promise.all([
@@ -141,8 +131,8 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     // O logo vem primeiro: a imagem tem fundo branco e não pode cobrir o resto.
     if (first) {
       drawLogo(page, PAGE_H - 66, 1);
-      page.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj}`, { x: MARGIN, y: PAGE_H - 92, size: 8, font: semi, color: ASPHALT });
-      const contact = [PDF_STORE.address, `WhatsApp ${site.whatsappLabel}`, site.email].filter(Boolean).join(" · ");
+      page.drawText(`${store.legalName} · CNPJ ${store.cnpj}`, { x: MARGIN, y: PAGE_H - 92, size: 8, font: semi, color: ASPHALT });
+      const contact = [store.address, `WhatsApp ${store.whatsappLabel}`, store.email].filter(Boolean).join(" · ");
       page.drawText(contact, { x: MARGIN, y: PAGE_H - 104, size: 8, font: regular, color: MUTED });
       const right = PAGE_W - MARGIN;
       const t = docTitle.toUpperCase();
@@ -239,7 +229,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     };
 
     section("Das partes", 90);
-    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${PDF_STORE.registeredAddress || `${ADDRESS_PLACEHOLDER}, ${PDF_STORE.city}/${PDF_STORE.stateCode}`}, doravante denominada VENDEDORA.`, 10);
+    paragraph(`VENDEDORA: ${store.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${store.cnpj}, com sede em ${store.registeredAddress || `${ADDRESS_PLACEHOLDER}, ${store.city}/${store.stateCode}`}, doravante denominada VENDEDORA.`, 10);
     y -= 4;
     paragraph(`COMPRADOR(A): ${clean(data.customer)}, portador(a) do CPF nº ${blank(data.cpf, 18)}, RG nº ${blank(data.rg, 16)}, residente e domiciliado(a) em ${blank(data.address, 44)}, telefone ${blank(data.phone, 16)}, doravante denominado(a) COMPRADOR(A).`, 10);
     y -= 4;
@@ -334,13 +324,13 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     const nextClause = signal > 0 ? 9 : 8;
     if (data.conditions.trim()) clause(`Cláusula ${nextClause}ª — Das condições adicionais`, [clean(data.conditions)]);
     clause(`Cláusula ${nextClause + (data.conditions.trim() ? 1 : 0)}ª — Do foro`, [
-      `As partes elegem o foro da comarca de ${PDF_STORE.city}/${PDF_STORE.stateCode} para dirimir quaisquer controvérsias deste contrato, ressalvado o foro do domicílio do consumidor, quando aplicável. E, por estarem justas e contratadas, assinam este instrumento em 2 (duas) vias de igual teor, na presença de 2 (duas) testemunhas.`,
+      `As partes elegem o foro da comarca de ${store.city}/${store.stateCode} para dirimir quaisquer controvérsias deste contrato, ressalvado o foro do domicílio do consumidor, quando aplicável. E, por estarem justas e contratadas, assinam este instrumento em 2 (duas) vias de igual teor, na presença de 2 (duas) testemunhas.`,
     ]);
 
     // Local, data e assinaturas juntos.
     y -= 18;
     ensure(230);
-    page.drawText(`${PDF_STORE.city}/${PDF_STORE.stateCode}${longDate ? `, ${longDate}` : ""}.`, { x: MARGIN, y, size: 11, font: regular, color: ASPHALT });
+    page.drawText(`${store.city}/${store.stateCode}${longDate ? `, ${longDate}` : ""}.`, { x: MARGIN, y, size: 11, font: regular, color: ASPHALT });
     y -= 50;
     const sigW = (CONTENT_W - 40) / 2;
     const sign = (x: number, who: string, name: string, sub: string) => {
@@ -349,7 +339,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       const lines = [...(name ? wrap(name, semi, 10, sigW).slice(0, 2) : []), ...(sub ? [sub] : [])];
       lines.forEach((text, row) => page.drawText(text, { x, y: y - 28 - row * 12, size: row === 0 && name ? 10 : 9, font: row === 0 && name ? semi : regular, color: row === 0 && name ? ASPHALT : MUTED }));
     };
-    sign(MARGIN, "Vendedora", PDF_STORE.legalName, `CNPJ ${PDF_STORE.cnpj}`);
+    sign(MARGIN, "Vendedora", store.legalName, `CNPJ ${store.cnpj}`);
     sign(MARGIN + sigW + 40, "Comprador(a)", clean(data.customer), data.cpf ? `CPF ${data.cpf}` : "");
     y -= 70;
     sign(MARGIN, "Testemunha 1", "", "Nome e CPF:");
@@ -463,19 +453,32 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     }
 
   }
-  if (!isReceipt) contract();
+  if (isProposal) {
+    section("Proposta comercial");
+    paragraph("Condições para análise e negociação. Esta proposta não registra aceite, pagamento, quitação ou transferência do veículo.", 11);
+    section("Cliente");
+    fields([{ label: "Nome", value: data.customer }, { label: "Contato", value: data.phone }]);
+    section("Veículo");
+    fields([{ label: "Modelo", value: data.vehicle }, { label: "Ano/modelo", value: String(data.yearModel ?? data.year ?? "—") }]);
+    section("Valor e pagamento propostos");
+    paragraph(`Valor proposto: ${money(data.total ?? data.amount)}.`, 12);
+    if (data.payments?.length) data.payments.forEach((item) => paragraph(formatContractPaymentRow(item), 10));
+    else paragraph(data.payment || "A combinar.", 10);
+    if (data.conditions.trim()) { section("Observações da negociação"); paragraph(data.conditions, 10); }
+    paragraph("Disponibilidade do veículo, valores e eventual aprovação de crédito devem ser confirmados com a Garagem antes da contratação.", 10);
+  } else if (!isReceipt) contract();
 
   // Local, data e assinaturas ficam juntos na mesma página.
   if (isReceipt) {
   y -= SECTION_GAP;
   ensure(86);
-  const place = `${PDF_STORE.city}/${PDF_STORE.stateCode}${longDate ? `, ${longDate}` : ""}.`;
+  const place = `${store.city}/${store.stateCode}${longDate ? `, ${longDate}` : ""}.`;
   page.drawText(place, { x: MARGIN, y, size: 11, font: regular, color: ASPHALT });
   y -= 30;
   const sigW = (CONTENT_W - 40) / 2;
   const sigs = [
     { who: "Cliente", name: data.customer, sub: data.cpf ? `CPF ${data.cpf}` : "" },
-    { who: "Vendedora", name: PDF_STORE.legalName, sub: `CNPJ ${PDF_STORE.cnpj}` },
+    { who: "Vendedora", name: store.legalName, sub: `CNPJ ${store.cnpj}` },
   ];
   sigs.forEach((sig, i) => {
     const x = MARGIN + i * (sigW + 40);
@@ -489,13 +492,13 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
   // Rodapé e numeração depois que o total de páginas é conhecido.
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: MARGIN, y: FOOTER_Y + 22 }, end: { x: PAGE_W - MARGIN, y: FOOTER_Y + 22 }, thickness: 0.6, color: LINE });
-    p.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj} · ${PDF_STORE.city}/${PDF_STORE.stateCode} · www.suagaragem.net`, { x: MARGIN, y: FOOTER_Y + 8, size: 8, font: semi, color: ASPHALT });
-    p.drawText(isReceipt ? "Confira os dados antes de assinar." : "Contrato de compra e venda de veículo. Rubrique as páginas e confira os dados antes de assinar.", { x: MARGIN, y: FOOTER_Y - 4, size: 8, font: regular, color: MUTED });
+    p.drawText(`${store.legalName} · CNPJ ${store.cnpj} · ${store.city}/${store.stateCode} · www.suagaragem.net`, { x: MARGIN, y: FOOTER_Y + 8, size: 8, font: semi, color: ASPHALT });
+    p.drawText(isProposal ? "Proposta comercial para análise. Condições sujeitas à confirmação." : isReceipt ? "Confira os dados antes de assinar." : "Contrato de compra e venda de veículo. Rubrique as páginas e confira os dados antes de assinar.", { x: MARGIN, y: FOOTER_Y - 4, size: 8, font: regular, color: MUTED });
     const n = `Página ${i + 1} de ${pages.length}`;
     p.drawText(n, { x: PAGE_W - MARGIN - regular.widthOfTextAtSize(n, 8), y: FOOTER_Y + 8, size: 8, font: regular, color: MUTED });
   });
 
-  pdf.setTitle(`Garagem — ${isReceipt ? "Recibo" : "Contrato de compra e venda"}${isReceipt && number ? ` nº ${number}` : ""}`);
+  pdf.setTitle(`Garagem — ${isReceipt ? "Recibo" : isProposal ? "Proposta comercial" : "Contrato de compra e venda"}${isReceipt && number ? ` nº ${number}` : ""}`);
   return pdf.save();
 }
 

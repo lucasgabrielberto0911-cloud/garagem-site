@@ -8,8 +8,16 @@ const db = new PrismaClient();
 const vehicleId = "ce2eadminlote4vehicle";
 const customerId = "ce2eadminlote4customer";
 
+test.beforeEach(async ({ context }) => {
+  await context.route("**/fotos/**", route => route.fulfill({ path: "public/branding/placeholder-car.png", contentType: "image/png" }));
+  await context.route("**/_next/image?**", route => route.fulfill({ path: "public/branding/placeholder-car.png", contentType: "image/png" }));
+  await context.route("**/*.supabase.co/storage/**", route => route.abort());
+});
+
 test.beforeAll(async () => {
   await db.sale.deleteMany({ where: { vehicleId } });
+  await db.commercialDocument.deleteMany({ where: { vehicleId } });
+  await db.vehicleReservation.deleteMany({ where: { vehicleId } });
   await db.vehicle.deleteMany({ where: { id: vehicleId } });
   await db.customer.upsert({ where: { id: customerId }, create: { id: customerId, name: "Cliente Comercial E2E", phone: "27999990000", cpf: "11144477735" }, update: { cpf: "11144477735" } });
   await db.admin.upsert({ where: { email: "comercial@local.test" }, create: { name: "Teste local", email: "comercial@local.test", passwordHash: await bcrypt.hash("comercial-local-123", 4) }, update: {} });
@@ -17,6 +25,7 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => {
   await db.sale.deleteMany({ where: { vehicleId } });
+  await db.commercialDocument.deleteMany({ where: { vehicleId } });
   await db.vehicleReservation.deleteMany({ where: { vehicleId } });
   await db.vehicle.deleteMany({ where: { id: vehicleId } });
   await db.customer.deleteMany({ where: { id: "ce2eadminlote4outro" } });
@@ -519,7 +528,9 @@ test.describe("fluxo único de venda", () => {
     await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     await db.customer.update({ where: { id: customerId }, data: { rg: "MG-12.345.678", cpf: null } });
 
+    const actor = await db.admin.findUniqueOrThrow({ where: { email: "comercial@local.test" } });
     for (const useNewCustomer of [false, true]) {
+      await db.adminDraft.deleteMany({ where: { adminId: actor.id, key: `sale:${flowVehicleId}:any` } });
       await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
       await page.waitForLoadState("networkidle");
       await page.getByRole("button", { name: "Continuar" }).click();

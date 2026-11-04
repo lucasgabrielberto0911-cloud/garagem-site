@@ -86,13 +86,13 @@ test("PDF com Sora e Inter preserva acentos e pagina condições longas", async 
   assert.equal(Buffer.from(bytes).subarray(0, 5).toString(), "%PDF-");
   const pdf = await PDFDocument.load(bytes);
   assert.ok(pdf.getPageCount() >= 2);
-  assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
+  assert.equal(pdf.getTitle(), "Garagem — Proposta comercial");
 });
 test("recibo de sinal típico cabe em uma página e assina como a empresa", async () => {
   const data = { customer: "João Gonçalves", cpf: "123.456.789-09", phone: "27999990000", vehicle: "Citroën C3", plate: "ABC1D23", amount: 5000, total: 60000, payment: "Pix", conditions: "Reserva por 7 dias.", seller: "vendedor@exemplo.com", date: "2026-10-19T12:00:00Z", year: 2019, yearModel: 2020, color: "Prata", km: 48200 };
   const pdf = await PDFDocument.load(await commercialPdf("recibo", data, "teste-local"));
   assert.equal(pdf.getPageCount(), 1);
-  const contrato = await PDFDocument.load(await commercialPdf("proposta", data, "teste-local"));
+  const contrato = await PDFDocument.load(await commercialPdf("contrato", data, "teste-local"));
   assert.equal(contrato.getTitle(), "Garagem — Contrato de compra e venda");
 });
 test("recibo com dados no tamanho máximo e observação curta continua em uma página", async () => {

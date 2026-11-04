@@ -3,8 +3,22 @@ import { isVehicleCuid } from "./vehicle-slug";
 export const RECENT_VEHICLES_KEY = "garagem:vistos-recentemente";
 export const RECENT_VEHICLES_EVENT = "garagem:vistos-alterados";
 export const RECENT_VEHICLES_LIMIT = 8;
+export const RECENT_VEHICLES_CACHE_TTL_MS = 60_000;
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export type RecentVisit = { id: string; viewedAt: number };
+
+export function shouldFetchRecentVehicles(
+  cached: { key: string; failed: boolean; fetchedAt: number } | null,
+  ids: string,
+  now = Date.now(),
+  ttlMs = RECENT_VEHICLES_CACHE_TTL_MS,
+): boolean {
+  if (!ids) return false;
+  if (!cached) return true;
+  if (cached.failed) return true;
+  if (cached.key !== ids) return true;
+  return now - cached.fetchedAt >= ttlMs;
+}
 
 /** Só ids e horário ficam neste aparelho. Preços sempre vêm da API pública. */
 export function parseRecentVisits(raw: string | null, now = Date.now()): RecentVisit[] {

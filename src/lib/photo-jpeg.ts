@@ -46,3 +46,10 @@ export async function encodeMasterJpeg(bytes: Uint8Array): Promise<Uint8Array> {
     .toBuffer();
   return new Uint8Array(encoded);
 }
+
+/** Catálogo público: inclusive JPEG legado da câmera fica limitado a 1280 px. */
+export async function toCatalogJpeg(bytes: Uint8Array, quality = 80): Promise<Uint8Array> {
+  return new Uint8Array(await sharp(Buffer.from(bytes), { limitInputPixels: 40_000_000 })
+    .rotate().resize({ width: 1280, height: 1280, fit: "inside", withoutEnlargement: true })
+    .flatten({ background: "#ffffff" }).jpeg({ quality, mozjpeg: true }).toBuffer());
+}

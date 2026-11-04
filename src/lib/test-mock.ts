@@ -7,7 +7,7 @@ export function mockPrismaMethod(
   t: TestContext,
   target: object,
   name: string,
-  implementation: () => Promise<unknown>,
+  implementation: (...args: any[]) => Promise<unknown>, // eslint-disable-line @typescript-eslint/no-explicit-any
 ) {
   const methods = target as Record<string, unknown>;
   let targets = originals.get(t);

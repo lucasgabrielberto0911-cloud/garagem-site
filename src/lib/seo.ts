@@ -1,6 +1,6 @@
 import { publicVehicleDescription } from "./public-vehicle-description";
 import type { Metadata } from "next";
-import { publicPhotoSrc } from "@/lib/public-photo-url";
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import {
   publicGoogleUrl,
@@ -23,6 +23,7 @@ import {
 } from "@/lib/vehicle-location";
 import {
   buildVehicleFullLabel,
+  collapseWhitespace,
   formatVehicleDisplay,
 } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -361,8 +362,9 @@ export function vehicleJsonLd(vehicle: {
   const path = display.path;
   const priceOk = vehicle.status !== "vendido" && hasPublishablePrice(vehicle.price);
   const availability = vehicleAvailabilityUrl(vehicle.status);
-  const description = publicVehicleDescription(vehicle.description, vehicle.status === "vendido")
+  const rawDescription = publicVehicleDescription(vehicle.description, vehicle.status === "vendido")
     || vehicleSeoDescription({ ...vehicle, version: display.version, year: vehicle.yearModel, sold: vehicle.status === "vendido" });
+  const description = rawDescription ? collapseWhitespace(rawDescription) : null;
 
   const offers: Record<string, unknown> = {
     "@type": "Offer",
@@ -378,7 +380,7 @@ export function vehicleJsonLd(vehicle: {
   const images = [
     ...new Set(
       vehicle.photos
-        .map((photo) => (photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : ""))
+        .map((photo) => (photo.url ? absoluteUrl(publicVehiclePhotoSrc(photo.url)) : ""))
         .filter(Boolean),
     ),
   ];

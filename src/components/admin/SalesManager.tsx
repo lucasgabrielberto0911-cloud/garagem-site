@@ -1,4 +1,5 @@
 "use client";
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 import { formatAdminMoney as formatCurrencyBRL } from "@/lib/admin-money";
 import { normalizeSalesQuery } from "@/lib/admin-sales-search";
 
@@ -43,6 +44,8 @@ import {
   formatPhoneBR,
   formatPlateDisplay,
   formatPlateInput,
+  isValidPlate,
+  normalizePlate,
 } from "@/lib/format";
 import {
   CONSIGNED_LABEL,
@@ -68,6 +71,8 @@ export type SaleRow = {
   paymentMethod: string;
   saleDate: Date;
   notes: string | null;
+  /** false = venda do estoque sem contrato emitido (modal ou venda rápida). */
+  hasContract?: boolean;
   vehicle: {
     id: string;
     brand: string;
@@ -153,6 +158,10 @@ function todayInputValue() {
 
 function dateInputFrom(date: Date) {
   return localDateInput(date);
+}
+
+function missingContract(sale: SaleRow) {
+  return !sale.vehicle.historical && sale.hasContract === false;
 }
 
 function customerPhoneDigits(customer: SaleRow["customer"]) {
@@ -392,15 +401,39 @@ export function SalesManager({
     const form = event.currentTarget;
     if (isPending) return;
     const amount = parseMoneyBR(price);
-    if (amount == null || amount <= 0) {
-      setErrors({
-        salePrice: "Informe o valor em reais, por exemplo 35.000,50.",
-      });
+    // Mostra todos os campos com problema de uma vez, em vez de um erro por tentativa.
+    const problems: Record<string, string> = {};
+    if (isHistorical) {
+      if (!brand.trim()) problems.brand = "Informe a marca.";
+      if (!model.trim()) problems.model = "Informe o modelo.";
+      if (!plate.trim() || !isValidPlate(normalizePlate(plate))) problems.plate = "Informe a placa completa (ABC1D23 ou ABC-1234).";
+    } else if (!vehicleId) {
+      problems.vehicleId = "Escolha o veículo vendido.";
+    }
+    if (amount == null || amount <= 0) problems.salePrice = "Informe o valor em reais, por exemplo 35.000,50.";
+    if (!isHistorical && !paymentMethod) problems.paymentMethod = "Escolha a forma de pagamento.";
+    if (isNewCustomer && (customerName.trim() || phone.trim())) {
+      if (!customerName.trim()) problems.customerName = "Informe o nome do cliente, ou apague o telefone para registrar sem cliente.";
+      if (!normalizeAdminPhone(phone)) problems.customerPhone = "Telefone incompleto: informe com DDD (10 ou 11 dígitos).";
+    }
+    const problemNames = Object.keys(problems);
+    if (problemNames.length > 0 || amount == null) {
+      setErrors(problems);
+      focusAdminError(form, problemNames[0]);
+      toast.error(problemNames.length === 1 ? "Corrija o campo destacado." : `Corrija os ${problemNames.length} campos destacados.`);
       return;
     }
+    setErrors({});
+    const vehicleLabel = isHistorical ? `${brand} ${model}` : selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Veículo selecionado";
+    const buyerLabel = isNewCustomer ? customerName.trim() || "sem cliente" : pickedCustomer?.name ?? "cliente selecionado";
     const confirmed = await confirmAction({
       title: `${isEditing ? "Salvar" : "Registrar"} venda?`,
-      description: `${isHistorical ? `${brand} ${model}` : selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Veículo selecionado"} por ${formatCurrencyBRL(amount)}.${amount < 1000 ? " Valor abaixo de R$ 1.000: confira se é o valor completo da venda." : ""}`,
+      description: [
+        `${vehicleLabel} por ${formatCurrencyBRL(amount)}`,
+        `Cliente: ${buyerLabel}`,
+        `Pagamento: ${paymentMethod || "Histórico"}`,
+        `Data: ${saleDate ? formatDate(new Date(`${saleDate}T12:00:00`)) : "hoje"}`,
+      ].join(" · ") + `.${amount < 1000 ? " Valor abaixo de R$ 1.000: confira se é o valor completo da venda." : ""}${!isEditing && !isHistorical ? " Esta venda não gera contrato; use “Iniciar venda” para gerar o contrato." : ""}`,
       confirmLabel: isEditing ? "Salvar venda" : "Registrar venda",
       danger: false,
     });
@@ -482,8 +515,13 @@ export function SalesManager({
               )}
               <p className="text-xs text-muted">
                 {isHistorical
-                  ? "Para negócios feitos antes do site: informe carro, placa e valor. Cliente é opcional."
-                  : "Liga a venda a um veículo do estoque. Cliente é opcional."}
+                  ? "Para negócios feitos antes do site: informe carro, placa e valor. Cliente é opcional; se informar, preencha nome e telefone."
+                  : "Ajuste os dados desta venda do estoque. Cliente é opcional."}{" "}
+                {isHistorical ? (
+                  <Link href="/admin/vendas/nova" className="text-brand underline">
+                    Vendeu um carro do estoque? Use Iniciar venda (gera contrato).
+                  </Link>
+                ) : null}
               </p>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -748,11 +786,11 @@ export function SalesManager({
                 />
               </Field>
 
-              <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
+              <div className="flex flex-col-reverse gap-2 border-t border-white/10 pt-4 sm:flex-row sm:flex-wrap">
                 <button
                   type="submit"
                   disabled={isPending}
-                  className={btn.primary}
+                  className={`${btn.primary} w-full sm:w-auto`}
                 >
                   {isPending
                     ? isEditing
@@ -774,7 +812,7 @@ export function SalesManager({
                     setOpen(false);
                     resetForm();
                   }}
-                  className={btn.outline}
+                  className={`${btn.outline} w-full sm:w-auto`}
                 >
                   Cancelar
                 </button>
@@ -980,13 +1018,16 @@ export function SalesManager({
                       {sale.vehicle.historical ? (
                         <Badge tone="neutral">Histórica</Badge>
                       ) : null}
+                      {missingContract(sale) ? (
+                        <Badge tone="warning">Sem contrato</Badge>
+                      ) : null}
                       {sale.vehicle.consigned ? (
                         <Badge tone="info">{CONSIGNED_LABEL}</Badge>
                       ) : null}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 border-t border-white/10">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-white/10">
                     {wa ? (
                       <a
                         href={`https://wa.me/55${wa}`}
@@ -1019,7 +1060,7 @@ export function SalesManager({
                         onClick={() => openSaleContract(sale)}
                         className={`${mobileActionCell} border-l border-white/10`}
                       >
-                        Ver venda/documentos
+                        {missingContract(sale) ? "Gerar contrato" : "Ver venda/documentos"}
                       </button>
                     ) : null}
                     <button
@@ -1109,6 +1150,9 @@ export function SalesManager({
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                           <Badge tone="success">{sale.paymentMethod}</Badge>
+                          {missingContract(sale) ? (
+                            <Badge tone="warning">Sem contrato</Badge>
+                          ) : null}
                           {extractSaleSeller(sale) !== "Geral" ? (
                             <span className="text-xs text-cream">
                               {extractSaleSeller(sale)}
@@ -1163,9 +1207,9 @@ export function SalesManager({
                               type="button"
                               onClick={() => openSaleContract(sale)}
                               className="p-2 text-xs text-cream transition hover:text-brand-light"
-                              title="Gerar contrato desta venda"
+                              title={missingContract(sale) ? "Esta venda não tem contrato: abra a operação do veículo para gerar" : "Documentos desta venda"}
                             >
-                              Ver venda/documentos
+                              {missingContract(sale) ? "Gerar contrato" : "Ver venda/documentos"}
                             </button>
                           ) : null}
                           <button

@@ -27,3 +27,9 @@ test("versão anterior tem referência privada própria e não aceita miniatura 
   assert.equal(privatePreviousRefForPublicUrl(`https://example.supabase.co/storage/v1/object/public/veiculos/${stem}.webp`), `private://documentos/foto-master/${stem}-previous.jpg`);
   for (const invalid of [0, -90, 360, "90", null]) assert.equal(parsePhotoRotation(invalid), null);
 });
+
+test("parsePhotoRotation aceita 90, 180 e 270 graus em sentido horário", () => {
+  assert.equal(parsePhotoRotation(90), 90);
+  assert.equal(parsePhotoRotation(180), 180);
+  assert.equal(parsePhotoRotation(270), 270);
+});

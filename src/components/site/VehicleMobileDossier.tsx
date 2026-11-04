@@ -141,7 +141,7 @@ function DossierBlock({
       data-ficha-section={section}
     >
       <summary className="flex min-h-[3rem] cursor-pointer list-none items-center justify-between gap-3 py-3.5 font-display text-[15px] font-semibold tracking-tight text-cream [&::-webkit-details-marker]:hidden">
-        <span>{title}</span>
+        <h2 className="contents"><span>{title}</span></h2>
         <span
           aria-hidden="true"
           className="text-muted transition-transform duration-200 group-open:rotate-180 group-open:text-brand-light"

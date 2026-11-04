@@ -16,7 +16,8 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
     // Cota Hobby de Image Optimization esgotada: /_next/image devolve 402
     // (OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED) e o estoque/galeria ficam
-    // sem foto. Servir originais (Supabase + /branding) até upgrade de plano.
+    // sem foto. Veículos usam /fotos com CDN e redução local via sharp;
+    // não dependem da cota de /_next/image. /branding segue sem transformação.
     unoptimized: true,
     remotePatterns: [
       {

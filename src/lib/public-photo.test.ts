@@ -50,9 +50,10 @@ test("GET mantém os bytes e remove noindex, cookies e cache do Storage; HEAD é
   for (const header of ["x-robots-tag", "set-cookie", "vary"]) assert.equal(get.headers.get(header), null);
 });
 
-test("miniatura também fica imutável por um ano no navegador e na CDN", async () => {
+test("miniatura legada usa 30 dias sem immutable no navegador e na CDN", async () => {
   const response = await servePublicPhoto(request(), ["v1", "original", "car-card.webp"], async () => new Response("image", { headers: { "Content-Type": "image/webp" } }));
-  assert.equal(response.headers.get("cache-control"), "public, max-age=31536000, s-maxage=31536000, immutable");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=2592000, s-maxage=2592000");
+  assert.equal(response.headers.get("vercel-cdn-cache-control"), response.headers.get("cache-control"));
 });
 
 test("GET e HEAD condicionais retornam 304 sem bytes nem credenciais", async () => {
@@ -72,7 +73,7 @@ test("GET e HEAD condicionais retornam 304 sem bytes nem credenciais", async () 
     assert.equal(result.status, 304);
     assert.equal(await result.text(), "");
     assert.equal(result.headers.get("etag"), '"photo"');
-    assert.equal(result.headers.get("cache-control"), "public, max-age=31536000, s-maxage=31536000, immutable");
+    assert.equal(result.headers.get("cache-control"), "public, max-age=2592000, s-maxage=2592000");
     assert.equal(result.headers.get("set-cookie"), null);
   }
 });

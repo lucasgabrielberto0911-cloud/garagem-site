@@ -75,6 +75,19 @@ export const KM_OPTIONS = [
   { value: "120000", label: "Até 120 mil km" },
 ] as const;
 
+export function kmFilterOptions(currentMaxKm?: string): Array<{ value: string; label: string }> {
+  const base: Array<{ value: string; label: string }> = [...KM_OPTIONS];
+  const raw = (currentMaxKm ?? "").trim();
+  if (!raw || base.some((option) => option.value === raw)) {
+    return base;
+  }
+  const num = Number(raw);
+  if (Number.isFinite(num) && num > 0) {
+    base.push({ value: raw, label: `Até ${formatCompactNumber(raw)} km` });
+  }
+  return base;
+}
+
 export function selectedOption(options: string[], value: string) {
   const key = value.trim().toLocaleLowerCase("pt-BR");
   if (!key) return "";

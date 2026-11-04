@@ -3,7 +3,7 @@ import { site } from "@/lib/site";
 type WordmarkSize = "header" | "hero" | "footer" | "splash";
 
 export const WORDMARK_SRC = "/branding/logo-wordmark-320.webp";
-export const WORDMARK_SRC_SET = "/branding/logo-wordmark-320.webp 320w, /branding/logo-wordmark-480.webp 480w, /branding/logo-wordmark-640.webp 640w, /branding/logo-wordmark.webp 887w";
+export const WORDMARK_SRC_SET = "/branding/logo-wordmark-180.webp 180w, /branding/logo-wordmark-320.webp 320w, /branding/logo-wordmark-480.webp 480w, /branding/logo-wordmark-640.webp 640w, /branding/logo-wordmark.webp 887w";
 // O preload da home usa o mesmo tamanho do hero.
 export const WORDMARK_SIZES = "(min-width: 1024px) 380px, (min-width: 640px) 360px, min(52vw, 188px)";
 

@@ -14,7 +14,7 @@ import { vehiclePath } from "@/lib/vehicle-slug";
 import { comparisonSelection, toggleComparison, readComparisonSession, writeComparisonSession } from "@/lib/favorites-comparison";
 
 export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [ready, setReady] = useState(false);
   const [chosen, setChosen] = useState<string[] | null>(null);
   useEffect(() => {

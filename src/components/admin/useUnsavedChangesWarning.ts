@@ -1,9 +1,62 @@
 "use client";
 
-import { useEffect } from "react";
+import { createElement, useEffect } from "react";
+import { createRoot } from "react-dom/client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export const UNSAVED_CHANGES_MESSAGE =
   "Você tem alterações não salvas. Sair mesmo assim?";
+
+type Confirmer = (message: string) => Promise<boolean>;
+
+let customConfirmer: Confirmer | null = null;
+let activeConfirmPromise: Promise<boolean> | null = null;
+
+/** Permite injetar confirmador customizado em testes ou ambientes sem DOM completo. */
+export function setUnsavedChangesConfirmer(confirmer: Confirmer | null) {
+  customConfirmer = confirmer;
+}
+
+/** Troca o window.confirm pelo ConfirmDialog padrão do painel. */
+export function confirmUnsavedChanges(
+  message = UNSAVED_CHANGES_MESSAGE,
+): Promise<boolean> {
+  if (customConfirmer) return customConfirmer(message);
+  if (typeof document === "undefined") return Promise.resolve(true);
+  if (activeConfirmPromise) return activeConfirmPromise;
+
+  activeConfirmPromise = new Promise<boolean>((resolve) => {
+    const container = document.createElement("div");
+    container.setAttribute("data-unsaved-dialog", "true");
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+
+    function handleClose(confirmed: boolean) {
+      try {
+        root.unmount();
+      } catch {}
+      container.remove();
+      activeConfirmPromise = null;
+      resolve(confirmed);
+    }
+
+    root.render(
+      createElement(ConfirmDialog, {
+        open: true,
+        title: "Descartar alterações?",
+        description: message,
+        confirmLabel: "Descartar",
+        cancelLabel: "Continuar editando",
+        danger: true,
+        onConfirm: () => handleClose(true),
+        onCancel: () => handleClose(false),
+      }),
+    );
+  });
+
+  return activeConfirmPromise;
+}
 
 function isInternalNavigation(anchor: HTMLAnchorElement, event: MouseEvent) {
   if (event.defaultPrevented || event.button !== 0) return false;
@@ -27,7 +80,7 @@ function isInternalNavigation(anchor: HTMLAnchorElement, event: MouseEvent) {
  * Voltar/Avançar do navegador não passa por clique em link nem por beforeunload
  * quando a navegação é do App Router. Para poder perguntar, enquanto algum
  * formulário está sujo mantemos UMA entrada extra no histórico (mesma URL):
- * o botão Voltar consome essa entrada, disparamos o confirm e, se a pessoa
+ * o botão Voltar consome essa entrada, disparamos a confirmação e, se a pessoa
  * ficar, a entrada é recriada. Sem mexer em history.pushState/replaceState
  * globais: só chamamos a API padrão uma vez por estado sujo.
  */
@@ -35,6 +88,8 @@ let dirtyCount = 0;
 let sentinelUrl: string | null = null;
 let leaving = false;
 let skipNextClick = false;
+let confirmingBack = false;
+let restoring = false;
 
 function pushSentinel() {
   window.history.pushState(window.history.state, "");
@@ -52,6 +107,22 @@ function popSentinel() {
 }
 
 function onPopState(event: PopStateEvent) {
+  if (restoring) {
+    // Eco do history.go(1) que desfaz o segundo Voltar.
+    restoring = false;
+    event.stopImmediatePropagation();
+    return;
+  }
+  if (confirmingBack && !leaving) {
+    // Voltar de novo com o modal aberto: desfaz o recuo e mantém a pergunta pendente.
+    event.stopImmediatePropagation();
+    restoring = true;
+    window.setTimeout(() => {
+      restoring = false;
+    }, 600);
+    window.history.go(1);
+    return;
+  }
   if (leaving || !sentinelUrl || dirtyCount === 0) return;
   // Voltamos da entrada extra para a entrada original (mesma URL): é o gesto Voltar.
   if (window.location.href !== sentinelUrl) {
@@ -59,16 +130,20 @@ function onPopState(event: PopStateEvent) {
     return;
   }
   event.stopImmediatePropagation();
-  if (window.confirm(UNSAVED_CHANGES_MESSAGE)) {
-    leaving = true;
-    sentinelUrl = null;
-    window.history.go(-1);
-    window.setTimeout(() => {
-      leaving = false;
-    }, 500);
-  } else {
-    pushSentinel();
-  }
+  confirmingBack = true;
+  void confirmUnsavedChanges(UNSAVED_CHANGES_MESSAGE).then((confirmed) => {
+    confirmingBack = false;
+    if (confirmed) {
+      leaving = true;
+      sentinelUrl = null;
+      window.history.go(-1);
+      window.setTimeout(() => {
+        leaving = false;
+      }, 500);
+    } else {
+      pushSentinel();
+    }
+  });
 }
 
 function onBeforeUnload(event: BeforeUnloadEvent) {
@@ -84,34 +159,38 @@ function onClick(event: MouseEvent) {
   const anchor = (event.target as Element | null)?.closest?.("a[href]");
   if (!(anchor instanceof HTMLAnchorElement)) return;
   if (!isInternalNavigation(anchor, event)) return;
-  if (!window.confirm(UNSAVED_CHANGES_MESSAGE)) {
-    event.preventDefault();
-    event.stopPropagation();
-    return;
-  }
-  if (!sentinelUrl) return;
-  // Já confirmado: tira a entrada extra antes de seguir para o link, para o Voltar da próxima tela não cair no formulário de novo.
+
   event.preventDefault();
   event.stopPropagation();
-  leaving = true;
-  sentinelUrl = null;
-  let done = false;
-  const proceed = () => {
-    if (done) return;
-    done = true;
-    window.removeEventListener("popstate", proceed);
-    window.setTimeout(() => {
-      leaving = false;
+
+  void confirmUnsavedChanges(UNSAVED_CHANGES_MESSAGE).then((confirmed) => {
+    if (!confirmed) return;
+    if (!sentinelUrl) {
       skipNextClick = true;
       anchor.click();
-    }, 0);
-  };
-  window.addEventListener("popstate", proceed);
-  window.setTimeout(proceed, 600);
-  window.history.go(-1);
+      return;
+    }
+    // Já confirmado: tira a entrada extra antes de seguir para o link, para o Voltar da próxima tela não cair no formulário de novo.
+    leaving = true;
+    sentinelUrl = null;
+    let done = false;
+    const proceed = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("popstate", proceed);
+      window.setTimeout(() => {
+        leaving = false;
+        skipNextClick = true;
+        anchor.click();
+      }, 0);
+    };
+    window.addEventListener("popstate", proceed);
+    window.setTimeout(proceed, 600);
+    window.history.go(-1);
+  });
 }
 
-function activate() {
+export function activateUnsavedGuard() {
   dirtyCount += 1;
   skipNextClick = false;
   if (dirtyCount > 1) return;
@@ -121,7 +200,7 @@ function activate() {
   pushSentinel();
 }
 
-function deactivate() {
+export function deactivateUnsavedGuard() {
   dirtyCount = Math.max(0, dirtyCount - 1);
   if (dirtyCount > 0) return;
   window.removeEventListener("beforeunload", onBeforeUnload);
@@ -138,7 +217,7 @@ function deactivate() {
 export function useUnsavedChangesWarning(dirty: boolean) {
   useEffect(() => {
     if (!dirty) return;
-    activate();
-    return deactivate;
+    activateUnsavedGuard();
+    return deactivateUnsavedGuard;
   }, [dirty]);
 }

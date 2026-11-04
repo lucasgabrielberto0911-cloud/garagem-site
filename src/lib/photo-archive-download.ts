@@ -1,9 +1,11 @@
+import { e2ePhotoFixture } from "./e2e-photo-fixture";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   ADMIN_JPEG_QUALITY,
   DOWNLOAD_JPEG_QUALITY,
   toDownloadJpeg,
+  toCatalogJpeg,
 } from "@/lib/photo-jpeg";
 import { masterObjectPathFromGalleryPath } from "@/lib/photo-master";
 import { downloadPrivateMaster } from "@/lib/photo-master-store";
@@ -108,6 +110,8 @@ async function downloadStorageObject(storagePath: string): Promise<Uint8Array | 
  * Prefere o Storage com service role; cai na URL pública ou em /public.
  */
 export async function loadArchiveOriginal(url: string): Promise<ArchiveFile | null> {
+  const fixture = await e2ePhotoFixture();
+  if (fixture) return { bytes: fixture, contentType: "image/png" };
   const withoutHash = url.split("#")[0] ?? url;
   const original = supabaseOriginalSrc(withoutHash).split("?")[0] ?? withoutHash;
   let storagePath: string | null = null;
@@ -203,11 +207,17 @@ export async function loadArchiveOriginal(url: string): Promise<ArchiveFile | nu
   }
 }
 
-/** JPG leve da ficha: só a WebP da galeria (≤1280), qualidade 90. */
+/** JPG público da ficha: mesmo legado JPEG fica limitado a 1280 px. */
 export async function loadGalleryJpeg(url: string): Promise<Uint8Array | null> {
+  return loadCatalogJpeg(url, DOWNLOAD_JPEG_QUALITY);
+}
+
+/** Catálogo público usa a galeria e nunca busca o master privado. */
+export async function loadCatalogJpeg(url: string, quality = 80): Promise<Uint8Array | null> {
   const file = await loadArchiveOriginal(url);
-  if (!file) return null;
-  return encodeDownload(file.bytes, DOWNLOAD_JPEG_QUALITY, MAX_SOURCE_BYTES);
+  if (!file || file.bytes.byteLength === 0 || file.bytes.byteLength > MAX_SOURCE_BYTES) return null;
+  try { return await toCatalogJpeg(file.bytes, quality); }
+  catch { return null; }
 }
 
 /**

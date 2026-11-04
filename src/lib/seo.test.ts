@@ -93,7 +93,7 @@ test("Google recebe fotos públicas no domínio canônico e mantém imagens exte
     { url: "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/car.webp" },
     { url: "https://cdn.example/hb20.webp" },
   ] }) as { image: string[]; mainEntityOfPage: { "@type": string; "@id": string }; inLanguage: string; url: string };
-  assert.deepEqual(data.image, ["https://www.suagaragem.net/fotos/v1/original/car.webp", "https://cdn.example/hb20.webp"]);
+  assert.deepEqual(data.image, ["https://www.suagaragem.net/fotos/v1/1280-contain-q78/car.webp", "https://cdn.example/hb20.webp"]);
   assert.deepEqual(data.mainEntityOfPage, { "@type": "WebPage", "@id": data.url });
   assert.equal(data.inLanguage, "pt-BR");
 });
@@ -108,6 +108,15 @@ test("JSON-LD do veículo traz versão e não inventa prazo de validade da ofert
   const sold = vehicleJsonLd({ ...hb20, status: "vendido" }) as { offers: Record<string, unknown> };
   assert.equal("price" in sold.offers, false);
   assert.equal("priceValidUntil" in sold.offers, false);
+});
+
+test("JSON-LD sanitiza quebras de linha brutas na descrição do veículo", () => {
+  const data = vehicleJsonLd({
+    ...hb20,
+    description: "Carro completo.\r\n\r\nÚnico dono.\r\n\r\nRevisões em dia.",
+  }) as { description?: string };
+  assert.equal(data.description, "Carro completo. Único dono. Revisões em dia.");
+  assert.doesNotMatch(data.description ?? "", /\r|\n/);
 });
 
 

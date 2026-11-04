@@ -1,3 +1,4 @@
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 import type { Customer, Prisma } from "@prisma/client";
 import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
 import { parseContractPaymentsJson, parseVehicleCustomerIds, signalExceedsTotal, signalMismatch, sumContractPayments } from "@/lib/admin-commercial";
@@ -40,8 +41,8 @@ export function parseSaleFlowInput(raw: string): SaleFlowParseResult {
   const { total, payments } = paymentCheck;
   const customerId = typeof input.customerId === "string" ? input.customerId : "";
   const customerName = String(input.customerName ?? "").trim();
-  const customerPhone = digitsOnly(input.customerPhone);
-  if (!customerName || customerPhone.length < 10) return fail("Informe nome e telefone válidos do comprador.");
+  const customerPhone = normalizeAdminPhone(String(input.customerPhone ?? "")) ?? "";
+  if (!customerName || !customerPhone) return fail("Informe nome e telefone válidos do comprador.");
   const sellerName = String(input.seller ?? "").trim();
   const commission = input.commission == null ? null : Number(input.commission);
   if (commission != null && (!Number.isFinite(commission) || commission < 0)) return fail("Comissão inválida.");

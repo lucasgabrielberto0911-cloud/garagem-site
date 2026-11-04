@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
+import { PDFDocument, rgb, type PDFFont, type PDFImage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -8,9 +8,14 @@ import { promissoryClause, promissoryDateInWords, promissoryLongDate, validatePr
 import { moneyInWords } from "./money-words";
 import { site } from "./site";
 
-/** Via única em A4, com os mesmos recursos locais dos demais PDFs comerciais. */
-export async function promissoryPdf(input: PromissoryInput) {
-  const data = validatePromissory(input);
+type PdfAssets = {
+  title: PDFFont;
+  regular: PDFFont;
+  semi: PDFFont;
+  logo: PDFImage;
+};
+
+async function createDocumentWithAssets(): Promise<{ pdf: PDFDocument; assets: PdfAssets }> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const [titleBytes, regularBytes, semiBytes, logoBytes] = await Promise.all([
@@ -20,10 +25,17 @@ export async function promissoryPdf(input: PromissoryInput) {
     readFile(path.join(process.cwd(), "public/logo.png")),
   ]);
   // Fontes inteiras: o subset do fontkit perde glifos nos PDFs do projeto.
-  const title = await pdf.embedFont(titleBytes);
-  const regular = await pdf.embedFont(regularBytes);
-  const semi = await pdf.embedFont(semiBytes);
-  const logo = await pdf.embedPng(logoBytes);
+  const [title, regular, semi, logo] = await Promise.all([
+    pdf.embedFont(titleBytes),
+    pdf.embedFont(regularBytes),
+    pdf.embedFont(semiBytes),
+    pdf.embedPng(logoBytes),
+  ]);
+  return { pdf, assets: { title, regular, semi, logo } };
+}
+
+function drawPromissoryPage(pdf: PDFDocument, assets: PdfAssets, data: ReturnType<typeof validatePromissory>) {
+  const { title, regular, semi, logo } = assets;
   const page = pdf.addPage([595.28, 841.89]);
   const margin = 44;
   const width = page.getWidth() - margin * 2;
@@ -84,7 +96,7 @@ export async function promissoryPdf(input: PromissoryInput) {
   page.drawRectangle({ x: margin - 10, y: 66, width: width + 20, height: 661, borderColor: asphalt, borderWidth: 0.8 });
   page.drawLine({ start: { x: margin - 10, y: 727 }, end: { x: margin + width + 10, y: 727 }, color: brand, thickness: 4 });
   draw("NOTA PROMISSÓRIA", margin, 704, 18, title);
-  draw(`Nº ${data.number ?? "______"} · Via única`, margin, 682, 10, semi, muted);
+  draw(`Nº ${data.number ?? "______"} · ${data.status === "paga" ? "QUITADA · Reimpressão histórica" : "Via única"}`, margin, 682, 10, semi, muted);
   const amount = formatAdminMoney(data.amount).replace(/\u00a0/g, " ");
   const amountWidth = title.widthOfTextAtSize(amount, 18);
   page.drawRectangle({ x: margin + width - amountWidth - 20, y: 674, width: amountWidth + 20, height: 42, borderColor: asphalt, borderWidth: 0.8 });
@@ -95,11 +107,13 @@ export async function promissoryPdf(input: PromissoryInput) {
   draw("Vencimento:", margin, y, 12, semi);
   draw(` ${promissoryLongDate(data.dueDate)}`, margin + semi.widthOfTextAtSize("Vencimento:", 12), y, 12);
   y -= 30;
-  const clause = promissoryClause(data);
+  const clause = data.status === "paga"
+    ? `NOTA QUITADA. Pagamento registrado${data.paidAt ? ` em ${new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(data.paidAt))}` : " (data não disponível)"}. Reimpressão histórica da nota; não representa nova cobrança.`
+    : promissoryClause(data);
   const highlights = [promissoryDateInWords(data.dueDate) + ",", "NOTA PROMISSÓRIA", `${site.legalName.toUpperCase()},`, site.cnpj, `${amount} (${moneyInWords(data.amount)})`].map(value => {
     const start = clause.indexOf(value);
     return { start, end: start + value.length };
-  });
+  }).filter(range => range.start !== -1);
   let x = margin;
   for (const word of clause.matchAll(/\S+/g)) {
     const font = highlights.some(range => word.index >= range.start && word.index < range.end) ? semi : regular;
@@ -147,7 +161,36 @@ export async function promissoryPdf(input: PromissoryInput) {
   page.drawLine({ start: { x: margin, y: 49 }, end: { x: margin + width, y: 49 }, color: line, thickness: 0.6 });
   const footer = `${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj} · ${PDF_STORE.city}/${PDF_STORE.stateCode} · www.suagaragem.net`;
   draw(footer, margin + (width - regular.widthOfTextAtSize(footer, 7.5)) / 2, 34, 7.5, regular, muted);
+}
+
+/** Via única em A4, com os mesmos recursos locais dos demais PDFs comerciais. */
+export async function promissoryPdf(input: PromissoryInput) {
+  const data = validatePromissory(input);
+  const { pdf, assets } = await createDocumentWithAssets();
+  drawPromissoryPage(pdf, assets, data);
   pdf.setTitle(`Nota promissória nº ${data.number ?? "______"} · Garagem`);
   pdf.setAuthor(PDF_STORE.legalName);
   return pdf.save();
+}
+
+/** Lote de notas em um único PDF (1 página A4 por parcela) para imprimir todas de uma vez. */
+export async function promissoryBatchPdf(inputs: PromissoryInput[]) {
+  if (!inputs.length) throw new Error("Informe ao menos uma nota promissória para gerar o PDF.");
+  if (inputs.length === 1) return promissoryPdf(inputs[0]);
+  const validated = inputs.map((item) => validatePromissory(item));
+  const { pdf, assets } = await createDocumentWithAssets();
+  for (const data of validated) {
+    drawPromissoryPage(pdf, assets, data);
+  }
+  const firstNo = validated[0].number ?? "1";
+  const lastNo = validated[validated.length - 1].number ?? String(validated.length);
+  pdf.setTitle(`Notas promissórias nº ${firstNo} a ${lastNo} · Garagem`);
+  pdf.setAuthor(PDF_STORE.legalName);
+  return pdf.save();
+}
+
+/** Usa exatamente o renderizador de impressão antes de persistir o lote. */
+export async function validatePromissoryPages(inputs: PromissoryInput[]) {
+  const { pdf, assets } = await createDocumentWithAssets();
+  for (const input of inputs) drawPromissoryPage(pdf, assets, validatePromissory(input));
 }

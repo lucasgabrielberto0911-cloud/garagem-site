@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { afterSaleMessage, AFTER_SALE } from "@/lib/admin-commercial";
 import { completeAfterSale } from "@/app/admin/veiculos/commercial-actions";
 import { dismissPromissoryNotice } from "@/app/admin/promissorias/actions";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
 
 export default async function AgendaPage({ searchParams }: {
-  searchParams: Promise<{ periodo?: string | string[]; page?: string | string[]; q?: string | string[] }>;
+  searchParams: Promise<{ periodo?: string | string[]; page?: string | string[]; q?: string | string[]; tarefas?: string; avisos?: string }>;
 }) {
   if (!(await getSession())) redirect("/admin/login");
   const query = await searchParams;
@@ -42,15 +43,33 @@ export default async function AgendaPage({ searchParams }: {
     select: { id: true, name: true, phone: true, vehicleInfo: true, plate: true, source: true, nextAction: true, nextActionAt: true },
   });
   const taskDate = agendaWhere(period, now).nextActionAt;
+  const contains = { contains: q, mode: "insensitive" as const };
+  const afterWhere: Prisma.AfterSaleTaskWhereInput = {
+    completedAt: null, dueAt: taskDate as Prisma.DateTimeFilter,
+    ...(q ? { sale: { OR: [{ customer: { name: contains } }, { customer: { phone: contains } }, { vehicle: { brand: contains } }, { vehicle: { model: contains } }, { vehicle: { plate: contains } }] } } : {}),
+  };
+  const paidWhere: Prisma.PromissoryNoteWhereInput = { status: "paga", paidNoticeDoneAt: null,
+    ...(q ? { OR: [{ issuerName: contains }, { issuerPhone: contains }, ...(Number.isSafeInteger(Number(q)) && Number(q) > 0 && Number(q) <= 2147483647 ? [{ number: Number(q) }] : [])] } : {}),
+  };
+  const [afterTotal, paidTotal] = await Promise.all([prisma.afterSaleTask.count({ where: afterWhere }), prisma.promissoryNote.count({ where: paidWhere })]);
+  function paginate(input: string | undefined, total: number) {
+    const pages = Math.max(1, Math.ceil(total / 50));
+    const number = Number(input);
+    return { pages, page: Math.min(pages, Number.isFinite(number) ? Math.max(1, Math.trunc(number)) : 1) };
+  }
+  const tasks = paginate(query.tarefas, afterTotal);
+  const notices = paginate(query.avisos, paidTotal);
   const [afterSales, siteSettings, paidNotes] = await Promise.all([
-    prisma.afterSaleTask.findMany({ where: { completedAt: null, dueAt: taskDate as import("@prisma/client").Prisma.DateTimeFilter }, orderBy: { dueAt: "asc" }, take: 50, include: { sale: { include: { customer: true, vehicle: true } } } }),
+    prisma.afterSaleTask.findMany({ where: afterWhere, orderBy: [{ dueAt: "asc" }, { id: "asc" }], skip: (tasks.page - 1) * 50, take: 50, include: { sale: { include: { customer: true, vehicle: true } } } }),
     prisma.siteSettings.findUnique({ where: { id: "default" }, select: { googleProfileUrl: true } }),
-    prisma.promissoryNote.findMany({ where: { status: "paga", paidNoticeDoneAt: null }, orderBy: { paidAt: "asc" }, take: 50, select: { id: true, number: true, issuerName: true, paidAt: true } }),
+    prisma.promissoryNote.findMany({ where: paidWhere, orderBy: [{ paidAt: "asc" }, { id: "asc" }], skip: (notices.page - 1) * 50, take: 50, select: { id: true, number: true, issuerName: true, paidAt: true } }),
   ]);
-  function href(value = period, nextPage = 1) {
+  function href(value = period, nextPage = 1, taskPage = tasks.page, noticePage = notices.page) {
     const params = new URLSearchParams({ periodo: value });
     if (q) params.set("q", q);
     if (nextPage > 1) params.set("page", String(nextPage));
+    if (value === period && taskPage > 1) params.set("tarefas", String(taskPage));
+    if (noticePage > 1) params.set("avisos", String(noticePage));
     return `/admin/agenda?${params}`;
   }
 
@@ -59,7 +78,7 @@ export default async function AgendaPage({ searchParams }: {
     <nav aria-label="Período da agenda" className="grid grid-cols-3 gap-2">
       {AGENDA_PERIODS.map(({ value, label }, index) => <Link key={value} href={href(value)} aria-current={period === value ? "page" : undefined}
         className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-sm transition sm:flex-row sm:gap-3 ${period === value ? "border-brand/40 bg-brand/10 text-cream" : "border-white/10 text-muted hover:text-cream"}`}>
-        {label}<span className="text-xs tabular-nums">{counts[index]}</span>
+        {label}<span className="text-[10px]">Atendimentos</span><span className="text-xs tabular-nums">{counts[index]}</span>
       </Link>)}
     </nav>
     <form role="search" className="flex gap-2">
@@ -91,7 +110,7 @@ export default async function AgendaPage({ searchParams }: {
     </div>}
     <section className="space-y-3" aria-label="Pós-venda">
       <h2 className="font-display text-xl font-semibold">Pós-venda automático</h2>
-      <p className="text-sm text-muted">Tarefas geradas ao registrar vendas com cliente: entrega, 7 dias, 30 dias e 180 dias. Envio pelo vendedor. Exibindo até 50 tarefas deste período.</p>
+      <p className="text-sm text-muted">Tarefas geradas ao registrar vendas com cliente: entrega, 7 dias, 30 dias e 180 dias. Envio pelo vendedor. {afterTotal} tarefa(s) neste período · página {tasks.page} de {tasks.pages}.</p>
       {afterSales.length === 0 ? <p className="text-sm text-muted">Nenhuma tarefa neste período.</p> : afterSales.map((task) => {
         const customer = task.sale.customer;
         const label = `${task.sale.vehicle.brand} ${task.sale.vehicle.model} ${task.sale.vehicle.yearModel}`;
@@ -104,10 +123,14 @@ export default async function AgendaPage({ searchParams }: {
           <form action={completeAfterSale.bind(null, task.id)}><button className={btn.primary}>Marcar tarefa concluída</button></form></div>
         </article>;
       })}
+      {tasks.pages > 1 && <nav aria-label="Páginas do pós-venda" className="flex justify-between gap-2">
+        {tasks.page > 1 ? <Link className={btn.outline} href={href(period, page, tasks.page - 1)}>Tarefas anteriores</Link> : <span />}
+        {tasks.page < tasks.pages && <Link className={btn.outline} href={href(period, page, tasks.page + 1)}>Próximas tarefas</Link>}
+      </nav>}
     </section>
     {paidNotes.length ? <section className="space-y-3" aria-label="Promissórias pagas">
       <h2 className="font-display text-xl font-semibold">Promissórias pagas</h2>
-      <p className="text-sm text-muted">Avisos gerados quando uma nota é marcada como paga. Dê ciência depois de conferir o recebimento.</p>
+      <p className="text-sm text-muted">Avisos gerados quando uma nota é marcada como paga. Caixa de entrada de todos os períodos: {paidTotal} aviso(s) · página {notices.page} de {notices.pages}. Dê ciência depois de conferir o recebimento.</p>
       {paidNotes.map((note) => <article key={note.id} className="space-y-3 rounded-lg border border-white/10 p-4">
         <h3 className="font-display">Nota nº {note.number} · {note.issuerName}</h3>
         <p className="text-xs text-muted">{note.paidAt ? `Baixada em ${adminActionDate(note.paidAt)}` : "Baixada"}</p>
@@ -117,6 +140,10 @@ export default async function AgendaPage({ searchParams }: {
           <form action={dismissPromissoryNotice.bind(null, note.id)}><button className={btn.primary}>Dar ciência</button></form>
         </div>
       </article>)}
+      {notices.pages > 1 && <nav aria-label="Páginas dos avisos" className="flex justify-between gap-2">
+        {notices.page > 1 ? <Link className={btn.outline} href={href(period, page, tasks.page, notices.page - 1)}>Avisos anteriores</Link> : <span />}
+        {notices.page < notices.pages && <Link className={btn.outline} href={href(period, page, tasks.page, notices.page + 1)}>Próximos avisos</Link>}
+      </nav>}
     </section> : null}
     {pages > 1 ? <nav aria-label="Páginas da agenda" className="flex justify-between gap-2">
       {page > 1 ? <Link href={href(period, page - 1)} className={btn.outline}>Anterior</Link> : <span />}

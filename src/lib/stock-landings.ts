@@ -3,6 +3,13 @@ import { formatBrandName, formatModelName } from "./format";
 export function stockLandingSlug(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
+
+/** Redireciona slugs com letras maiúsculas para o caminho canônico em minúsculas (ex: /marca/Honda -> /marca/honda). */
+export function canonicalSlugRedirect(prefix: string, slug: string): string | null {
+  if (!slug || slug === slug.toLowerCase()) return null;
+  const cleanPrefix = prefix.replace(/^\/+|\/+$/g, "");
+  return `/${cleanPrefix}/${slug.toLowerCase()}`;
+}
 export function stockLandingLinks(
   rows: { brand: string; model: string; updatedAt?: Date | string | null }[],
 ) {

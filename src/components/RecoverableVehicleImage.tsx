@@ -1,5 +1,7 @@
 "use client";
 
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 
@@ -13,7 +15,7 @@ export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet
   const imageRef = useRef<HTMLImageElement>(null);
   const failedImage = useCallback((image: HTMLImageElement) => {
     if (!state.original) {
-      const original = supabaseOriginalSrc(image.currentSrc || src);
+      const original = publicVehiclePhotoSrc(supabaseOriginalSrc(image.currentSrc || src));
       if (original && original !== (image.currentSrc || image.src)) {
         setState(current => ({ ...current, original }));
         return;

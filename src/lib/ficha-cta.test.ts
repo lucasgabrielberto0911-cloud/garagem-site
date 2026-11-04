@@ -118,7 +118,7 @@ test("primeira foto da galeria é a única com prioridade alta", () => {
   assert.match(gallery, /GALLERY_HERO_SIZES/);
   assert.match(
     readSrc("lib/stock-query.ts"),
-    /GALLERY_HERO_SIZES =\s*\n\s*"\(min-width: 1280px\) 710px, \(min-width: 1024px\) calc\(\(100vw - 96px\) \* 0\.6\), \(min-width: 640px\) 100vw, 60vw"/,
+    /GALLERY_HERO_SIZES =\s*\n\s*"\(min-width: 1280px\) 710px, \(min-width: 1024px\) calc\(\(100vw - 96px\) \* 0\.6\), 100vw"/,
   );
   assert.match(gallery, /sizes="96px"/);
   assert.match(header, /headerWordmarkPriority\(pathname\)/);
@@ -565,4 +565,10 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
   assert.match(mobileMarkup, /Garantia estendida de 1 ano/);
   // Não duplica a introdução longa quando os itens de condições já estão presentes
   assert.doesNotMatch(mobileMarkup, /Todo seminovo passa por checagem na loja antes do anúncio/);
+});
+
+test("barra do celular: Agendar visita tem altura real de 44px sem expansão do alvo", () => {
+  const bar = readSrc("components/site/VehicleMobileBar.tsx");
+  assert.match(bar, /className="inline-flex min-h-11[^>]*>\s*Agendar visita/s);
+  assert.doesNotMatch(bar, /before:-inset/);
 });

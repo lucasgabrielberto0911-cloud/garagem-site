@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { PDFDocument } from "pdf-lib";
 import {
-  addMonthsClamped, canCancelPromissory, canMarkPromissoryPaid, dateOnly, formatCivilDate, normalizePromissoryPhone,
-  parsePromissoryFilter, parsePromissoryForm, parsePromissoryStatus, promissoryListWhere, promissoryInstallmentDates, promissoryPaidNotice, promissoryRowToPdfInput,
+  addDaysCivil, addMonthsClamped, canCancelPromissory, canMarkPromissoryPaid, dateOnly, describePromissoryDue, formatCivilDate,
+  nextMonthDayCivil, normalizePromissoryPhone, parsePromissoryDueFilter, parsePromissoryFilter, parsePromissoryForm,
+  parsePromissoryStatus, promissoryListWhere, promissoryInstallmentDates, promissoryPaidNotice, promissoryRowToPdfInput,
   type PromissoryFormFields,
 } from "./promissory-notes";
-import { promissoryPdf } from "./promissory-pdf";
+import { promissoryBatchPdf, promissoryPdf } from "./promissory-pdf";
 
 const today = "2026-10-29";
 const form: Partial<PromissoryFormFields> = {
@@ -136,4 +138,111 @@ test("promissórias: filtro da lista por situação e busca por número, nome, C
   const byCpf = promissoryListWhere("todas", "52998224725");
   assert.ok(byCpf.OR?.some((item) => item.issuerCpf === "529.982.247-25"));
   assert.ok(byCpf.OR?.some((item) => "issuerPhone" in item));
+});
+
+test("promissórias: filtros por vencimento (vencidas, hoje, 7 dias, 30 dias)", () => {
+  assert.equal(parsePromissoryDueFilter("vencidas"), "vencidas");
+  assert.equal(parsePromissoryDueFilter("hoje"), "hoje");
+  assert.equal(parsePromissoryDueFilter("7dias"), "7dias");
+  assert.equal(parsePromissoryDueFilter("30dias"), "30dias");
+  assert.equal(parsePromissoryDueFilter("invalido"), "todos");
+
+  const overdueWhere = promissoryListWhere("abertas", "", { due: "vencidas", today: "2026-10-30" });
+  assert.deepEqual(overdueWhere, {
+    status: { in: ["emitida", "vinculada"] },
+    dueDate: { lt: new Date("2026-10-30T00:00:00.000Z") },
+  });
+
+  const dueTodayWhere = promissoryListWhere("todas", "", { due: "hoje", today: "2026-10-30" });
+  assert.deepEqual(dueTodayWhere, {
+    status: { in: ["emitida", "vinculada"] },
+    dueDate: new Date("2026-10-30T00:00:00.000Z"),
+  });
+
+  const next7Where = promissoryListWhere("abertas", "maria", { due: "7dias", today: "2026-10-30" });
+  assert.deepEqual(next7Where, {
+    status: { in: ["emitida", "vinculada"] },
+    dueDate: {
+      gte: new Date("2026-10-30T00:00:00.000Z"),
+      lte: new Date("2026-11-06T00:00:00.000Z"),
+    },
+    OR: [{ issuerName: { contains: "maria", mode: "insensitive" } }],
+  });
+
+  const next30Where = promissoryListWhere("abertas", "", { due: "30dias", today: "2026-10-30" });
+  assert.deepEqual(next30Where, {
+    status: { in: ["emitida", "vinculada"] },
+    dueDate: {
+      gte: new Date("2026-10-30T00:00:00.000Z"),
+      lte: new Date("2026-11-29T00:00:00.000Z"),
+    },
+  });
+});
+
+test("promissórias: cálculo de dias civis, atalhos de dia do mês e alerta de vencimento", () => {
+  assert.equal(addDaysCivil("2026-10-30", 7), "2026-11-06");
+  assert.equal(addDaysCivil("2026-12-28", 5), "2027-01-02");
+  assert.equal(nextMonthDayCivil("2026-10-03", 10), "2026-10-10");
+  assert.equal(nextMonthDayCivil("2026-10-10", 10), "2026-11-10");
+  assert.equal(nextMonthDayCivil("2026-12-20", 5), "2027-01-05");
+
+  assert.deepEqual(describePromissoryDue("2026-10-29", "2026-10-30", "emitida"), {
+    label: "Vencida há 1 dia",
+    badge: "Vencida",
+    tone: "warning",
+    overdue: true,
+  });
+  assert.deepEqual(describePromissoryDue("2026-10-25", "2026-10-30", "vinculada"), {
+    label: "Vencida há 5 dias",
+    badge: "Vencida",
+    tone: "warning",
+    overdue: true,
+  });
+  assert.deepEqual(describePromissoryDue("2026-10-30", "2026-10-30", "emitida"), {
+    label: "Vence hoje",
+    badge: "Vence hoje",
+    tone: "warning",
+    overdue: false,
+  });
+  assert.deepEqual(describePromissoryDue("2026-10-31", "2026-10-30", "emitida"), {
+    label: "Vence amanhã",
+    badge: "Vence amanhã",
+    tone: "info",
+    overdue: false,
+  });
+  assert.deepEqual(describePromissoryDue("2026-11-04", "2026-10-30", "emitida"), {
+    label: "Vence em 5 dias",
+    badge: "Vence em 5d",
+    tone: "info",
+    overdue: false,
+  });
+  assert.equal(describePromissoryDue("2026-11-15", "2026-10-30", "emitida"), null);
+  assert.equal(describePromissoryDue("2026-10-01", "2026-10-30", "paga"), null);
+  assert.equal(describePromissoryDue("2026-10-01", "2026-10-30", "cancelada"), null);
+});
+
+test("promissórias: PDF em lote gera uma página A4 por parcela", async () => {
+  const baseRow = {
+    number: 10,
+    amount: { toString: () => "1200.00" },
+    dueDate: new Date("2026-11-30T00:00:00.000Z"),
+    issuedAt: new Date("2026-10-29T00:00:00.000Z"),
+    issuePlace: "Linhares/ES",
+    paymentPlace: "Linhares/ES",
+    issuerName: "Maria de Exemplo",
+    issuerCpf: "529.982.247-25",
+    issuerRg: null,
+    issuerBirthDate: new Date("1985-03-12T00:00:00.000Z"),
+    issuerPhone: "27999990000",
+    issuerAddress: "Rua de Exemplo, 100, Centro, Linhares/ES",
+  };
+  const inputs = [
+    promissoryRowToPdfInput({ ...baseRow, number: 10, dueDate: new Date("2026-11-30T00:00:00.000Z") }),
+    promissoryRowToPdfInput({ ...baseRow, number: 11, dueDate: new Date("2026-12-30T00:00:00.000Z") }),
+    promissoryRowToPdfInput({ ...baseRow, number: 12, dueDate: new Date("2027-01-30T00:00:00.000Z") }),
+  ];
+  const bytes = await promissoryBatchPdf(inputs);
+  assert.equal(Buffer.from(bytes.slice(0, 5)).toString(), "%PDF-");
+  const parsedPdf = await PDFDocument.load(bytes);
+  assert.equal(parsedPdf.getPageCount(), 3);
 });

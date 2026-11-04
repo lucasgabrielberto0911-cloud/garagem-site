@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandModelOptions } from "@/components/admin/BrandModelOptions";
 import { CommercialPanel } from "@/components/admin/CommercialPanel";
 import type { Prisma } from "@prisma/client";
 import { adminDate, reservationDeadline } from "@/lib/admin-date";
@@ -236,6 +237,7 @@ export default async function EditVehiclePage({
           initialTab: view === "fotos" ? "fotos" : "anuncio",
         }} />
       )}
+      <BrandModelOptions />
     </div>
   );
 }

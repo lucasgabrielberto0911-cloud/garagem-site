@@ -7,24 +7,14 @@ import { toast } from "sonner";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleImage } from "@/components/VehicleImage";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import {
-  ActionSheet,
-  ActionSheetButton,
-  ActionSheetLink,
-} from "@/components/admin/ActionSheet";
+import { ActionSheet } from "@/components/admin/ActionSheet";
+import { SheetActions } from "@/components/admin/vehicles-table/SheetActions";
 import { VehiclePromoKitModal } from "@/components/admin/VehiclePromoKitModal";
 import {
-  IconCash,
-  IconCheck,
-  IconClipboard,
-  IconCopy,
-  IconExternal,
   IconImage,
   IconMore,
   IconPencil,
   IconPlus,
-  IconStar,
-  IconTrash,
 } from "@/components/admin/icons";
 import { EmptyState, btn, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL } from "@/lib/format";
@@ -33,7 +23,6 @@ import {
   expectedMargin,
   hasCostBasis,
 } from "@/lib/vehicle-ops";
-import { vehiclePath } from "@/lib/vehicle-slug";
 import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
 import {
   ADMIN_BULK_MAX,
@@ -48,18 +37,16 @@ import {
   type AdminBulkStatus,
 } from "@/lib/admin-bulk";
 import {
-  ADMIN_CARD_OVERFLOW_ACTIONS,
   DELETE_CONFIRM_PHRASE,
   adminCardMetaLine,
-  adminCardOverflowStatuses,
   adminCardShowsSoldAction,
   deleteRequiresTypedConfirm,
-  type AdminCardOverflowAction,
 } from "@/lib/admin-list";
 import { coverSrc } from "@/lib/stock-query";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import type { StockPending } from "@/lib/admin-stock-pending";
-import { stockListQuietNote } from "@/lib/stock-quality";
+import { publishMissingLine, stockListQuietNote } from "@/lib/stock-quality";
+import { rotateLocalDraftOnDuplicate } from "@/lib/admin-duplicate-vehicle";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -106,9 +93,6 @@ const SORT_SELECT_OPTIONS = [
   { value: "year:asc", label: "Mais antigo" },
 ] as const;
 
-const CHIP_SCROLL =
-  "flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
-
 const STATUS_DOT: Record<string, string> = {
   disponivel: "bg-emerald-400",
   reservado: "bg-brand-orange",
@@ -153,6 +137,7 @@ export function VehiclesTable({
   availableCount: availableCountProp,
   reservedCount: reservedCountProp,
   quality,
+  adminId,
 }: {
   vehicles: VehicleRow[];
   initialTotal: number;
@@ -171,6 +156,7 @@ export function VehiclesTable({
     stale: number;
     staleDays: number;
   };
+  adminId?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -193,12 +179,16 @@ export function VehiclesTable({
   const [loadError, setLoadError] = useState(false);
   const loadingRef = useRef(false);
   const [deleteTarget, setDeleteTarget] = useState<VehicleRow | null>(null);
+  const [duplicateConfirmTarget, setDuplicateConfirmTarget] = useState<VehicleRow | null>(null);
   const [soldTarget, setSoldTarget] = useState<VehicleRow | null>(null);
   const [simpleSoldTarget, setSimpleSoldTarget] = useState<VehicleRow | null>(null);
   const [promoTarget, setPromoTarget] = useState<VehicleRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [selecting, setSelecting] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [bulkTarget, setBulkTarget] = useState<AdminBulkStatus | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [undoBanner, setUndoBanner] = useState<{ ids: string[] } | null>(null);
@@ -208,17 +198,28 @@ export function VehiclesTable({
   const allVisibleSelected =
     items.length > 0 && items.every((item) => selected.includes(item.id));
   const someVisibleSelected = selected.length > 0 && !allVisibleSelected;
+  const selectMode = selecting || selected.length > 0;
+  const statusFilterActive = tab === "estoque" && Boolean(status);
+  const pendingFilterActive = tab === "estoque" && Boolean(pending);
+  const activeFilterCount =
+    (q ? 1 : 0) + (statusFilterActive ? 1 : 0) + (pendingFilterActive ? 1 : 0);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) {
+      if (
+        (event.key !== "/" && event.key !== "?") ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey
+      ) {
         return;
       }
       const tag = (event.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if ((event.target as HTMLElement | null)?.isContentEditable) return;
       event.preventDefault();
-      searchRef.current?.focus();
+      if (event.key === "?") setShortcutsOpen(true);
+      else searchRef.current?.focus();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -227,10 +228,20 @@ export function VehiclesTable({
   useEffect(() => {
     function onEscape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      if (bulkTarget || soldTarget || simpleSoldTarget || deleteTarget || actionsTarget) return;
-      if (selected.length === 0 && !undoBanner) return;
+      if (
+        bulkTarget ||
+        soldTarget ||
+        simpleSoldTarget ||
+        deleteTarget ||
+        actionsTarget ||
+        duplicateConfirmTarget ||
+        shortcutsOpen
+      )
+        return;
+      if (selected.length === 0 && !undoBanner && !selecting) return;
       event.preventDefault();
       setSelected([]);
+      setSelecting(false);
       setUndoBanner(null);
     }
     window.addEventListener("keydown", onEscape);
@@ -241,6 +252,9 @@ export function VehiclesTable({
     simpleSoldTarget,
     deleteTarget,
     actionsTarget,
+    duplicateConfirmTarget,
+    shortcutsOpen,
+    selecting,
     selected.length,
     undoBanner,
   ]);
@@ -378,11 +392,18 @@ export function VehiclesTable({
     );
   }
 
-  function runQuickAction(
+  function runQuickAction<
+    T extends {
+      ok: boolean;
+      message: string;
+      redirectUrl?: string;
+    },
+  >(
     id: string,
-    action: () => Promise<{ ok: boolean; message: string }>,
-    onOk?: () => void,
+    action: () => Promise<T>,
+    onOk?: (result: T) => void,
     options?: { refresh?: boolean },
+    onError?: (result: T) => void,
   ) {
     setBusyId(id);
     startTransition(async () => {
@@ -390,12 +411,20 @@ export function VehiclesTable({
         const result = await action();
         if (result.ok) {
           toast.success(result.message);
-          onOk?.();
+          onOk?.(result);
+          if (result.redirectUrl) {
+            router.push(result.redirectUrl);
+            return;
+          }
           // Destaque só muda a estrela e o contador local. Recarregar a página
           // aqui repetia a lista e os números sem alterar o que está na tela.
           if (options?.refresh !== false) router.refresh();
         } else {
-          toast.error(result.message);
+          if (onError) {
+            onError(result);
+          } else {
+            toast.error(result.message);
+          }
         }
       } catch {
         toast.error("Não foi possível concluir a ação.");
@@ -409,7 +438,8 @@ export function VehiclesTable({
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deleteVehicle(deleteTarget.id);
+      const result = await deleteVehicle(deleteTarget.id);
+        if (result && !result.ok) { toast.error(result.message); return; }
       toast.success("Veículo excluído.");
       if (deleteTarget.featured) {
         setFeaturedCount((count) => Math.max(0, count - 1));
@@ -440,8 +470,13 @@ export function VehiclesTable({
         `/api/admin/vehicles/${encodeURIComponent(target.id)}/sell`,
         { method: "PATCH", headers: { "Content-Type": "application/json" }, body: "{}" },
       );
-      const result = (await response.json()) as { ok?: boolean; message?: string };
+      const result = (await response.json()) as { ok?: boolean; message?: string; nextUrl?: string };
       if (!response.ok || !result.ok) {
+        if (result.nextUrl?.startsWith("/admin/vendas/nova")) {
+          toast.error(result.message ?? "Conclua a venda pelo assistente.");
+          router.push(result.nextUrl);
+          return;
+        }
         toast.error(result.message ?? "Não foi possível marcar o veículo como vendido.");
         return;
       }
@@ -533,6 +568,59 @@ export function VehiclesTable({
     }
   }
 
+  async function bulkFeature(next: boolean) {
+    const targets = items.filter(
+      (item) =>
+        selected.includes(item.id) &&
+        item.featured !== next &&
+        (!next || item.status === "disponivel"),
+    );
+    if (targets.length === 0) {
+      toast.error(
+        next
+          ? "Só anúncio disponível entra na home."
+          : "Nenhum dos selecionados está na home.",
+      );
+      return;
+    }
+    setBulkBusy(true);
+    let done = 0;
+    let lastError = "";
+    try {
+      for (const vehicle of targets) {
+        const result = await setVehicleFeatured(vehicle.id, next);
+        if (!result.ok) {
+          lastError = result.message;
+          break;
+        }
+        done += 1;
+        setFeaturedCount((count) => Math.max(0, count + (next ? 1 : -1)));
+        if (tab === "destaques" && !next) {
+          removeFromList(vehicle.id, "destaques");
+          continue;
+        }
+        setItems((current) =>
+          current.map((item) =>
+            item.id === vehicle.id ? { ...item, featured: next } : item,
+          ),
+        );
+      }
+      if (done > 0) {
+        toast.success(
+          next
+            ? `${done} na home (destaque).`
+            : `${done} tirado(s) da home.`,
+        );
+        router.refresh();
+      }
+      if (lastError) toast.error(lastError);
+    } catch {
+      toast.error("Não foi possível atualizar os destaques.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function undoBulkSold(ids: string[]) {
     const revert = bulkUndoStatus("vendido");
     if (!revert) return;
@@ -590,12 +678,36 @@ export function VehiclesTable({
     );
   }
 
-  function duplicate(vehicle: VehicleRow) {
+  function duplicate(
+    vehicle: VehicleRow,
+    options?: { replaceDraft?: boolean },
+  ) {
     runQuickAction(
       vehicle.id,
-      () => duplicateVehicle(vehicle.id),
-      () => {
-        void fetchPage(1, sort, true);
+      () => duplicateVehicle(vehicle.id, options),
+      (result) => {
+        if (!result.ok) return;
+        const currentAdminId = result.adminId ?? adminId;
+        if (currentAdminId) {
+          try {
+            rotateLocalDraftOnDuplicate(
+              [window.sessionStorage, window.localStorage],
+              currentAdminId,
+              window.sessionStorage,
+            );
+          } catch {}
+        }
+        if (!result.redirectUrl) {
+          void fetchPage(1, sort, true);
+        }
+      },
+      undefined,
+      (result) => {
+        if ("hasExistingDraft" in result && result.hasExistingDraft) {
+          setDuplicateConfirmTarget(vehicle);
+          return;
+        }
+        toast.error(result.message);
       },
     );
   }
@@ -616,8 +728,7 @@ export function VehiclesTable({
           disabled={items.length === 0}
           className="h-5 w-5 accent-brand"
         />
-        <span className="sm:hidden">Selecionar todos</span>
-        <span className="hidden sm:inline">Todos</span>
+        <span>Selecionar todos</span>
       </label>
       <p className="shrink-0 text-xs text-muted">
         {selected.length > 0
@@ -715,135 +826,226 @@ export function VehiclesTable({
         <p className="text-xs leading-relaxed text-muted">{stockNote}</p>
       ) : null}
 
-      <div className="border border-white/10 bg-ink/50 p-2 sm:p-3">
-        <form
-          className="flex items-stretch gap-2"
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            applyFilters({
-              q: (form.elements.namedItem("q") as HTMLInputElement).value,
-            });
-          }}
-        >
-          <input
-            ref={searchRef}
-            type="search"
-            name="q"
-            enterKeyHint="search"
-            defaultValue={q}
-            placeholder="Modelo ou placa"
-            aria-label="Buscar marca, modelo ou placa"
-            className={`${inputClass} min-w-0 flex-1`}
-          />
-          <button
-            type="submit"
-            disabled={isPending}
-            className={`${btn.outline} hidden shrink-0 px-4 sm:inline-flex`}
+      <div className="space-y-2">
+        <div className="flex items-stretch gap-2">
+          <form
+            className="flex min-w-0 flex-1 items-stretch gap-2"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              applyFilters({
+                q: (form.elements.namedItem("q") as HTMLInputElement).value,
+              });
+            }}
           >
-            {isPending ? "..." : "Buscar"}
-          </button>
-        </form>
-
-        <div className="mt-2 flex items-center gap-2">
-          <div className="hidden shrink-0 items-center gap-2 border-r border-white/10 pr-3 sm:flex">
-            {selectAll}
-          </div>
-          {tab === "estoque" ? (
-            <div
-              className={CHIP_SCROLL}
-              role="group"
-              aria-label="Filtrar por status"
+            <input
+              ref={searchRef}
+              type="search"
+              name="q"
+              enterKeyHint="search"
+              defaultValue={q}
+              placeholder="Marca, modelo ou placa"
+              aria-label="Buscar marca, modelo ou placa"
+              className={`${inputClass} min-w-0 flex-1`}
+            />
+            <button
+              type="submit"
+              disabled={isPending}
+              className={`${btn.outline} hidden shrink-0 px-4 sm:inline-flex`}
             >
-              {(
-                [
-                  { value: null, label: "Todos", count: estoqueCount },
-                  {
-                    value: "disponivel",
-                    label: "Disponível",
-                    count: availableCount,
-                  },
-                  {
-                    value: "reservado",
-                    label: "Reservado",
-                    count: reservedCount,
-                  },
-                ] as const
-              ).map((option) => {
-                const active =
-                  option.value === null ? !status : status === option.value;
-                return (
-                  <button
-                    key={option.label}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => applyFilters({ status: option.value, ...(option.value === "reservado" && pending === "antigos" ? { pending: "" as const } : {}) })}
-                    className={`${FILTER_PILL} ${
-                      active
-                        ? "bg-brand/25 text-cream"
-                        : "text-muted hover:bg-white/5 hover:text-cream"
-                    }`}
-                  >
+              {isPending ? "..." : "Buscar"}
+            </button>
+          </form>
+          <button
+            type="button"
+            aria-expanded={filtersOpen}
+            aria-controls="vehicles-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className={`${btn.outline} shrink-0 px-3`}
+          >
+            Filtros
+            {activeFilterCount > 0 ? (
+              <span className="ml-1.5 text-xs tabular-nums text-brand-orange">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            aria-pressed={selectMode}
+            onClick={() => {
+              if (selectMode) {
+                setSelecting(false);
+                setSelected([]);
+              } else {
+                setSelecting(true);
+              }
+            }}
+            className="min-h-11 shrink-0 px-2 text-xs font-semibold uppercase tracking-wide text-muted transition touch-manipulation hover:text-cream"
+          >
+            {selectMode ? "Concluir" : "Selecionar"}
+          </button>
+        </div>
+
+        {filtersOpen ? (
+          <div
+            id="vehicles-filters"
+            className="space-y-3 border border-white/10 bg-ink/50 p-3"
+          >
+            {tab === "estoque" ? (
+              <>
+                <div>
+                  <p className="mb-1.5 text-xs text-muted">Status</p>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por status">
+                    {(
+                      [
+                        { value: null, label: "Todos", count: estoqueCount },
+                        { value: "disponivel", label: "Disponível", count: availableCount },
+                        { value: "reservado", label: "Reservado", count: reservedCount },
+                      ] as const
+                    ).map((option) => {
+                      const active =
+                        option.value === null ? !status : status === option.value;
+                      return (
+                        <button
+                          key={option.label}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() =>
+                            applyFilters({
+                              status: option.value,
+                              ...(option.value === "reservado" && pending === "antigos"
+                                ? { pending: "" as const }
+                                : {}),
+                            })
+                          }
+                          className={`${FILTER_PILL} ${
+                            active
+                              ? "bg-brand/25 text-cream"
+                              : "text-muted hover:bg-white/5 hover:text-cream"
+                          }`}
+                        >
+                          {option.label}
+                          <span className="ml-1.5 text-xs tabular-nums opacity-70">
+                            {option.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs text-muted">Precisa de atenção</p>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Pendências do estoque">
+                    {(
+                      [
+                        { value: "", label: "Nenhuma" },
+                        { value: "sem-fotos", label: "Sem foto" },
+                        { value: "sem-preco", label: "Sem preço" },
+                        { value: "antigos", label: "60+ dias" },
+                      ] as const
+                    ).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={pending === option.value}
+                        disabled={isPending}
+                        onClick={() =>
+                          applyFilters({
+                            pending: option.value,
+                            ...(option.value === "antigos" ? { status: null } : {}),
+                          })
+                        }
+                        className={`${FILTER_PILL} ${
+                          pending === option.value
+                            ? "bg-brand/25 text-cream"
+                            : "text-muted hover:bg-white/5 hover:text-cream"
+                        } disabled:opacity-60`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : null}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted" htmlFor="vehicles-sort">
+                Ordenar
+              </label>
+              <select
+                id="vehicles-sort"
+                value={`${sort.key}:${sort.dir}`}
+                onChange={(event) => {
+                  const [key, dir] = event.target.value.split(":") as [
+                    SortKey,
+                    "asc" | "desc",
+                  ];
+                  changeSort({ key, dir });
+                }}
+                className="h-11 min-w-0 flex-1 border border-white/10 bg-transparent px-2 text-sm text-cream outline-none focus:border-brand sm:max-w-[14rem]"
+              >
+                {SORT_SELECT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
                     {option.label}
-                    <span className="ml-1.5 text-xs tabular-nums opacity-70">
-                      {option.count}
-                    </span>
-                  </button>
-                );
-              })}
+                  </option>
+                ))}
+              </select>
             </div>
-          ) : (
-            <div className="min-w-0 flex-1" />
-          )}
-          {q ? (
+          </div>
+        ) : null}
+
+        {activeFilterCount > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5" aria-label="Filtros ativos">
+            {q ? (
+              <ActiveChip label={`Busca: ${q}`} onClear={() => applyFilters({ q: "" })} />
+            ) : null}
+            {statusFilterActive ? (
+              <ActiveChip
+                label={STATUS_LABEL[status ?? ""] ?? String(status)}
+                onClear={() => applyFilters({ status: null })}
+              />
+            ) : null}
+            {pendingFilterActive ? (
+              <ActiveChip
+                label={
+                  pending === "sem-fotos"
+                    ? "Sem foto"
+                    : pending === "sem-preco"
+                      ? "Sem preço"
+                      : "60+ dias"
+                }
+                onClear={() => applyFilters({ pending: "" })}
+              />
+            ) : null}
             <button
               type="button"
-              onClick={() => applyFilters({ q: "" })}
-              className="min-h-11 shrink-0 px-2 text-xs text-muted underline-offset-4 transition touch-manipulation hover:text-cream hover:underline"
+              onClick={() => applyFilters({ q: "", status: null, pending: "" })}
+              className="min-h-8 px-1.5 text-xs text-muted underline-offset-4 hover:text-cream hover:underline"
             >
-              Limpar busca
+              Limpar
             </button>
-          ) : null}
-          <label className="sr-only" htmlFor="vehicles-sort">
-            Ordenar
-          </label>
-          <select
-            id="vehicles-sort"
-            value={`${sort.key}:${sort.dir}`}
-            onChange={(event) => {
-              const [key, dir] = event.target.value.split(":") as [
-                SortKey,
-                "asc" | "desc",
-              ];
-              changeSort({ key, dir });
-            }}
-            aria-label="Ordenar"
-            className="h-11 w-[8.25rem] shrink-0 border border-white/10 bg-transparent px-2 text-xs text-cream outline-none focus:border-brand sm:w-[10.5rem] sm:text-sm"
-          >
-            {SORT_SELECT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+          </div>
+        ) : null}
 
-      {tab === "estoque" ? <div className="space-y-2">
-        <div role="group" aria-label="Pendências do estoque" className="grid grid-cols-3 gap-2">
-          {([
-            { value: "", label: "Sem filtro" },
-            { value: "sem-fotos", label: "Sem fotos" },
-            { value: "antigos", label: "60+ dias" },
-          ] as const).map((option) => <button key={option.value} type="button" aria-pressed={pending === option.value}
-            disabled={isPending} onClick={() => applyFilters({ pending: option.value, ...(option.value === "antigos" ? { status: null } : {}) })}
-            className={`min-h-11 rounded-lg border px-2 py-2 text-xs transition ${pending === option.value ? "border-brand/40 bg-brand/10 text-cream" : "border-white/10 text-muted hover:text-cream"} disabled:opacity-60`}>
-            {option.label}
-          </button>)}
-        </div>
-        {pending ? <p role="status" className="text-xs leading-relaxed text-muted">{total} veículo(s) {pending === "sem-fotos" ? "sem fotos" : "disponível(is) há mais de 60 dias"}. Abra Editar para revisar o anúncio.</p> : null}
-      </div> : null}
+        {selectMode ? (
+          <div className="flex items-center gap-3 border-b border-white/10 pb-2">
+            {selectAll}
+          </div>
+        ) : null}
+        {pending && tab === "estoque" ? (
+          <p role="status" className="text-xs leading-relaxed text-muted">
+            {total} veículo(s){" "}
+            {pending === "sem-fotos"
+              ? "sem fotos"
+              : pending === "sem-preco"
+                ? "sem preço"
+                : "disponível(is) há mais de 60 dias"}
+            . Abra Editar para revisar o anúncio.
+          </p>
+        ) : null}
+      </div>
 
       {tab === "destaques" ? (
         <div className="border border-white/10 bg-ink/40 px-4 py-3 text-sm">
@@ -915,7 +1117,7 @@ export function VehiclesTable({
             {selected.length} selecionado(s)
             <span className="text-muted">
               {" "}
-              · máx. {ADMIN_BULK_MAX} · Esc limpa · só disponível/vendido
+              · máx. {ADMIN_BULK_MAX} · Esc cancela
             </span>
           </p>
           <div className="flex flex-wrap gap-2">
@@ -928,6 +1130,26 @@ export function VehiclesTable({
               >
                 Marcar disponível
               </button>
+            ) : null}
+            {tab !== "vendidos" ? (
+              <>
+                <button
+                  type="button"
+                  disabled={bulkBusy}
+                  onClick={() => void bulkFeature(true)}
+                  className={btn.outline}
+                >
+                  Destacar
+                </button>
+                <button
+                  type="button"
+                  disabled={bulkBusy}
+                  onClick={() => void bulkFeature(false)}
+                  className={btn.outline}
+                >
+                  Tirar da home
+                </button>
+              </>
             ) : null}
             <button
               type="button"
@@ -979,17 +1201,13 @@ export function VehiclesTable({
                 : "transition-opacity"
             }
           >
-            {selected.length > 0 ? (
-              <div className="mb-2 flex items-center justify-between gap-3 sm:hidden">
-                {selectAll}
-              </div>
-            ) : null}
             <ul className="space-y-2">
               {items.map((vehicle) => (
                 <VehicleAdminCard
                   key={vehicle.id}
                   vehicle={vehicle}
                   busy={busyId === vehicle.id}
+                  selectable={selectMode}
                   selected={selected.includes(vehicle.id)}
                   onToggleSelect={() => toggleSelected(vehicle.id)}
                   onMarkSold={() => setSoldTarget(vehicle)}
@@ -1030,6 +1248,27 @@ export function VehiclesTable({
           </div>
         </>
       )}
+
+      <ActionSheet
+        open={shortcutsOpen}
+        title="Atalhos do teclado"
+        onClose={() => setShortcutsOpen(false)}
+      >
+        <dl className="space-y-2 px-4 py-3 text-sm text-cream">
+          {[
+            ["/", "Buscar"],
+            ["?", "Mostrar esta lista"],
+            ["Esc", "Cancelar a seleção"],
+          ].map(([key, label]) => (
+            <div key={key} className="flex items-center justify-between gap-3">
+              <dt className="text-muted">{label}</dt>
+              <dd>
+                <kbd className="border border-white/20 px-2 py-0.5 text-xs">{key}</kbd>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </ActionSheet>
 
       <ActionSheet
         open={actionsTarget !== null}
@@ -1073,6 +1312,27 @@ export function VehiclesTable({
           />
         ) : null}
       </ActionSheet>
+
+      <ConfirmDialog
+        open={duplicateConfirmTarget !== null}
+        title="Substituir rascunho em andamento?"
+        description={
+          duplicateConfirmTarget
+            ? `Já existe um rascunho de novo veículo em andamento. Deseja substituí-lo pelos dados de ${duplicateConfirmTarget.brand} ${duplicateConfirmTarget.model}? O rascunho anterior será preservado como cópia de segurança.`
+            : undefined
+        }
+        confirmLabel="Substituir rascunho"
+        danger
+        loading={busyId === duplicateConfirmTarget?.id}
+        onCancel={() => setDuplicateConfirmTarget(null)}
+        onConfirm={() => {
+          const target = duplicateConfirmTarget;
+          setDuplicateConfirmTarget(null);
+          if (target) {
+            duplicate(target, { replaceDraft: true });
+          }
+        }}
+      />
 
       <ConfirmDialog
         open={soldTarget !== null}
@@ -1175,9 +1435,26 @@ export function VehiclesTable({
   );
 }
 
+function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/10 py-0.5 pl-2.5 pr-1 text-xs text-cream">
+      <span className="truncate">{label}</span>
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label={`Remover filtro ${label}`}
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-cream"
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
 function VehicleAdminCard({
   vehicle,
   busy,
+  selectable,
   selected,
   onToggleSelect,
   onMarkSold,
@@ -1186,6 +1463,7 @@ function VehicleAdminCard({
 }: {
   vehicle: VehicleRow;
   busy: boolean;
+  selectable: boolean;
   selected: boolean;
   onToggleSelect: () => void;
   onMarkSold: () => void;
@@ -1196,12 +1474,13 @@ function VehicleAdminCard({
   const title = `${vehicle.brand} ${vehicle.model}`;
   const missingPrice = !(vehicle.price > 0);
   const meta = adminCardMetaLine(vehicle);
+  const missing = publishMissingLine(vehicle);
   const showSold = adminCardShowsSoldAction(vehicle.status);
 
   return (
     <li className="overflow-hidden border border-white/10 bg-ink/50">
       <div className="flex gap-3 p-3 lg:gap-4">
-        <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
+        {selectable ? <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
           <span className="sr-only">Selecionar {title}</span>
           <input
             type="checkbox"
@@ -1209,7 +1488,7 @@ function VehicleAdminCard({
             onChange={onToggleSelect}
             className="h-5 w-5 accent-brand"
           />
-        </label>
+        </label> : null}
         <Link
           prefetch={false}
           href={`/admin/veiculos/${vehicle.id}`}
@@ -1253,6 +1532,7 @@ function VehicleAdminCard({
               <span className="mt-1 block text-xs leading-relaxed text-muted">
                 {meta}
               </span>
+              {missing ? <span className="mt-1 block text-xs text-brand-orange">{missing}</span> : null}
             </span>
             <span className="shrink-0 sm:text-right">
               {missingPrice ? (
@@ -1321,181 +1601,5 @@ function VehicleAdminCard({
         </button>
       </div>
     </li>
-  );
-}
-
-function SheetActions({
-  vehicle,
-  busy,
-  close,
-  onStatus,
-  onFeatured,
-  onDuplicate,
-  onMarkSold,
-  onMarkSoldSimple,
-  onDelete,
-  onPromo,
-}: {
-  vehicle: VehicleRow;
-  busy: boolean;
-  close: () => void;
-  onStatus: (status: string) => void;
-  onFeatured: () => void;
-  onDuplicate: () => void;
-  onMarkSold: () => void;
-  onMarkSoldSimple: () => void;
-  onDelete: () => void;
-  onPromo?: () => void;
-}) {
-  const run = (action: () => void) => () => {
-    close();
-    action();
-  };
-  const beforeDelete = ADMIN_CARD_OVERFLOW_ACTIONS.filter(
-    (action) => action !== "excluir",
-  );
-
-  return (
-    <>
-      <ActionSheetLink
-        href={`/admin/veiculos/${vehicle.id}`}
-        icon={<IconPencil className="h-4 w-4" />}
-        label="Editar anúncio"
-        hint="Preço, fotos e ficha"
-        onNavigate={close}
-      />
-      {onPromo ? (
-        <ActionSheetButton
-          icon={<IconExternal className="h-4 w-4" />}
-          label="Kit de divulgação"
-          hint="WhatsApp, Instagram e card Status"
-          onClick={run(onPromo)}
-        />
-      ) : null}
-      {beforeDelete.map((action) => (
-        <OverflowAction
-          key={action}
-          action={action}
-          vehicle={vehicle}
-          busy={busy}
-          close={close}
-          run={run}
-          onFeatured={onFeatured}
-          onDuplicate={onDuplicate}
-          onDelete={onDelete}
-        />
-      ))}
-      {adminCardOverflowStatuses(vehicle.status).map((option) => (
-        <ActionSheetButton
-          key={option.value}
-          icon={<IconCheck className="h-4 w-4" />}
-          label={option.label}
-          disabled={busy}
-          onClick={run(() => onStatus(option.value))}
-        />
-      ))}
-      {adminCardShowsSoldAction(vehicle.status) ? (
-        <>
-          <ActionSheetButton
-            icon={<IconCheck className="h-4 w-4" />}
-            label="Marcar como vendida (simples)"
-            hint="Sem comprador, preço ou registro de faturamento"
-            disabled={busy}
-            onClick={run(onMarkSoldSimple)}
-          />
-          <ActionSheetButton
-            icon={<IconCash className="h-4 w-4" />}
-            label="Registrar venda completa"
-            hint="Abre o formulário atual de venda"
-            tone="warning"
-            disabled={busy}
-            onClick={run(onMarkSold)}
-          />
-        </>
-      ) : null}
-      <OverflowAction
-        action="excluir"
-        vehicle={vehicle}
-        busy={busy}
-        close={close}
-        run={run}
-        onFeatured={onFeatured}
-        onDuplicate={onDuplicate}
-        onDelete={onDelete}
-      />
-    </>
-  );
-}
-
-function OverflowAction({
-  action,
-  vehicle,
-  busy,
-  close,
-  run,
-  onFeatured,
-  onDuplicate,
-  onDelete,
-}: {
-  action: AdminCardOverflowAction;
-  vehicle: VehicleRow;
-  busy: boolean;
-  close: () => void;
-  run: (action: () => void) => () => void;
-  onFeatured: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-}) {
-  if (action === "operacao") {
-    return (
-      <ActionSheetLink
-        href={`/admin/veiculos/${vehicle.id}?view=operacao`}
-        icon={<IconClipboard className="h-4 w-4" />}
-        label="Operação"
-        hint="Custos, documentos, chave e manual"
-        onNavigate={close}
-      />
-    );
-  }
-  if (action === "site") {
-    return (
-      <ActionSheetLink
-        href={vehiclePath(vehicle)}
-        external
-        icon={<IconExternal className="h-4 w-4" />}
-        label="Ver no site"
-        onNavigate={close}
-      />
-    );
-  }
-  if (action === "destacar") {
-    return (
-      <ActionSheetButton
-        icon={<IconStar className="h-4 w-4" filled={vehicle.featured} />}
-        label={vehicle.featured ? "Tirar da vitrine" : "Destacar na home"}
-        hint={`Até ${MAX_HOME_FEATURED} destaques`}
-        disabled={busy}
-        onClick={run(onFeatured)}
-      />
-    );
-  }
-  if (action === "duplicar") {
-    return (
-      <ActionSheetButton
-        icon={<IconCopy className="h-4 w-4" />}
-        label="Duplicar anúncio"
-        disabled={busy}
-        onClick={run(onDuplicate)}
-      />
-    );
-  }
-  return (
-    <ActionSheetButton
-      icon={<IconTrash className="h-4 w-4" />}
-      label="Excluir definitivamente"
-      hint="Só para duplicata ou erro — a página vira 404"
-      tone="danger"
-      onClick={run(onDelete)}
-    />
   );
 }

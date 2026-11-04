@@ -2,8 +2,8 @@
 
 import { cloneElement, isValidElement, useId, type Dispatch, type SetStateAction, type ReactNode } from "react";
 import type { Facets, FilterValues } from "./StockFilters";
-import { CATEGORY_FILTER_OPTIONS, BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, KM_OPTIONS, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
-import { modelAfterBrandChange, modelFilterOptions } from "@/lib/stock-query";
+import { CATEGORY_FILTER_OPTIONS, BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
+import { modelAfterBrandChange, modelFilterOptions, sanitizeFiltersForCategory } from "@/lib/stock-query";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { transmissionFilterOptions, transmissionFilterParam } from "@/lib/vehicle-display";
 import { stockRangeError } from "@/lib/stock-range-validation";
@@ -40,7 +40,13 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   <select
                     value={draft.category}
                     onChange={(event) =>
-                      setDraft({ ...draft, category: event.target.value })
+                      setDraft(
+                        sanitizeFiltersForCategory(
+                          draft,
+                          event.target.value,
+                          facets.models,
+                        ),
+                      )
                     }
                     className={selectClass}
                   >
@@ -158,7 +164,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   onChange={(event) => setDraft({ ...draft, maxKm: event.target.value })}
                   className={selectClass}
                 >
-                  {KM_OPTIONS.map((option) => (
+                  {kmFilterOptions(draft.maxKm).map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>

@@ -151,7 +151,7 @@ test("medidas públicas batem com o layout e com o upload", () => {
   assert.equal(GALLERY_FILE_WIDTH, GALLERY_MAX_EDGE);
   assert.equal(
     GALLERY_HERO_SIZES,
-    "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), (min-width: 640px) 100vw, 60vw",
+    "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), 100vw",
   );
   assert.equal(
     CARD_SIZES,

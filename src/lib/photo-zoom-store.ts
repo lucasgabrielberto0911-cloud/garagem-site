@@ -1,3 +1,4 @@
+import { e2ePhotoFixture } from "./e2e-photo-fixture";
 import { encodeZoomImage, ZOOM_MAX_BYTES } from "./photo-zoom-image";
 import { zoomObjectPath } from "./photo-zoom-path";
 import { masterObjectPathFromGalleryPath } from "./photo-master";
@@ -30,6 +31,8 @@ async function load(galleryPath: string) {
 }
 
 export async function loadPhotoZoom(galleryPath: string) {
+  const fixture = await e2ePhotoFixture();
+  if (fixture) return fixture;
   const existing = pending.get(galleryPath);
   if (existing) return existing;
   if (pending.size >= 4) return null;

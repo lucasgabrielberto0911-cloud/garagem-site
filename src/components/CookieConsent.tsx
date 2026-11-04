@@ -25,10 +25,10 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-label="Consentimento de cookies"
-      className="site-consent pointer-events-auto flex flex-col gap-1 border border-white/15 bg-ink/95 px-2.5 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur sm:px-3 sm:py-3"
+      className="site-consent pointer-events-auto flex flex-col gap-1 border border-white/15 bg-ink/95 px-2.5 py-1 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur sm:px-3 sm:py-2.5"
     >
-      <p className="text-xs leading-snug text-cream/90">
-        Analytics só com aceite.{" "}
+      <p className="text-[11px] leading-tight text-cream/90 sm:text-xs sm:leading-snug">
+        Usamos cookies para medir o site e anúncios (atribuição publicitária, Meta/GA4). Aceita?{" "}
         <Link
           href="/privacidade"
           prefetch={false}

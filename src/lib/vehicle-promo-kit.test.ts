@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   buildWhatsAppPromo,
   buildInstagramPromo,
   type PromoVehicle,
 } from "./vehicle-promo-kit";
+import { VehiclePromoKitModal } from "@/components/admin/VehiclePromoKitModal";
 
 const mockVehicle: PromoVehicle = {
   id: "cmshv22g9000fl204fk6qz9l2",
@@ -54,4 +57,16 @@ test("buildInstagramPromo: gera legenda com hashtags e respeita veículo vendido
   const soldText = buildInstagramPromo({ ...mockVehicle, status: "vendido" });
   assert.match(soldText, /🏷️ Vendido/);
   assert.doesNotMatch(soldText, /119\.900/);
+});
+
+test("VehiclePromoKitModal: botão fechar tem alvo de toque mínimo de 44x44px", () => {
+  const html = renderToStaticMarkup(
+    createElement(VehiclePromoKitModal, {
+      vehicle: mockVehicle,
+      open: true,
+      onClose: () => {},
+    }),
+  );
+  assert.match(html, /<button\b[^>]*aria-label="Fechar"/);
+  assert.match(html, /class="[^"]*\bh-11\b[^"]*\bw-11\b[^"]*"[^>]*aria-label="Fechar"/);
 });

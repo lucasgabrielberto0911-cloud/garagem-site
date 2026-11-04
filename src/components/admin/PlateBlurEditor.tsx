@@ -194,9 +194,9 @@ export function PlateBlurEditor({
         role="dialog"
         aria-modal="true"
         aria-labelledby="plate-blur-title"
-        className="flex h-[100dvh] w-full max-w-4xl flex-col border border-white/10 bg-ink shadow-2xl sm:h-[min(920px,100dvh)]"
+        className="flex h-[100dvh] w-full max-w-4xl flex-col overflow-y-auto border border-white/10 bg-ink shadow-2xl sm:h-[min(920px,100dvh)]"
       >
-        <header className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
+        <header className={`${zoom > 1 ? "hidden sm:flex" : "flex"} shrink-0 items-start justify-between gap-3 border-b border-white/10 px-4 py-3`}>
           <div>
             <h2
               id="plate-blur-title"
@@ -238,7 +238,7 @@ export function PlateBlurEditor({
           />
           <span className="text-xs">{zoom}×</span>
         </div>
-        <div className="relative min-h-0 flex-1 overflow-auto bg-black">
+        <div className="relative min-h-[240px] flex-1 overflow-auto overscroll-contain bg-black">
           <div
             ref={stageRef}
             className="relative bg-black"
@@ -315,7 +315,7 @@ export function PlateBlurEditor({
             ) : null}
           </div>
         </div>
-        <footer className="space-y-3 border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <footer className="shrink-0 space-y-3 border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {blurred ? (
             <p className="border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">
               Região borracha. Marque outra se precisar, feche e{" "}

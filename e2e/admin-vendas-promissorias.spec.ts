@@ -29,9 +29,12 @@ const test = base.extend<{ saleData: { vehicleId: string; customerId: string; no
     } finally {
       await db.promissoryNote.deleteMany({ where: { customerId: customer.id } });
       await db.sale.deleteMany({ where: { vehicleId: vehicle.id } });
+      await db.commercialDocument.deleteMany({ where: { vehicleId: vehicle.id } });
+      await db.vehicleReservation.deleteMany({ where: { vehicleId: vehicle.id } });
       await db.vehicle.delete({ where: { id: vehicle.id } });
       await db.customer.delete({ where: { id: customer.id } });
       await db.adminAudit.deleteMany({ where: { adminId: admin.id } });
+      await db.adminDraft.deleteMany({ where: { adminId: admin.id } });
       await db.admin.delete({ where: { id: admin.id } });
     }
   },
@@ -48,6 +51,45 @@ async function paymentStage(page: Page) {
   await next(page, "Pagamento");
   await page.getByRole("button", { name: "+ Promissória", exact: true }).click();
 }
+
+test("venda: erro posiciona foco na busca, parcela, placa e valor inválidos", async ({ page, saleData }) => {
+  await page.goto("/admin/vendas/nova");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("combobox")).toBeFocused();
+  await page.goto(`/admin/vendas/nova?veiculo=${saleData.vehicleId}`);
+  await next(page, "Cliente");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("combobox")).toBeFocused();
+  await expect(page.getByRole("status").filter({ hasText: "Rascunho guardado" })).toBeVisible();
+  await page.goto(`/admin/vendas/nova?veiculo=${saleData.vehicleId}&cliente=${saleData.customerId}`);
+  await next(page, "Cliente");
+  await expect(page.getByRole("heading", { name: "Cliente", exact: true })).toBeFocused();
+  await expect(page.locator('[aria-current="step"]')).toContainText("Cliente");
+  await next(page, "Pagamento");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("button", { name: "+ À vista/PIX", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "+ Financiamento", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Número de parcelas", { exact: true })).toBeFocused();
+  await page.getByLabel("Número de parcelas", { exact: true }).fill("12");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Valor financiado", { exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "✓ Financiamento", exact: true }).click();
+  await page.getByRole("button", { name: "+ Troca", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Veículo/descrição", { exact: true })).toBeFocused();
+  await page.getByLabel("Veículo/descrição", { exact: true }).fill("Veículo fictício");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Placa", { exact: true })).toBeFocused();
+  await page.getByLabel("Placa", { exact: true }).fill("ABC1D23");
+  await page.getByRole("button", { name: "+ Cartão", exact: true }).click();
+  await page.getByLabel("Valor", { exact: true }).first().fill("1.000,00");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Parcelas", { exact: true })).toBeFocused();
+  await page.getByLabel("Parcelas", { exact: true }).fill("2");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Valor", { exact: true }).last()).toBeFocused();
+});
 
 async function review(page: Page) {
   await next(page, "Vendedor");
@@ -78,8 +120,8 @@ test("contrato: notas existentes + PIX, divergência e nota paga não deixam ven
   await paymentStage(page);
   const panel = page.getByRole("region", { name: "Pagamento em promissórias" });
   await panel.getByRole("checkbox", { name: new RegExp(`Nota nº ${saleData.number} ·`) }).check();
-  await expect(page.getByRole("button", { name: "Continuar", exact: true })).toBeDisabled();
-  await expect(page.getByText(/Falta informar/)).toContainText("1.000,00");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: /Faltam/ })).toContainText(/1\.000,00/);
   await page.getByRole("button", { name: /À vista\/PIX/ }).click();
   await page.getByLabel("Valor", { exact: true }).fill("1.000,00");
   await page.getByLabel("Valor", { exact: true }).blur();

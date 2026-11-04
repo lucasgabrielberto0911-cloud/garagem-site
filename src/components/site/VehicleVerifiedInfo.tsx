@@ -1,5 +1,5 @@
 import { IconShieldCheck } from "@/components/site/icons";
-import { publicPhotoSrc } from "@/lib/public-photo-url";
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { galleryThumbSrc } from "@/lib/stock-query";
 import type { PublicVerifiedItem } from "@/lib/vehicle-verified";
 
@@ -35,7 +35,7 @@ export function VehicleVerifiedList({
                   // eslint-disable-next-line @next/next/no-img-element -- fotos públicas por /api/fotos, sem cota /_next/image
                   <img
                     key={photo.id}
-                    src={publicPhotoSrc(galleryThumbSrc(photo))}
+                    src={publicVehiclePhotoSrc(galleryThumbSrc(photo))}
                     alt={`${item.label}: ${alt}`}
                     width={480}
                     height={360}

@@ -1,4 +1,30 @@
+import { isCardVariantPath } from "@/lib/cover-frame";
+import { publicPhotoSrc } from "@/lib/public-photo-url";
+import { coverSrc } from "@/lib/stock-query";
+
 export type CoverAssessment = { width: number; height: number; warnings: string[] };
+
+/**
+ * Resolve a URL leve (miniatura 480×360 do card) para medir a capa sem
+ * baixar a foto inteira do Storage (evita egress no admin).
+ */
+export function coverAssessmentSrc(
+  coverUrl?: string | null,
+  thumbnailUrl?: string | null,
+): string {
+  const thumb = (thumbnailUrl ?? "").trim();
+  if (thumb) return publicPhotoSrc(thumb);
+
+  const raw = (coverUrl ?? "").trim();
+  if (!raw) return "";
+
+  if (raw.startsWith("/fotos/v1/original/") && !isCardVariantPath(raw)) {
+    return raw.replace("/fotos/v1/original/", "/fotos/v1/480x360-cover-q65/");
+  }
+
+  const card = coverSrc([{ url: raw, thumbnailUrl: null }]) ?? raw;
+  return publicPhotoSrc(card);
+}
 
 /** Apenas sinais para revisão humana, nunca um bloqueio de publicação. */
 export function assessCoverPhoto(width: number, height: number, pixels: Uint8ClampedArray, sampleWidth: number, sampleHeight: number): CoverAssessment {

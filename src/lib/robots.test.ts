@@ -22,6 +22,8 @@ test("robots.txt permite catalog e fotos para agentes Meta sem abrir /api para o
     ? defaultRule.disallow
     : [defaultRule.disallow];
   assert.ok(defaultDisallow.includes("/api"));
+  assert.ok(defaultDisallow.includes("/atalho"));
+  assert.ok(defaultDisallow.includes("/atalho/"));
   assert.equal(defaultRule.allow, "/");
 });
 
@@ -43,6 +45,7 @@ test("regra mais específica libera só o feed exato e as fotos para Meta", () =
       ["/api/estoque", false],
       ["/api/admin", false],
       ["/admin/veiculos", false],
+      ["/atalho/promo", false],
     ] as const) {
       const matches = [...allows.map(value => ({ value, allow: true })), ...blocks.map(value => ({ value, allow: false }))]
         .filter(({ value }) => value.endsWith("$") ? path === value.slice(0, -1) : path.startsWith(value))

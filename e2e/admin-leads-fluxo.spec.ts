@@ -66,6 +66,13 @@ async function avancarEtapa(page: import("@playwright/test").Page, etapa: number
   }
 }
 
+async function escolherCidade(page: import("@playwright/test").Page) {
+  // Na criação, a cidade fica em "Mais detalhes" (recolhido) na etapa 3.
+  const detalhes = page.locator("#vehicle-more-details");
+  if ((await detalhes.getAttribute("open")) === null) await detalhes.locator(":scope > summary").click();
+  await detalhes.getByRole("button", { name: "Linhares ES", exact: true }).click();
+}
+
 async function adicionarFotos(page: import("@playwright/test").Page) {
   const fotos = samples.flatMap(sample => sample.photos).slice(0, 2)
     .map(({ url, thumbnailUrl }) => ({ url, thumbnailUrl }));
@@ -188,8 +195,9 @@ test("veículo: legenda inteira do Fastback publica 15 opcionais agrupados e per
   await form.getByLabel("Colar legenda", { exact: true }).fill(fastbackLegend);
   await expect(form.locator('[name="description"]')).toHaveValue(parsed.description);
   await expect(form.locator('[name="priceDisplay"]')).toHaveValue("106.900");
+  await avancarEtapa(page, 3);
+  await escolherCidade(page);
   await avancarEtapa(page, 4);
-  await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
   await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
   await expect.poll(() => prisma.vehicle.count({ where: { model: conta.prefixo } })).toBe(1);
   const vehicle = await prisma.vehicle.findFirstOrThrow({ where: { model: conta.prefixo } });
@@ -257,8 +265,9 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await form.getByRole("button", { name: "Próximo", exact: true }).click();
   await form.locator('[name="priceDisplay"]').fill(" R$ 87.654,00 ");
   await form.getByLabel("Colar legenda", { exact: true }).fill("Veículo revisado e bem cuidado.");
+  await avancarEtapa(page, 3);
+  await escolherCidade(page);
   await avancarEtapa(page, 4);
-  await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
   await form.getByRole("button", { name: "Voltar", exact: true }).click();
   await expect(page.locator("#wizard-title")).toContainText("Etapa 3 de 4");
   await form.getByRole("button", { name: "Voltar", exact: true }).click();
@@ -309,7 +318,7 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await expect(page.getByText("Fotos inválidas.", { exact: true })).toBeVisible();
   await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement, fotos) => { input.value = fotos; }, fotosValidas);
   await form.getByRole("button", { name: "Voltar", exact: true }).click();
-  await expect(page.locator("#wizard-title")).toHaveText("Etapa 3 de 4: Descrição, opcionais e preço");
+  await expect(page.locator("#wizard-title")).toHaveText("Etapa 3 de 4: Preço e anúncio");
   await form.locator('[name="priceDisplay"]').fill("85.900");
   await avancarEtapa(page, 4);
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
