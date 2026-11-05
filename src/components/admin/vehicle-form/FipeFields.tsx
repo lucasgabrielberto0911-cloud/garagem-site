@@ -25,15 +25,18 @@ export function FipeDataLink({ form, label }: { form: FipeForm; label?: string }
 export function FipePriceLine({ form }: { form: FipeForm }) {
   if (!form.brand.trim() || !form.model.trim() || !/^(19|20)\d{2}$/.test(form.yearModel)) return null;
   const quote = form.fipe.quote;
+  const stock = quote?.stock;
+  function applyPrice(price: number) {
+    form.setValues(current => ({ ...current, price: moneyInput(price) }));
+    form.setDirty(true);
+    form.setErrors(current => { const next = { ...current }; delete next.price; return next; });
+  }
   return <div className="col-span-2 text-xs leading-relaxed text-muted">
     {quote ? <>
       <span title={`Referência: ${quote.vehicle.reference} · código ${quote.vehicle.code}`}>FIPE {formatAdminMoney(quote.vehicle.price)}</span>
       {quote.stock ? <> · estoque parecido ({quote.stock.count}): {formatAdminMoney(quote.stock.min)} a {formatAdminMoney(quote.stock.max)} · média {formatAdminMoney(quote.stock.average)}</> : null}
-      {" · "}<button type="button" className="min-h-11 underline underline-offset-4 hover:text-cream" onClick={() => {
-        form.setValues(current => ({ ...current, price: moneyInput(quote.vehicle.price) }));
-        form.setDirty(true);
-        form.setErrors(current => { const next = { ...current }; delete next.price; return next; });
-      }}>Usar {formatAdminMoney(quote.vehicle.price)}</button>
+      {" · "}<button type="button" className="min-h-11 underline underline-offset-4 hover:text-cream" onClick={() => applyPrice(quote.vehicle.price)}>Usar {formatAdminMoney(quote.vehicle.price)}</button>
+      {stock ? <>{" · "}<button type="button" className="min-h-11 underline underline-offset-4 hover:text-cream" onClick={() => applyPrice(stock.average)}>Usar média do estoque ({formatAdminMoney(stock.average)})</button></> : null}
     </> : <FipeDataLink form={form} label="Consultar referência FIPE" />}
   </div>;
 }

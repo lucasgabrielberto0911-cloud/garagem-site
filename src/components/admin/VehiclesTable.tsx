@@ -177,7 +177,7 @@ export function VehiclesTable({
   const searchRef = useRef<HTMLInputElement>(null);
   const [loadingSort, setLoadingSort] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const loadingRef = useRef(false);
+  const requestRef = useRef<AbortController | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VehicleRow | null>(null);
   const [duplicateConfirmTarget, setDuplicateConfirmTarget] = useState<VehicleRow | null>(null);
   const [soldTarget, setSoldTarget] = useState<VehicleRow | null>(null);
@@ -193,6 +193,8 @@ export function VehiclesTable({
   const [bulkBusy, setBulkBusy] = useState(false);
   const [undoBanner, setUndoBanner] = useState<{ ids: string[] } | null>(null);
   const [actionsTarget, setActionsTarget] = useState<VehicleRow | null>(null);
+
+  useEffect(() => () => requestRef.current?.abort(), []);
 
   const hasMore = items.length < total;
   const allVisibleSelected =
@@ -265,9 +267,14 @@ export function VehiclesTable({
       nextSort: { key: SortKey; dir: "asc" | "desc" },
       replace: boolean,
     ) => {
-      if (loadingRef.current && !replace) return;
-      loadingRef.current = true;
-      if (replace) setLoadingSort(true);
+      if (requestRef.current && !replace) return;
+      requestRef.current?.abort();
+      const controller = new AbortController();
+      requestRef.current = controller;
+      if (replace) {
+        setLoadingMore(false);
+        setLoadingSort(true);
+      }
       else setLoadingMore(true);
       setLoadError(false);
       try {
@@ -283,12 +290,14 @@ export function VehiclesTable({
         search.set("pageSize", String(pageSize));
         const response = await fetch(
           `/api/admin/veiculos?${search.toString()}`,
+          { signal: controller.signal },
         );
         if (!response.ok) throw new Error("fetch");
         const data = (await response.json()) as {
           vehicles?: VehicleRow[];
           total?: number;
         };
+        if (controller.signal.aborted) return;
         const incoming = (data.vehicles ?? []).map(hydrateVehicle);
         setTotal(data.total ?? 0);
         if (replace) {
@@ -305,12 +314,15 @@ export function VehiclesTable({
           setPage(nextPage);
         }
       } catch {
+        if (controller.signal.aborted) return;
         setLoadError(true);
         toast.error("Não foi possível carregar os veículos.");
       } finally {
-        loadingRef.current = false;
-        setLoadingMore(false);
-        setLoadingSort(false);
+        if (requestRef.current === controller) {
+          requestRef.current = null;
+          setLoadingMore(false);
+          setLoadingSort(false);
+        }
       }
     },
     [pageSize, q, tab, status, pending],

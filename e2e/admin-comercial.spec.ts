@@ -521,7 +521,8 @@ test.describe("fluxo único de venda", () => {
     // afterAll limpa as reservas antes de excluir o cliente (FK RESTRICT).
   });
 
-  test("rejeita CPF duplicado ao cadastrar e atualizar cliente e limpa RG ao trocar para novo", async ({ page, request, context, baseURL }) => {
+  // Cada cenário usa um contexto próprio, sem recuperar salvamentos pendentes do anterior.
+  for (const useNewCustomer of [false, true]) test(`rejeita CPF duplicado ao ${useNewCustomer ? "cadastrar cliente e limpa RG ao trocar para novo" : "atualizar cliente"}`, async ({ page, request, context, baseURL }) => {
     const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
     expect(login.ok()).toBeTruthy();
     const cookie = login.headers()["set-cookie"].split(";")[0];
@@ -529,38 +530,36 @@ test.describe("fluxo único de venda", () => {
     await db.customer.update({ where: { id: customerId }, data: { rg: "MG-12.345.678", cpf: null } });
 
     const actor = await db.admin.findUniqueOrThrow({ where: { email: "comercial@local.test" } });
-    for (const useNewCustomer of [false, true]) {
-      await db.adminDraft.deleteMany({ where: { adminId: actor.id, key: `sale:${flowVehicleId}:any` } });
-      await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
-      await page.waitForLoadState("networkidle");
-      await page.getByRole("button", { name: "Continuar" }).click();
-      if (useNewCustomer) {
-        await page.getByRole("combobox").click();
-        await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
-        await expect(page.getByLabel("RG")).toHaveValue("MG-12.345.678");
-        await page.getByLabel("Cadastrar cliente nesta venda").check();
-        await expect(page.getByLabel("RG")).toHaveValue("");
-        await page.getByLabel("Nome").fill("Novo comprador");
-        await page.getByLabel("Telefone").fill("27988887777");
-      } else {
-        await page.getByRole("combobox").click();
-        await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
-        await page.getByLabel("CPF").fill("529.982.247-25");
-      }
+    await db.adminDraft.deleteMany({ where: { adminId: actor.id, key: `sale:${flowVehicleId}:any` } });
+    await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    if (useNewCustomer) {
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+      await expect(page.getByLabel("RG")).toHaveValue("MG-12.345.678");
+      await page.getByLabel("Cadastrar cliente nesta venda").check();
+      await expect(page.getByLabel("RG")).toHaveValue("");
+      await page.getByLabel("Nome").fill("Novo comprador");
+      await page.getByLabel("Telefone").fill("27988887777");
+    } else {
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
       await page.getByLabel("CPF").fill("529.982.247-25");
-      await page.getByRole("button", { name: "Continuar" }).click();
-      await page.getByLabel("Valor total negociado").fill("67.000,00");
-      await page.getByRole("button", { name: /À vista\/PIX/ }).click();
-      await page.getByLabel("Valor", { exact: true }).fill("67.000,00");
-      await page.getByLabel("Valor", { exact: true }).blur();
-      await page.getByRole("button", { name: "Continuar" }).click();
-      await expect(page.getByRole("heading", { name: "Vendedor" })).toBeVisible();
-      await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
-      await page.getByLabel("Comissão (R$)").fill("0");
-      await page.getByRole("button", { name: "Continuar" }).click();
-      await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
-      await expect(page.getByText("Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", { exact: true })).toHaveRole("alert");
     }
+    await page.getByLabel("CPF").fill("529.982.247-25");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByLabel("Valor total negociado").fill("67.000,00");
+    await page.getByRole("button", { name: /À vista\/PIX/ }).click();
+    await page.getByLabel("Valor", { exact: true }).fill("67.000,00");
+    await page.getByLabel("Valor", { exact: true }).blur();
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(page.getByRole("heading", { name: "Vendedor" })).toBeVisible();
+    await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
+    await page.getByLabel("Comissão (R$)").fill("0");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
+    await expect(page.getByText("Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", { exact: true })).toHaveRole("alert");
     expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(0);
   });
 });

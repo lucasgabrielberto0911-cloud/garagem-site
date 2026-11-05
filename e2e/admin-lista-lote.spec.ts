@@ -122,3 +122,52 @@ test("atalhos: / foca a busca e ? lista os atalhos", async ({ page, tag }) => {
     });
   }).toPass({ timeout: 15_000 });
 });
+
+test("ordenação mantém a consulta mais recente quando as respostas chegam fora de ordem", async ({ page, tag }) => {
+  await page.goto(`/admin/veiculos?q=${tag}`);
+  await expect(page.getByText(`${tag} Alfa`)).toBeVisible();
+  const rows = await prisma.vehicle.findMany({ where: { brand: tag } });
+  let releaseOld!: () => void;
+  const oldGate = new Promise<void>(resolve => { releaseOld = resolve; });
+  let releaseCurrent!: () => void;
+  const currentGate = new Promise<void>(resolve => { releaseCurrent = resolve; });
+  let oldStarted!: () => void;
+  const started = new Promise<void>(resolve => { oldStarted = resolve; });
+  let currentStarted!: () => void;
+  const current = new Promise<void>(resolve => { currentStarted = resolve; });
+  let oldFinished!: () => void;
+  const finished = new Promise<void>(resolve => { oldFinished = resolve; });
+  await page.route("**/api/admin/veiculos?**", async route => {
+    const ascending = new URL(route.request().url()).searchParams.get("dir") === "asc";
+    if (ascending) { oldStarted(); await oldGate; }
+    else { currentStarted(); await currentGate; }
+    await route.fulfill({ json: {
+      vehicles: rows.filter(row => row.model === (ascending ? "Alfa" : "Gama")),
+      total: 1,
+    } }).catch(() => { /* A consulta anterior pode ter sido cancelada pelo navegador. */ });
+    if (ascending) oldFinished();
+  });
+  try {
+    await page.getByRole("button", { name: /^Filtros/ }).click();
+    const sort = page.getByRole("combobox", { name: "Ordenar" });
+    await sort.selectOption("price:asc");
+    await started;
+    const cancelled = page.waitForEvent("requestfailed", request =>
+      request.url().includes("/api/admin/veiculos?") &&
+      new URL(request.url()).searchParams.get("dir") === "asc",
+    );
+    await sort.selectOption("price:desc");
+    await current;
+    releaseCurrent();
+    await expect(page.getByText(`${tag} Gama`)).toBeVisible();
+    releaseOld();
+    await cancelled;
+    await finished;
+    await expect(page.getByText(`${tag} Alfa`)).toHaveCount(0);
+    await expect(page.getByText("Não foi possível carregar os veículos.")).toBeHidden();
+    await expect(sort).toHaveValue("price:desc");
+  } finally {
+    releaseOld();
+    releaseCurrent();
+  }
+});

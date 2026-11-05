@@ -77,6 +77,13 @@ export function IdentitySection({
           })}
         </div>
       </div>
+      <div className="mb-4 border border-white/10 p-3">
+        <FipeDataLink form={form} />
+        <p className="text-xs leading-relaxed text-muted">
+          Preencha marca, modelo, versão, ano modelo e combustível pela FIPE.
+          A consulta não usa a placa.
+        </p>
+      </div>
       <Field
         label="Placa (interna)"
         error={errors.plate}
@@ -121,7 +128,6 @@ export function IdentitySection({
               className={`${inputClass} ${errors.model ? errorBorder : ""}`}
             />
           </Field>
-          <FipeDataLink form={form} />
         </div>
         <Field label={isMoto ? "Versão / cilindrada" : "Versão"}>
           <input

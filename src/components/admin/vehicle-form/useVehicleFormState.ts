@@ -406,7 +406,8 @@ export function useVehicleFormState({
     setStep(next);
     if (mode === "create") setDirty(true);
     if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
+      // Evita que a rolagem suave global continue movendo os campos da nova etapa.
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }
     requestAnimationFrame(() =>
       document.getElementById("wizard-title")?.focus({ preventScroll: true }),
