@@ -7,6 +7,7 @@ import { encodeFramedCardSet } from "@/lib/image-variants";
 import { ownPublicPhotoPath } from "@/lib/own-photo-path";
 import { masterObjectPathFromGalleryPath } from "@/lib/photo-master";
 import { downloadPrivateMaster } from "@/lib/photo-master-store";
+import { downloadR2Photo, getR2PublicUrl, isR2PhotoUrl } from "@/lib/r2-photos";
 import { getSupabaseAdmin, hasSupabaseServiceRole, VEHICLE_PHOTOS_BUCKET } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -37,14 +38,29 @@ export async function POST(request: Request) {
     const masterPath = masterObjectPathFromGalleryPath(galleryPath);
     let source = masterPath ? await downloadPrivateMaster(masterPath) : null;
     if (!source) {
-      const { data, error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).download(galleryPath);
-      if (error || !data || data.size > MAX_GALLERY_BYTES) throw new Error("source");
-      source = new Uint8Array(await data.arrayBuffer());
+      if (isR2PhotoUrl(body?.url)) {
+        const r2Bytes = await downloadR2Photo(galleryPath);
+        if (!r2Bytes || r2Bytes.length > MAX_GALLERY_BYTES) throw new Error("source");
+        source = new Uint8Array(r2Bytes);
+      } else {
+        const { data, error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).download(galleryPath);
+        if (error || !data || data.size > MAX_GALLERY_BYTES) throw new Error("source");
+        source = new Uint8Array(await data.arrayBuffer());
+      }
     }
     const set = await encodeFramedCardSet(Buffer.from(source), frame);
     const { path: cardPath, error } = await uploadFramedCard(supabase, galleryPath, frame, set);
     if (error) throw error;
-    return NextResponse.json({ thumbnailUrl: supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardPath).data.publicUrl }, { headers });
+    const hasAnyR2 = Boolean(
+      process.env.R2_ACCOUNT_ID ||
+        process.env.R2_BUCKET ||
+        process.env.R2_PUBLIC_URL ||
+        process.env.R2_API_TOKEN,
+    );
+    const thumbnailUrl = hasAnyR2 || isR2PhotoUrl(body?.url)
+      ? getR2PublicUrl(cardPath)
+      : supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardPath).data.publicUrl;
+    return NextResponse.json({ thumbnailUrl }, { headers });
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Pedido inválido." }, { status: 400, headers });
     console.error("[upload/cover-frame]", error);

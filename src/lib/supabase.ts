@@ -1,4 +1,5 @@
 import { VEHICLE_PHOTOS_BUCKET, VEHICLE_DOCS_BUCKET, parseStoredFileRef, storagePathFromPublicUrl } from "@/lib/storage-file-ref";
+import { deleteR2Photos, isR2PhotoUrl } from "./r2-photos";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { zoomObjectPath } from "./photo-zoom-path";
 import { hdCardCompanion } from "./cover-frame";
@@ -91,21 +92,33 @@ export async function deleteStorageFiles(
   urls: Array<string | null | undefined>,
 ) {
   const grouped = new Map<string, string[]>();
+  const r2Paths: string[] = [];
 
   for (const value of urls) {
     const parsed = parseStoredFileRef(value);
     if (!parsed) continue;
-    const list = grouped.get(parsed.bucket) ?? [];
-    list.push(parsed.path);
+
+    const paths: string[] = [parsed.path];
     if (parsed.kind === "public") {
       const zoom = zoomObjectPath(parsed.path);
-      if (zoom) list.push(zoom);
+      if (zoom) paths.push(zoom);
       const preview = galleryPreviewObjectPath(parsed.path);
-      if (preview) list.push(preview);
+      if (preview) paths.push(preview);
       const hdCard = hdCardCompanion(parsed.path);
-      if (hdCard) list.push(hdCard);
+      if (hdCard) paths.push(hdCard);
     }
-    grouped.set(parsed.bucket, list);
+
+    if (parsed.kind === "public" && isR2PhotoUrl(parsed.url)) {
+      r2Paths.push(...paths);
+    } else {
+      const list = grouped.get(parsed.bucket) ?? [];
+      list.push(...paths);
+      grouped.set(parsed.bucket, list);
+    }
+  }
+
+  if (r2Paths.length > 0) {
+    await deleteR2Photos(Array.from(new Set(r2Paths)));
   }
 
   if (grouped.size === 0) return;

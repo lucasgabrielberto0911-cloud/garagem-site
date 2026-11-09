@@ -29,6 +29,7 @@ import {
   getSupabaseAdmin,
   hasSupabaseServiceRole,
 } from "../src/lib/supabase";
+import { uploadR2Photo } from "../src/lib/r2-photos";
 import { vehiclePath } from "../src/lib/vehicle-slug";
 
 const prisma = new PrismaClient();
@@ -176,6 +177,16 @@ async function listPhotoFiles(dir: string) {
 }
 
 async function uploadPublicObject(objectPath: string, buffer: Buffer, contentType: string) {
+  const hasAnyR2 = Boolean(
+    process.env.R2_ACCOUNT_ID ||
+      process.env.R2_BUCKET ||
+      process.env.R2_PUBLIC_URL ||
+      process.env.R2_API_TOKEN,
+  );
+  if (hasAnyR2 || !hasSupabaseServiceRole()) {
+    const { url } = await uploadR2Photo(objectPath, buffer, contentType);
+    return url;
+  }
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(objectPath, buffer, {
     contentType,

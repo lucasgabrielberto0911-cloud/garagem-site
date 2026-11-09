@@ -1,11 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { framedCardObjectPath, hdCardCompanion, type CoverFrame } from "@/lib/cover-frame";
 import type { FramedCardSet } from "@/lib/image-variants";
+import { hasR2Config, uploadR2Photo } from "@/lib/r2-photos";
 import { VEHICLE_PHOTOS_BUCKET } from "@/lib/storage-file-ref";
 
 type UploadResult = { path: string; error: Error | null };
 
 async function put(supabase: SupabaseClient, path: string, image: { buffer: Buffer; contentType: string }) {
+  if (hasR2Config()) {
+    try {
+      await uploadR2Photo(path, image.buffer, image.contentType);
+      return null;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      return !/already exists|duplicate/i.test(error.message) ? error : null;
+    }
+  }
   const { error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(path, image.buffer, {
     contentType: image.contentType,
     cacheControl: "31536000",

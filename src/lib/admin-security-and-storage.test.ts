@@ -100,8 +100,40 @@ test("parseStoredFileRef valida formato de arquivos privados e públicos", () =>
 test("isAllowedStorageHost filtra corretamente hosts seguros", () => {
   assert.equal(isAllowedStorageHost("x.supabase.co"), true);
   assert.equal(isAllowedStorageHost("sub.x.supabase.co"), true);
+  assert.equal(isAllowedStorageHost("pub-1234567890abcdef.r2.dev"), true);
+  assert.equal(isAllowedStorageHost("pub-test.r2.dev"), true);
   assert.equal(isAllowedStorageHost("localhost"), false);
   assert.equal(isAllowedStorageHost("127.0.0.1"), false);
   assert.equal(isAllowedStorageHost("evil.com"), false);
   assert.equal(isAllowedStorageHost("evil.supabase.co.attacker.com"), false);
+  assert.equal(isAllowedStorageHost("pub-test.r2.dev.attacker.com"), false);
+  assert.equal(isAllowedStorageHost("attacker.r2.dev"), false);
+
+  const prevR2 = process.env.R2_PUBLIC_URL;
+  try {
+    process.env.R2_PUBLIC_URL = "https://fotos.suagaragem.net";
+    assert.equal(isAllowedStorageHost("fotos.suagaragem.net"), true);
+    assert.equal(isAllowedStorageHost("fotos.suagaragem.net", "443", "https:"), true);
+    assert.equal(isAllowedStorageHost("evil.suagaragem.net"), false);
+  } finally {
+    if (prevR2 === undefined) delete process.env.R2_PUBLIC_URL;
+    else process.env.R2_PUBLIC_URL = prevR2;
+  }
+});
+
+test("storagePathFromPublicUrl e parseStoredFileRef aceitam URLs do Cloudflare R2", () => {
+  const r2Url = "https://pub-1234567890abcdef.r2.dev/1731170000000-uuid.webp";
+  assert.equal(storagePathFromPublicUrl(r2Url), "1731170000000-uuid.webp");
+
+  const r2Nested = "https://pub-1234567890abcdef.r2.dev/fotos/carro-card.webp";
+  assert.equal(storagePathFromPublicUrl(r2Nested), "fotos/carro-card.webp");
+
+  assert.equal(storagePathFromPublicUrl("https://pub-1234567890abcdef.r2.dev/../hack.webp"), null);
+  assert.equal(storagePathFromPublicUrl("http://pub-1234567890abcdef.r2.dev/foto.webp"), null);
+
+  const parsed = parseStoredFileRef(r2Url);
+  assert.ok(parsed);
+  assert.equal(parsed.kind, "public");
+  assert.equal(parsed.path, "1731170000000-uuid.webp");
+  assert.equal(parsed.url, r2Url);
 });
