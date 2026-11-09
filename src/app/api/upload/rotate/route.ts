@@ -9,6 +9,7 @@ import { encodeMasterJpeg, toDownloadJpeg } from "@/lib/photo-jpeg";
 import { parsePhotoRotation, rotatePhoto } from "@/lib/photo-rotation";
 import { cardObjectPath, encodeCardImage, encodeGalleryImage } from "@/lib/image-variants";
 import { ownPublicPhotoPath } from "@/lib/own-photo-path";
+import { deleteR2Photos, downloadR2Photo, isR2PhotoUrl, uploadR2Photo } from "@/lib/r2-photos";
 import { getSupabaseAdmin, hasSupabaseServiceRole, VEHICLE_PHOTOS_BUCKET, VEHICLE_DOCS_BUCKET } from "@/lib/supabase";
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -55,9 +56,15 @@ export async function POST(request: Request) {
     const sourceMaster = masterObjectPathFromGalleryPath(sourcePath);
     let current = sourceMaster ? await downloadPrivateMaster(sourceMaster) : null;
     if (!current) {
-      const { data, error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).download(sourcePath);
-      if (error || !data) throw new Error("source");
-      current = new Uint8Array(await data.arrayBuffer());
+      if (isR2PhotoUrl(body?.url)) {
+        const r2Bytes = await downloadR2Photo(sourcePath);
+        if (!r2Bytes) throw new Error("source");
+        current = new Uint8Array(r2Bytes);
+      } else {
+        const { data, error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).download(sourcePath);
+        if (error || !data) throw new Error("source");
+        current = new Uint8Array(await data.arrayBuffer());
+      }
     }
     const previousPath = previousObjectPathFromGalleryPath(sourcePath);
     const previous = restore && previousPath ? await downloadPrivateMaster(previousPath) : null;
@@ -70,17 +77,39 @@ export async function POST(request: Request) {
     // Só retorna a nova foto se as duas versões privadas estiverem guardadas.
     const originals = await Promise.all([uploadPrivateMasterBytes(id, master), uploadPrivateMasterBytes(`${id}-previous`, backup)]);
     if (originals.some(ok => !ok)) throw new Error("backup");
-    const uploads = await Promise.all([
-      supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(galleryPath, gallery.buffer, { contentType: gallery.contentType, upsert: false, cacheControl: "31536000" }),
-      supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardPath, card.buffer, { contentType: card.contentType, upsert: false, cacheControl: "31536000" }),
-    ]);
-    if (uploads.some(result => result.error)) throw new Error("upload");
-    return NextResponse.json({ url: supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(galleryPath).data.publicUrl, thumbnailUrl: supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardPath).data.publicUrl }, { headers });
+
+    let url: string;
+    let thumbnailUrl: string;
+    const hasAnyR2 = Boolean(
+      process.env.R2_ACCOUNT_ID ||
+        process.env.R2_BUCKET ||
+        process.env.R2_PUBLIC_URL ||
+        process.env.R2_API_TOKEN,
+    );
+    if (hasAnyR2 || isR2PhotoUrl(body?.url)) {
+      const [gUp, cUp] = await Promise.all([
+        uploadR2Photo(galleryPath, gallery.buffer, gallery.contentType),
+        uploadR2Photo(cardPath, card.buffer, card.contentType),
+      ]);
+      url = gUp.url;
+      thumbnailUrl = cUp.url;
+    } else {
+      const uploads = await Promise.all([
+        supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(galleryPath, gallery.buffer, { contentType: gallery.contentType, upsert: false, cacheControl: "31536000" }),
+        supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardPath, card.buffer, { contentType: card.contentType, upsert: false, cacheControl: "31536000" }),
+      ]);
+      if (uploads.some(result => result.error)) throw new Error("upload");
+      url = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(galleryPath).data.publicUrl;
+      thumbnailUrl = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardPath).data.publicUrl;
+    }
+    return NextResponse.json({ url, thumbnailUrl }, { headers });
   } catch (error) {
     if (id) {
       const storage = getSupabaseAdmin().storage;
+      const pathsToRemove = [galleryPath, cardPath, galleryPath ? galleryPreviewObjectPath(galleryPath) : null].filter((path): path is string => Boolean(path));
       await Promise.allSettled([
-        storage.from(VEHICLE_PHOTOS_BUCKET).remove([galleryPath, cardPath, galleryPath ? galleryPreviewObjectPath(galleryPath) : null].filter((path): path is string => Boolean(path))),
+        deleteR2Photos(pathsToRemove),
+        storage.from(VEHICLE_PHOTOS_BUCKET).remove(pathsToRemove),
         storage.from(VEHICLE_DOCS_BUCKET).remove([`${id}.webp`].flatMap(path => [masterObjectPathFromGalleryPath(path), previousObjectPathFromGalleryPath(path)]).filter((path): path is string => Boolean(path))),
       ]);
     }

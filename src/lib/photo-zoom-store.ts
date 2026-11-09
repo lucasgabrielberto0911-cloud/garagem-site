@@ -3,6 +3,7 @@ import { encodeZoomImage, ZOOM_MAX_BYTES } from "./photo-zoom-image";
 import { zoomObjectPath } from "./photo-zoom-path";
 import { masterObjectPathFromGalleryPath } from "./photo-master";
 import { downloadPrivateMaster } from "./photo-master-store";
+import { downloadR2Photo, hasR2Config, uploadR2Photo } from "./r2-photos";
 import { getSupabaseAdmin, VEHICLE_PHOTOS_BUCKET } from "./supabase";
 
 const pending = new Map<string, Promise<Buffer | null>>();
@@ -10,6 +11,14 @@ const pending = new Map<string, Promise<Buffer | null>>();
 async function load(galleryPath: string) {
   const path = zoomObjectPath(galleryPath);
   if (!path) return null;
+
+  if (hasR2Config()) {
+    const cachedR2 = await downloadR2Photo(path);
+    if (cachedR2 && cachedR2.length > 0 && cachedR2.length <= ZOOM_MAX_BYTES) {
+      return cachedR2;
+    }
+  }
+
   const storage = getSupabaseAdmin().storage.from(VEHICLE_PHOTOS_BUCKET);
   const cached = await storage.download(path);
   if (!cached.error && cached.data) {
@@ -22,10 +31,18 @@ async function load(galleryPath: string) {
   const bytes = await encodeZoomImage(master);
   if (!bytes) return null;
   // IDs são imutáveis: blur/rotação/restauração geram nova galeria e novo zoom.
-  const upload = await storage.upload(path, bytes, { contentType: "image/webp", upsert: false, cacheControl: "31536000" });
-  if (upload.error && !/already exists|duplicate|exists/i.test(upload.error.message)) {
-    // A cópia ainda pode ser exibida; nenhuma alteração do anúncio foi feita.
-    console.warn("[photo-zoom] cache indisponível");
+  if (hasR2Config()) {
+    try {
+      await uploadR2Photo(path, bytes, "image/webp");
+    } catch {
+      console.warn("[photo-zoom] cache R2 indisponível");
+    }
+  } else {
+    const upload = await storage.upload(path, bytes, { contentType: "image/webp", upsert: false, cacheControl: "31536000" });
+    if (upload.error && !/already exists|duplicate|exists/i.test(upload.error.message)) {
+      // A cópia ainda pode ser exibida; nenhuma alteração do anúncio foi feita.
+      console.warn("[photo-zoom] cache indisponível");
+    }
   }
   return bytes;
 }

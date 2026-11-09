@@ -474,3 +474,33 @@ test("fixture E2E mantém a conversão do Storage apenas com banco local dedicad
     if (previous.database === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = previous.database;
   }
 });
+
+test("fotos somente R2 entram no feed: JPG/PNG direto, WebP pela rota de conversão", () => {
+  const r2 = "https://pub-revisao.r2.dev";
+  assert.equal(catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, { id: "p1", url: `${r2}/foto.jpg` }), `${r2}/foto.jpg`);
+  assert.equal(
+    catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, { id: "photoaaaaaaaaaaaaaaaaaa", url: `${r2}/foto.webp` }),
+    `https://www.suagaragem.net/api/catalog-jpg/${VEHICLE_CUID}/photoaaaaaaaaaaaaaaaaaa`,
+  );
+  const onlyR2 = {
+    ...sample,
+    photos: [
+      { id: "photoaaaaaaaaaaaaaaaaaa", url: `${r2}/a.webp` },
+      { id: "photobbbbbbbbbbbbbbbbbb", url: `${r2}/b-card.webp` },
+    ],
+  };
+  const row = catalogVehicleRow(onlyR2, "https://www.suagaragem.net");
+  assert.ok(row);
+  assert.match(row["image[0].url"], /\/api\/catalog-jpg\/.+\/photoaaaaaaaaaaaaaaaaaa$/);
+  assert.match(buildCatalogCsv([onlyR2]), new RegExp(VEHICLE_CUID));
+});
+
+test("R2 só entra no feed com a forma de URL pública esperada", () => {
+  for (const url of [
+    "https://pub-revisao.r2.dev.attacker.com/foto.jpg",
+    "https://pub-revisao.r2.dev/foto.jpg?token=x",
+    "http://pub-revisao.r2.dev/foto.jpg",
+  ]) {
+    assert.equal(catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, { id: "photoaaaaaaaaaaaaaaaaaa", url }), "", url);
+  }
+});

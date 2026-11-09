@@ -22,9 +22,16 @@ import {
   uploadPrivateMasterBytes,
 } from "@/lib/photo-master-store";
 import {
+  downloadR2Photo,
+  getR2PublicUrl,
+  isR2PhotoUrl,
+  uploadR2Photo,
+} from "@/lib/r2-photos";
+import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
   hasSupabaseServiceRole,
+  isAllowedStorageHost,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
 
@@ -96,32 +103,56 @@ export async function POST(request: Request) {
     const supabase = getSupabaseAdmin();
 
     // Com enquadramento, a capa sai de novo no mesmo recorte (480 e, se couber, 960).
-    const [galleryUpload, cardUpload] = await Promise.all([
-      supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(galleryPath, gallery.buffer, {
-        contentType: gallery.contentType,
-        upsert: false,
-        cacheControl: "31536000",
-      }),
-      frame && framedSet
-        ? uploadFramedCard(supabase, galleryPath, frame, framedSet)
-        : supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardObjectPath(galleryPath), card!.buffer, {
-            contentType: card!.contentType,
-            upsert: false,
-            cacheControl: "31536000",
-          }).then(({ error }) => ({ path: cardObjectPath(galleryPath), error })),
-    ]);
+    const hasAnyR2 = Boolean(
+      process.env.R2_ACCOUNT_ID ||
+        process.env.R2_BUCKET ||
+        process.env.R2_PUBLIC_URL ||
+        process.env.R2_API_TOKEN,
+    );
+    let galleryUrl: string;
+    let thumbnailUrl: string | null = null;
 
-    if (galleryUpload.error) {
-      return NextResponse.json(
-        { error: galleryUpload.error.message || "Falha ao salvar a foto borracha." },
-        { status: 500 },
-      );
+    if (hasAnyR2 || isR2PhotoUrl(url)) {
+      const galleryUpload = await uploadR2Photo(galleryPath, gallery.buffer, gallery.contentType);
+      galleryUrl = galleryUpload.url;
+
+      if (frame && framedSet) {
+        const cardUpload = await uploadFramedCard(supabase, galleryPath, frame, framedSet);
+        thumbnailUrl = cardUpload.error ? null : getR2PublicUrl(cardUpload.path);
+      } else {
+        const cardUpload = await uploadR2Photo(cardObjectPath(galleryPath), card!.buffer, card!.contentType);
+        thumbnailUrl = cardUpload.url;
+      }
+    } else {
+      const [galleryUpload, cardUpload] = await Promise.all([
+        supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(galleryPath, gallery.buffer, {
+          contentType: gallery.contentType,
+          upsert: false,
+          cacheControl: "31536000",
+        }),
+        frame && framedSet
+          ? uploadFramedCard(supabase, galleryPath, frame, framedSet)
+          : supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardObjectPath(galleryPath), card!.buffer, {
+              contentType: card!.contentType,
+              upsert: false,
+              cacheControl: "31536000",
+            }).then(({ error }) => ({ path: cardObjectPath(galleryPath), error })),
+      ]);
+
+      if (galleryUpload.error) {
+        return NextResponse.json(
+          { error: galleryUpload.error.message || "Falha ao salvar a foto borracha." },
+          { status: 500 },
+        );
+      }
+
+      const { data } = supabase.storage
+        .from(VEHICLE_PHOTOS_BUCKET)
+        .getPublicUrl(galleryPath);
+      const thumb = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardUpload.path);
+      galleryUrl = data.publicUrl;
+      thumbnailUrl = cardUpload.error ? null : thumb.data.publicUrl;
     }
-
-    const { data } = supabase.storage
-      .from(VEHICLE_PHOTOS_BUCKET)
-      .getPublicUrl(galleryPath);
-    const thumb = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardUpload.path);
 
     try {
       const jpeg = await encodeMasterJpeg(new Uint8Array(processed));
@@ -131,8 +162,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      url: data.publicUrl,
-      thumbnailUrl: cardUpload.error ? null : thumb.data.publicUrl,
+      url: galleryUrl,
+      thumbnailUrl,
     });
   } catch (error) {
     if (error instanceof BlurRectError) {
@@ -151,18 +182,27 @@ export async function POST(request: Request) {
 
 function isOwnPhotoUrl(url: string) {
   if (!storagePathFromPublicUrl(url)) return false;
-  const allowed = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!allowed) return false;
   try {
     const parsed = new URL(url);
-    const base = new URL(allowed);
-    return parsed.protocol === "https:" && parsed.host === base.host;
+    if (parsed.protocol !== "https:") return false;
+    return isAllowedStorageHost(parsed.hostname, parsed.port, parsed.protocol);
   } catch {
     return false;
   }
 }
 
 async function downloadPhoto(url: string) {
+  if (isR2PhotoUrl(url)) {
+    const r2Bytes = await downloadR2Photo(url);
+    if (!r2Bytes) {
+      throw new BlurRectError("Não foi possível baixar a foto para borrar.");
+    }
+    if (r2Bytes.byteLength > MAX_BYTES) {
+      throw new BlurRectError("A foto é grande demais para borrar.");
+    }
+    return r2Bytes;
+  }
+
   const imageResponse = await fetch(url, {
     signal: AbortSignal.timeout(20_000),
     redirect: "error",
