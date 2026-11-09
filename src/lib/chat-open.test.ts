@@ -21,12 +21,12 @@ test("o botão do chat usa exatamente “Ajuda para escolher”, sem “pra”",
   assert.match(CHAT_HELP_LABEL, /\bpara\b/);
 });
 
-test("ficha: Ajuda para escolher fica abaixo do WhatsApp, em contorno", () => {
+test("ficha: Ajuda para escolher fica abaixo do WhatsApp, discreta (contorno ou texto)", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const blocks = chatOpenBlocks(page);
   assert.equal(blocks.length, 1);
   for (const block of blocks) {
-    assert.match(block, /variant="outline"/);
+    assert.match(block, /variant="(outline|ghost)"/);
     assert.doesNotMatch(block, /variant="solid"/);
     assert.doesNotMatch(block, /bg-asphalt/);
   }

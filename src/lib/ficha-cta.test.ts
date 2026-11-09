@@ -9,6 +9,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleMobileBlocks, VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
+import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
 import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import { FavoritesProvider } from "@/lib/favorites";
@@ -571,4 +572,49 @@ test("descrição no celular só tira linhas idênticas à ficha técnica", () =
   );
   const lines = segments.flatMap((segment) => (segment.kind === "facts" ? segment.lines.map((line) => line.text) : []));
   assert.deepEqual(lines, ["Histórico: único dono", "Revisões: todas na concessionária"]);
+});
+
+test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna principal", () => {
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
+  const asideAt = page.indexOf('<aside className="ficha-aside');
+  const asideEnd = page.indexOf("</aside>");
+  const aside = page.slice(asideAt, asideEnd);
+  const main = page.slice(0, asideAt);
+
+  // Ficha técnica saiu do card sticky e fica sempre aberta ao lado da descrição.
+  assert.doesNotMatch(aside, /specs\.map/);
+  assert.doesNotMatch(aside, /data-ficha-section="especificacoes"/);
+  assert.match(main, /data-ficha-section="especificacoes"/);
+  assert.match(main, /specs\.map/);
+  assert.doesNotMatch(main, /<details/);
+  const specsAt = main.indexOf('data-ficha-section="especificacoes"');
+  const aboutAt = main.indexOf("Sobre o veículo");
+  const itemsAt = main.indexOf("Itens e acessórios");
+  assert.ok(specsAt > 0 && specsAt < aboutAt && aboutAt < itemsAt);
+
+  // Opcionais: lista na coluna principal + atalho com âncora no card.
+  assert.match(main, /id="opcionais-desktop"/);
+  assert.match(aside, /href="#opcionais-desktop"/);
+  assert.match(aside, /Ver os \$\{accessories\.length\} opcionais/);
+  assert.doesNotMatch(page.slice(page.indexOf("<VehicleMobileBlocks")), /opcionais-desktop/);
+
+  // Um botão principal de WhatsApp; ações menores; chat e usado discretos.
+  assert.equal((aside.match(/<WhatsAppButton/g) ?? []).length, 2); // vendido + à venda
+  assert.match(aside, /variant="secondary"/);
+  assert.match(aside, /variant="ghost"/);
+  assert.match(aside, /<VehicleTrustNotes/);
+
+  // Sem parcela, simulador ou valor de financiamento no card.
+  assert.doesNotMatch(aside, /calcula a parcela|parcela estimada|simul/i);
+  assert.doesNotMatch(aside, /R\$\s*\d/);
+});
+
+test("faixa de confiança do desktop: garantia, vistoria da loja e Linhares/ES", () => {
+  const html = renderToStaticMarkup(
+    createElement(VehicleTrustNotes, { warranty: null }),
+  );
+  assert.match(html, /Garantia de 3 meses/);
+  assert.match(html, /Vistoria da loja/);
+  assert.match(html, /Linhares\/ES/);
+  assert.doesNotMatch(html, /parcela/i);
 });

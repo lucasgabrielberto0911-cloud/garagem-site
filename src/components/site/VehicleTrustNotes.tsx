@@ -1,69 +1,39 @@
-import {
-  IconClock,
-  IconClipboardCheck,
-  IconFileText,
-  IconPlay,
-  IconShieldCheck,
-} from "@/components/site/icons";
+import { IconClipboardCheck, IconMapPin, IconShieldCheck } from "@/components/site/icons";
 
 const NOTES = [
-  {
-    Icon: IconShieldCheck,
-    label: "Garantia de 3 meses — motor e câmbio",
-  },
-  {
-    Icon: IconClipboardCheck,
-    label: "Vistoria completa antes de anunciar",
-  },
-  {
-    Icon: IconFileText,
-    label: "Documentação pronta",
-  },
-  {
-    Icon: IconClock,
-    label: "Atendimento online 8h–23h",
-  },
+  { Icon: IconShieldCheck, label: "Garantia de 3 meses — motor e câmbio" },
+  { Icon: IconClipboardCheck, label: "Vistoria da loja" },
+  { Icon: IconMapPin, label: "Linhares/ES" },
 ] as const;
 
-const VIDEO_NOTE = { Icon: IconPlay, label: "Vídeo do carro pelo WhatsApp, se quiser" } as const;
-
 /**
- * Confiança ao lado do preço. Os itens fixos são da loja; `warranty` e
- * `documentation` só entram se o admin preencheu para este veículo.
+ * Faixa de confiança do card da ficha no computador: garantia, vistoria e
+ * cidade da loja. Se o admin preencheu a garantia deste carro, ela substitui
+ * a frase padrão. Documentação e demais detalhes ficam na coluna principal.
  */
 export function VehicleTrustNotes({
   className = "",
   warranty,
-  documentation,
 }: {
   className?: string;
   warranty?: string | null;
-  documentation?: string | null;
 }) {
-  const own = [
-    warranty?.trim() ? { Icon: IconShieldCheck, label: `Garantia deste carro: ${warranty.trim()}` } : null,
-    documentation?.trim() ? { Icon: IconFileText, label: documentation.trim() } : null,
-  ].filter((note) => note !== null);
-  const notes = [...own, ...NOTES, VIDEO_NOTE];
+  const own = warranty?.trim();
+  const notes = own
+    ? [{ Icon: IconShieldCheck, label: `Garantia deste carro: ${own}` }, ...NOTES.slice(1)]
+    : NOTES;
   return (
-    <section
-      aria-label="Por que comprar na Garagem"
-      className={`border border-white/10 bg-asphalt/50 px-3 py-3 ${className}`}
+    <ul
+      aria-label="Garantia e vistoria"
+      data-trust-notes=""
+      className={`grid gap-1.5 border-y border-white/10 py-3 ${className}`}
     >
-      <h2 className="mb-2 font-display text-xs font-semibold uppercase tracking-wider text-cream">
-        Por que comprar na Garagem
-      </h2>
-      <ul className="grid gap-2 sm:grid-cols-2">
       {notes.map(({ Icon, label }) => (
-        <li
-          key={label}
-          className="flex items-center gap-2 text-left text-xs leading-snug text-cream/85"
-        >
-          <Icon className="h-3.5 w-3.5 shrink-0 text-brand-light" />
+        <li key={label} className="flex items-center gap-2 text-left text-xs leading-snug text-cream/90">
+          <Icon className="h-4 w-4 shrink-0 text-brand-light" />
           <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>
         </li>
       ))}
-      </ul>
-    </section>
+    </ul>
   );
 }

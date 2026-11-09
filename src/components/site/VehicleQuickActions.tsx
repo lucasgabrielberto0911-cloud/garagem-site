@@ -36,6 +36,7 @@ export function VehicleQuickActions({
   trade,
   visit,
   className = "hidden lg:grid",
+  variant = "default",
 }: {
   contentId: string;
   contentSlug?: string;
@@ -56,6 +57,8 @@ export function VehicleQuickActions({
   trade: string;
   visit?: string;
   className?: string;
+  /** `secondary`: botões menores, sem competir com o WhatsApp principal. */
+  variant?: "default" | "secondary";
 }) {
   const actions: Action[] = [
     {
@@ -114,7 +117,11 @@ export function VehicleQuickActions({
             ariaLabel={action.ariaLabel}
             vehicleId={contentId}
             slug={contentSlug}
-            className="inline-flex min-h-[48px] items-center justify-center border border-white/10 bg-ink px-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
+            className={
+              variant === "secondary"
+                ? "inline-flex min-h-[44px] items-center justify-center border border-white/10 px-2 text-center font-display text-xs font-medium text-cream/80 transition touch-manipulation hover:border-white/30 hover:text-cream"
+                : "inline-flex min-h-[48px] items-center justify-center border border-white/10 bg-ink px-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
+            }
           >
             {action.label}
           </TrackedWhatsAppLink>
