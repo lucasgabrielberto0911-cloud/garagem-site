@@ -75,7 +75,7 @@ async function loadCatalogVehicles(includeConsigned: boolean) {
   const where: CatalogWhere = {
     status: "disponivel",
     historical: false,
-    ...(includeConsigned ? {} : { consigned: false }),
+    consigned: false,
   };
 
   try {
