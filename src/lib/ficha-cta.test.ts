@@ -574,6 +574,36 @@ test("descrição no celular só tira linhas idênticas à ficha técnica", () =
   assert.deepEqual(lines, ["Histórico: único dono", "Revisões: todas na concessionária"]);
 });
 
+test("descrição tira a mini-grade repetida (Cor, Câmbio, Combustível, Motor) e mantém detalhe extra", () => {
+  const specs = [
+    { label: "Cor", value: "Prata" },
+    { label: "Câmbio", value: "Automático" },
+    { label: "Combustível", value: "Flex" },
+    { label: "Motor", value: "1.5 16V" },
+  ];
+  const segments = visibleDescriptionSegments(
+    [
+      "🎨 Cor: Prata",
+      "⚙️ Câmbio: Automático",
+      "⛽ Combustível: Flex",
+      "🛠️ Motor: 1.5",
+      "✅ Histórico: único dono",
+    ].join("\n"),
+    undefined,
+    specs,
+  );
+  const lines = segments.flatMap((segment) => (segment.kind === "facts" ? segment.lines.map((line) => line.text) : []));
+  assert.deepEqual(lines, ["Histórico: único dono"]);
+  const extra = visibleDescriptionSegments("⚙️ Câmbio: Automático CVT", undefined, specs);
+  assert.equal(extra.length, 1);
+});
+
+test("parecidos na ficha não têm Tenho interesse, mas o estoque tem", () => {
+  assert.match(readSrc("components/site/SimilarVehicles.tsx"), /<VehicleGrid[^>]*hideInterest/);
+  assert.match(readSrc("components/site/VehicleCard.tsx"), /hideInterest \? null/);
+  assert.doesNotMatch(readSrc("components/site/VehicleGrid.tsx"), /hideInterest = true/);
+});
+
 test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna principal", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const asideAt = page.indexOf('<aside className="ficha-aside');
@@ -585,7 +615,7 @@ test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna prin
   assert.doesNotMatch(aside, /specs\.map/);
   assert.doesNotMatch(aside, /data-ficha-section="especificacoes"/);
   assert.match(main, /data-ficha-section="especificacoes"/);
-  assert.match(main, /specs\.map/);
+  assert.match(main, /specsNotInChips\(specs\)\.map/);
   assert.doesNotMatch(main, /<details/);
   const specsAt = main.indexOf('data-ficha-section="especificacoes"');
   const aboutAt = main.indexOf("Sobre o veículo");

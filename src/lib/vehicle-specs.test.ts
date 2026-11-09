@@ -8,6 +8,7 @@ import {
   formatVehicleYearRange,
   publicInspectionBadge,
   publicInspectionNote,
+  specsNotInChips,
 } from "./vehicle-specs";
 
 test("ficha sempre mostra os campos centrais, sem buraco de cor vazia", () => {
@@ -187,4 +188,12 @@ test("selo da ficha mostra o texto salvo e some quando a vistoria está vazia", 
     }).some((row) => row.label === "Vistoria da loja"),
     false,
   );
+});
+
+test("ficha técnica não repete o que os chips já mostram", () => {
+  const rows = buildVehiclePublicSpecs({
+    category: "carro", year: 2020, yearModel: 2021, km: 50000, fuel: "Flex", transmission: "Automático",
+    color: "Prata", engine: "1.5 16V", doors: 4, plateEnd: "7",
+  });
+  assert.deepEqual(specsNotInChips(rows).map((row) => row.label), ["Tipo", "Cor", "Motor", "Portas"]);
 });

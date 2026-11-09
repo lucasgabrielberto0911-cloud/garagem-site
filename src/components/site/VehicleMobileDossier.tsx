@@ -15,6 +15,7 @@ import {
   STORE_INSPECTION_LABEL,
   STORE_INSPECTION_NOTE,
   type VehicleSpecRow,
+  specsNotInChips,
   formatVehicleYearRange,
   publicInspectionNote,
 } from "@/lib/vehicle-specs";
@@ -30,13 +31,11 @@ import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import type { PublicVerifiedItem } from "@/lib/vehicle-verified";
 import type { VehicleSeal } from "@/lib/vehicle-seals";
 
-/** Já aparecem na primeira dobra. */
-const FOLD_LABELS = new Set(["Ano", "km", "Câmbio", "Combustível", "Final placa"]);
 /** Garantia e vistoria já aparecem na faixa de confiança. */
 const TRUST_LABELS = new Set(["Garantia", STORE_INSPECTION_LABEL]);
 
 function sheetSpecs(specs: VehicleSpecRow[]) {
-  return specs.filter((row) => !FOLD_LABELS.has(row.label) && !TRUST_LABELS.has(row.label));
+  return specsNotInChips(specs).filter((row) => !TRUST_LABELS.has(row.label));
 }
 
 /** A âncora Especificações cai na ficha técnica quando ela existe. */
