@@ -234,10 +234,10 @@ export async function SiteFooter() {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            <Link href="/privacidade" prefetch={false} className="transition hover:text-cream">
+            <Link href="/privacidade" prefetch={false} className="inline-flex min-h-11 items-center px-2 transition hover:text-cream lg:min-h-0 lg:px-0">
               Privacidade
             </Link>
-            <Link href="/faq" prefetch={false} className="transition hover:text-cream">
+            <Link href="/faq" prefetch={false} className="inline-flex min-h-11 items-center px-2 transition hover:text-cream lg:min-h-0 lg:px-0">
               Dúvidas
             </Link>
           </div>
