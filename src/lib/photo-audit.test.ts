@@ -66,3 +66,10 @@ test("200 HTML e ausência de resposta nunca passam como foto válida", () => {
   assert.match(auditPhotos([vehicle], new Map()).get("a")!.join(), /não verificado/);
   assert.match(auditPhotos([{ ...vehicle, photos: ["http://"], cover: "http://" }], new Map()).get("a")!.join(), /URL de foto inválida/);
 });
+
+test("cache 200 não esconde dependência legada do Storage na verificação manual", () => {
+  const photo = `${base}/fotos/v1/1280-contain-q78/foto.webp`;
+  const vehicle = { id: "a", name: "A", page: base, cover: photo, photos: [photo] };
+  const issues = auditPhotos([vehicle], new Map([[photo, { status: 200, type: "image/webp" }]]));
+  assert.match(issues.get("a")!.join(), /Supabase Storage/);
+});

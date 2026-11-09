@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { e2ePhotoFixture } from "./e2e-photo-fixture";
-import { publicPhotoPreviewFallback, publicPhotoUpstream, VEHICLE_PHOTO_VARIANT } from "./public-photo-url";
+import { isPublicPhotoBlob, publicPhotoUpstream, VEHICLE_PHOTO_VARIANT } from "./public-photo-url";
 
 const noCache = { "Cache-Control": "no-store" };
 
@@ -23,14 +23,11 @@ export async function servePublicPhoto(request: Request, parts: string[], fetche
       headers: upstreamHeaders,
     };
     const fixture = await e2ePhotoFixture();
-    let response = fixture
+    // Referências legadas não podem consumir Storage nem tentar fallback durante o bloqueio.
+    if (!fixture && !isPublicPhotoBlob(upstream)) return new Response(null, { status: 410, headers: noCache });
+    const response = fixture
       ? new Response(request.method === "HEAD" ? null : new Uint8Array(fixture), { headers: { "Content-Type": "image/png" } })
       : await fetcher(upstream, options);
-    const fallback = publicPhotoPreviewFallback(parts);
-    if (!fixture && [400, 404].includes(response.status) && fallback) {
-      await response.body?.cancel();
-      response = await fetcher(fallback, options);
-    }
     // Cards legados podem ser regravados pelo backfill no mesmo caminho.
     const cacheControl = /-card(?:[.-]|$)/i.test(parts.at(-1) ?? "")
       ? "public, max-age=2592000, s-maxage=2592000"

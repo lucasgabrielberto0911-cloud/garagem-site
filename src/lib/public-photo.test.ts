@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { publicPhotoSrc, publicPhotoSrcSet, publicPhotoOriginal, publicPhotoUpstream, PUBLIC_PHOTO_VARIANTS, PHOTO_STORAGE_ORIGIN } from "./public-photo-url";
+import { publicPhotoSrc, publicPhotoSrcSet, publicPhotoOriginal, publicPhotoUpstream, PUBLIC_PHOTO_VARIANTS, PHOTO_STORAGE_ORIGIN, PHOTO_BLOB_ORIGIN } from "./public-photo-url";
 import { servePublicPhoto } from "./public-photo-http";
 import { coverMobileSrcSet, galleryPreviewSrcSet, supabaseOriginalSrc } from "./stock-query";
 
@@ -23,10 +23,23 @@ test("foto e recortes do celular mantêm dimensões/qualidade e apontam para o s
   }
 });
 
-test("não transforma imagens externas, documentos privados nem recortes desconhecidos", () => {
-  for (const url of ["/branding/placeholder-car.png", "https://cdn.example/photo.webp", original.replace("veiculos", "documentos"), original + "?token=private", original.replace("object/public", "object/sign"), original.replace("object/public", "render/image/public") + "?width=2000", original.replace("veiculos/", "veiculos/%2e%2e/")]) assert.equal(publicPhotoSrc(url), url);
+test("preserva imagens externas e bloqueia exposição direta de Storage fora das rotas conhecidas", () => {
+  for (const url of ["/branding/placeholder-car.png", "https://cdn.example/photo.webp"]) assert.equal(publicPhotoSrc(url), url);
+  for (const url of [ original.replace("veiculos", "documentos"), original + "?token=private", original.replace("object/public", "object/sign"), original.replace("object/public", "render/image/public") + "?width=2000", original.replace("veiculos/", "veiculos/%2e%2e/"), original.replace("vesmqhyxautgtvgccweo", "outroprojeto")]) assert.equal(publicPhotoSrc(url), "/branding/placeholder-car.png");
   assert.equal(publicPhotoOriginal(own), null);
   for (const parts of [["v1", "original", "..", "secret.webp"], ["v1", "original", "%2fsecret.webp"], ["v1", "original", "document.pdf"], ["v1", "original", "https:", "example.webp"], ["v1", "constructor", key]]) assert.equal(publicPhotoUpstream(parts), null);
+});
+
+test("rotas legadas recusam GET e HEAD sem consultar o Storage nem tentar fallback", async () => {
+  for (const method of ["GET", "HEAD"]) {
+    for (const variant of ["original", "1280-contain-q78", ...Object.keys(PUBLIC_PHOTO_VARIANTS)]) {
+      const result = await servePublicPhoto(request(own, method), ["v1", variant, key], async () => {
+        assert.fail("Nenhuma requisição ao Storage é permitida");
+      });
+      assert.equal(result.status, 410);
+      assert.equal(result.headers.get("cache-control"), "no-store");
+    }
+  }
 });
 
 test("GET mantém os bytes e remove noindex, cookies e cache do Storage; HEAD é equivalente", async () => {
@@ -34,14 +47,14 @@ test("GET mantém os bytes e remove noindex, cookies e cache do Storage; HEAD é
   let calls = 0;
   const fetcher: typeof fetch = async (url, options) => {
     calls++;
-    assert.equal(url, original);
+    assert.equal(url, PHOTO_BLOB_ORIGIN + "/" + key);
     assert.equal(options?.redirect, "error");
     assert.equal(options?.cache, "no-store");
     assert.deepEqual(options?.headers, { Accept: "image/webp,image/jpeg,image/png,image/gif" });
     return new Response(options?.method === "HEAD" ? null : bytes, { headers: { "Content-Type": "image/webp", "X-Robots-Tag": "none", "Set-Cookie": "secret=1", "Cache-Control": "no-cache", "ETag": '"photo"', "Vary": "Cookie" } });
   };
-  const get = await servePublicPhoto(request(), ["v1", "original", key], fetcher);
-  const head = await servePublicPhoto(request(own, "HEAD"), ["v1", "original", key], fetcher);
+  const get = await servePublicPhoto(request(), ["v1", "original", "blob", key], fetcher);
+  const head = await servePublicPhoto(request(own, "HEAD"), ["v1", "original", "blob", key], fetcher);
   assert.equal(calls, 2);
   assert.deepEqual(new Uint8Array(await get.arrayBuffer()), bytes);
   assert.equal(await head.text(), "");
@@ -51,7 +64,7 @@ test("GET mantém os bytes e remove noindex, cookies e cache do Storage; HEAD é
 });
 
 test("miniatura legada usa 30 dias sem immutable no navegador e na CDN", async () => {
-  const response = await servePublicPhoto(request(), ["v1", "original", "car-card.webp"], async () => new Response("image", { headers: { "Content-Type": "image/webp" } }));
+  const response = await servePublicPhoto(request(), ["v1", "original", "blob", "car-card.webp"], async () => new Response("image", { headers: { "Content-Type": "image/webp" } }));
   assert.equal(response.headers.get("cache-control"), "public, max-age=2592000, s-maxage=2592000");
   assert.equal(response.headers.get("vercel-cdn-cache-control"), response.headers.get("cache-control"));
 });
@@ -62,7 +75,7 @@ test("GET e HEAD condicionais retornam 304 sem bytes nem credenciais", async () 
       method,
       headers: { "If-None-Match": '"photo"', "If-Modified-Since": "Mon, 12 Oct 2026 12:00:00 GMT", Cookie: "session=privada", Authorization: "Bearer privado" },
     });
-    const result = await servePublicPhoto(conditional, ["v1", "original", "car-card.webp"], async (_url, options) => {
+    const result = await servePublicPhoto(conditional, ["v1", "original", "blob", "car-card.webp"], async (_url, options) => {
       const headers = new Headers(options?.headers);
       assert.equal(headers.get("if-none-match"), '"photo"');
       assert.equal(headers.get("if-modified-since"), "Mon, 12 Oct 2026 12:00:00 GMT");
@@ -80,25 +93,25 @@ test("GET e HEAD condicionais retornam 304 sem bytes nem credenciais", async () 
 
 test("foto alterada retorna 200 e 304 sem requisição condicional não é cacheado", async () => {
   const conditional = new Request("https://www.suagaragem.net" + own, { headers: { "If-None-Match": '"antiga"' } });
-  const changed = await servePublicPhoto(conditional, ["v1", "original", key], async () => new Response("nova", { headers: { "Content-Type": "image/webp", ETag: '"nova"' } }));
+  const changed = await servePublicPhoto(conditional, ["v1", "original", "blob", key], async () => new Response("nova", { headers: { "Content-Type": "image/webp", ETag: '"nova"' } }));
   assert.equal(changed.status, 200);
   assert.equal(await changed.text(), "nova");
   assert.equal(changed.headers.get("etag"), '"nova"');
-  const unsolicited = await servePublicPhoto(request(), ["v1", "original", key], async () => new Response(null, { status: 304 }));
+  const unsolicited = await servePublicPhoto(request(), ["v1", "original", "blob", key], async () => new Response(null, { status: 304 }));
   assert.equal(unsolicited.status, 502);
   assert.equal(unsolicited.headers.get("cache-control"), "no-store");
 });
 
 test("erros, HTML, redirect e falhas de rede não ficam cacheados", async () => {
   for (const response of [new Response("missing", { status: 404 }), new Response("error", { status: 503 }), new Response("login", { headers: { "Content-Type": "text/html" } }), new Response("partial", { status: 206, headers: { "Content-Type": "image/webp" } })]) {
-    const result = await servePublicPhoto(request(), ["v1", "original", key], async () => response);
+    const result = await servePublicPhoto(request(), ["v1", "original", "blob", key], async () => response);
     assert.equal(result.status, response.status === 404 ? 404 : 502);
     assert.equal(result.headers.get("cache-control"), "no-store");
   }
-  const failed = await servePublicPhoto(request(), ["v1", "original", key], async () => { throw new Error("timeout"); });
+  const failed = await servePublicPhoto(request(), ["v1", "original", "blob", key], async () => { throw new Error("timeout"); });
   assert.equal(failed.status, 502);
   assert.equal(failed.headers.get("cache-control"), "no-store");
   const forbidden = async () => { throw new Error("não deveria buscar"); };
-  assert.equal((await servePublicPhoto(request(own + "?width=9000"), ["v1", "original", key], forbidden)).status, 404);
+  assert.equal((await servePublicPhoto(request(own + "?width=9000"), ["v1", "original", "blob", key], forbidden)).status, 404);
   assert.equal((await servePublicPhoto(request(), ["v1", "9000-cover", key], forbidden)).status, 404);
 });

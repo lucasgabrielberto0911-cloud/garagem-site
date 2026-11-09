@@ -162,14 +162,14 @@ O estoque continua excluindo vendidos, reservados e históricos, conforme o cont
 
 - Executar `npx tsx scripts/verificar-fotos.ts`; o arquivo padrão é `~/RELATORIO-FOTOS.md`.
 - Para escolher o arquivo: `npx tsx scripts/verificar-fotos.ts --relatorio RELATORIO-FOTOS.md`.
-- O workflow `verificar-fotos.yml` agenda 06h de Brasília e oferece execução manual. Publica resumo e artefato por 14 dias, com permissão `contents: read`, sem segredos do banco e sem modificar dados.
-- Alertas de fotos não derrubam o job. Falhas de coleta encerram com código 1 e preservam o relatório parcial. O agendamento passa a funcionar quando o workflow chegar à branch padrão.
+- O workflow `verificar-fotos.yml` foi removido por solicitação do Lucas. Execução somente manual: `npx tsx scripts/verificar-fotos.ts`. Não há agendamento no GitHub Actions.
+- Alertas de fotos são reportados. Falhas de coleta encerram o comando manual com código 1 e preservam o relatório parcial. A checagem também informa dependências legadas do Storage, mesmo quando um cache responde 200.
 
 ## Prioridades e tarefas prontas para issue/PR
 
 1. **Alta / esforço médio — investigar os 16 HEAD 502**: reproduzir as URLs acima em ambiente isolado; comparar referências da galeria com os objetos disponíveis em cópia local; corrigir referências ou publicação em PR próprio. Não alterar fotos automaticamente a partir deste relatório.
 2. **Média / esforço médio — confirmar resolução e conteúdo visual**: inspecionar cópias locais das fotos da Fazer, Ka+ e Haval; validar dimensões reais e correspondência com cada veículo. Metadados públicos sem dimensões não permitem concluir se uma imagem está nítida.
-3. **Baixa / esforço baixo — acompanhar o relatório diário**: revisar artefatos do workflow após o merge e comparar a evolução dos alertas; usar as URLs e IDs para correções pontuais no painel por um responsável autorizado.
+3. **Baixa / esforço baixo — verificar sob demanda**: rodar o comando manual somente quando solicitado e comparar a evolução dos alertas; usar as URLs e IDs para correções pontuais no painel por um responsável autorizado.
 
 ## Validação da implementação
 
@@ -182,3 +182,8 @@ O estoque continua excluindo vendidos, reservados e históricos, conforme o cont
 - `git diff --check`: aprovado.
 
 Lighthouse antes/depois no preview não executado; preview depende de solicitação.
+
+
+## Atualização: Kicks e bloqueio do Storage
+
+A investigação posterior, com SELECT somente leitura e sem baixar fotos, está em [2026-11-09-ordem-kicks-storage-blob.md](2026-11-09-ordem-kicks-storage-blob.md). Ela registra a ordem real do Kicks e todas as 233 referências de fotos de veículos que ainda dependem do Storage (16 de disponíveis e 217 de vendidos), além do retrato do fundador. O bloqueio de requisições públicas ao Storage não migra os arquivos ausentes para o Blob.

@@ -74,6 +74,9 @@ export function auditPhotos(vehicles: AuditVehicle[], heads: Map<string, PhotoHe
       try { url = new URL(photo, vehicle.page); decodeURIComponent(url.pathname); }
       catch { issues.push(`URL de foto inválida: ${photo}`); continue; }
       const key = photoIdentity(photo, vehicle.page);
+      if (/\.supabase\.co$/.test(url.hostname) || /^\/(?:api\/)?fotos\/v1\/[^/]+\/(?!blob\/)/.test(url.pathname)) {
+        issues.push(`Referência legada ao Supabase Storage; publicar cópia local no Vercel Blob: ${photo}`);
+      }
       const repeated = [...(owners.get(key) ?? [])].filter(id => id !== vehicle.id);
       if (repeated.length) issues.push(`Foto repetida entre veículos (${repeated.join(", ")}): ${photo}`);
       const folder = decodeURIComponent(url.pathname).match(/\/estoque\/([^/]+)\//)?.[1];

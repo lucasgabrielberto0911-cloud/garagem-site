@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import sharp from "sharp";
-import { publicVehiclePhotoSrc, publicPhotoSrc, publicPhotoSrcSet, PHOTO_STORAGE_ORIGIN, VEHICLE_PHOTO_VARIANT } from "./public-photo-url";
+import { publicVehiclePhotoSrc, publicPhotoSrc, publicPhotoSrcSet, PHOTO_STORAGE_ORIGIN, PHOTO_BLOB_ORIGIN, VEHICLE_PHOTO_VARIANT } from "./public-photo-url";
 import { servePublicPhoto } from "./public-photo-http";
 import { e2ePhotoFixture } from "./e2e-photo-fixture";
 import { loadArchiveOriginal } from "./photo-archive-download";
@@ -22,9 +22,9 @@ test("foto de câmera sai em WebP e JPEG com no máximo 1280 px, sem ampliar peq
   for (const [width, height] of [[2400, 1600], [1600, 2400], [32, 24]]) {
     const input = await sharp({ create: { width, height, channels: 3, background: "#ed1122" } }).jpeg().toBuffer();
     let calls = 0;
-    const response = await servePublicPhoto(new Request("https://site.test" + reduced), ["v1", VEHICLE_PHOTO_VARIANT, "camera.jpg"], async url => {
+    const response = await servePublicPhoto(new Request("https://site.test" + reduced), ["v1", VEHICLE_PHOTO_VARIANT, "blob", "camera.jpg"], async url => {
       calls++;
-      assert.equal(url, source);
+      assert.equal(url, PHOTO_BLOB_ORIGIN + "/camera.jpg");
       return new Response(new Uint8Array(input), { headers: { "Content-Type": "image/jpeg" } });
     });
     assert.equal(calls, 1);
@@ -42,7 +42,7 @@ test("foto de câmera sai em WebP e JPEG com no máximo 1280 px, sem ampliar peq
 
 test("transformação inválida ou fonte acima de 15 MB não entrega original nem entra no cache", async () => {
   for (const input of [new Uint8Array(15 * 1024 * 1024 + 1), new Uint8Array([1, 2, 3])]) {
-    const response = await servePublicPhoto(new Request("https://site.test" + reduced), ["v1", VEHICLE_PHOTO_VARIANT, "camera.jpg"], async () => new Response(input, { headers: { "Content-Type": "image/jpeg" } }));
+    const response = await servePublicPhoto(new Request("https://site.test" + reduced), ["v1", VEHICLE_PHOTO_VARIANT, "blob", "camera.jpg"], async () => new Response(input, { headers: { "Content-Type": "image/jpeg" } }));
     assert.equal(response.status, 502);
     assert.equal(response.headers.get("cache-control"), "no-store");
     assert.equal(response.headers.get("vercel-cdn-cache-control"), null);
@@ -61,7 +61,7 @@ test("E2E atende fetch do servidor com fixture e bloqueia banco externo antes do
     assert.equal((await loadArchiveOriginal(source))?.contentType, "image/png");
     process.env.DATABASE_URL = "postgresql://invalid:invalid@banco.example/ci";
     await assert.rejects(e2ePhotoFixture(), /acesso ao Storage bloqueado/);
-    const blocked = await servePublicPhoto(new Request("https://site.test" + reduced), ["v1", VEHICLE_PHOTO_VARIANT, "camera.jpg"], async () => { throw Error("Storage proibido"); });
+    const blocked = await servePublicPhoto(new Request("https://site.test" + reduced), ["v1", VEHICLE_PHOTO_VARIANT, "blob", "camera.jpg"], async () => { throw Error("Storage proibido"); });
     assert.equal(blocked.status, 502);
   } finally {
     if (previous.flag === undefined) delete process.env.E2E_TEST; else process.env.E2E_TEST = previous.flag;
