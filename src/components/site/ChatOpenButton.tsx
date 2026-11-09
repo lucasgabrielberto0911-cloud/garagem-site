@@ -16,7 +16,7 @@ export function ChatOpenButton({
   source: string;
   prompt?: string;
   size?: "md" | "lg" | "compact";
-  variant?: "solid" | "outline";
+  variant?: "solid" | "outline" | "ghost";
   className?: string;
 }) {
   const sizing =
@@ -28,7 +28,9 @@ export function ChatOpenButton({
   const look =
     variant === "solid"
       ? "bg-brand text-cream hover:bg-brand-dark"
-      : "border border-white/20 text-cream hover:border-brand hover:bg-white/5";
+      : variant === "ghost"
+        ? "text-muted underline-offset-4 hover:text-cream hover:underline"
+        : "border border-white/20 text-cream hover:border-brand hover:bg-white/5";
 
   return (
     <button

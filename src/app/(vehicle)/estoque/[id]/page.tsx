@@ -230,7 +230,6 @@ export default async function VehicleDetailPage({
     getPublicSite(),
   ]);
   const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
-  const verifiedDocumentation = verified.find((item) => item.key === "documentacao")?.text;
   const seals = sold ? [] : publicVehicleSeals({ verified, accessories });
 
   const specs = buildVehiclePublicSpecs({
@@ -386,10 +385,56 @@ export default async function VehicleDetailPage({
               />
             </div>
 
+            <section
+              data-ficha-section="especificacoes"
+              className="ficha-jump-target hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
+            >
+              <h2 className="font-display text-base font-semibold text-cream">
+                Ficha técnica
+              </h2>
+              {vehicle.createdAt || updatedLabel ? (
+                <p className="mt-1 text-xs text-muted">
+                  <ListedAgo
+                    listedAt={
+                      vehicle.createdAt
+                        ? new Date(vehicle.createdAt).toISOString()
+                        : null
+                    }
+                    updatedLabel={updatedLabel}
+                  />
+                </p>
+              ) : null}
+              <dl
+                data-ficha-spec-grid=""
+                className="mt-3 grid grid-cols-3 gap-2 text-sm [&>:last-child:nth-child(3n+1)]:col-span-3 [&>:last-child:nth-child(3n+2)]:col-span-2"
+              >
+                {specs.map((spec) => (
+                  <div
+                    key={spec.label}
+                    className="min-w-0 border border-white/10 bg-ink px-3 py-2.5"
+                  >
+                    <dt className="text-[11px] uppercase tracking-wider text-muted">
+                      {spec.label}
+                    </dt>
+                    {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
+                    <dd
+                      className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
+                        spec.empty
+                          ? "font-medium text-muted"
+                          : "font-semibold text-cream"
+                      }`}
+                    >
+                      {spec.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+
             {hasDetails ? (
               <section
                 data-ficha-section="detalhes"
-                className="ficha-jump-target hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
+                className="ficha-jump-target hidden pt-6 lg:block"
               >
                 {description ? (
                   <div>
@@ -405,9 +450,16 @@ export default async function VehicleDetailPage({
                 ) : null}
 
                 {accessories.length > 0 ? (
-                  <div className={description ? "mt-5" : undefined}>
-                    <h2 className="font-display text-base font-semibold text-cream">
+                  <div
+                    id="opcionais-desktop"
+                    data-ficha-opcionais=""
+                    className={`ficha-jump-target ${description ? "mt-8 border-t border-white/10 pt-6" : ""}`}
+                  >
+                    <h2 className="flex flex-wrap items-baseline gap-x-3 font-display text-xl font-bold tracking-tight text-cream">
                       Itens e acessórios
+                      <span className="text-sm font-semibold text-brand-light">
+                        {accessories.length === 1 ? "1 opcional" : `${accessories.length} opcionais`}
+                      </span>
                     </h2>
                     <VehicleAccessoryChips items={accessories} />
                   </div>
@@ -478,13 +530,8 @@ export default async function VehicleDetailPage({
               {!sold ? (
                 <VehicleInspectionBadge inspection={vehicle.inspection} />
               ) : null}
-              <VehicleSeals seals={seals} />
-              {!sold ? (
-                <VehicleTrustNotes
-                  warranty={vehicle.warranty}
-                  documentation={verifiedDocumentation}
-                />
-              ) : null}
+              <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} />
+              {!sold ? <VehicleTrustNotes warranty={vehicle.warranty} /> : null}
 
               {sold ? (
                 <div className="space-y-2">
@@ -551,73 +598,39 @@ export default async function VehicleDetailPage({
                     finance={whatsapp.finance}
                     trade={whatsapp.trade}
                     visit={whatsapp.visit}
+                    variant="secondary"
                   />
-                  <p className="-mt-2 text-xs leading-relaxed text-muted">
-                    Esses botões também abrem o WhatsApp deste veículo.
-                  </p>
 
-                  <ChatOpenButton
-                    source="ficha"
-                    prompt={`Tenho dúvida sobre o ${title}`}
-                    size="md"
-                    variant="outline"
-                    className="w-full"
-                  />
-                  <p className="text-xs leading-relaxed text-muted">
-                    Dúvida breve no site. Preço, visita e proposta seguem no WhatsApp.
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs">
+                    <ChatOpenButton
+                      source="ficha"
+                      prompt={`Tenho dúvida sobre o ${title}`}
+                      size="compact"
+                      variant="ghost"
+                      className="-ml-3"
+                    />
+                    <Link
+                      href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
+                      prefetch={false}
+                      className="inline-flex min-h-[44px] items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
+                    >
+                      Avaliar meu usado
+                    </Link>
+                  </div>
                 </>
               )}
 
-              <dl
-                data-ficha-section="especificacoes"
-                className="ficha-jump-target ficha-spec-grid grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm"
-              >
-                {specs.map((spec) => (
-                  <div
-                    key={spec.label}
-                    className="min-w-0 border border-white/10 bg-asphalt/40 px-3 py-2.5"
-                  >
-                    <dt className="text-[11px] uppercase tracking-wider text-muted">
-                      {spec.label}
-                    </dt>
-                    {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
-                    <dd
-                      className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
-                        spec.empty
-                          ? "font-medium text-muted"
-                          : "font-semibold text-cream"
-                      }`}
-                    >
-                      {spec.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-
-              {vehicle.createdAt || updatedLabel ? (
-                <p className="text-xs text-muted">
-                  <ListedAgo
-                    listedAt={
-                      vehicle.createdAt
-                        ? new Date(vehicle.createdAt).toISOString()
-                        : null
-                    }
-                    updatedLabel={updatedLabel}
-                  />
-                </p>
-              ) : null}
-
-              {!sold ? (
-                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
-                  <Link
-                    href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
-                    prefetch={false}
-                    className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
-                  >
-                    Ou preencha a avaliação do seu usado
-                  </Link>
-                </div>
+              {accessories.length > 0 ? (
+                <a
+                  href="#opcionais-desktop"
+                  data-ficha-opcionais-link=""
+                  className="flex min-h-[44px] items-center justify-between gap-3 border-t border-white/10 text-sm font-semibold text-cream transition hover:text-brand-light"
+                >
+                  <span>
+                    {accessories.length === 1 ? "Ver o opcional" : `Ver os ${accessories.length} opcionais`}
+                  </span>
+                  <span aria-hidden="true">↓</span>
+                </a>
               ) : null}
 
               <ShareVehicle
