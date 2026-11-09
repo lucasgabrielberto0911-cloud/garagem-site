@@ -151,10 +151,42 @@ test("CSV público não expõe cidade interna, CEP nem coordenadas do veículo",
     const row = catalogVehicleRow({ ...sample, locationCity }, "https://www.suagaragem.net");
     assert.ok(row);
     assert.deepEqual(row, baseline);
-    assert.deepEqual(JSON.parse(row.address), { region: "Espírito Santo", country: "Brazil" });
-    for (const field of ["postal_code", "latitude", "longitude"]) assert.equal(row[field as keyof typeof row], "");
     const csv = buildCatalogCsv([{ ...sample, locationCity }]);
-    assert.doesNotMatch(csv, /Linhares|Serra|Vitória|Aracruz|29900-000|29160-000|29015-000|29190-022/);
+    assert.doesNotMatch(csv, /Serra|Vitória|Aracruz|29160-000|29015-000|29190-022/);
+  }
+});
+
+test("CSV usa endereço completo da loja com padrões e variáveis de ambiente", (t) => {
+  const keys = ["META_DEALER_ADDR1", "META_DEALER_CEP"] as const;
+  const previous = keys.map((key) => process.env[key]);
+  t.after(() => {
+    keys.forEach((key, index) => {
+      if (previous[index] === undefined) delete process.env[key];
+      else process.env[key] = previous[index];
+    });
+  });
+
+  for (const configured of [undefined, "", "   ", "personalizado"]) {
+    if (configured === undefined) {
+      keys.forEach((key) => { delete process.env[key]; });
+    } else {
+      process.env.META_DEALER_ADDR1 = configured === "personalizado" ? ' Rua "Teste", 123 ' : configured;
+      process.env.META_DEALER_CEP = configured === "personalizado" ? " 29901-234 " : configured;
+    }
+    const address = {
+      addr1: configured === "personalizado" ? 'Rua "Teste", 123' : "Linhares",
+      city: "Linhares",
+      region: "ES",
+      postal_code: configured === "personalizado" ? "29901-234" : "29900-000",
+      country: "BR",
+    };
+    const row = catalogVehicleRow(sample, "https://www.suagaragem.net");
+    assert.ok(row);
+    assert.deepEqual(JSON.parse(row.address), address);
+    assert.equal(row.postal_code, address.postal_code);
+    assert.equal(row.latitude, "-19.3911");
+    assert.equal(row.longitude, "-40.0722");
+    assert.ok(buildCatalogCsv([sample]).includes(csvEscape(JSON.stringify(address))));
   }
 });
 
