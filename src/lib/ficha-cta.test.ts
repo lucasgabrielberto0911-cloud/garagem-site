@@ -31,9 +31,8 @@ test("CTAs da ficha passam pelo helper ficha — não reutilizam home", () => {
   assert.doesNotMatch(page, /campaign="home"/);
 
   assert.match(bar, /fichaWhatsAppTracking/);
-  assert.match(bar, /Tenho interesse/);
-  assert.match(bar, /Financiamento, troca ou vídeo/);
-  assert.match(bar, /no WhatsApp/);
+  assert.match(bar, /Chamar no WhatsApp/);
+  assert.doesNotMatch(bar, /Agendar visita|Financiamento, troca ou vídeo|formatCurrencyBRL/);
   assert.doesNotMatch(bar, /IntersectionObserver/);
   assert.doesNotMatch(bar, /translate-y-full/);
   assert.doesNotMatch(bar, /campaign:\s*"home"/);
@@ -567,8 +566,3 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
   assert.doesNotMatch(mobileMarkup, /Todo seminovo passa por checagem na loja antes do anúncio/);
 });
 
-test("barra do celular: Agendar visita tem altura real de 44px sem expansão do alvo", () => {
-  const bar = readSrc("components/site/VehicleMobileBar.tsx");
-  assert.match(bar, /className="inline-flex min-h-11[^>]*>\s*Agendar visita/s);
-  assert.doesNotMatch(bar, /before:-inset/);
-});

@@ -72,8 +72,8 @@ test("visita e clique consentidos chegam ao diário e ao funil autenticado", asy
   await page.goto(`${vehiclePath(samples[0])}?utm_source=google`);
   expect((await measured).status()).toBe(204);
   const click = page.waitForResponse(response => response.url().endsWith("/api/funil") && response.request().postDataJSON().event === "whatsapp");
-  if (page.viewportSize()!.width < 1024) await page.getByRole("link", { name: /^Tenho interesse no WhatsApp/ }).click();
-  else await page.locator('main a[href*="wa.me"]:visible').filter({ hasText: /Tenho interesse|Falar no WhatsApp/ }).first().click();
+  if (page.viewportSize()!.width < 1024) await page.getByRole("link", { name: /^Chamar no WhatsApp/ }).click();
+  else await page.locator('main a[href*="wa.me"]:visible').filter({ hasText: /Chamar no WhatsApp|Tenho interesse|Falar no WhatsApp/ }).first().click();
   expect((await click).status()).toBe(204);
   expect(events.map(raw => JSON.parse(raw).origin)).toContain("google");
   const recorded = await prisma.adminAudit.findFirst({ where: { entityId: samples[0].id, action: "site:whatsapp", adminId: "site:google" } });

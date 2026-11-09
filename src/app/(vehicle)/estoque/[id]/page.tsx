@@ -721,10 +721,6 @@ export default async function VehicleDetailPage({
         vehiclePath={path}
         contentName={fullLabel}
         message={whatsapp.interest}
-        videoMessage={whatsapp.video}
-        financeMessage={whatsapp.finance}
-        tradeMessage={whatsapp.trade}
-        visitMessage={whatsapp.visit}
         brand={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}

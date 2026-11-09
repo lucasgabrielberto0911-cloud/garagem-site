@@ -37,14 +37,13 @@ test("cards mantêm uma capa prioritária e as seguintes em lazy loading", async
   }
 });
 
-test("barra móvel: tocar nas bordas mantém a ação de cada botão", async ({ page }, info) => {
+test("barra móvel: um só botão de WhatsApp, 56px, tocar nas bordas mantém a ação", async ({ page }, info) => {
   test.skip(!info.project.name.startsWith("mobile"), "Barra exclusiva do celular");
   await page.goto(vehiclePath(samples[0]));
   const bar = page.locator("[data-vehicle-mobile-bar]");
-  const interest = bar.getByRole("link", { name: /^Tenho interesse/ });
-  const visit = bar.getByRole("link", { name: /^Agendar visita/ });
-  await expect(interest).toBeVisible();
-  await expect(visit).toBeVisible();
+  const wa = bar.getByRole("link", { name: /^Chamar no WhatsApp/ });
+  await expect(wa).toBeVisible();
+  await expect(bar.getByRole("link")).toHaveCount(1);
   // Registra o alvo real sem abrir o WhatsApp nem enviar leads de teste.
   await page.evaluate(() => {
     document.addEventListener("click", event => {
@@ -55,30 +54,18 @@ test("barra móvel: tocar nas bordas mantém a ação de cada botão", async ({ 
       document.body.dataset.ultimoAlvo = link.getAttribute("aria-label") ?? "";
     }, true);
   });
-  const interestBox = (await interest.boundingBox())!;
-  const visitBox = (await visit.boundingBox())!;
-  expect(interestBox.height).toBeGreaterThanOrEqual(44);
-  expect(visitBox.height).toBeGreaterThanOrEqual(44);
-  expect(visitBox.y - interestBox.y - interestBox.height).toBeGreaterThanOrEqual(2);
-  for (const link of [interest, visit]) {
-    const box = (await link.boundingBox())!;
-    const label = (await link.getAttribute("aria-label"))!;
-    for (const [x, y] of [
-      [box.x + box.width / 2, box.y + 1],
-      [box.x + box.width / 2, box.y + box.height - 1],
-      [box.x + 1, box.y + box.height / 2],
-      [box.x + box.width - 1, box.y + box.height / 2],
-      [box.x + 1, box.y + 1],
-      [box.x + box.width - 1, box.y + 1],
-      [box.x + 1, box.y + box.height - 1],
-      [box.x + box.width - 1, box.y + box.height - 1],
-    ]) {
-      await page.locator("body").evaluate(element => delete element.dataset.ultimoAlvo);
-      await page.touchscreen.tap(x, y);
-      await expect(page.locator("body")).toHaveAttribute("data-ultimo-alvo", label);
-    }
+  const box = (await wa.boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(52);
+  expect(box.height).toBeLessThanOrEqual(60);
+  const label = (await wa.getAttribute("aria-label"))!;
+  for (const [x, y] of [
+    [box.x + box.width / 2, box.y + 1],
+    [box.x + box.width / 2, box.y + box.height - 1],
+    [box.x + 1, box.y + box.height / 2],
+    [box.x + box.width - 1, box.y + box.height / 2],
+  ]) {
+    await page.locator("body").evaluate(element => delete element.dataset.ultimoAlvo);
+    await page.touchscreen.tap(x, y);
+    await expect(page.locator("body")).toHaveAttribute("data-ultimo-alvo", label);
   }
-  await page.locator("body").evaluate(element => delete element.dataset.ultimoAlvo);
-  await page.mouse.click(visitBox.x + visitBox.width / 2, visitBox.y - 1);
-  await expect(page.locator("body")).not.toHaveAttribute("data-ultimo-alvo");
 });
