@@ -71,7 +71,7 @@ export function HeroSearch({
             id="hero-busca"
             type="search"
             name="q"
-            placeholder="Busque por marca ou modelo"
+            placeholder="Ex.: Civic"
             className="w-full min-w-0 bg-transparent py-1.5 font-body text-sm text-cream placeholder:text-muted focus:outline-none sm:py-2.5 sm:text-base"
           />
         </div>

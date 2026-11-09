@@ -238,7 +238,7 @@ export default async function HomePage() {
           <Link
             href="/estoque"
             prefetch={false}
-            className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-orange"
+            className="inline-flex min-h-11 items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-orange"
           >
             Ver todos os veículos
             <IconArrowRight className="h-4 w-4" />
@@ -421,7 +421,7 @@ export default async function HomePage() {
             <Link
               href="/faq"
               prefetch={false}
-              className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-orange"
+              className="inline-flex min-h-11 items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-orange"
             >
               Ver todas as dúvidas
               <IconArrowRight className="h-4 w-4" />
