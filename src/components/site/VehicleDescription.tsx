@@ -20,7 +20,7 @@ function splitLabeled(text: string) {
   return { label, value };
 }
 
-function FactGroup({ lines }: { lines: DescriptionFact[] }) {
+function FactGroup({ lines, hideEmoji }: { lines: DescriptionFact[]; hideEmoji: boolean }) {
   const shouts = lines.filter((line) => isShout(line.text));
   const rest = lines.filter((line) => !isShout(line.text));
   const leads = rest.filter((line) => !splitLabeled(line.text));
@@ -30,9 +30,10 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
     <div className="space-y-3">
       {shouts.map((line) => (
         <p
-          key={line.text}
+          key={`${line.emoji}-${line.text}`}
           className="flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light"
         >
+          {hideEmoji ? null : <span aria-hidden="true">{line.emoji}</span>}
           <span>{line.text}</span>
         </p>
       ))}
@@ -40,9 +41,14 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
         <ul className="space-y-2">
           {leads.map((line) => (
             <li
-              key={line.text}
+              key={`${line.emoji}-${line.text}`}
               className="text-[15px] font-medium leading-snug text-cream"
             >
+              {hideEmoji ? null : (
+                <span className="mr-2" aria-hidden="true">
+                  {line.emoji}
+                </span>
+              )}
               {line.text}
             </li>
           ))}
@@ -55,9 +61,14 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
             if (!labeled) return null;
             return (
               <li
-                key={line.text}
+                key={`${line.emoji}-${line.text}`}
                 className="flex items-start gap-3 px-3 py-2.5"
               >
+                {hideEmoji ? null : (
+                  <span className="w-5 shrink-0 text-center text-sm leading-5" aria-hidden="true">
+                    {line.emoji}
+                  </span>
+                )}
                 <span className="min-w-0">
                   <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                     {labeled.label}
@@ -117,11 +128,14 @@ export function VehicleDescription({
   className = "",
   summaryFacts,
   specRows,
+  hideEmoji = false,
 }: {
   text: string;
   className?: string;
   summaryFacts?: DescriptionSummaryFacts;
   specRows?: { label: string; value: string }[];
+  /** Celular: sem emoji nas linhas. Desktop mantém como o anúncio foi escrito. */
+  hideEmoji?: boolean;
 }) {
   const segments = visibleDescriptionSegments(text, summaryFacts, specRows);
   if (segments.length === 0) return null;
@@ -152,7 +166,7 @@ export function VehicleDescription({
           );
         }
 
-        return <FactGroup key={index} lines={segment.lines} />;
+        return <FactGroup key={index} lines={segment.lines} hideEmoji={hideEmoji} />;
       })}
     </div>
   );

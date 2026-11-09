@@ -266,7 +266,7 @@ export function VehicleMobileBlocks({
 
       {hasAbout ? (
         <DossierBlock title="Sobre o veículo" section="detalhes">
-          <VehicleDescription text={description!} summaryFacts={summaryFacts} specRows={specs} />
+          <VehicleDescription text={description!} summaryFacts={summaryFacts} specRows={specs} hideEmoji />
         </DossierBlock>
       ) : null}
 

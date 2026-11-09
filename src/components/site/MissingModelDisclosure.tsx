@@ -4,15 +4,19 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 /**
  * "Procurando outro modelo?": fechado no celular, aberto e sem seta no desktop.
- * Nasce aberto (HTML do servidor = desktop de sempre) e fecha ao hidratar abaixo de 1024 px.
+ * Nasce aberto (HTML do servidor = desktop de sempre) e acompanha a largura: fecha abaixo de 1024 px e abre a partir dele.
  */
 export function MissingModelDisclosure({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
-    if (window.matchMedia("(max-width: 1023px)").matches && ref.current) {
-      ref.current.open = false;
-    }
+    const query = window.matchMedia("(min-width: 1024px)");
+    const sync = () => {
+      if (ref.current) ref.current.open = query.matches;
+    };
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
   }, []);
 
   return (
