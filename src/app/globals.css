@@ -1315,6 +1315,18 @@ textarea:-webkit-autofill:focus {
   }
 }
 
+/* Sem abas de seção no celular: nada a descontar do scroll nem da dobra. */
+@media (max-width: 1023px) {
+  :root {
+    --ficha-section-nav: 0rem;
+  }
+
+  /* Na ficha, o card parecido só abre o anúncio; o contato é a barra do carro atual. */
+  [data-similar-vehicles] .listing-card-interest {
+    display: none;
+  }
+}
+
 /* Faixa da galeria: swipe horizontal sem empurrar a página (bounce iOS). */
 .gallery-strip {
   -webkit-overflow-scrolling: touch;

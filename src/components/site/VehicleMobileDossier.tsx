@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
-import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
-import { VehicleDescription } from "@/components/site/VehicleDescription";
-import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
+import { VehicleFeatures } from "@/components/site/VehicleFeatures";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
+import { VehicleDescription, visibleDescriptionSegments } from "@/components/site/VehicleDescription";
+import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleSeals } from "@/components/site/VehicleSeals";
-import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import { IconClipboardCheck, IconMapPin, IconShieldCheck } from "@/components/site/icons";
 import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import {
@@ -32,11 +31,17 @@ import type { PublicVerifiedItem } from "@/lib/vehicle-verified";
 import type { VehicleSeal } from "@/lib/vehicle-seals";
 
 /** Já aparecem na primeira dobra. */
-const FOLD_LABELS = new Set(["Ano", "km", "Câmbio"]);
+const FOLD_LABELS = new Set(["Ano", "km", "Câmbio", "Combustível", "Final placa"]);
+/** Garantia e vistoria já aparecem na faixa de confiança. */
+const TRUST_LABELS = new Set(["Garantia", STORE_INSPECTION_LABEL]);
 
-/** A âncora Especificações cai na grade completa quando ela existe. */
+function sheetSpecs(specs: VehicleSpecRow[]) {
+  return specs.filter((row) => !FOLD_LABELS.has(row.label) && !TRUST_LABELS.has(row.label));
+}
+
+/** A âncora Especificações cai na ficha técnica quando ela existe. */
 export function hasMobileFichaSpecs(specs: VehicleSpecRow[]) {
-  return specs.some((row) => !FOLD_LABELS.has(row.label));
+  return sheetSpecs(specs).length > 0;
 }
 
 export function VehicleMobileSummary({
@@ -48,6 +53,7 @@ export function VehicleMobileSummary({
   yearModel,
   km,
   transmission,
+  fuel,
   plateEnd,
   inspection,
   seals = [],
@@ -61,25 +67,29 @@ export function VehicleMobileSummary({
   yearModel: number;
   km: number;
   transmission: string;
+  fuel?: string | null;
   plateEnd?: string | null;
   inspection?: string | null;
   /** Selos já filtrados (sem dado = sem selo). */
   seals?: readonly VehicleSeal[];
-  /** Quando a grade completa não existe, a âncora aponta para estes fatos. */
+  /** Quando a ficha técnica não existe, a âncora aponta para estes fatos. */
   specAnchor?: boolean;
 }) {
+  const plate = (plateEnd ?? "").replace(/\s+/g, " ").trim();
+  const fuelText = (fuel ?? "").trim();
   const facts = [
     { label: "Ano", value: formatVehicleYearRange(year, yearModel) },
     { label: "Km", value: formatNumberBR(km) },
     { label: "Câmbio", value: transmission.trim() || SPEC_EMPTY },
+    ...(fuelText && fuelText !== SPEC_EMPTY ? [{ label: "Combustível", value: fuelText }] : []),
+    ...(plate ? [{ label: "Final da placa", value: plate }] : []),
   ];
-  const plate = (plateEnd ?? "").replace(/\s+/g, " ").trim();
 
   return (
     <div className="ficha-mobile-sheet px-4 pb-3 pt-3 sm:px-6">
-      <p className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream">
+      <h1 className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream">
         {title}
-      </p>
+      </h1>
       {version ? (
         <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-muted">{version}</p>
       ) : null}
@@ -93,14 +103,19 @@ export function VehicleMobileSummary({
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
       ) : null}
-      {!sold ? <VehicleSeals seals={seals} className="mt-2.5" /> : null}
+      {!sold ? <VehicleSeals seals={seals} className="mt-2.5" optionalsHref="#opcionais" /> : null}
       <dl
         className={`mt-2.5 grid grid-cols-2 gap-1.5${specAnchor ? " ficha-jump-target" : ""}`}
         id={specAnchor ? "especificacoes" : undefined}
         data-ficha-section={specAnchor ? "especificacoes" : undefined}
       >
-        {facts.map((fact) => (
-          <div key={fact.label} className={`min-w-0 border border-white/10 bg-ink px-2.5 py-2${fact.label === "Câmbio" ? " col-span-2" : ""}`}>
+        {facts.map((fact, index) => (
+          <div
+            key={fact.label}
+            className={`min-w-0 border border-white/10 bg-ink px-2.5 py-2${
+              facts.length % 2 === 1 && index === facts.length - 1 ? " col-span-2" : ""
+            }`}
+          >
             <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
               {fact.label}
             </dt>
@@ -110,53 +125,55 @@ export function VehicleMobileSummary({
           </div>
         ))}
       </dl>
-      {plate ? (
-        <p className="mt-2 text-[13px] leading-snug text-cream">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            Final da placa{" "}
-          </span>
-          <span className="font-display font-semibold">{plate}</span>
-        </p>
-      ) : null}
     </div>
   );
 }
 
+/** Bloco sempre aberto: título em Sora, sem acordeão. */
 function DossierBlock({
   title,
   children,
-  defaultOpen = false,
   section,
+  id,
 }: {
   title: string;
   children: ReactNode;
-  defaultOpen?: boolean;
   section?: "especificacoes" | "detalhes";
+  id?: string;
 }) {
   return (
-    <details
-      className={`group border-b border-white/10${section ? " ficha-jump-target" : ""}`}
-      open={defaultOpen}
-      id={section}
+    <section
+      className={`border-b border-white/10 py-5${section ? " ficha-jump-target" : ""}`}
+      id={id ?? section}
       data-ficha-section={section}
     >
-      <summary className="flex min-h-[3rem] cursor-pointer list-none items-center justify-between gap-3 py-3.5 font-display text-[15px] font-semibold tracking-tight text-cream [&::-webkit-details-marker]:hidden">
-        <h2 className="contents"><span>{title}</span></h2>
-        <span
-          aria-hidden="true"
-          className="text-muted transition-transform duration-200 group-open:rotate-180 group-open:text-brand-light"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M3.5 6L8 10.5L12.5 6"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-          </svg>
-        </span>
-      </summary>
-      <div className="pb-4 text-[15px] leading-relaxed text-cream/80">{children}</div>
-    </details>
+      <h2 className="mb-3 font-display text-lg font-semibold tracking-tight text-cream">{title}</h2>
+      <div className="text-[15px] leading-relaxed text-cream/80">{children}</div>
+    </section>
+  );
+}
+
+const TRUST_PILLS = [
+  { Icon: IconShieldCheck, label: "Garantia de 3 meses (motor e câmbio)" },
+  { Icon: IconClipboardCheck, label: "Vistoria da loja" },
+  { Icon: IconMapPin, label: "Linhares/ES" },
+] as const;
+
+/** Confiança sempre visível: garantia, vistoria e cidade, sem clicar. */
+function VehicleTrustStrip() {
+  return (
+    <ul
+      aria-label="Garantia e vistoria"
+      data-trust-strip=""
+      className="grid gap-2 border-b border-white/10 py-4"
+    >
+      {TRUST_PILLS.map(({ Icon, label }) => (
+        <li key={label} className="flex items-center gap-2.5 text-sm leading-snug text-cream">
+          <Icon className="h-5 w-5 shrink-0 text-brand-light" />
+          {label}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -176,11 +193,12 @@ export function VehicleMobileBlocks({
   inspection,
   conditions,
   listedLine,
-  prompt,
   quickActions,
   verified = [],
   verifiedHeading,
   warranty,
+  address,
+  hours,
 }: {
   fullLabel: string;
   path: string;
@@ -197,11 +215,13 @@ export function VehicleMobileBlocks({
   inspection?: string | null;
   conditions: VehicleConditionsContent;
   listedLine?: ReactNode;
-  prompt: string;
   /** Pontos verificados daquele exemplar (só os preenchidos). Vazio = sem bloco. */
   verified?: PublicVerifiedItem[];
   verifiedHeading?: string;
   warranty?: string | null;
+  /** Endereço e horário do painel (getPublicSite), iguais ao rodapé. */
+  address: string;
+  hours: string;
   quickActions?: {
     contentPath: string;
     video: string;
@@ -216,7 +236,7 @@ export function VehicleMobileBlocks({
     postalCode?: string;
   };
 }) {
-  const extraSpecs = specs.filter((row) => !FOLD_LABELS.has(row.label));
+  const extraSpecs = sheetSpecs(specs);
   const inspectionNote = publicInspectionNote(inspection);
   const conditionItems = publishedConditionItems(conditions.items);
   const vistoria = conditionItems.find(
@@ -230,26 +250,39 @@ export function VehicleMobileBlocks({
     (otherConditions.length > 0 && introText === DEFAULT_VEHICLE_CONDITIONS.intro.trim())
       ? ""
       : introText;
+  const hasAbout =
+    !!description &&
+    visibleDescriptionSegments(description, summaryFacts, specs).length > 0;
 
   return (
-    <div className="mt-5 border-t border-white/10 lg:hidden">
+    <div className="mt-2 lg:hidden">
+      {!sold ? <VehicleTrustStrip /> : null}
+
       {verified.length > 0 ? (
-        <DossierBlock title={verifiedHeading ?? "Verificado neste carro"} defaultOpen>
+        <DossierBlock title={verifiedHeading ?? "Verificado neste carro"}>
           <VehicleVerifiedList items={verified} alt={fullLabel} showVideoHint={!sold} />
         </DossierBlock>
       ) : null}
 
-      <DossierBlock title={STORE_INSPECTION_LABEL}>
-        {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
-          <p className="mb-2.5 text-[15px] leading-relaxed text-cream">{inspectionNote}</p>
-        ) : null}
-        <p className="text-[15px] leading-relaxed text-cream/90">
-          {publicStoreInspectionText(vistoria?.text)}
-        </p>
-      </DossierBlock>
+      {hasAbout ? (
+        <DossierBlock title="Sobre o veículo" section="detalhes">
+          <VehicleDescription text={description!} summaryFacts={summaryFacts} specRows={specs} hideEmoji />
+        </DossierBlock>
+      ) : null}
+
+      {accessories.length > 0 ? (
+        <DossierBlock
+          title="Itens e acessórios"
+          section={hasAbout ? undefined : "detalhes"}
+        >
+          <div id="opcionais" className="scroll-mt-24">
+            <VehicleFeatures items={accessories} />
+          </div>
+        </DossierBlock>
+      ) : null}
 
       {extraSpecs.length > 0 ? (
-        <DossierBlock title="Ficha" section="especificacoes">
+        <DossierBlock title="Ficha técnica" section="especificacoes">
           {listedLine ? (
             <p className="mb-3 text-xs tracking-wide text-muted">{listedLine}</p>
           ) : null}
@@ -272,50 +305,52 @@ export function VehicleMobileBlocks({
         </DossierBlock>
       ) : null}
 
-      {intro || otherConditions.length > 0 ? (
-        <DossierBlock title={conditions.title}>
-          {intro ? <p>{intro}</p> : null}
-          {otherConditions.length > 0 ? (
-            <ul className={intro ? "mt-4 space-y-3" : "space-y-3"}>
-              {otherConditions.map((item) => (
-                <li key={item.label} className="border-l-2 border-brand/80 pl-3">
-                  <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-cream">
-                    {item.label}
-                  </p>
-                  <p className="mt-1 text-[15px] leading-relaxed text-cream/80">
-                    {item.label.toLocaleLowerCase("pt-BR") === "garantia" && warranty
-                      ? warranty
-                      : item.text}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </DossierBlock>
-      ) : null}
-
-      {description ? (
-        <DossierBlock title="Sobre o veículo" defaultOpen section="detalhes">
-          <VehicleDescription text={description} summaryFacts={summaryFacts} />
-        </DossierBlock>
-      ) : null}
-
-      {accessories.length > 0 ? (
-        <DossierBlock
-          title="Itens e acessórios"
-          defaultOpen
-          section={description ? undefined : "detalhes"}
-        >
-          <VehicleAccessoryChips items={accessories} />
-        </DossierBlock>
+      {!sold ? (
+        <details className="group border-b border-white/10" data-vistoria-garantia="">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
+            <span>Saiba mais sobre vistoria e garantia</span>
+            <span
+              aria-hidden="true"
+              className="text-muted transition-transform duration-200 group-open:rotate-180"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </span>
+          </summary>
+          <div className="pb-4 text-[15px] leading-relaxed text-cream/80">
+            <h3 className="font-display text-sm font-semibold text-cream">{STORE_INSPECTION_LABEL}</h3>
+            {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
+              <p className="mt-1.5 text-cream">{inspectionNote}</p>
+            ) : null}
+            <p className="mt-1.5">{publicStoreInspectionText(vistoria?.text)}</p>
+            {intro || otherConditions.length > 0 ? (
+              <h3 className="mt-4 font-display text-sm font-semibold text-cream">{conditions.title}</h3>
+            ) : null}
+            {intro ? <p className="mt-1.5">{intro}</p> : null}
+            {otherConditions.length > 0 ? (
+              <ul className="mt-3 space-y-3">
+                {otherConditions.map((item) => (
+                  <li key={item.label} className="border-l-2 border-brand/80 pl-3">
+                    <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-cream">
+                      {item.label}
+                    </p>
+                    <p className="mt-1 text-cream/80">
+                      {item.label.toLocaleLowerCase("pt-BR") === "garantia" && warranty
+                        ? warranty
+                        : item.text}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </details>
       ) : null}
 
       {!sold && quickActions ? (
-        <DossierBlock title="Vídeo e propostas">
-          <p>
-            Peça um vídeo no WhatsApp. A gravação mostra os pontos que você
-            quiser ver — a página não guarda arquivo de vídeo.
-          </p>
+        <DossierBlock title="Próximos passos" id="proximos-passos">
+          <p>Financiamento, troca, vídeo ou visita — a gente responde no WhatsApp.</p>
           <div className="mt-3">
             <VehicleQuickActions
               contentId={vehicleId}
@@ -339,30 +374,15 @@ export function VehicleMobileBlocks({
               className="grid"
             />
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-muted">
-            Cada opção abre o WhatsApp deste veículo.
-          </p>
-          <ChatOpenButton
-            source="ficha"
-            prompt={prompt}
-            size="md"
-            variant="outline"
-            className="mt-3 w-full"
-          />
-          <p className="mt-2 text-xs leading-relaxed text-muted">
-            Dúvida breve no site. Preço, visita e proposta seguem no WhatsApp.
-          </p>
         </DossierBlock>
       ) : null}
 
-      <DossierBlock title="Atendimento">
-        {!sold ? (
-          <VehicleTrustNotes
-            className="mb-3"
-            warranty={warranty}
-            documentation={verified.find((item) => item.key === "documentacao")?.text}
-          />
-        ) : null}
+      <DossierBlock title="Onde estamos" id="onde-estamos">
+        <p className="flex items-start gap-2 text-cream">
+          <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
+          <span>Linhares/ES — {address}</span>
+        </p>
+        <p className="mt-1.5">{hours}</p>
         {!sold ? (
           <FavoriteButton
             vehicleId={vehicleId}
@@ -372,14 +392,15 @@ export function VehicleMobileBlocks({
             model={model}
             year={yearModel}
             variant="full"
-            className="mb-3 w-full"
+            className="mt-4 w-full"
           />
         ) : null}
-        <p className="text-xs leading-relaxed">
-          Financiamento em até 60x e cartão em até 18x. O consultor calcula a
-          parcela no WhatsApp — o site não publica valor de parcela. Sujeito a
-          análise de crédito e CET.
-        </p>
+        <ShareVehicle
+          title={fullLabel}
+          path={path}
+          vehicleId={vehicleId}
+          className="mt-3"
+        />
         {!sold ? (
           <Link
             href={`/vender?interesse=${vehicleId}&label=${encodeURIComponent(fullLabel)}`}
@@ -389,12 +410,6 @@ export function VehicleMobileBlocks({
             Ou preencha a avaliação do seu usado
           </Link>
         ) : null}
-        <ShareVehicle
-          title={fullLabel}
-          path={path}
-          vehicleId={vehicleId}
-          className="mt-3 border-t border-white/10 pt-3"
-        />
       </DossierBlock>
     </div>
   );

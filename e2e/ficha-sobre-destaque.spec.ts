@@ -29,6 +29,9 @@ for (const [sample, count] of [[samples[0], 3], [samples[2], 19]] as const) {
     const heading = details.locator("h2, summary").first();
     await expect(heading).toHaveCSS("font-family", /Sora/);
 
+    // No celular a lista mostra os primeiros itens e expande em "Ver todos".
+    const verTodos = page.getByRole("button", { name: /^Ver todos os \d+ opcionais$/ });
+    if (await verTodos.count()) await verTodos.click();
     const accessories = page.locator("[data-accessory-chips]:visible");
     await expect(accessories.locator("[data-accessory-chip]")).toHaveCount(count);
     await expect(accessories).toHaveCSS("border-left-width", "0px");

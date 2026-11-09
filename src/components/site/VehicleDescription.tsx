@@ -2,6 +2,7 @@ import {
   parseVehicleDescription,
   withoutRepeatedDescriptionFacts,
   type DescriptionSummaryFacts,
+  type DescriptionSegment,
   type DescriptionFact,
 } from "@/lib/vehicle-description";
 
@@ -19,7 +20,7 @@ function splitLabeled(text: string) {
   return { label, value };
 }
 
-function FactGroup({ lines }: { lines: DescriptionFact[] }) {
+function FactGroup({ lines, hideEmoji }: { lines: DescriptionFact[]; hideEmoji: boolean }) {
   const shouts = lines.filter((line) => isShout(line.text));
   const rest = lines.filter((line) => !isShout(line.text));
   const leads = rest.filter((line) => !splitLabeled(line.text));
@@ -32,7 +33,7 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
           key={`${line.emoji}-${line.text}`}
           className="flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light"
         >
-          <span aria-hidden="true">{line.emoji}</span>
+          {hideEmoji ? null : <span aria-hidden="true">{line.emoji}</span>}
           <span>{line.text}</span>
         </p>
       ))}
@@ -43,9 +44,11 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
               key={`${line.emoji}-${line.text}`}
               className="text-[15px] font-medium leading-snug text-cream"
             >
-              <span className="mr-2" aria-hidden="true">
-                {line.emoji}
-              </span>
+              {hideEmoji ? null : (
+                <span className="mr-2" aria-hidden="true">
+                  {line.emoji}
+                </span>
+              )}
               {line.text}
             </li>
           ))}
@@ -61,9 +64,11 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
                 key={`${line.emoji}-${line.text}`}
                 className="flex items-start gap-3 px-3 py-2.5"
               >
-                <span className="w-5 shrink-0 text-center text-sm leading-5" aria-hidden="true">
-                  {line.emoji}
-                </span>
+                {hideEmoji ? null : (
+                  <span className="w-5 shrink-0 text-center text-sm leading-5" aria-hidden="true">
+                    {line.emoji}
+                  </span>
+                )}
                 <span className="min-w-0">
                   <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                     {labeled.label}
@@ -81,17 +86,58 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
   );
 }
 
+/** "Quilometragem: 106.000 km" e a linha "km: 106.000" da ficha são o mesmo dado. */
+function specKey(label: string, value: string) {
+  let key = normalizeSpec(label);
+  let val = normalizeSpec(value);
+  if (key === "quilometragem") key = "km";
+  if (key === "km") val = val.replace(/\s*km$/, "");
+  return `${key}:${val}`;
+}
+
+function normalizeSpec(text: string) {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").replace(/\s+/g, " ").trim().toLocaleLowerCase("pt-BR");
+}
+
+/**
+ * Segmentos que a ficha mostra. `specRows` (celular) tira só as linhas
+ * "Cor: Preta" cujo rótulo e valor já estão iguais na ficha técnica;
+ * "Histórico: único dono" e afins ficam.
+ */
+export function visibleDescriptionSegments(
+  text: string,
+  summaryFacts?: DescriptionSummaryFacts,
+  specRows?: { label: string; value: string }[],
+): DescriptionSegment[] {
+  const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
+  if (!specRows?.length) return segments;
+  const known = new Set(specRows.map((row) => specKey(row.label, row.value)));
+  return segments.flatMap((segment): DescriptionSegment[] => {
+    if (segment.kind !== "facts") return [segment];
+    const lines = segment.lines.filter((line) => {
+      const labeled = splitLabeled(line.text);
+      return !labeled || !known.has(specKey(labeled.label, labeled.value));
+    });
+    return lines.length > 0 ? [{ kind: "facts", lines }] : [];
+  });
+}
+
 /** Descrição do anúncio com hierarquia. Texto corrido continua um parágrafo. */
 export function VehicleDescription({
   text,
   className = "",
   summaryFacts,
+  specRows,
+  hideEmoji = false,
 }: {
   text: string;
   className?: string;
   summaryFacts?: DescriptionSummaryFacts;
+  specRows?: { label: string; value: string }[];
+  /** Celular: sem emoji nas linhas. Desktop mantém como o anúncio foi escrito. */
+  hideEmoji?: boolean;
 }) {
-  const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
+  const segments = visibleDescriptionSegments(text, summaryFacts, specRows);
   if (segments.length === 0) return null;
 
   if (
@@ -120,7 +166,7 @@ export function VehicleDescription({
           );
         }
 
-        return <FactGroup key={index} lines={segment.lines} />;
+        return <FactGroup key={index} lines={segment.lines} hideEmoji={hideEmoji} />;
       })}
     </div>
   );

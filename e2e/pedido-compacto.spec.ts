@@ -16,6 +16,8 @@ test.beforeEach(async ({ page }) => {
 
 test("ficha: quatro campos, máscara e layout sem rolagem lateral", async ({ page }, info) => {
   await page.goto(vehiclePath(samples[0]));
+  const missingSummary = page.locator("[data-missing-model] > summary");
+  if (await missingSummary.isVisible()) await missingSummary.click();
   const form = page.locator("[data-missing-model-form] form");
   const inputs = form.locator("input:not([type=hidden]):not([type=checkbox]):not([name=website])");
   await expect(inputs).toHaveCount(4);
@@ -42,6 +44,25 @@ test("ficha: quatro campos, máscara e layout sem rolagem lateral", async ({ pag
   await expect(form.getByLabel("Telefone com DDD")).toBeFocused();
 });
 
+test("ficha: formulário 'Procurando outro modelo?' acompanha a largura (390 → 1440)", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(vehiclePath(samples[0]));
+  const details = page.locator("[data-missing-model]");
+  const summary = details.locator("> summary");
+  const form = page.locator("[data-missing-model-form] form");
+  await expect(summary).toBeVisible();
+  await expect(details).not.toHaveJSProperty("open", true);
+  await expect(form).toBeHidden();
+  await summary.click();
+  await expect(form).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(details).toHaveJSProperty("open", true);
+  await expect(form).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(details).toHaveJSProperty("open", false);
+  await expect(summary).toBeVisible();
+});
+
 test("envio sem e-mail salva orçamento no banco e exibe no admin", async ({ page }, info) => {
   const name = `Pedido compacto ${info.project.name}`;
   const email = `pedido-${info.project.name}@local.test`;
@@ -49,6 +70,8 @@ test("envio sem e-mail salva orçamento no banco e exibe no admin", async ({ pag
   const admin = await prisma.admin.create({ data: { name: "Admin de teste", email, passwordHash: await bcrypt.hash(password, 10) } });
   try {
     await page.goto(vehiclePath(samples[0]));
+    const missingSummary = page.locator("[data-missing-model] > summary");
+    if (await missingSummary.isVisible()) await missingSummary.click();
     const form = page.locator("[data-missing-model-form] form");
     await form.getByLabel("Telefone com DDD").fill("27988887766");
     await form.getByRole("textbox", { name: "Nome", exact: true }).fill(name);

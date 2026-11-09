@@ -31,6 +31,7 @@ import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
+import { MissingModelDisclosure } from "@/components/site/MissingModelDisclosure";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { JsonLd } from "@/components/JsonLd";
 import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
@@ -39,6 +40,7 @@ import { ListedAgo } from "@/components/site/ListedAgo";
 import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
+import { getPublicSite } from "@/lib/site-settings";
 import { priceBandHref } from "@/lib/related-vehicles";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
@@ -221,10 +223,11 @@ export default async function VehicleDetailPage({
   const sameBandTitle = isMoto
     ? "Motos na mesma faixa"
     : "Carros na mesma faixa";
-  const [conditions, verifiedItems] = await Promise.all([
+  const [conditions, verifiedItems, publicSite] = await Promise.all([
     getVehicleConditions(),
     // Falha ou tabela ausente = sem seção; carro vendido não mostra.
     sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
+    getPublicSite(),
   ]);
   const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
   const verifiedDocumentation = verified.find((item) => item.key === "documentacao")?.text;
@@ -346,7 +349,8 @@ export default async function VehicleDetailPage({
           </nav>
         </div>
 
-        <h1 className="sr-only">{title}</h1>
+        {/* No celular o título visível do resumo é o h1; aqui só o desktop. */}
+        <h1 className="sr-only hidden lg:block">{title}</h1>
         <FichaSectionNav hasDetails={hasDetails} />
 
         {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
@@ -376,6 +380,7 @@ export default async function VehicleDetailPage({
                 transmission={display.transmission}
                 plateEnd={vehicle.plateEnd}
                 inspection={sold ? null : vehicle.inspection}
+                fuel={specs.find((row) => row.label === "Combustível")?.value}
                 seals={seals}
                 specAnchor={!hasMobileFichaSpecs(specs)}
               />
@@ -625,13 +630,15 @@ export default async function VehicleDetailPage({
               <p className="text-xs leading-relaxed text-muted">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
-                  : `Valores e disponibilidade sujeitos a alteração. Financiamento em até 60x e cartão em até 18x. Parcela só no WhatsApp, com análise de crédito e CET. Combine pelo WhatsApp ${site.whatsappLabel}.`}
+                  : `Valores e disponibilidade sujeitos a alteração. Financiamento em até 60x e cartão em até 18x, sujeitos a análise de crédito. Combine pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
             </div>
           </aside>
         </div>
 
         <VehicleMobileBlocks
+          address={publicSite.address}
+          hours={publicSite.hours}
           fullLabel={fullLabel}
           path={path}
           sold={sold}
@@ -656,7 +663,6 @@ export default async function VehicleDetailPage({
               updatedLabel={updatedLabel}
             />
           }
-          prompt={`Tenho dúvida sobre o ${title}`}
           verified={verified}
           warranty={vehicle.warranty}
           verifiedHeading={verifiedHeading(isMoto)}
@@ -700,7 +706,7 @@ export default async function VehicleDetailPage({
           />
         </Suspense>
 
-        <div className="mt-10 sm:mt-12">
+        <MissingModelDisclosure>
           <MissingModelForm
             idPrefix="ficha"
             sourcePage="ficha"
@@ -714,7 +720,7 @@ export default async function VehicleDetailPage({
                 : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
             }
           />
-        </div>
+        </MissingModelDisclosure>
         <SeoInternalLinks />
       </Container>
 

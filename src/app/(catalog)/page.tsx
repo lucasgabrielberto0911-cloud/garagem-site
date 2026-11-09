@@ -65,7 +65,7 @@ const REASONS = [
   {
     Icon: IconHandshake,
     title: "Negociação clara",
-    text: "O preço está no anúncio. Há financiamento em até 60 vezes, sujeito à análise de crédito, e pagamento com cartão em até 18 vezes. O consultor informa o valor da parcela e as condições no WhatsApp.",
+    text: "O preço está no anúncio. Há financiamento em até 60 vezes, sujeito à análise de crédito, e pagamento com cartão em até 18 vezes. As condições são combinadas no WhatsApp.",
   },
 ] as const;
 
@@ -436,8 +436,8 @@ export default async function HomePage() {
           Ainda em dúvida sobre o próximo passo?
         </h2>
         <p className="mt-2 max-w-xl text-sm leading-snug text-muted">
-          O consultor calcula a parcela no WhatsApp {site.whatsappLabel}. O
-          site não publica valor de parcela.
+          Financiamento, troca, vídeo ou visita: fale com o consultor no
+          WhatsApp {site.whatsappLabel}.
         </p>
         <ActionRow className="mt-4 sm:justify-start">
           <WhatsAppButton

@@ -160,6 +160,12 @@ async function conferirZip(page: import("@playwright/test").Page) {
   await page.unroute("**/api/admin/fotos/jpg?**");
 }
 
+async function expandirOpcionais(page: import("@playwright/test").Page) {
+  // No celular a ficha mostra os primeiros opcionais; "Ver todos" expande.
+  const verTodos = page.getByRole("button", { name: /^Ver todos os \d+ opcionais$/ });
+  if (await verTodos.count()) await verTodos.click();
+}
+
 test("veículo: legenda inteira do Fastback publica 15 opcionais agrupados e permite edição", async ({ page, conta }) => {
   await login(page, conta.email);
   await page.goto("/admin/veiculos/novo");
@@ -215,6 +221,7 @@ test("veículo: legenda inteira do Fastback publica 15 opcionais agrupados e per
   expect(vehicle.yearModel).toBe(2024);
   expect(vehicle.engine).toBe("1.0 Turbo 200, até 130 cv");
   expect(vehicle.transmission).toBe("Automático CVT com 7 marchas simuladas");
+  await expandirOpcionais(page);
   const equipamentos = page.locator("[data-accessory-chips]:visible");
   await expect(equipamentos.locator("[data-accessory-chip]")).toHaveCount(15);
   for (const [group, count] of [["Conforto", 8], ["Segurança", 7], ["Facilidades", 2]] as const) {
@@ -240,6 +247,7 @@ test("veículo: legenda inteira do Fastback publica 15 opcionais agrupados e per
   await expect(form.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
   await expect(page.getByText("Anúncio salvo com sucesso.", { exact: true })).toBeVisible();
   await page.goto(vehiclePath(vehicle));
+  await expandirOpcionais(page);
   await expect(page.locator("[data-accessory-chips]:visible [data-accessory-chip]")).toHaveCount(14);
 
 });

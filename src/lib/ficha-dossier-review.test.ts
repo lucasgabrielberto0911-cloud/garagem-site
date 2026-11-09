@@ -34,7 +34,6 @@ function dossier(opts: { sold?: boolean; conditions?: VehicleConditionsContent }
         inspection: null,
         conditions: opts.conditions ?? DEFAULT_VEHICLE_CONDITIONS,
         google: DEFAULT_GOOGLE_REVIEWS,
-        prompt: "dúvida",
         verified,
       }),
     ),
