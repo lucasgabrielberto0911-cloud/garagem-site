@@ -1,0 +1,34 @@
+name: Relatório diário de fotos
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 06h em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: relatorio-fotos
+  cancel-in-progress: false
+
+jobs:
+  relatorio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Conferir URLs sem baixar fotos
+        run: npx tsx scripts/verificar-fotos.ts --relatorio RELATORIO-FOTOS.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relatorio-fotos
+          path: RELATORIO-FOTOS.md
+          if-no-files-found: error
+          retention-days: 14

@@ -40,6 +40,7 @@ export const PUBLIC_VEHICLE_CARD_SELECT = {
   color: true,
   createdAt: true,
   updatedAt: true,
+  _count: { select: { photos: true } },
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,

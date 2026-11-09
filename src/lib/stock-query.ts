@@ -33,6 +33,7 @@ export type VehicleCardRecord = {
   /** Preço atual menor que o último registrado (VehiclePriceHistory). */
   /** Valor da queda em R$ (histórico real); ausente = sem queda. */
   priceDrop?: number;
+  photoCount?: number;
   photos: VehicleCardPhoto[];
 };
 
@@ -324,7 +325,7 @@ export type StockPageResult = {
 };
 
 export const STOCK_SORT_OPTIONS = [
-  { value: "destaques", label: "Destaques do dia" },
+  { value: "destaques", label: "Recomendados" },
   { value: "recentes", label: "Mais recentes" },
   { value: "menor-preco", label: "Menor preço" },
   { value: "maior-preco", label: "Maior preço" },
@@ -344,7 +345,7 @@ export function stockCityFilter(value?: string | null) {
 export function stockSortLabel(sort?: string | null) {
   const key = (sort || "destaques").trim();
   const found = STOCK_SORT_OPTIONS.find((option) => option.value === key);
-  return found?.label ?? "Destaques do dia";
+  return found?.label ?? "Recomendados";
 }
 
 /** Ordenação fora do padrão: a lista precisa da consulta, não do HTML recente. */

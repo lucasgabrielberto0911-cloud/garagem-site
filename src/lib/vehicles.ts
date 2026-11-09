@@ -18,6 +18,7 @@ import {
   type StockPageResult,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
+import { orderCustomerStock, customerStockCategory } from "@/lib/stock-customer-order";
 import { orderStockDaily, saoPauloDateKey } from "@/lib/stock-daily-order";
 import {
   colorWhere,
@@ -493,7 +494,7 @@ export function buildStockWhere(filters: StockFilters, catalog: { brand: string;
 
   return {
     ...PUBLIC_SITEMAP_VEHICLE_WHERE,
-    ...(filters.category ? { category: filters.category } : {}),
+    category: customerStockCategory(filters),
     ...(filters.brand
       ? { brand: { equals: filters.brand, mode: "insensitive" as const } }
       : {}),
@@ -558,12 +559,12 @@ const loadDailyStockPoolCached = unstable_cache(
   async (key: string) => {
     const filters = JSON.parse(key) as StockFilters;
     const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
-    return orderStockDaily(await findCardVehicles({
+    return orderCustomerStock(await findCardVehicles({
       where: buildStockWhere(filters, catalog),
       orderBy: stockOrderBy(filters.sort),
     }));
   },
-  ["stock-daily-pool-v1"],
+  ["stock-daily-pool-v2"],
   PUBLIC_CACHE,
 );
 
@@ -574,7 +575,7 @@ const loadStockCountCached = unstable_cache(
     const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
     return prisma.vehicle.count({ where: buildStockWhere(filters, catalog) });
   },
-  ["stock-count-v1"],
+  ["stock-count-v2"],
   PUBLIC_CACHE,
 );
 
@@ -670,7 +671,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v17"],
+  ["stock-page-v18"],
   PUBLIC_CACHE,
 );
 
