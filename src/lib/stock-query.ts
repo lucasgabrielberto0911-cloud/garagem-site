@@ -8,8 +8,8 @@ import {
 
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
 
-/** 8 no celular = 4 linhas; lotes menores descem mais rápido na rolagem. */
-export const STOCK_PAGE_SIZE = 8;
+/** O estoque atual cabe na primeira leva; a rolagem infinita atende lotes maiores. */
+export const STOCK_PAGE_SIZE = 16;
 
 export type VehicleCardPhoto = { url: string; thumbnailUrl?: string | null };
 
