@@ -152,17 +152,17 @@ https://www.suagaragem.net/estoque/honda-civic-exl-2-0-flex-16v-2020-cmu4sgkfz00
 - Sem alertas nos metadados/HTTP. Resolução e conteúdo visual não certificados.
 
 
-## Critério de recomendação do estoque
+## Escopo após a revisão do PR #433
 
-A ordenação padrão “Recomendados” prioriza anúncios disponíveis com capa e pelo menos cinco fotos; dentro de cada grupo, usa a data de cadastro mais recente e desempata pelo ID. Isso mede completude do cadastro, sem certificar que as imagens estejam corretas ou nítidas. O select continua trazendo uma única capa; a contagem usa `_count.photos` no banco. O cache público permanece em 3600 s com as tags existentes.
+A ordenação “Recomendados”, a priorização por quantidade de fotos e a mudança para carros por padrão foram retiradas deste PR. A listagem mantém o comportamento da base; essas propostas ficam para outro PR.
 
-O estoque continua excluindo vendidos, reservados e históricos, conforme o contrato público existente. O comparador também coloca reservado e vendido depois dos disponíveis como defesa. Não se reintroduzem anúncios indisponíveis na listagem. Motos entram somente com `category=moto` ou os termos “moto(s)”/“motocicleta(s)” na busca. Ordenações explícitas por preço, km, ano, nome e recência continuam respeitadas.
+A correção da capa do Kicks também fica fora deste PR. O diagnóstico é mantido como evidência da pendência: falta identificar a foto correta em cópia local e aplicar a sequência confirmada pelo admin. O teste de ordem usa um veículo fictício e não comprova a correção do Kicks real.
 
 ## Reprodução e acompanhamento
 
 - Executar `npx tsx scripts/verificar-fotos.ts`; o arquivo padrão é `~/RELATORIO-FOTOS.md`.
 - Para escolher o arquivo: `npx tsx scripts/verificar-fotos.ts --relatorio RELATORIO-FOTOS.md`.
-- O workflow `verificar-fotos.yml` foi removido por solicitação do Lucas. Execução somente manual: `npx tsx scripts/verificar-fotos.ts`. Não há agendamento no GitHub Actions.
+- O diff final contra `main` não altera workflows: `verificar-fotos.yml` foi criado e removido em commits desta branch e não existe na base. Execução somente manual: `npx tsx scripts/verificar-fotos.ts`. Não há agendamento no GitHub Actions.
 - Alertas de fotos são reportados. Falhas de coleta encerram o comando manual com código 1 e preservam o relatório parcial. A checagem também informa dependências legadas do Storage, mesmo quando um cache responde 200.
 
 ## Prioridades e tarefas prontas para issue/PR
@@ -171,13 +171,13 @@ O estoque continua excluindo vendidos, reservados e históricos, conforme o cont
 2. **Média / esforço médio — confirmar resolução e conteúdo visual**: inspecionar cópias locais das fotos da Fazer, Ka+ e Haval; validar dimensões reais e correspondência com cada veículo. Metadados públicos sem dimensões não permitem concluir se uma imagem está nítida.
 3. **Baixa / esforço baixo — verificar sob demanda**: rodar o comando manual somente quando solicitado e comparar a evolução dos alertas; usar as URLs e IDs para correções pontuais no painel por um responsável autorizado.
 
-## Validação da implementação
+## Validação histórica antes da revisão de escopo
 
 - `npm test`: 1.711 testes aprovados, zero falhas.
 - `npm run lint`: aprovado; lint específico dos arquivos acrescentados/ajustados após a execução geral também aprovado.
 - `npm run build`: aprovado com `DATABASE_URL` e `DIRECT_URL` apontando explicitamente para o banco local `garagem_e2e`, com `E2E_TEST=1`.
 - `npx tsc --noEmit` e `npx tsc --noEmit --project tsconfig.test.json`: aprovados.
-- `E2E_TEST=1 E2E_PORT=3379 npx playwright test e2e/estoque-qualidade-fotos.spec.ts` com as URLs do banco local: quatro cenários aprovados em 320, 390, 430 e 1440 px. Verifica ordem dos cards, contagem, paginação, ordenação por preço, busca/filtro de motos e ausência de overflow. Fotos substituídas pela fixture local.
+- O E2E de recomendação foi validado na versão anterior e retirado junto com a funcionalidade após a revisão. Os resultados atuais estão no corpo do PR.
 - `npx tsx scripts/verificar-fotos.ts`: aprovado contra o site público, somente leitura, sem bytes de fotos; 15 veículos, 144 URLs, 16 alertas e zero falhas de cobertura.
 - `git diff --check`: aprovado.
 

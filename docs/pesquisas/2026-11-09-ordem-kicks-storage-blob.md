@@ -4,7 +4,9 @@ Atualização de 2026-11-09 para o PR #433, branch `reserva/codex-verificacao-fo
 
 ## Resumo
 
-- Workflow diário removido por solicitação do Lucas. A verificação fica somente no comando manual `npx tsx scripts/verificar-fotos.ts`; não há workflow nem agendamento novo.
+- O diff final contra `main` não altera workflows. `verificar-fotos.yml` foi criado e removido em commits desta branch, e não existe na base. A verificação nova fica somente no comando manual `npx tsx scripts/verificar-fotos.ts`.
+- A correção da foto de capa do Kicks fica fora do escopo deste PR e permanece pendente; este documento registra apenas o diagnóstico. O E2E de ordem valida um veículo fictício, sem corrigir nem certificar a escolha visual do Kicks real.
+- “Recomendados” e as mudanças de categoria padrão foram retirados do PR; ficam para outro trabalho.
 - Inventário de metadados por SELECT somente leitura: 361 fotos de 44 veículos; 128 registros com galeria e miniatura no Blob; 233 registros ainda referenciam Storage, em 32 veículos. Desses, 16 fotos são de anúncios disponíveis (Haval H6: 13; Fazer 250: 2; Ka+: 1). O inventário completo abaixo também inclui vendidos, porque suas fichas podem continuar acessíveis.
 - O retrato do fundador também depende do Storage: `SiteSettings.id=default`, campo `founderPhotoUrl`, URL https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/1787433281678-19e323c7-3aab-4778-97e7-36bfb4b3f57c.webp. A consulta de Testimonial não encontrou fotos preenchidas.
 - As sete fotos do Kicks estão no Blob. Ordem no banco, JSON-LD público e capa da API conferem. A captura local `/home/lucas/ficha-prints/kicks-01-topo.png` mostra banco traseiro na foto 1/7; `/home/lucas/ficha-prints/estoque-mobile.png` mostra o mesmo interior na capa do card. Isso confirma o problema editorial da capa salva, sem demonstrar bug de ordenação no código. A captura não identifica qual dos outros seis IDs deve virar a nova capa.
@@ -925,13 +927,13 @@ Status: disponivel; histórico: não; 2 fotos com dependência.
 3. **Média × médio esforço — vendidos e retrato:** migrar os demais 217 registros e o retrato do fundador; validar fichas vendidas sem preço e com noindex; invalidar `site-settings` ao trocar o retrato.
 4. **Alta × baixo esforço — evitar regressão no upload:** o fluxo administrativo de upload ainda é legado Supabase. Migrá-lo para Blob exige tarefa própria de upload/autorização/derivados; este PR bloqueia consumo público do Storage e não muda segredos ou dados de produção. Enquanto isso, novo upload legado não ficará disponível publicamente.
 
-## Validação desta atualização
+## Validação após a revisão de escopo
 
-- `npm test`: 1.715 testes aprovados, zero falhas. Banco explicitamente local (`127.0.0.1:5432/garagem_e2e`); sem carregar credenciais de produção.
-- `npm run lint`: aprovado; verificação específica final dos novos testes também aprovada.
+- `npm test`: 1.713 testes aprovados, zero falhas. Banco explicitamente local (`127.0.0.1:5432/garagem_e2e`), com `E2E_TEST` desligado nos unitários. A primeira execução com `E2E_TEST=1` teve oito falhas por substituir respostas HTTP por fixtures; a repetição com o ambiente correto passou integralmente.
+- `npm run lint`: aprovado.
 - `npm run build`: aprovado, com `DATABASE_URL` e `DIRECT_URL` locais e `E2E_TEST=1`.
-- `npx tsc --noEmit --project tsconfig.test.json`: aprovado.
-- `E2E_TEST=1 E2E_PORT=3379 npx playwright test e2e/ordem-fotos-blob.spec.ts e2e/fotos-publicas.spec.ts e2e/estoque-qualidade-fotos.spec.ts`: 16 cenários aprovados, em 320, 390, 430 e 1440 px. Banco local dedicado, fixture local no browser e interceptação do servidor por `E2E_TEST=1`.
+- `npx tsc --noEmit` e `npx tsc --noEmit --project tsconfig.test.json`: aprovados.
+- `E2E_TEST=1 E2E_PORT=3379 npx playwright test e2e/ordem-fotos-blob.spec.ts e2e/fotos-publicas.spec.ts`: 12 cenários aprovados, em 320, 390, 430 e 1440 px. Banco local dedicado, fixture local no browser e interceptação do servidor por `E2E_TEST=1`.
 - `git diff --check`: aprovado.
 
 História verificada: o visitante abre o estoque e a ficha, recebe a capa e a sequência ordenadas por `Photo.order` e navega pela galeria; os caminhos públicos de fotos não buscam Storage, e o catálogo pode converter fotos do Blob.

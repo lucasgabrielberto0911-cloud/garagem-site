@@ -15,12 +15,11 @@ const PUBLIC_VEHICLE_CARD_SELECT_LEGACY = {
 
 type CardQuery = Omit<Parameters<typeof prisma.vehicle.findMany>[0], "select">;
 
-function withCardDefaults(row: VehicleCardRecord & { _count?: { photos: number } }): VehicleCardRecord {
-  const { locationCity: internalCity, _count, ...publicRow } = row;
+function withCardDefaults(row: VehicleCardRecord): VehicleCardRecord {
+  const { locationCity: internalCity, ...publicRow } = row;
   void internalCity;
   return {
     ...publicRow,
-    photoCount: _count?.photos ?? row.photos.length,
     createdAt: row.createdAt ?? new Date(0),
     photos: (row.photos ?? []).map((photo) => ({
       url: photo.url,

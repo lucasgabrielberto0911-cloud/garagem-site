@@ -74,7 +74,7 @@ export function extractNaturalStockClauses(query: string): {
     },
   );
 
-  rest = rest.replace(/\b(?:motos?|motocicletas?)\b/gi, () => {
+  rest = rest.replace(/\bmotos?\b/gi, () => {
     clauses.push({ category: "moto" });
     return " ";
   });

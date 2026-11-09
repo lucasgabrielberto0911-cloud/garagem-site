@@ -202,10 +202,10 @@ test("rótulo de ordenação do estoque cai em destaques do dia", () => {
   assert.equal(stockSortLabel("maior-preco"), "Maior preço");
   assert.equal(stockSortLabel("nome"), "Nome (A–Z)");
   assert.equal(stockSortLabel("recentes"), "Mais recentes");
-  assert.equal(stockSortLabel("destaques"), "Recomendados");
-  assert.equal(stockSortLabel(""), "Recomendados");
-  assert.equal(stockSortLabel(undefined), "Recomendados");
-  assert.equal(stockSortLabel("desconhecido"), "Recomendados");
+  assert.equal(stockSortLabel("destaques"), "Destaques do dia");
+  assert.equal(stockSortLabel(""), "Destaques do dia");
+  assert.equal(stockSortLabel(undefined), "Destaques do dia");
+  assert.equal(stockSortLabel("desconhecido"), "Destaques do dia");
 });
 
 test("ordenação do estoque usa preço, km, ano e nome", () => {
@@ -268,7 +268,7 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
   assert.match(where, /transmissionWhere\(filters\.transmission\)/);
   assert.match(where, /and\.push\(gear\)/);
   assert.doesNotMatch(where, /transmission: filters\.transmission/);
-  assert.match(vehicles, /stock-page-v18/);
+  assert.match(vehicles, /stock-page-v17/);
   assert.equal(parseStockFilters({ transmission: "automatico" }).transmission, "automatico");
   assert.equal(stockViewNeedsFetch({ transmission: "automatico" }), true);
   assert.equal(stockViewNeedsFetch({ transmission: "manual" }), true);

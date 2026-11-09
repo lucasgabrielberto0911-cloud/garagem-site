@@ -25,7 +25,7 @@ export function toggleAccessoryValue(current: string, name: string) {
 }
 
 export const CATEGORY_FILTER_OPTIONS = [
-  { value: "", label: "Carros (padrão)" },
+  { value: "", label: "Carros e motos" },
   { value: "carro", label: "Carros" },
   { value: "moto", label: "Motos" },
 ] as const;
