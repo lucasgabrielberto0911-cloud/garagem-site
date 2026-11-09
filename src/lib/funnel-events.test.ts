@@ -16,6 +16,7 @@ import {
   trackWhatsAppClick,
   VehicleLeadHit,
   VehicleViewContent,
+  readPageUtm,
 } from "./funnel-events";
 import * as compat from "./meta-pixel";
 
@@ -84,4 +85,9 @@ test("catalogParamsFromChatVehicle monta params de catálogo", () => {
   });
   assert.deepEqual(params.content_ids, [CUID]);
   assert.equal(params.value, 80000);
+});
+
+test("readPageUtm descarta utm_source=pwa legado e mantém campanhas reais", () => {
+  assert.deepEqual(readPageUtm("?utm_source=pwa&utm_medium=homescreen"), {});
+  assert.deepEqual(readPageUtm("?utm_source=meta&utm_medium=cpc"), { utm_source: "meta", utm_medium: "cpc" });
 });

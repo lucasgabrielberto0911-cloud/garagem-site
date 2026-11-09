@@ -50,7 +50,7 @@ import {
 } from "@/lib/vehicle-display";
 import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
-import { extractVehicleIdFromParam, vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
+import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { getVehicleConditions } from "@/lib/site-content";
 import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
@@ -150,8 +150,8 @@ export default async function VehicleDetailPage({
   const { id } = await params;
   const vehicle = await getVehicleByParam(id);
   if (!vehicle) {
-    // Anúncio apagado (id válido que não existe mais): leva ao estoque em vez de 404.
-    if (isRetiredStockSlug(id) || extractVehicleIdFromParam(id)) {
+    // Só anúncios retirados conhecidos vão ao estoque; id inexistente dá 404.
+    if (isRetiredStockSlug(id)) {
       permanentRedirect("/estoque");
     }
     notFound();

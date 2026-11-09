@@ -18,7 +18,16 @@ export function GoogleAnalytics() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}');
+          var gaCfg = {};
+          try {
+            var u = new URL(location.href);
+            if ((u.searchParams.get('utm_source') || '').toLowerCase() === 'pwa') {
+              u.searchParams.delete('utm_source');
+              if ((u.searchParams.get('utm_medium') || '').toLowerCase() === 'homescreen') u.searchParams.delete('utm_medium');
+              gaCfg.page_location = u.toString();
+            }
+          } catch (e) {}
+          gtag('config', '${GA_MEASUREMENT_ID}', gaCfg);
         `}
       </Script>
     </>
