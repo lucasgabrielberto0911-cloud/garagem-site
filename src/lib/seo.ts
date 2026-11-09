@@ -366,11 +366,24 @@ export function vehicleJsonLd(vehicle: {
     || vehicleSeoDescription({ ...vehicle, version: display.version, year: vehicle.yearModel, sold: vehicle.status === "vendido" });
   const description = rawDescription ? collapseWhitespace(rawDescription) : null;
 
+  const seller = {
+    "@type": "AutoDealer",
+    "@id": absoluteUrl("/#loja"),
+    name: site.name,
+    url: absoluteUrl("/"),
+    telephone: `+${site.whatsappNumber}`,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: vehicleLocationLabel(DEFAULT_VEHICLE_LOCATION_CITY),
+      addressRegion: site.stateCode,
+      addressCountry: "BR",
+    },
+  };
   const offers: Record<string, unknown> = {
     "@type": "Offer",
     availability,
     url: absoluteUrl(path),
-    seller: { "@type": "AutoDealer", "@id": absoluteUrl("/#loja"), name: site.name, url: absoluteUrl("/") },
+    seller,
     itemCondition: "https://schema.org/UsedCondition",
   };
   if (priceOk) {

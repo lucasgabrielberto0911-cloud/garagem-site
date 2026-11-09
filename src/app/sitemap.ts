@@ -7,7 +7,6 @@ import type { MetadataRoute } from "next";
 import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
-import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
 import {
   CITIES_DIRECTORY_PATH,
   SERVICE_CITIES,
@@ -144,16 +143,19 @@ async function loadPublicSitemapVehicles() {
     photos: { select: { url: true }, orderBy: { order: "asc" as const } },
   } as const;
 
+  // Fichas indexáveis: disponíveis + reservados (vendidos usam noindex e ficam fora).
+  const where = { historical: false, status: { in: ["disponivel", "reservado"] } };
+
   try {
     return await prisma.vehicle.findMany({
-      where: PUBLIC_SITEMAP_VEHICLE_WHERE,
+      where,
       select,
       orderBy: { updatedAt: "desc" },
     });
   } catch (error) {
     if (!isMissingColumnError(error, "historical")) throw error;
     return prisma.vehicle.findMany({
-      where: { status: "disponivel" },
+      where: { status: { in: ["disponivel", "reservado"] } },
       select,
       orderBy: { updatedAt: "desc" },
     });

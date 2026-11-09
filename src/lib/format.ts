@@ -136,11 +136,11 @@ export function vehicleSeoDescription(input: {
     .trim();
   const siteName = input.siteName ?? "Garagem";
   if (input.sold) {
-    return `${label} (vendido), seminovo ES na ${siteName}. Veja veículos similares disponíveis e fale pelo WhatsApp.`;
+    return `${label} (vendido), seminovo em Linhares/ES na ${siteName}. Veja veículos similares disponíveis e fale pelo WhatsApp.`;
   }
   const price = Number.isFinite(input.price) && input.price > 0
     ? ` por ${formatCurrencyBRL(input.price)}` : "";
-  const base = `${label}, seminovo ES${price} na ${siteName}.`;
+  const base = `${label}, seminovo em Linhares/ES${price} na ${siteName}.`;
   const details = ` ${formatNumberBR(input.km)} km, câmbio ${input.transmission}.`;
   const cta = " Confira fotos e fale pelo WhatsApp.";
   return `${base}${base.length + details.length + cta.length <= 160 ? details : ""}${cta}`;

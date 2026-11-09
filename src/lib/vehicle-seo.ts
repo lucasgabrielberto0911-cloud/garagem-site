@@ -1,4 +1,5 @@
 import { formatCurrencyBRL, formatVehicleLabel } from "@/lib/format";
+import { SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 import { shortVersion } from "@/lib/vehicle-display";
 import { site } from "@/lib/site";
 
@@ -17,12 +18,12 @@ type VehicleSeoTitleInput = {
 };
 
 /**
- * Título único para SEO com identificação do veículo, preço e busca regional:
- * "Honda Civic LXR 2015 por R$ 74.900 | seminovo ES | Garagem".
+ * Título único para SEO com marca, modelo, ano, preço e cidade:
+ * "Honda Civic LXR 2015 por R$ 74.900 em Linhares/ES | Garagem".
  *
  * Quando passa do limite (60 caracteres), corta palavras da versão antes do
  * sufixo para evitar que o buscador corte a marca e o contexto regional.
- * Carro vendido não divulga preço antigo: "Honda Civic LXR 2015 (vendido) | seminovo ES | Garagem".
+ * Carro vendido não divulga preço antigo: "Honda Civic LXR 2015 (vendido) em Linhares/ES | Garagem".
  */
 export function vehicleSeoTitle(input: VehicleSeoTitleInput) {
   const siteName = input.siteName ?? site.name;
@@ -39,7 +40,11 @@ export function vehicleSeoTitle(input: VehicleSeoTitleInput) {
       ? ` por ${formatCurrencyBRL(input.price)}`
       : "";
 
-  const suffixes = [` | seminovo ES | ${siteName}`, ` | ${siteName}`];
+  const suffixes = [
+    ` | seminovo em ${SEO_LOCAL_LOCATION} | ${siteName}`,
+    ` em ${SEO_LOCAL_LOCATION} | ${siteName}`,
+    ` | ${siteName}`,
+  ];
 
   for (const suffix of suffixes) {
     for (let n = versionTokens.length; n >= 0; n--) {
