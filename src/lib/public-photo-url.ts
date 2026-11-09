@@ -1,6 +1,16 @@
 /** URLs de apresentação. Banco, uploads e admin mantêm as URLs do Storage. */
 import { galleryPreviewObjectPath } from "./gallery-preview-path";
 export const PHOTO_STORAGE_ORIGIN = "https://vesmqhyxautgtvgccweo.supabase.co";
+export const PHOTO_BLOB_ORIGIN = "https://t6ze7ss5b2a5svfd.public.blob.vercel-storage.com";
+
+/** Só o Blob público da loja pode ser buscado pelo servidor. */
+export function isPublicPhotoBlob(value: string) {
+  try {
+    const url = new URL(value);
+    return url.origin === PHOTO_BLOB_ORIGIN && !url.username && !url.password &&
+      !url.search && !url.hash && validPublicPhotoKey(url.pathname.slice(1).split("/"));
+  } catch { return false; }
+}
 export const PUBLIC_PHOTO_PREFIX = "/fotos/v1/";
 export const VEHICLE_PHOTO_VARIANT = "1280-contain-q78";
 const OBJECT_PREFIX = "/storage/v1/object/public/veiculos/";
@@ -24,14 +34,17 @@ export function validPublicPhotoKey(parts: string[]) {
 }
 
 export function publicPhotoSrc(value: string): string {
+  let fallback = value;
   try {
     const url = new URL(value);
-    if (url.origin !== PHOTO_STORAGE_ORIGIN || url.username || url.password) return value;
+    if (!url.hostname.endsWith(".supabase.co") || !url.pathname.startsWith("/storage/")) return fallback;
+    fallback = "/branding/placeholder-car.png";
+    if (url.origin !== PHOTO_STORAGE_ORIGIN || url.username || url.password) return fallback;
     const rendered = url.pathname.startsWith(RENDER_PREFIX);
     const prefix = rendered ? RENDER_PREFIX : OBJECT_PREFIX;
-    if (!url.pathname.startsWith(prefix)) return value;
+    if (!url.pathname.startsWith(prefix)) return fallback;
     const parts = url.pathname.slice(prefix.length).split("/").map(decodeURIComponent);
-    if (!validPublicPhotoKey(parts)) return value;
+    if (!validPublicPhotoKey(parts)) return fallback;
     let variant = "original";
     if (rendered) {
       const entries = [...url.searchParams.entries()];
@@ -39,11 +52,11 @@ export function publicPhotoSrc(value: string): string {
         const expected = new URLSearchParams(query);
         return entries.length === [...expected].length && new Set(entries.map(([k]) => k)).size === entries.length && entries.every(([k, v]) => expected.get(k) === v);
       });
-      if (!match) return value;
+      if (!match) return fallback;
       variant = match[0];
-    } else if (url.search) return value;
+    } else if (url.search) return fallback;
     return `${PUBLIC_PHOTO_PREFIX}${variant}/${parts.join("/")}`;
-  } catch { return value; }
+  } catch { return fallback; }
 }
 
 /** Fotos de veículos nunca anunciam o original sem limite de resolução. */
@@ -77,6 +90,11 @@ export function publicPhotoOriginal(value: string): string | null {
 export function publicPhotoUpstream(parts: string[]) {
   const [version, variant, ...key] = parts;
   if (version !== "v1" || !validPublicPhotoKey(key)) return null;
+  if (key[0] === "blob") {
+    if (!["original", VEHICLE_PHOTO_VARIANT].includes(variant)) return null;
+    const url = PHOTO_BLOB_ORIGIN + "/" + key.slice(1).join("/");
+    return isPublicPhotoBlob(url) ? url : null;
+  }
   if (variant === "original") return PHOTO_STORAGE_ORIGIN + OBJECT_PREFIX + key.join("/");
   if (variant === VEHICLE_PHOTO_VARIANT) return PHOTO_STORAGE_ORIGIN + OBJECT_PREFIX + key.join("/");
   if (!Object.hasOwn(PUBLIC_PHOTO_VARIANTS, variant)) return null;

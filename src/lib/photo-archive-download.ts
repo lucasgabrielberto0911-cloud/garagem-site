@@ -1,4 +1,5 @@
 import { e2ePhotoFixture } from "./e2e-photo-fixture";
+import { isPublicPhotoBlob } from "./public-photo-url";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -109,9 +110,10 @@ async function downloadStorageObject(storagePath: string): Promise<Uint8Array | 
  * Baixa o arquivo da galeria (não a miniatura do card).
  * Prefere o Storage com service role; cai na URL pública ou em /public.
  */
-export async function loadArchiveOriginal(url: string): Promise<ArchiveFile | null> {
+export async function loadArchiveOriginal(url: string, source: "admin" | "public" = "admin"): Promise<ArchiveFile | null> {
   const fixture = await e2ePhotoFixture();
   if (fixture) return { bytes: fixture, contentType: "image/png" };
+  if (source === "public" && !isPublicPhotoBlob(url)) return null;
   const withoutHash = url.split("#")[0] ?? url;
   const original = supabaseOriginalSrc(withoutHash).split("?")[0] ?? withoutHash;
   let storagePath: string | null = null;
@@ -153,7 +155,7 @@ export async function loadArchiveOriginal(url: string): Promise<ArchiveFile | nu
     if (parsed.protocol !== "https:") return null;
     if (parsed.username || parsed.password) return null;
     if (parsed.port && parsed.port !== "443") return null;
-    if (!isAllowedStorageHost(parsed.hostname)) return null;
+    if (!isPublicPhotoBlob(original) && !isAllowedStorageHost(parsed.hostname)) return null;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -214,7 +216,7 @@ export async function loadGalleryJpeg(url: string): Promise<Uint8Array | null> {
 
 /** Catálogo público usa a galeria e nunca busca o master privado. */
 export async function loadCatalogJpeg(url: string, quality = 80): Promise<Uint8Array | null> {
-  const file = await loadArchiveOriginal(url);
+  const file = await loadArchiveOriginal(url, "public");
   if (!file || file.bytes.byteLength === 0 || file.bytes.byteLength > MAX_SOURCE_BYTES) return null;
   try { return await toCatalogJpeg(file.bytes, quality); }
   catch { return null; }

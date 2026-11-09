@@ -37,25 +37,21 @@ test("preview mantém 800 px, proporção, orientação e não amplia fotos meno
   assert.equal(meta.width, 800); assert.equal(meta.height, 1200);
 });
 
-test("800 pronto usa objeto direto; falta do preview recupera o render legado com cache indexável", async () => {
+test("preview legado é identificado, mas não consulta nem recupera Storage publicamente", async () => {
   const parts = ["v1", "800-contain-q80", path];
   assert.equal(publicPhotoUpstream(parts), `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/${id}-g800-preview.webp`);
   for (const method of ["GET", "HEAD"]) {
-    const urls: string[] = [];
+    let calls = 0;
     const request = new Request(`https://www.suagaragem.net/fotos/${parts.join("/")}`, { method });
-    const response = await servePublicPhoto(request, parts, async (url, options) => {
-      urls.push(String(url)); assert.equal(options?.method, method);
-      return urls.length === 1 ? new Response(null, { status: 404 }) : new Response(method === "HEAD" ? null : "bytes", { headers: { "Content-Type": "image/webp", "X-Robots-Tag": "none" } });
+    const response = await servePublicPhoto(request, parts, async () => {
+      calls++;
+      return new Response(null, { status: 402 });
     });
-    assert.equal(urls.length, 2);
-    assert.match(urls[1], /render\/image\/public\/veiculos\/.*-g800.webp\?width=800&resize=contain&quality=80&format=webp$/);
-    assert.equal(response.status, 200); assert.equal(response.headers.get("x-robots-tag"), null);
-    assert.match(response.headers.get("cache-control")!, /31536000, immutable/);
-    assert.equal(await response.text(), method === "HEAD" ? "" : "bytes");
+    assert.equal(calls, 0);
+    assert.equal(response.status, 410);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(await response.text(), "");
   }
-  let calls = 0;
-  await servePublicPhoto(new Request("https://www.suagaragem.net/fotos/v1/800-contain-q80/old.webp"), ["v1", "800-contain-q80", "old.webp"], async () => { calls++; return new Response("bytes", { headers: { "Content-Type": "image/webp" } }); });
-  assert.equal(calls, 1);
 });
 
 test("Storage SDK prepara antes de publicar, tolera falhas e remove derivados; fallback assinado também prepara", async () => {
