@@ -131,7 +131,7 @@ test("offline força documento; 4G no desktop não", () => {
     shouldForceDocumentNavigation({ online: false, pathname: "/admin/veiculos" }),
     false,
   );
-  assert.equal(PWA_START_URL.includes("utm_source=pwa"), true);
+  assert.equal(PWA_START_URL.includes("utm_content=pwa") && !PWA_START_URL.includes("utm_source"), true);
   assert.match(installCaptureScript(), new RegExp(INSTALL_DISMISS_KEY));
   assert.match(installCaptureScript(), /beforeinstallprompt/);
 });

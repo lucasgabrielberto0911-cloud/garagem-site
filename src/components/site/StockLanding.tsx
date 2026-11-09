@@ -35,6 +35,8 @@ export async function stockLandingMetadata(kind: "marca" | "modelo", slug: strin
     title: `${link.label} seminovo em Linhares/ES | Garagem`,
     description: `${copy.description} Confira ano, km e preço nas fichas.`,
     path,
+    // Sem veículo disponível a página é fraca (só histórico): fora do índice.
+    noIndex: !rows.some(row => row.status === "disponivel"),
   });
 }
 export async function StockLanding({ kind, slug }: { kind: "marca" | "modelo"; slug: string }) {

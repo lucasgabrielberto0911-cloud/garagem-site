@@ -29,6 +29,7 @@ import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
+import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { JsonLd } from "@/components/JsonLd";
@@ -49,7 +50,7 @@ import {
 } from "@/lib/vehicle-display";
 import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
-import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
+import { extractVehicleIdFromParam, vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { getVehicleConditions } from "@/lib/site-content";
 import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
@@ -149,7 +150,8 @@ export default async function VehicleDetailPage({
   const { id } = await params;
   const vehicle = await getVehicleByParam(id);
   if (!vehicle) {
-    if (isRetiredStockSlug(id)) {
+    // Anúncio apagado (id válido que não existe mais): leva ao estoque em vez de 404.
+    if (isRetiredStockSlug(id) || extractVehicleIdFromParam(id)) {
       permanentRedirect("/estoque");
     }
     notFound();
@@ -713,6 +715,7 @@ export default async function VehicleDetailPage({
             }
           />
         </div>
+        <SeoInternalLinks />
       </Container>
 
       <VehicleMobileBar

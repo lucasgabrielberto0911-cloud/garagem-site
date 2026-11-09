@@ -454,7 +454,7 @@ export function buildChatEventPayload(params: ChatEventParams = {}) {
     .map((id) => id.trim())
     .filter(Boolean)
     .slice(0, 3);
-  if (source) payload.source = source.slice(0, 48);
+  if (source) payload.chat_entry = source.slice(0, 48);
   if (intent) payload.intent = intent.slice(0, 32);
   if (ids.length) payload.vehicle_ids = ids;
   if (

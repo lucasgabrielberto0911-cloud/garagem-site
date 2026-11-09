@@ -245,7 +245,7 @@ test("evento do chat guarda só categorias, contagem e IDs públicos", () => {
       message_count: 2,
     }),
     {
-      source: "home-hero",
+      chat_entry: "home-hero",
       intent: "budget",
       vehicle_ids: ["a", VEHICLE_CUID, "b"],
       result_count: 3,
@@ -263,14 +263,14 @@ test("ChatOpen vai para Meta custom e GA4 sem texto da conversa", () => {
   assert.deepEqual(calls[0], [
     "trackCustom",
     "ChatOpen",
-    { source: "home-hero", message_count: 0 },
+    { chat_entry: "home-hero", message_count: 0 },
   ]);
   assert.deepEqual(gtagCalls[0], [
     "event",
     "chat_open",
     {
       event_category: "chat",
-      source: "home-hero",
+      chat_entry: "home-hero",
       message_count: 0,
     },
   ]);
@@ -312,7 +312,7 @@ test("ChatLeadCreated e Lead do catálogo não levam telefone", () => {
   trackLead({ content_ids: [], content_name: "chatbot-site" });
   assert.equal(calls[0]?.[1], "ChatLeadCreated");
   assert.deepEqual(calls[0]?.[2], {
-    source: "home-hero",
+    chat_entry: "home-hero",
     intent: "stock",
     message_count: 2,
   });

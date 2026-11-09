@@ -15,7 +15,7 @@
  * roda na primeira instalação. Num deploy, a aba aberta continua no SW antigo
  * até o próximo carregamento — sem misturar HTML novo com chunks velhos.
  *
- * `/?utm_source=pwa` e `/` compartilham a mesma entrada de cache.
+ * `/?utm_content=pwa` e `/` compartilham a mesma entrada de cache.
  * Regras de rota espelham `src/lib/pwa-page-key.ts`.
  */
 const VERSION = "garagem-v10";
