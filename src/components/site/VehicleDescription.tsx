@@ -75,20 +75,38 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
   );
 }
 
+/** "Quilometragem: 106.000 km" e a linha "km: 106.000" da ficha são o mesmo dado. */
+function specKey(label: string, value: string) {
+  let key = normalizeSpec(label);
+  let val = normalizeSpec(value);
+  if (key === "quilometragem") key = "km";
+  if (key === "km") val = val.replace(/\s*km$/, "");
+  return `${key}:${val}`;
+}
+
+function normalizeSpec(text: string) {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").replace(/\s+/g, " ").trim().toLocaleLowerCase("pt-BR");
+}
+
 /**
- * Segmentos que a ficha mostra. `hideSpecLines` (celular) tira as linhas
- * "Cor: …", "Motor: …", que já estão na ficha técnica.
+ * Segmentos que a ficha mostra. `specRows` (celular) tira só as linhas
+ * "Cor: Preta" cujo rótulo e valor já estão iguais na ficha técnica;
+ * "Histórico: único dono" e afins ficam.
  */
 export function visibleDescriptionSegments(
   text: string,
   summaryFacts?: DescriptionSummaryFacts,
-  hideSpecLines = false,
+  specRows?: { label: string; value: string }[],
 ): DescriptionSegment[] {
   const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
-  if (!hideSpecLines) return segments;
+  if (!specRows?.length) return segments;
+  const known = new Set(specRows.map((row) => specKey(row.label, row.value)));
   return segments.flatMap((segment): DescriptionSegment[] => {
     if (segment.kind !== "facts") return [segment];
-    const lines = segment.lines.filter((line) => !splitLabeled(line.text));
+    const lines = segment.lines.filter((line) => {
+      const labeled = splitLabeled(line.text);
+      return !labeled || !known.has(specKey(labeled.label, labeled.value));
+    });
     return lines.length > 0 ? [{ kind: "facts", lines }] : [];
   });
 }
@@ -98,14 +116,14 @@ export function VehicleDescription({
   text,
   className = "",
   summaryFacts,
-  hideSpecLines = false,
+  specRows,
 }: {
   text: string;
   className?: string;
   summaryFacts?: DescriptionSummaryFacts;
-  hideSpecLines?: boolean;
+  specRows?: { label: string; value: string }[];
 }) {
-  const segments = visibleDescriptionSegments(text, summaryFacts, hideSpecLines);
+  const segments = visibleDescriptionSegments(text, summaryFacts, specRows);
   if (segments.length === 0) return null;
 
   if (

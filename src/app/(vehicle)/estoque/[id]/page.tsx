@@ -31,6 +31,7 @@ import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
+import { MissingModelDisclosure } from "@/components/site/MissingModelDisclosure";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { JsonLd } from "@/components/JsonLd";
 import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
@@ -39,6 +40,7 @@ import { ListedAgo } from "@/components/site/ListedAgo";
 import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
+import { getPublicSite } from "@/lib/site-settings";
 import { priceBandHref } from "@/lib/related-vehicles";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
@@ -221,10 +223,11 @@ export default async function VehicleDetailPage({
   const sameBandTitle = isMoto
     ? "Motos na mesma faixa"
     : "Carros na mesma faixa";
-  const [conditions, verifiedItems] = await Promise.all([
+  const [conditions, verifiedItems, publicSite] = await Promise.all([
     getVehicleConditions(),
     // Falha ou tabela ausente = sem seção; carro vendido não mostra.
     sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
+    getPublicSite(),
   ]);
   const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
   const verifiedDocumentation = verified.find((item) => item.key === "documentacao")?.text;
@@ -634,6 +637,8 @@ export default async function VehicleDetailPage({
         </div>
 
         <VehicleMobileBlocks
+          address={publicSite.address}
+          hours={publicSite.hours}
           fullLabel={fullLabel}
           path={path}
           sold={sold}
@@ -701,15 +706,7 @@ export default async function VehicleDetailPage({
           />
         </Suspense>
 
-        <details className="group mt-10 border-t border-white/10 sm:mt-12" data-missing-model="">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-base font-semibold text-cream [&::-webkit-details-marker]:hidden">
-            <span>Procurando outro modelo?</span>
-            <span aria-hidden="true" className="text-muted transition-transform duration-200 group-open:rotate-180">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
-            </span>
-          </summary>
+        <MissingModelDisclosure>
           <MissingModelForm
             idPrefix="ficha"
             sourcePage="ficha"
@@ -723,7 +720,7 @@ export default async function VehicleDetailPage({
                 : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
             }
           />
-        </details>
+        </MissingModelDisclosure>
         <SeoInternalLinks />
       </Container>
 

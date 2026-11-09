@@ -23,8 +23,9 @@ test("ficha vendida pré-preenche o modelo no pedido sem preço e oferece WhatsA
   page,
 }) => {
   await page.goto(vehiclePath(soldCivic));
-  // O pedido de outro modelo fica fechado no fim da ficha.
-  await page.locator("[data-missing-model] > summary").click();
+  // No celular o pedido de outro modelo fica fechado no fim da ficha.
+  const missingSummary = page.locator("[data-missing-model] > summary");
+  if (await missingSummary.isVisible()) await missingSummary.click();
   const modelInput = page
     .locator("[data-missing-model-form] form")
     .getByLabel("Veículo que procura");

@@ -1,3 +1,5 @@
+import { site } from "@/lib/site";
+import { visibleDescriptionSegments } from "@/components/site/VehicleDescription";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -170,6 +172,8 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        address: site.address,
+        hours: site.hours,
         fullLabel: "Honda HR-V",
         path: "/estoque/hrv",
         sold: false,
@@ -307,6 +311,8 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        address: site.address,
+        hours: site.hours,
         fullLabel: "Renault Sandero",
         path: "/estoque/sandero",
         sold: false,
@@ -534,6 +540,8 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        address: site.address,
+        hours: site.hours,
         fullLabel: "Chevrolet Onix Premier",
         path: "/estoque/onix",
         sold: false,
@@ -554,3 +562,13 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
   assert.doesNotMatch(mobileMarkup, /Todo seminovo passa por checagem na loja antes do anúncio/);
 });
 
+
+test("descrição no celular só tira linhas idênticas à ficha técnica", () => {
+  const segments = visibleDescriptionSegments(
+    ["✅ Cor: Prata", "✅ Histórico: único dono", "✅ Revisões: todas na concessionária"].join("\n"),
+    undefined,
+    [{ label: "Cor", value: "Prata" }],
+  );
+  const lines = segments.flatMap((segment) => (segment.kind === "facts" ? segment.lines.map((line) => line.text) : []));
+  assert.deepEqual(lines, ["Histórico: único dono", "Revisões: todas na concessionária"]);
+});

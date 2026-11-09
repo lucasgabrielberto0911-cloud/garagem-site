@@ -1,3 +1,4 @@
+import { site } from "@/lib/site";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -38,6 +39,8 @@ function blocks(options: { description?: string; accessories?: string[] }) {
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        address: site.address,
+        hours: site.hours,
         fullLabel: "Honda HR-V",
         path: "/estoque/hrv",
         sold: false,

@@ -16,6 +16,8 @@ test.beforeEach(async ({ page }) => {
 
 test("ficha: quatro campos, máscara e layout sem rolagem lateral", async ({ page }, info) => {
   await page.goto(vehiclePath(samples[0]));
+  const missingSummary = page.locator("[data-missing-model] > summary");
+  if (await missingSummary.isVisible()) await missingSummary.click();
   const form = page.locator("[data-missing-model-form] form");
   const inputs = form.locator("input:not([type=hidden]):not([type=checkbox]):not([name=website])");
   await expect(inputs).toHaveCount(4);

@@ -8,7 +8,6 @@ import { VehicleDescription, visibleDescriptionSegments } from "@/components/sit
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleSeals } from "@/components/site/VehicleSeals";
 import { IconClipboardCheck, IconMapPin, IconShieldCheck } from "@/components/site/icons";
-import { site } from "@/lib/site";
 import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import {
@@ -198,6 +197,8 @@ export function VehicleMobileBlocks({
   verified = [],
   verifiedHeading,
   warranty,
+  address,
+  hours,
 }: {
   fullLabel: string;
   path: string;
@@ -218,6 +219,9 @@ export function VehicleMobileBlocks({
   verified?: PublicVerifiedItem[];
   verifiedHeading?: string;
   warranty?: string | null;
+  /** Endereço e horário do painel (getPublicSite), iguais ao rodapé. */
+  address: string;
+  hours: string;
   quickActions?: {
     contentPath: string;
     video: string;
@@ -248,7 +252,7 @@ export function VehicleMobileBlocks({
       : introText;
   const hasAbout =
     !!description &&
-    visibleDescriptionSegments(description, summaryFacts, true).length > 0;
+    visibleDescriptionSegments(description, summaryFacts, specs).length > 0;
 
   return (
     <div className="mt-2 lg:hidden">
@@ -262,7 +266,7 @@ export function VehicleMobileBlocks({
 
       {hasAbout ? (
         <DossierBlock title="Sobre o veículo" section="detalhes">
-          <VehicleDescription text={description!} summaryFacts={summaryFacts} hideSpecLines />
+          <VehicleDescription text={description!} summaryFacts={summaryFacts} specRows={specs} />
         </DossierBlock>
       ) : null}
 
@@ -376,9 +380,9 @@ export function VehicleMobileBlocks({
       <DossierBlock title="Onde estamos" id="onde-estamos">
         <p className="flex items-start gap-2 text-cream">
           <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
-          <span>Linhares/ES — {site.address}</span>
+          <span>Linhares/ES — {address}</span>
         </p>
-        <p className="mt-1.5">{site.hours}</p>
+        <p className="mt-1.5">{hours}</p>
         {!sold ? (
           <FavoriteButton
             vehicleId={vehicleId}

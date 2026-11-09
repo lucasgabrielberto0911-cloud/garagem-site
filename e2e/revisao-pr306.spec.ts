@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 test("ficha disponível e vendida têm um H1 acessível em qualquer viewport", async ({ page }) => {
   for (const vehicle of [samples[0], { ...samples[0], id: "ce2esold000000000000000001" }]) {
     await page.goto(vehiclePath(vehicle));
-    await expect(page.locator("h1")).toHaveCount(1);
+    // O HTML traz um h1 do celular e um do desktop; só um fica acessível por viewport.
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/Civic/i);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

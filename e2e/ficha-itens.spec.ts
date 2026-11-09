@@ -8,6 +8,9 @@ const hrv = samples[2];
 async function chips(page: import("@playwright/test").Page, sample: typeof civic) {
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
   await page.goto(vehiclePath(sample));
+  // No celular a lista mostra os primeiros itens; "Ver todos" expande.
+  const verTodos = page.getByRole("button", { name: /^Ver todos os \d+ opcionais$/ });
+  if (await verTodos.count()) await verTodos.click();
   const list = page.locator("[data-accessory-chips]:visible");
   await expect(list).toHaveCount(1);
   return list;
