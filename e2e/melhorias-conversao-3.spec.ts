@@ -23,6 +23,8 @@ test("ficha vendida pré-preenche o modelo no pedido sem preço e oferece WhatsA
   page,
 }) => {
   await page.goto(vehiclePath(soldCivic));
+  // O pedido de outro modelo fica fechado no fim da ficha.
+  await page.locator("[data-missing-model] > summary").click();
   const modelInput = page
     .locator("[data-missing-model-form] form")
     .getByLabel("Veículo que procura");
@@ -65,10 +67,9 @@ test("agendamento de visita na ficha e em 1 toque no painel do chat", async ({
       /Civic.*quero ver ele de perto/,
     );
   } else {
-    await page.getByText("Vídeo e propostas", { exact: true }).click();
+    // "Próximos passos" fica sempre aberto, sem clique.
     const dossierVisit = page
-      .locator("details")
-      .filter({ hasText: "Vídeo e propostas" })
+      .locator("#proximos-passos")
       .getByRole("link", {
         name: "Agendar visita: combinar dia e hora pelo WhatsApp",
         exact: true,

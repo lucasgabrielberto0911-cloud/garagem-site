@@ -346,7 +346,8 @@ export default async function VehicleDetailPage({
           </nav>
         </div>
 
-        <h1 className="sr-only">{title}</h1>
+        {/* No celular o título visível do resumo é o h1; aqui só o desktop. */}
+        <h1 className="sr-only hidden lg:block">{title}</h1>
         <FichaSectionNav hasDetails={hasDetails} />
 
         {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
@@ -376,6 +377,7 @@ export default async function VehicleDetailPage({
                 transmission={display.transmission}
                 plateEnd={vehicle.plateEnd}
                 inspection={sold ? null : vehicle.inspection}
+                fuel={specs.find((row) => row.label === "Combustível")?.value}
                 seals={seals}
                 specAnchor={!hasMobileFichaSpecs(specs)}
               />
@@ -625,7 +627,7 @@ export default async function VehicleDetailPage({
               <p className="text-xs leading-relaxed text-muted">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
-                  : `Valores e disponibilidade sujeitos a alteração. Financiamento em até 60x e cartão em até 18x. Parcela só no WhatsApp, com análise de crédito e CET. Combine pelo WhatsApp ${site.whatsappLabel}.`}
+                  : `Valores e disponibilidade sujeitos a alteração. Financiamento em até 60x e cartão em até 18x, sujeitos a análise de crédito. Combine pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
             </div>
           </aside>
@@ -656,7 +658,6 @@ export default async function VehicleDetailPage({
               updatedLabel={updatedLabel}
             />
           }
-          prompt={`Tenho dúvida sobre o ${title}`}
           verified={verified}
           warranty={vehicle.warranty}
           verifiedHeading={verifiedHeading(isMoto)}
@@ -700,7 +701,15 @@ export default async function VehicleDetailPage({
           />
         </Suspense>
 
-        <div className="mt-10 sm:mt-12">
+        <details className="group mt-10 border-t border-white/10 sm:mt-12" data-missing-model="">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-base font-semibold text-cream [&::-webkit-details-marker]:hidden">
+            <span>Procurando outro modelo?</span>
+            <span aria-hidden="true" className="text-muted transition-transform duration-200 group-open:rotate-180">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </span>
+          </summary>
           <MissingModelForm
             idPrefix="ficha"
             sourcePage="ficha"
@@ -714,7 +723,7 @@ export default async function VehicleDetailPage({
                 : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
             }
           />
-        </div>
+        </details>
         <SeoInternalLinks />
       </Container>
 

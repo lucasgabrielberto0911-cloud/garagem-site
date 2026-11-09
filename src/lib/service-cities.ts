@@ -137,7 +137,7 @@ export const SERVICE_CITIES = [
       {
         question: "Como funciona o financiamento para quem está em Linhares?",
         answer:
-          "A Garagem financia em até 60x, e o cartão de crédito é aceito em até 18x. O consultor calcula a parcela no WhatsApp, com o veículo que você escolheu.",
+          "A Garagem financia em até 60x, e o cartão de crédito é aceito em até 18x. Condições de financiamento no WhatsApp, com o veículo que você escolheu.",
       },
     ],
   },
