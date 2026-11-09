@@ -120,24 +120,12 @@ function readSrc(path: string) {
   return readFileSync(join(process.cwd(), "src", path), "utf8");
 }
 
-test("barra do celular: Agendar visita usa a mensagem visit, com pixel, só em carro à venda", () => {
+test("barra do celular: um só botão de WhatsApp de 56px, sem Agendar visita", () => {
   const bar = readSrc("components/site/VehicleMobileBar.tsx");
-  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
-  assert.match(page, /visitMessage=\{whatsapp\.visit\}/);
-  assert.match(page, /intent: "visit"/);
-  assert.match(bar, /Agendar visita/);
-  assert.match(bar, /"ficha-visit"/);
-  assert.match(bar, /Tenho interesse/);
-  // Ação dentro do ramo "não vendido" e envolta no Lead/AddToCart do veículo.
-  const soldBranch = bar.indexOf("{sold ? (");
-  const visitStart = bar.indexOf("{visitHref ? (");
-  const visitEnd = bar.indexOf("Agendar visita\n", visitStart);
-  assert.ok(soldBranch > 0 && visitStart > soldBranch && visitEnd > visitStart);
-  const visitBlock = bar.slice(visitStart, visitEnd);
-  assert.match(visitBlock, /<VehicleLeadHit/);
-  assert.match(visitBlock, /openWhatsApp\(/);
-  // O texto não promete loja nem endereço.
-  assert.doesNotMatch(visitBlock, /loja|endere[cç]o|venha/i);
+  assert.match(bar, /h-14 w-full/);
+  assert.match(bar, /safe-area-inset-bottom/);
+  assert.match(bar, /Chamar no WhatsApp/);
+  assert.doesNotMatch(bar, /ficha-visit|Agendar visita/);
 });
 
 test("ficha: seção verificada some em carro vendido e não usa cidade nem preço", () => {

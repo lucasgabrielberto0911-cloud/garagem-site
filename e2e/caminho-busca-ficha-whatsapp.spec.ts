@@ -197,20 +197,18 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
     await expect(mobileBar).toBeVisible();
 
     // Valida que o preço está visível na barra móvel
-    await expect(mobileBar).toContainText("74.900");
-    await expect(mobileBar).toContainText("Civic");
+    await expect(mobileBar).not.toContainText("74.900");
+    await expect(mobileBar).not.toContainText("Agendar visita");
 
     // Botão principal de WhatsApp na barra fixa
     const mobileWaButton = mobileBar.locator("#ficha-whatsapp");
     await expect(mobileWaButton).toBeVisible();
-    await expect(mobileWaButton).toContainText("Tenho interesse");
-    await expect(mobileWaButton).toContainText("no WhatsApp");
+    await expect(mobileWaButton).toContainText("Chamar no WhatsApp");
 
-    // Validação da cor da marca: vermelho da loja (bg-brand), nunca dourado
+    // Verde WhatsApp, nunca o vermelho da marca nem dourado
     const mobileButtonClass =
       (await mobileWaButton.getAttribute("class")) || "";
-    expect(mobileButtonClass).toContain("bg-brand");
-    expect(mobileButtonClass).toContain("text-cream");
+    expect(mobileButtonClass).toContain("bg-[#25D366]");
     expect(mobileButtonClass).not.toContain("gold");
     expect(mobileButtonClass).not.toContain("yellow");
 
@@ -220,9 +218,8 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
     const matchRgb = mobileButtonBg.match(/\d+/g);
     if (matchRgb) {
       const [r, g, b] = matchRgb.map(Number);
-      expect(r).toBeGreaterThan(180);
-      expect(g).toBeLessThan(50);
-      expect(b).toBeLessThan(50);
+      // #25D366: verde WhatsApp
+      expect([r, g, b]).toEqual([37, 211, 102]);
     }
 
     // Validação do link do WhatsApp oficial com parâmetros e mensagem do carro

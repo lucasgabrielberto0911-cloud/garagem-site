@@ -16,12 +16,11 @@ test("ficha compacta preserva os alvos de toque, o texto de visita e não oferec
   if (page.viewportSize()!.width >= 1024) return;
   const bar = page.locator("[data-vehicle-mobile-bar]");
   await expect(bar).toBeVisible();
-  // Dois alvos de 44 px + intervalo de 2 px + padding de 8 px + borda de 1 px.
-  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(99);
-  const options = bar.getByRole("button", { name: "Financiamento, troca ou vídeo", exact: true });
-  expect((await options.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  expect((await bar.locator("#ficha-whatsapp").boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  expect((await bar.getByRole("link", { name: "Agendar visita: combinar dia e hora pelo WhatsApp", exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  // Só o botão de WhatsApp (56px) + padding da barra.
+  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(96);
+  const wa = bar.locator("#ficha-whatsapp");
+  expect((await wa.boundingBox())!.height).toBeGreaterThanOrEqual(52);
+  await expect(bar.getByRole("link", { name: /Agendar visita/ })).toHaveCount(0);
 });
 
 test("layout da home centralizado com margens simétricas em 1024, 1280 e 1440 px", async ({ page }) => {
