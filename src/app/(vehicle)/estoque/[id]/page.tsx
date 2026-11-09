@@ -168,7 +168,7 @@ export default async function VehicleDetailPage({
   const display = formatVehicleDisplay(vehicle);
   const title = display.title;
   const fullLabel = display.fullLabel;
-  const galleryAlt = [display.fullLabel, display.color].filter(Boolean).join(" · ");
+  const galleryAlt = [display.fullLabel, display.color].filter(Boolean).join(" · ") + " em Linhares/ES";
   const landingLinks = stockLandingLinks([vehicle]);
   const breadcrumbs = [
     { name: "Início", path: "/" },

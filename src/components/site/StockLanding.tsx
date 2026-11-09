@@ -31,7 +31,11 @@ export async function stockLandingMetadata(kind: "marca" | "modelo", slug: strin
   }
   const { path, link, rows } = await landing(kind, slug);
   const copy = stockLandingCopy(kind, link.label, rows);
-  return buildPageMetadata({ title: `${link.label} seminovo | Garagem`, description: copy.description, path });
+  return buildPageMetadata({
+    title: `${link.label} seminovo em Linhares/ES | Garagem`,
+    description: `${copy.description} Confira ano, km e preço nas fichas.`,
+    path,
+  });
 }
 export async function StockLanding({ kind, slug }: { kind: "marca" | "modelo"; slug: string }) {
   const { path, link, rows } = await landing(kind, slug);

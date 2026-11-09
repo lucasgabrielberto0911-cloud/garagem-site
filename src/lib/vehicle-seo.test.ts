@@ -14,13 +14,14 @@ const civic = {
   transmission: "Automático",
 };
 
-test("título e descrição incluem marca, modelo, versão, ano, preço e seminovo ES", () => {
+test("título e descrição incluem marca, modelo, versão, ano, preço e Linhares/ES", () => {
   for (const text of [vehicleSeoTitle(civic), vehicleSeoDescription(civic)]) {
     assert.match(text, /Honda Civic LXR 2015/);
     assert.match(text, /R\$\s*74\.900/);
-    assert.match(text, /seminovo ES/);
+    assert.match(text, /Linhares\/ES/);
     assert.match(text, /Garagem/);
   }
+  assert.match(vehicleSeoDescription(civic), /seminovo/);
   assert.ok(vehicleSeoTitle(civic).length <= VEHICLE_SEO_TITLE_MAX);
   assert.ok(vehicleSeoDescription(civic).length <= 160);
 });
@@ -77,9 +78,10 @@ test("vendido preserva identificação e busca regional, sem divulgar preço ant
   const sold = { ...civic, sold: true };
   for (const text of [vehicleSeoTitle(sold), vehicleSeoDescription(sold)]) {
     assert.match(text, /Honda Civic LXR 2015 \(vendido\)/);
-    assert.match(text, /seminovo ES/);
+    assert.match(text, /Linhares\/ES/);
     assert.doesNotMatch(text, /R\$|74[.,]?900/);
   }
+  assert.match(vehicleSeoDescription(sold), /seminovo/);
   assert.ok(vehicleSeoTitle(sold).length <= VEHICLE_SEO_TITLE_MAX);
   assert.match(vehicleSeoDescription(sold), /similares disponíveis/);
 });

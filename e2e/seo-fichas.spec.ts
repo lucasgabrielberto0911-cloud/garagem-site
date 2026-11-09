@@ -29,8 +29,9 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     expect(title).toContain(String(car.yearModel));
     for (const text of [title, description]) {
       expect(text.replace(/\s/g, " ")).toContain(formatCurrencyBRL(car.price).replace(/\s/g, " "));
-      expect(text).toContain("seminovo ES");
+      expect(text).toContain("Linhares/ES");
     }
+    expect(description).toContain("seminovo");
     titles.add(title);
     descriptions.add(description);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", origin + path);
@@ -62,7 +63,7 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     await expect(page.locator('nav[aria-label="Explore marcas, modelos e cidades"]')).toHaveCount(0);
     await expect(page.getByText("Encontre seu próximo seminovo")).toHaveCount(0);
     const photo = page.locator('[data-ficha-page] img').first();
-    await expect(photo).toHaveAttribute("alt", `${buildVehicleFullLabel(car)} · ${car.color} - foto 1 de ${car.photos.length}`);
+    await expect(photo).toHaveAttribute("alt", `${buildVehicleFullLabel(car)} · ${car.color} em Linhares/ES - foto 1 de ${car.photos.length}`);
     await expect(page.locator("[data-ficha-page]")).not.toContainText(/Localização do veículo/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
