@@ -381,9 +381,13 @@ export function catalogVehicleRow(
     .slice(0, CATALOG_IMAGE_SLOTS);
   if (images.length === 0) return null;
 
+  const postalCode = process.env.META_DEALER_CEP?.trim() || "29900-000";
   const address = JSON.stringify({
-    region: "Espírito Santo",
-    country: "Brazil",
+    addr1: process.env.META_DEALER_ADDR1?.trim() || "Linhares",
+    city: "Linhares",
+    region: "ES",
+    postal_code: postalCode,
+    country: "BR",
   });
   const link = new URL(vehiclePath(vehicle), origin);
   for (const [key, value] of Object.entries(CATALOG_UTM)) {
@@ -407,13 +411,13 @@ export function catalogVehicleRow(
     exterior_color: formatColorLabel(vehicle.color) || "Não informado",
     state_of_vehicle: "Used",
     address,
-    latitude: "",
-    longitude: "",
+    latitude: "-19.3911",
+    longitude: "-40.0722",
     availability: "AVAILABLE",
     condition: "EXCELLENT",
     dealer_id: CATALOG_DEALER_ID,
     dealer_name: site.name,
-    postal_code: "",
+    postal_code: postalCode,
     dealer_phone: dealerPhone(),
   };
 
