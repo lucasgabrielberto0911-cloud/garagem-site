@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isVehicleCuid } from "@/lib/vehicle-slug";
-import { isPublicPhotoSource } from "@/lib/public-photo-source";
+import { isPublicPhotoBlob } from "@/lib/public-photo-url";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 const noCache = { "Cache-Control": "no-store" };
@@ -16,7 +16,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       select: { url: true },
     });
     if (!photo) return new NextResponse(null, { status: 404, headers: noCache });
-    if (!isPublicPhotoSource(photo.url)) return new NextResponse(null, { status: 204, headers: noCache });
+    if (!isPublicPhotoBlob(photo.url)) return new NextResponse(null, { status: 204, headers: noCache });
     return NextResponse.redirect(photo.url, { status: 307, headers: noCache });
   } catch {
     console.warn("[photo-zoom] foto maior indisponível");
