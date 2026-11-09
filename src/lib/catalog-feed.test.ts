@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isVehicleCuid, vehicleSlug } from "./vehicle-slug";
+import { PHOTO_BLOB_ORIGIN, PHOTO_STORAGE_ORIGIN } from "./public-photo-url";
 import {
   CATALOG_DEALER_ID,
   META_CSV_COLUMNS,
@@ -43,8 +44,8 @@ const sample: CatalogFeedVehicle = {
   color: "Branco",
   description: "HB20 Platinum com procedência.",
   photos: [
-    { id: "photoaaaaaaaaaaaaaaaaaa", url: "https://cdn.example/a.webp" },
-    { id: "photobbbbbbbbbbbbbbbbbb", url: "https://cdn.example/b.jpg" },
+    { id: "photoaaaaaaaaaaaaaaaaaa", url: `${PHOTO_BLOB_ORIGIN}/a.webp` },
+    { id: "photobbbbbbbbbbbbbbbbbb", url: `${PHOTO_BLOB_ORIGIN}/b.jpg` },
   ],
 };
 
@@ -59,6 +60,7 @@ test("vehicle_id do feed é o Prisma CUID e a URL leva UTM do catálogo", () => 
   assert.equal(url.searchParams.get("utm_medium"), "dinamico");
   assert.equal(url.searchParams.get("utm_campaign"), "catalogo_veiculos");
   assert.equal(row.price, "82900.00 BRL");
+  assert.equal(row.year, String(sample.yearModel));
   assert.equal(row.availability, "AVAILABLE");
   assert.equal(row.condition, "EXCELLENT");
   assert.equal(row.state_of_vehicle, "Used");
@@ -71,7 +73,7 @@ test("vehicle_id do feed é o Prisma CUID e a URL leva UTM do catálogo", () => 
   assert.notEqual(row.dealer_id, "SUAGARAMEM");
   assert.equal(row.dealer_name, "Garagem");
   assert.match(row["image[0].url"], /\/api\/catalog-jpg\/.+\/photoaaaaaaaaaaaaaaaaaa$/);
-  assert.equal(row["image[1].url"], "https://cdn.example/b.jpg");
+  assert.equal(row["image[1].url"], `${PHOTO_BLOB_ORIGIN}/b.jpg`);
   assert.equal(row["image[2].url"], "");
 });
 
@@ -82,18 +84,15 @@ test("sem foto o veículo fica de fora do catálogo", () => {
   );
 });
 
-test("JPG e PNG públicos seguem direto; WebP passa pela conversão", () => {
-  assert.equal(
-    catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, {
-      id: "p1",
-      url: "https://cdn.example/foto.png?width=10",
-    }),
-    "https://cdn.example/foto.png",
-  );
+test("JPG e PNG do Blob seguem direto; WebP passa pela conversão", () => {
+  for (const extension of ["jpg", "jpeg", "png"]) {
+    const url = `${PHOTO_BLOB_ORIGIN}/foto.${extension}`;
+    assert.equal(catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, { id: "p1", url }), url);
+  }
   assert.match(
     catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, {
       id: "p1",
-      url: "https://cdn.example/foto.webp",
+      url: `${PHOTO_BLOB_ORIGIN}/foto.webp`,
     }),
     /\/api\/catalog-jpg\//,
   );
@@ -434,12 +433,44 @@ test("campos do pixel batem com o mesmo veículo do feed", () => {
   assert.equal(pixel.exterior_color, "Branco");
 });
 
-test("JPG e PNG do Supabase passam pelo JPEG reduzido e cacheado do site", () => {
+test("fotos do Storage e de hosts externos não geram URLs no feed real", () => {
   for (const extension of ["jpg", "png", "webp"]) {
-    const url = catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, {
-      id: "photoaaaaaaaaaaaaaaaaaa",
-      url: `https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/camera.${extension}`,
-    });
-    assert.equal(url, `https://www.suagaragem.net/api/catalog-jpg/${VEHICLE_CUID}/photoaaaaaaaaaaaaaaaaaa`);
+    for (const source of [PHOTO_STORAGE_ORIGIN + "/storage/v1/object/public/veiculos", "https://cdn.example"]) {
+      assert.equal(catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, {
+        id: "photoaaaaaaaaaaaaaaaaaa", url: `${source}/camera.${extension}`,
+      }), "");
+    }
+  }
+});
+
+test("fotos recusadas são compactadas e veículo sem foto servível sai do CSV", () => {
+  const storage = { id: "storage", url: `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/foto.webp` };
+  const row = catalogVehicleRow({ ...sample, photos: [storage, sample.photos[0], storage, sample.photos[1]] }, "https://www.suagaragem.net");
+  assert.ok(row);
+  assert.match(row["image[0].url"], /\/api\/catalog-jpg\//);
+  assert.equal(row["image[1].url"], sample.photos[1].url);
+  assert.equal(row["image[2].url"], "");
+  const afterLegacy = catalogVehicleRow({ ...sample, photos: [...Array.from({ length: 8 }, () => storage), ...sample.photos] }, "https://www.suagaragem.net");
+  assert.equal(afterLegacy?.["image[1].url"], sample.photos[1].url);
+  const unavailable = { ...sample, id: "sem-imagem-servivel", photos: [storage] };
+  assert.equal(catalogVehicleRow(unavailable, "https://www.suagaragem.net"), null);
+  const csv = buildCatalogCsv([unavailable, sample]);
+  assert.doesNotMatch(csv, /sem-imagem-servivel|supabase\.co/);
+  assert.match(csv, new RegExp(VEHICLE_CUID));
+});
+
+test("fixture E2E mantém a conversão do Storage apenas com banco local dedicado", () => {
+  const previous = { flag: process.env.E2E_TEST, database: process.env.DATABASE_URL };
+  try {
+    process.env.E2E_TEST = "1";
+    process.env.DATABASE_URL = "postgresql://local:local@127.0.0.1:5432/garagem_e2e";
+    const photo = { id: "photoaaaaaaaaaaaaaaaaaa", url: `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/camera.jpg` };
+    assert.equal(catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, photo),
+      `https://www.suagaragem.net/api/catalog-jpg/${VEHICLE_CUID}/${photo.id}`);
+    process.env.DATABASE_URL = "postgresql://invalid:invalid@banco.example/garagem_e2e";
+    assert.throws(() => catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, photo), /banco local dedicado/);
+  } finally {
+    if (previous.flag === undefined) delete process.env.E2E_TEST; else process.env.E2E_TEST = previous.flag;
+    if (previous.database === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = previous.database;
   }
 });

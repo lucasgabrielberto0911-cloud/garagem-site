@@ -17,7 +17,6 @@ export const CATALOG_CACHE_CONTROL =
 
 const PHOTO_SELECT = {
   orderBy: { order: "asc" as const },
-  take: 8,
   select: { id: true, url: true },
 };
 

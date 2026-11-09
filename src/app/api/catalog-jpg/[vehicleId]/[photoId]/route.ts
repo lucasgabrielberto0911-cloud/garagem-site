@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
+import { e2ePhotoFixture } from "@/lib/e2e-photo-fixture";
 import { loadCatalogJpeg } from "@/lib/photo-archive-download";
 import { prisma } from "@/lib/prisma";
+import { isPublicPhotoBlob } from "@/lib/public-photo-url";
 import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+const noCache = { "Cache-Control": "no-store" };
 
 /**
  * JPEG inline para o crawler do catálogo Meta.
@@ -19,7 +22,7 @@ export async function GET(
   const { vehicleId: vehicleParam, photoId } = await context.params;
   const vehicleId = extractVehicleIdFromParam(vehicleParam);
   if (!vehicleId || !/^[a-z0-9]{16,40}$/i.test(photoId)) {
-    return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
+    return NextResponse.json({ error: "Foto não encontrada." }, { status: 404, headers: noCache });
   }
 
   const vehicle = await prisma.vehicle.findFirst({
@@ -34,14 +37,19 @@ export async function GET(
   });
   const photo = vehicle?.photos[0];
   if (!photo) {
-    return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
+    return NextResponse.json({ error: "Foto não encontrada." }, { status: 404, headers: noCache });
+  }
+
+  const fixture = await e2ePhotoFixture();
+  if (!fixture && !isPublicPhotoBlob(photo.url)) {
+    return NextResponse.json({ error: "Foto não encontrada." }, { status: 404, headers: noCache });
   }
 
   const bytes = await loadCatalogJpeg(photo.url);
   if (!bytes) {
     return NextResponse.json(
       { error: "Não foi possível preparar o JPG." },
-      { status: 502 },
+      { status: 502, headers: noCache },
     );
   }
 
