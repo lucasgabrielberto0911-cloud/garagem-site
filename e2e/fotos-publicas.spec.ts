@@ -8,7 +8,9 @@ test("fotos públicas usam o domínio do site sem baixar imagens direto do Stora
   page.on("request", request => {
     if (/supabase\.co\/storage\//.test(request.url())) storageRequests.push(request.url());
   });
-  await page.route("**/fotos/v1/**", route => route.fulfill({ contentType: "image/png", path: "public/branding/placeholder-car.png" }));
+  for (const pattern of ["**/fotos/v1/**", "https://*.public.blob.vercel-storage.com/**", "https://*.supabase.co/storage/**"]) {
+    await page.route(pattern, route => route.fulfill({ contentType: "image/png", path: "public/branding/placeholder-car.png" }));
+  }
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
 
   for (const path of ["/", "/estoque", vehiclePath(samples[0]), "/sobre"]) {
