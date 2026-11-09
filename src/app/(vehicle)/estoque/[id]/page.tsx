@@ -29,6 +29,7 @@ import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
+import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { JsonLd } from "@/components/JsonLd";
@@ -149,6 +150,7 @@ export default async function VehicleDetailPage({
   const { id } = await params;
   const vehicle = await getVehicleByParam(id);
   if (!vehicle) {
+    // Só anúncios retirados conhecidos vão ao estoque; id inexistente dá 404.
     if (isRetiredStockSlug(id)) {
       permanentRedirect("/estoque");
     }
@@ -713,6 +715,7 @@ export default async function VehicleDetailPage({
             }
           />
         </div>
+        <SeoInternalLinks />
       </Container>
 
       <VehicleMobileBar

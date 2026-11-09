@@ -3,6 +3,7 @@ import { cache } from "react";
 import { getStockLandingHistory } from "@/lib/stock-landing-data";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { BUYING_GUIDES } from "@/lib/buying-guides";
+import { SEO_GUIDES } from "@/lib/seo-guides";
 import type { MetadataRoute } from "next";
 import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { prisma } from "@/lib/prisma";
@@ -31,6 +32,7 @@ const STATIC_ROUTES: {
   priority: number;
 }[] = [
   { path: "/modelos", changeFrequency: "weekly", priority: 0.7 },
+  ...SEO_GUIDES.map(guide => ({ path: `/guia/${guide.slug}`, changeFrequency: "monthly" as const, priority: 0.6 })),
   { path: "/guias", changeFrequency: "monthly", priority: 0.5 },
   ...BUYING_GUIDES.map(guide => ({ path: `/guias/${guide.slug}`, changeFrequency: "monthly" as const, priority: 0.5 })),
   { path: "/", changeFrequency: "daily", priority: 1 },
@@ -67,7 +69,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   let landings: ReturnType<typeof stockLandingLinks> = [];
-  try { landings = stockLandingLinks(await getStockLandingHistory()); }
+  try { // Só marca/modelo com veículo disponível: sem estoque a página é noindex e fica fora.
+    landings = stockLandingLinks((await getStockLandingHistory()).filter(row => row.status === "disponivel")); }
   catch (error) { console.error("[sitemap] falha ao listar marcas e modelos:", error); }
 
   const latestStockDate = resolveLatestStockDate(vehicles, landings);

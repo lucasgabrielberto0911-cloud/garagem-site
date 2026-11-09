@@ -54,3 +54,14 @@ test("extractVehicleIdFromParam: aceita tanto CUID direto quanto slug composto",
   assert.equal(extractVehicleIdFromParam("modelo-sem-id"), null);
   assert.equal(extractVehicleIdFromParam("carro-invalido-1234"), null);
 });
+
+test("vehicleSlug: palavra repetida na marca/modelo/versão entra uma vez só (Altis Altis)", () => {
+  const slug = vehicleSlug({
+    id: "cmshv22g9000fl204fk6qz9l2",
+    brand: "Toyota",
+    model: "Corolla Altis",
+    version: "Altis Altis 2.0 Flex",
+    yearModel: 2019,
+  });
+  assert.equal(slug, "toyota-corolla-altis-2-0-flex-2019-cmshv22g9000fl204fk6qz9l2");
+});

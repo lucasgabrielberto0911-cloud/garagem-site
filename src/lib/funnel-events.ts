@@ -196,6 +196,11 @@ export function readPageUtm(search?: string) {
     return {};
   }
   const utm: Record<string, string> = {};
+  // Legado: o PWA antigo abria com ?utm_source=pwa&utm_medium=homescreen (origem interna).
+  if (params.get("utm_source")?.toLowerCase() === "pwa") {
+    params.delete("utm_source");
+    if (params.get("utm_medium")?.toLowerCase() === "homescreen") params.delete("utm_medium");
+  }
   for (const key of PAGE_UTM_KEYS) {
     const value = compactString(params.get(key) ?? undefined)?.slice(0, 80);
     if (value) utm[key] = value;
@@ -454,7 +459,7 @@ export function buildChatEventPayload(params: ChatEventParams = {}) {
     .map((id) => id.trim())
     .filter(Boolean)
     .slice(0, 3);
-  if (source) payload.source = source.slice(0, 48);
+  if (source) payload.chat_entry = source.slice(0, 48);
   if (intent) payload.intent = intent.slice(0, 32);
   if (ids.length) payload.vehicle_ids = ids;
   if (

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { JsonLd } from "@/components/JsonLd";
 import { EstoqueBrowse } from "@/components/site/EstoqueBrowse";
+import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
 import { StockCatalogGate } from "@/components/site/StockCatalogGate";
 import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
 import { StockFilters } from "@/components/site/StockFilters";
@@ -71,7 +72,7 @@ export default async function EstoquePage() {
             <StockCatalogLinks vehicles={catalog} />
           </StockCatalogGate>
         </Suspense>
-
+        <SeoInternalLinks />
       </Container>
     </div>
   );

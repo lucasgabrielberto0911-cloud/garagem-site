@@ -6,7 +6,7 @@ export const INSTALL_SEEN_AT_KEY = "garagem:instalar-visto-em";
 /** Banner automático no máximo uma vez a cada 14 dias. O botão do menu continua. */
 export const INSTALL_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 /** Abertura do app instalado. O SW ignora utm na chave de cache. */
-export const PWA_START_URL = "/?utm_source=pwa&utm_medium=homescreen";
+export const PWA_START_URL = "/?utm_medium=homescreen&utm_content=pwa";
 
 export type InstallCoachKind = "android" | "ios" | null;
 

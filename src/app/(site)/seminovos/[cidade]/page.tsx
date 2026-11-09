@@ -14,6 +14,7 @@ import {
 } from "@/components/site/ui";
 import { site } from "@/lib/site";
 import { cityPageStockCopy } from "@/lib/city-showcase";
+import { getCityLocalContent } from "@/lib/city-local-content";
 import {
   CITIES_DIRECTORY_PATH,
   SERVICE_CITIES,
@@ -46,9 +47,10 @@ export async function generateMetadata({
   }
   const city = getServiceCity(cidade);
   if (!city) return {};
+  const local = getCityLocalContent(city.slug);
   return buildPageMetadata({
-    title: `Seminovos em ${city.name} | ${site.name}`,
-    description: city.metaDescription,
+    title: local?.title ?? `Seminovos em ${city.name} | ${site.name}`,
+    description: local?.description ?? city.metaDescription,
     path: `/seminovos/${city.slug}`,
   });
 }
@@ -68,7 +70,8 @@ export default async function SeminovosCidadePage({
 
   const path = `/seminovos/${city.slug}`;
   const stock = cityPageStockCopy(city.name);
-  const faqs = city.faqs.map((item) => ({
+  const local = getCityLocalContent(city.slug);
+  const faqs = [...city.faqs, ...(local?.faqs ?? [])].map((item) => ({
     question: item.question,
     answer: item.answer,
   }));
@@ -181,6 +184,34 @@ export default async function SeminovosCidadePage({
             </div>
           </aside>
         </section>
+
+        {local ? (
+          <section className="mt-12 max-w-3xl">
+            <h2 className="font-display text-xl font-semibold text-cream">
+              {local.heading}
+            </h2>
+            <div className="mt-4 space-y-4 text-sm leading-relaxed text-muted">
+              {local.paragraphs.map((text) => (
+                <p key={text.slice(0, 40)}>{text}</p>
+              ))}
+            </div>
+            <ul className="mt-5 flex flex-wrap gap-x-5">
+              {[
+                { href: "/estoque", label: "Ver o estoque completo" },
+                { href: "/vender", label: "Vender ou trocar meu veículo" },
+                { href: "/guia/financiamento-seminovos-linhares", label: "Guia de financiamento" },
+                { href: "/guia/troca-com-volta", label: "Guia de troca com volta" },
+                { href: "/guia/comparativos-estoque", label: "Comparativos do estoque" },
+              ].map((item) => (
+                <li key={item.href}>
+                  <Link className="inline-flex min-h-11 items-center text-sm text-cream underline" href={item.href}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {city.steps ? (
           <section className="mt-12">

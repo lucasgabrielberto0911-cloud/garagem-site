@@ -40,7 +40,13 @@ export function vehicleSlug(vehicle: VehiclePathInput) {
   const label = [vehicle.brand, vehicle.model, version, String(vehicle.yearModel)]
     .filter((part): part is string => Boolean(part && String(part).trim()))
     .join(" ");
-  const base = slugifyPart(label) || "veiculo";
+  // Palavra repetida na marca/modelo/versão (ex.: "Altis Altis") entra uma vez só.
+  const seen = new Set<string>();
+  const unique = slugifyPart(label)
+    .split("-")
+    .filter((word) => (seen.has(word) ? false : (seen.add(word), true)))
+    .join("-");
+  const base = unique || "veiculo";
   return `${base}-${vehicle.id}`;
 }
 
