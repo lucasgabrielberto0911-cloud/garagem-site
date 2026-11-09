@@ -52,7 +52,6 @@ function blocks(options: { description?: string; accessories?: string[] }) {
         inspection: null,
         conditions: DEFAULT_VEHICLE_CONDITIONS,
         google: DEFAULT_GOOGLE_REVIEWS,
-        prompt: "dúvida",
       }),
     ),
   );

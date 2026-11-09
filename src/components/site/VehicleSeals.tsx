@@ -7,9 +7,12 @@ import type { VehicleSeal } from "@/lib/vehicle-seals";
 export function VehicleSeals({
   seals,
   className = "",
+  optionalsHref,
 }: {
   seals: readonly VehicleSeal[];
   className?: string;
+  /** Quando existe, o selo de opcionais vira âncora para a lista. */
+  optionalsHref?: string;
 }) {
   if (seals.length === 0) return null;
 
@@ -26,7 +29,13 @@ export function VehicleSeals({
           className="inline-flex items-center gap-2 border border-white/15 bg-white/[0.04] px-2.5 py-1 text-xs font-semibold leading-snug text-cream"
         >
           <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 bg-brand" />
-          {seal.label}
+          {optionalsHref && seal.id === "opcionais" ? (
+            <a href={optionalsHref} className="underline-offset-4 hover:underline">
+              {seal.label}
+            </a>
+          ) : (
+            seal.label
+          )}
         </li>
       ))}
     </ul>

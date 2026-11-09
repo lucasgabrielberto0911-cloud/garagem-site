@@ -172,7 +172,7 @@ export function FichaSectionNav({ hasDetails }: { hasDetails: boolean }) {
   return (
     <nav
       aria-label="Seções do anúncio"
-      className="ficha-section-nav -mx-4 border-b border-white/10 bg-asphalt sm:-mx-6 lg:mx-0 lg:mt-4"
+      className="ficha-section-nav -mx-4 hidden lg:block border-b border-white/10 bg-asphalt sm:-mx-6 lg:mx-0 lg:mt-4"
     >
       <ul className="flex">
         {sections.map((section) => {

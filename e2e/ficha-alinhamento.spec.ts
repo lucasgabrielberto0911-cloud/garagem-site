@@ -20,12 +20,14 @@ for (const sample of [samples[0], { ...samples[0], id: "ce2esold0000000000000000
       await page.setViewportSize({ width, height: page.viewportSize()!.height });
       await page.goto(`${vehiclePath(sample)}?from=%2Festoque`);
       const abas = page.getByRole("navigation", { name: "Seções do anúncio" });
-      await expect(abas).toBeVisible();
+      // Abas FOTOS/ESPECIFICAÇÕES/DETALHES existem só no desktop.
+      if (width >= 1024) await expect(abas).toBeVisible();
+      else await expect(abas).toBeHidden();
       // Os similares precisam existir para reproduzir a reserva lateral indevida.
       await expect(page.locator("[data-similar-vehicles] .listing-card-grid")).toHaveCount(1);
       const fotos = page.locator("#fotos");
       const foto = (await fotos.boundingBox())!;
-      const nav = (await abas.boundingBox())!;
+      const nav = width >= 1024 ? (await abas.boundingBox())! : null;
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 
       if (width >= 1024) {
@@ -40,18 +42,17 @@ for (const sample of [samples[0], { ...samples[0], id: "ce2esold0000000000000000
         expect(Math.abs(foto.x - (width - painel.x - painel.width))).toBeLessThanOrEqual(1);
         expect(Math.abs(foto.x - header.left)).toBeLessThanOrEqual(1);
         expect(Math.abs(painel.x + painel.width - header.right)).toBeLessThanOrEqual(1);
-        for (const bloco of [nav, breadcrumb]) {
+        for (const bloco of [nav!, breadcrumb]) {
           expect(Math.abs(bloco.x - header.left)).toBeLessThanOrEqual(1);
           expect(Math.abs(bloco.x + bloco.width - header.right)).toBeLessThanOrEqual(1);
         }
         expect(Math.abs(voltar.x - header.left)).toBeLessThanOrEqual(1);
       } else {
         expect(Math.abs(foto.x - (width - foto.x - foto.width))).toBeLessThanOrEqual(1);
-        expect(nav.x).toBe(0);
-        expect(Math.abs(nav.width - width)).toBeLessThanOrEqual(1);
         await expect(page.getByRole("link", { name: "Voltar aos resultados" })).toBeVisible();
       }
 
+      if (width < 1024) continue;
       for (const nome of ["Especificações", "Detalhes", "Fotos"]) {
         const link = abas.getByRole("link", { name: nome, exact: true });
         if (!(await link.count())) continue;

@@ -2,6 +2,7 @@ import {
   parseVehicleDescription,
   withoutRepeatedDescriptionFacts,
   type DescriptionSummaryFacts,
+  type DescriptionSegment,
   type DescriptionFact,
 } from "@/lib/vehicle-description";
 
@@ -29,10 +30,9 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
     <div className="space-y-3">
       {shouts.map((line) => (
         <p
-          key={`${line.emoji}-${line.text}`}
+          key={line.text}
           className="flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light"
         >
-          <span aria-hidden="true">{line.emoji}</span>
           <span>{line.text}</span>
         </p>
       ))}
@@ -40,12 +40,9 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
         <ul className="space-y-2">
           {leads.map((line) => (
             <li
-              key={`${line.emoji}-${line.text}`}
+              key={line.text}
               className="text-[15px] font-medium leading-snug text-cream"
             >
-              <span className="mr-2" aria-hidden="true">
-                {line.emoji}
-              </span>
               {line.text}
             </li>
           ))}
@@ -58,12 +55,9 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
             if (!labeled) return null;
             return (
               <li
-                key={`${line.emoji}-${line.text}`}
+                key={line.text}
                 className="flex items-start gap-3 px-3 py-2.5"
               >
-                <span className="w-5 shrink-0 text-center text-sm leading-5" aria-hidden="true">
-                  {line.emoji}
-                </span>
                 <span className="min-w-0">
                   <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                     {labeled.label}
@@ -81,17 +75,37 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
   );
 }
 
+/**
+ * Segmentos que a ficha mostra. `hideSpecLines` (celular) tira as linhas
+ * "Cor: …", "Motor: …", que já estão na ficha técnica.
+ */
+export function visibleDescriptionSegments(
+  text: string,
+  summaryFacts?: DescriptionSummaryFacts,
+  hideSpecLines = false,
+): DescriptionSegment[] {
+  const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
+  if (!hideSpecLines) return segments;
+  return segments.flatMap((segment): DescriptionSegment[] => {
+    if (segment.kind !== "facts") return [segment];
+    const lines = segment.lines.filter((line) => !splitLabeled(line.text));
+    return lines.length > 0 ? [{ kind: "facts", lines }] : [];
+  });
+}
+
 /** Descrição do anúncio com hierarquia. Texto corrido continua um parágrafo. */
 export function VehicleDescription({
   text,
   className = "",
   summaryFacts,
+  hideSpecLines = false,
 }: {
   text: string;
   className?: string;
   summaryFacts?: DescriptionSummaryFacts;
+  hideSpecLines?: boolean;
 }) {
-  const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
+  const segments = visibleDescriptionSegments(text, summaryFacts, hideSpecLines);
   if (segments.length === 0) return null;
 
   if (

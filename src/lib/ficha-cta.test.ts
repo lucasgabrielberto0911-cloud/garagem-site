@@ -137,35 +137,20 @@ test("dobra da ficha não cresce quando a barra do navegador volta", () => {
   assert.doesNotMatch(page, /lg:contents/);
 });
 
-test("sobre e itens começam abertos; vistoria e ficha ficam fechadas", () => {
+test("blocos da ficha mobile ficam sempre abertos; só o saiba mais de vistoria e garantia fecha", () => {
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
   const conditions = readSrc("lib/vehicle-conditions.ts");
-  const blocks = [...dossier.matchAll(/<DossierBlock\b([^>]*)>/g)].map(
-    (match) => match[1] ?? "",
-  );
-  const allOpen = blocks.filter((attrs) => /\bdefaultOpen\b/.test(attrs));
-  // "Verificado neste carro" só existe quando a loja preencheu e abre primeiro.
-  const verified = allOpen.filter((attrs) => /verifiedHeading/.test(attrs));
-  const openBlocks = allOpen.filter((attrs) => !/verifiedHeading/.test(attrs));
 
-  assert.equal(verified.length, 1);
+  // Sem acordeão nos blocos principais; verificado vem antes de sobre.
+  assert.doesNotMatch(dossier, /defaultOpen/);
+  assert.doesNotMatch(dossier, /<details\b[^>]*\bopen=\{/);
   assert.match(dossier, /verified\.length > 0 \?\s*\(\s*<DossierBlock/);
-  assert.ok(dossier.indexOf("verifiedHeading ??") < dossier.indexOf("STORE_INSPECTION_LABEL}"));
-  assert.equal(openBlocks.length, 2);
-  assert.match(openBlocks[0] ?? "", /Sobre o veículo/);
-  assert.match(openBlocks[1] ?? "", /Itens e acessórios/);
-  assert.match(dossier, /<details\b[^>]*\bopen=\{defaultOpen\}/);
+  assert.ok(dossier.indexOf("verifiedHeading ??") < dossier.indexOf('title="Sobre o veículo"'));
   assert.match(dossier, /publicStoreInspectionText/);
+  assert.match(dossier, /VehicleTrustStrip/);
   assert.doesNotMatch(dossier, /Não é documento oficial/);
   assert.doesNotMatch(conditions, /Não é documento oficial/);
   assert.match(conditions, /óleo/);
-
-  const vistoria = blocks.find((attrs) => attrs.includes("STORE_INSPECTION_LABEL"));
-  const ficha = blocks.find((attrs) => attrs.includes('"Ficha"'));
-  assert.ok(vistoria);
-  assert.doesNotMatch(vistoria ?? "", /\bdefaultOpen\b/);
-  assert.ok(ficha);
-  assert.doesNotMatch(ficha ?? "", /\bdefaultOpen\b/);
 });
 
 test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () => {
@@ -215,7 +200,6 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
           ),
         },
         google: DEFAULT_GOOGLE_REVIEWS,
-        prompt: "dúvida",
         quickActions: {
           contentPath: "/estoque/hrv",
           video: "video",
@@ -225,38 +209,40 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
       }),
     ),
   );
-  const blocks = [...html.matchAll(/<details([^>]*)>([\s\S]*?)<\/details>/g)].map(
-    (match) => ({
-      open: /\sopen=""/.test(match[1] ?? ""),
-      title: match[2]?.match(/<span>([^<]+)<\/span>/)?.[1] ?? "",
-      body: match[2] ?? "",
-    }),
-  );
+  const titles = [...html.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)].map((match) => match[1]);
+  assert.deepEqual(titles, [
+    "Sobre o veículo",
+    "Itens e acessórios",
+    "Ficha técnica",
+    "Próximos passos",
+    "Onde estamos",
+  ]);
+  // Garantia, vistoria e cidade visíveis sem clicar.
+  assert.match(html, /data-trust-strip/);
+  assert.match(html, /Garantia de 3 meses/);
+  assert.match(html, /Linhares\/ES/);
+  const details = [...html.matchAll(/<details([^>]*)>/g)];
+  assert.equal(details.length, 1);
+  assert.doesNotMatch(details[0]?.[1] ?? "", /\sopen=""/);
 
-  assert.deepEqual(
-    blocks.map((block) => [block.title, block.open]),
-    [
-      ["Vistoria da loja", false],
-      ["Ficha", false],
-      [DEFAULT_VEHICLE_CONDITIONS.title, false],
-      ["Sobre o veículo", true],
-      ["Itens e acessórios", true],
-      ["Vídeo e propostas", false],
-      ["Atendimento", false],
-    ],
-  );
-  const accessories = blocks.find((block) => block.title === "Itens e acessórios");
-  assert.match(accessories?.body ?? "", /Ar-condicionado/);
-  assert.match(accessories?.body ?? "", /Direção elétrica/);
+  const section = (title: string) => {
+    const at = html.indexOf(`>${title}</h2>`);
+    const next = html.indexOf("</section>", at);
+    return html.slice(at, next);
+  };
+  const accessories = section("Itens e acessórios");
+  assert.match(accessories, /Ar-condicionado/);
+  assert.match(accessories, /Direção elétrica/);
+  assert.match(html, /id="opcionais"/);
 
-  const about = blocks.find((block) => block.title === "Sobre o veículo");
-  assert.match(about?.body ?? "", /NOVIDADE NO ESTOQUE DA GARAGEM/);
-  assert.match(about?.body ?? "", /106\.000 km/);
-  assert.match(about?.body ?? "", /Sedã médio automático/);
-  assert.match(about?.body ?? "", /<ul/);
+  const about = section("Sobre o veículo");
+  assert.match(about, /NOVIDADE NO ESTOQUE DA GARAGEM/);
+  assert.match(about, /Sedã médio automático/);
+  // Specs ficam só na ficha técnica; emoji de enfeite sai.
+  assert.doesNotMatch(about, /Quilometragem/);
+  assert.doesNotMatch(about, /🔥|📊/);
 
-  const ficha = blocks.find((block) => block.title === "Ficha");
-  const fichaBody = ficha?.body ?? "";
+  const fichaBody = section("Ficha técnica");
   assert.match(fichaBody, /Portas/);
   assert.match(fichaBody, /Cidade/);
   assert.match(fichaBody, /Linhares/);
@@ -264,8 +250,18 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     fichaBody.indexOf("Portas") < fichaBody.indexOf("Cidade"),
     "Cidade precisa vir depois de Portas na grade",
   );
+  // O que está nos chips do topo não repete na ficha técnica.
   assert.doesNotMatch(fichaBody, />Ano</);
   assert.doesNotMatch(fichaBody, />km</);
+  assert.doesNotMatch(fichaBody, />Câmbio</);
+  assert.doesNotMatch(fichaBody, />Combustível</);
+
+  // Nada de parcela nem simulador.
+  const steps = section("Próximos passos");
+  assert.match(steps, /Financiamento/);
+  assert.match(steps, /Troca/);
+  assert.match(steps, /Pedir vídeo/);
+  assert.doesNotMatch(html, /parcela|simulador|simular/i);
   assert.doesNotMatch(html, /Chave reserva/);
   assert.doesNotMatch(html, /Manual do proprietário/);
   assert.doesNotMatch(html, /Vídeo sob pedido/);
@@ -273,10 +269,9 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
   assert.doesNotMatch(html, /Equipamentos/);
   assert.doesNotMatch(html, /e mais \d/);
 
-  const vistoria = blocks.find((block) => block.title === "Vistoria da loja");
-  assert.match(vistoria?.body ?? "", /óleo/i);
-  assert.match(vistoria?.body ?? "", /fluidos/i);
-  assert.doesNotMatch(vistoria?.body ?? "", /documento oficial/i);
+  const vistoria = details[0] ? html.slice(html.indexOf("<details"), html.indexOf("</details>")) : "";
+  assert.match(vistoria, /óleo/i);
+  assert.match(vistoria, /fluidos/i);
   assert.doesNotMatch(html, /documento oficial/i);
   assert.doesNotMatch(readSrc("components/site/VehicleMobileDossier.tsx"), /gap-px/);
 });
@@ -301,7 +296,7 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.match(page, /VehicleInspectionBadge/);
   assert.match(page, /Falar no WhatsApp/);
   assert.match(page, /Abre o WhatsApp com este anúncio — modelo, ano e preço\./);
-  assert.match(dossier, /VehicleTrustNotes/);
+  assert.match(dossier, /VehicleTrustStrip/);
 
   const trustAt = page.indexOf("<VehicleTrustNotes");
   const interestAt = page.indexOf("Falar no WhatsApp");
@@ -331,7 +326,6 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
         inspection: "Cautelar aprovado",
         conditions: DEFAULT_VEHICLE_CONDITIONS,
         google: DEFAULT_GOOGLE_REVIEWS,
-        prompt: "dúvida",
       }),
     ),
   );
@@ -343,13 +337,11 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.doesNotMatch(html, /Equipamentos/);
   assert.doesNotMatch(html, /e mais \d/);
   assert.match(html, /Garantia de 3 meses/);
-  assert.match(html, /Documentação pronta/);
   assert.doesNotMatch(html, /Procedência verificada/);
-  assert.match(html, /Atendimento online 8h–23h/);
+  assert.match(html, /8h às 23h/);
   assert.match(html, /Cautelar aprovado/);
   assert.doesNotMatch(html, /Consignado/);
-  const items = html.match(/<details([^>]*)>([\s\S]*?)<\/details>/g) ?? [];
-  const accessories = items.find((block) => block.includes("Itens e acessórios")) ?? "";
+  const accessories = html.slice(html.indexOf(">Itens e acessórios</h2>"));
   assert.match(accessories, /Ar-condicionado/);
   assert.match(accessories, /Direção hidráulica/);
 });
@@ -535,9 +527,6 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
   assert.match(verifiedMarkup, /Quer ver algum detalhe específico\? Peça um vídeo pelo WhatsApp\./);
 
   const dossierSrc = readSrc("components/site/VehicleMobileDossier.tsx");
-  assert.match(dossierSrc, /min-h-\[3rem\]/);
-  assert.match(dossierSrc, /py-3\.5/);
-  assert.match(dossierSrc, /pb-4/);
   assert.match(dossierSrc, /DEFAULT_VEHICLE_CONDITIONS\.intro/);
 
   const mobileMarkup = renderToStaticMarkup(
@@ -557,7 +546,6 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
         specs: [],
         conditions: DEFAULT_VEHICLE_CONDITIONS,
         warranty: "Garantia estendida de 1 ano",
-        prompt: "dúvida",
       }),
     ),
   );

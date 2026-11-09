@@ -187,7 +187,7 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
     const mobileSummary = page.locator(".ficha-mobile-sheet");
     await expect(mobileSummary).toBeVisible();
 
-    const mobileTitle = mobileSummary.locator("p.font-display").first();
+    const mobileTitle = mobileSummary.locator("h1").first();
     await expect(mobileTitle).toBeVisible();
     await expect(mobileTitle).toContainText("Civic");
     await expect(mobileTitle).toHaveClass(/font-display/);
