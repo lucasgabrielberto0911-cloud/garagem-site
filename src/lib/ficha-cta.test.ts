@@ -151,7 +151,7 @@ test("blocos da ficha mobile ficam sempre abertos; só o saiba mais de vistoria 
   assert.match(dossier, /verified\.length > 0 \?\s*\(\s*<DossierBlock/);
   assert.ok(dossier.indexOf("verifiedHeading ??") < dossier.indexOf('title="Sobre o veículo"'));
   assert.match(dossier, /publicStoreInspectionText/);
-  assert.match(dossier, /VehicleTrustStrip/);
+  assert.match(dossier, /<VehicleTrustNotes warranty=\{warranty\} compact/);
   assert.doesNotMatch(dossier, /Não é documento oficial/);
   assert.doesNotMatch(conditions, /Não é documento oficial/);
   assert.match(conditions, /óleo/);
@@ -223,9 +223,6 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     "Próximos passos",
     "Onde estamos",
   ]);
-  // Garantia, vistoria e cidade visíveis sem clicar.
-  assert.match(html, /data-trust-strip/);
-  assert.match(html, /Garantia de 3 meses/);
   assert.match(html, /Linhares\/ES/);
   const details = [...html.matchAll(/<details([^>]*)>/g)];
   assert.equal(details.length, 1);
@@ -303,7 +300,7 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.match(page, /VehicleInspectionBadge/);
   assert.match(page, /Falar no WhatsApp/);
   assert.match(page, /Abre o WhatsApp com este anúncio — modelo, ano e preço\./);
-  assert.match(dossier, /VehicleTrustStrip/);
+  assert.match(dossier, /VehicleTrustNotes/);
 
   // Hierarquia de anúncio: o WhatsApp principal vem antes da faixa de confiança.
   const trustAt = page.indexOf("<VehicleTrustNotes");
@@ -693,6 +690,26 @@ test("faixa de confiança do desktop: garantia, vistoria da loja e Linhares/ES",
   assert.match(html, /Vistoria da loja/);
   assert.match(html, /Linhares\/ES/);
   assert.doesNotMatch(html, /parcela/i);
+});
+
+test("garantia usa o dado do veículo nas duas telas e fala veículo, não carro", () => {
+  const props = { title: "Honda CG", price: 15900, sold: false, facts: [] };
+  const render = (warranty: string | null, sold = false) =>
+    renderToStaticMarkup(createElement(VehicleMobileSummary, { ...props, sold, warranty }));
+
+  const own = render("6 meses de motor");
+  assert.match(own, /Garantia deste veículo: 6 meses de motor/);
+  assert.doesNotMatch(own, /Garantia de 3 meses|deste carro/);
+  assert.match(own, /Vistoria da loja/);
+  assert.match(render(null), /Garantia de 3 meses/);
+  assert.match(render("   "), /Garantia de 3 meses/);
+  assert.doesNotMatch(render("6 meses de motor", true), /Garantia|Vistoria da loja/);
+
+  const desktop = renderToStaticMarkup(
+    createElement(VehicleTrustNotes, { warranty: "6 meses de motor" }),
+  );
+  assert.match(desktop, /Garantia deste veículo: 6 meses de motor/);
+  assert.doesNotMatch(desktop, /Garantia de 3 meses/);
 });
 
 test("desktop rola junto: aba e card do anúncio sem sticky e sem coluna com scroll próprio", () => {

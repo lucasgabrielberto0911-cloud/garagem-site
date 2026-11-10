@@ -381,6 +381,7 @@ export default async function VehicleDetailPage({
                 sold={sold}
                 facts={keyFacts}
                 inspection={sold ? null : vehicle.inspection}
+                warranty={sold ? null : vehicle.warranty}
                 seals={seals}
                 specAnchor={!hasMobileFichaSpecs(specs)}
               />

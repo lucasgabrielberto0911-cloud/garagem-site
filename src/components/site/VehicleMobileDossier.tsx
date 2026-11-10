@@ -7,7 +7,8 @@ import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge
 import { VehicleDescription, visibleDescriptionSegments } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleSeals } from "@/components/site/VehicleSeals";
-import { IconClipboardCheck, IconMapPin, IconShieldCheck } from "@/components/site/icons";
+import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import { IconMapPin } from "@/components/site/icons";
 import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
 import { formatCurrencyBRL } from "@/lib/format";
 import {
@@ -50,6 +51,7 @@ export function VehicleMobileSummary({
   sold,
   facts,
   inspection,
+  warranty,
   seals = [],
   specAnchor = false,
 }: {
@@ -60,6 +62,7 @@ export function VehicleMobileSummary({
   /** Cor, ano e KM (`vehicleKeyFacts`). O resto da ficha fica em "Ficha técnica". */
   facts: readonly VehicleKeyFact[];
   inspection?: string | null;
+  warranty?: string | null;
   /** Selos já filtrados (sem dado = sem selo). */
   seals?: readonly VehicleSeal[];
   /** Quando a ficha técnica não existe, a âncora aponta para estes fatos. */
@@ -80,6 +83,8 @@ export function VehicleMobileSummary({
           <span className="ficha-price">{formatCurrencyBRL(price)}</span>
         )}
       </p>
+      {/* Logo abaixo do preço: é o que ainda cabe na primeira tela em celular baixo. */}
+      {!sold ? <VehicleTrustNotes warranty={warranty} compact className="mt-2.5" /> : null}
       <div
         className={`mt-2.5${specAnchor ? " ficha-jump-target" : ""}`}
         id={specAnchor ? "especificacoes" : undefined}
@@ -116,30 +121,6 @@ function DossierBlock({
       <h2 className="mb-3 font-display text-lg font-semibold tracking-tight text-cream">{title}</h2>
       <div className="text-[15px] leading-relaxed text-cream/80">{children}</div>
     </section>
-  );
-}
-
-const TRUST_PILLS = [
-  { Icon: IconShieldCheck, label: "Garantia de 3 meses (motor e câmbio)" },
-  { Icon: IconClipboardCheck, label: "Vistoria da loja" },
-  { Icon: IconMapPin, label: "Linhares/ES" },
-] as const;
-
-/** Confiança sempre visível: garantia, vistoria e cidade, sem clicar. */
-function VehicleTrustStrip() {
-  return (
-    <ul
-      aria-label="Garantia e vistoria"
-      data-trust-strip=""
-      className="grid gap-2 border-b border-white/10 py-4"
-    >
-      {TRUST_PILLS.map(({ Icon, label }) => (
-        <li key={label} className="flex items-center gap-2.5 text-sm leading-snug text-cream">
-          <Icon className="h-5 w-5 shrink-0 text-brand-light" />
-          {label}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -222,8 +203,6 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-2 lg:hidden">
-      {!sold ? <VehicleTrustStrip /> : null}
-
       {verified.length > 0 ? (
         <DossierBlock title={verifiedHeading ?? "Verificado neste carro"}>
           <VehicleVerifiedList items={verified} alt={fullLabel} showVideoHint={!sold} />
