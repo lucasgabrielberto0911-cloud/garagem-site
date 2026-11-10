@@ -124,10 +124,22 @@ export function buildVehiclePublicSpecs(
   return rows;
 }
 
-/** Já aparecem nos chips da primeira dobra (ficha técnica não repete). */
-const CHIP_SPEC_LABELS = new Set(["Ano", "km", "Km", "Câmbio", "Combustível", "Final placa", "Final da placa"]);
 
-/** Ficha técnica: só o que não está nos chips (Tipo, Cor, Motor, Portas e extras). */
-export function specsNotInChips(specs: VehicleSpecRow[]): VehicleSpecRow[] {
-  return specs.filter((row) => !CHIP_SPEC_LABELS.has(row.label));
+export type VehicleKeyFact = { label: string; value: string };
+
+/**
+ * Os três quadradinhos do topo da ficha, junto do nome e do preço:
+ * cor, ano e km. Campo vazio não vira quadradinho ("Não informada" no topo
+ * só polui). A ficha técnica completa continua na seção de especificações.
+ */
+export function vehicleKeyFacts(specs: VehicleSpecRow[]): VehicleKeyFact[] {
+  const pick = [
+    { from: "Cor", label: "Cor" },
+    { from: "Ano", label: "Ano" },
+    { from: "km", label: "KM" },
+  ];
+  return pick.flatMap(({ from, label }) => {
+    const row = specs.find((item) => item.label === from);
+    return row && !row.empty && row.value.trim() ? [{ label, value: row.value }] : [];
+  });
 }

@@ -61,7 +61,7 @@ test("desktop: ficha técnica e opcionais na coluna principal, card só com o es
   const aside = page.locator("[data-ficha-page] aside");
   await expect(aside).toBeVisible();
 
-  // A grade de specs saiu do card sticky e fica sempre aberta abaixo das fotos.
+  // A grade de specs fica fora do card, sempre aberta abaixo das fotos, com a ficha completa.
   await expect(aside.locator("[data-ficha-spec-grid]")).toHaveCount(0);
   const specs = page.locator("[data-ficha-spec-grid]");
   await expect(specs).toBeVisible();
@@ -73,24 +73,46 @@ test("desktop: ficha técnica e opcionais na coluna principal, card só com o es
   expect(grade!.y).toBeGreaterThan(fotos!.y + fotos!.height - 1);
   expect(grade!.x + grade!.width).toBeLessThanOrEqual(painel!.x);
   await expect(page.locator("details", { has: specs })).toHaveCount(0);
+  await expect(specs.locator("dt")).toContainText(["Ano", "km", "Câmbio", "Combustível", "Cor"]);
 
-  // Card: um único botão principal; ações secundárias menores; chat e usado discretos.
+  // Topo do card: preço em vermelho e quadradinhos de cor, ano e KM.
+  const preco = aside.locator("[data-ficha-price]");
+  await expect(preco).toContainText("R$");
+  const corPreco = await preco.evaluate((el) => getComputedStyle(el).color.match(/\d+/g)!.map(Number));
+  expect(corPreco[0]).toBeGreaterThan(200);
+  expect(corPreco[1]).toBeLessThan(100);
+  const fatos = aside.locator("[data-key-facts] dt");
+  await expect(fatos).toHaveText(["Cor", "Ano", "KM"]);
+
+  // Card: um único botão principal; financiamento, troca, vídeo e visita recolhidos.
   const principal = aside.getByRole("link", { name: "Falar no WhatsApp", exact: true });
   await expect(principal).toBeVisible();
-  const [bp, bf] = await Promise.all([
-    principal.boundingBox(),
-    aside.getByRole("link", { name: /financiamento deste veículo/ }).boundingBox(),
-  ]);
+  const financiamento = aside.getByRole("link", { name: /financiamento deste veículo/ });
+  await expect(financiamento).toBeHidden();
+  await aside.locator("[data-ficha-more-actions] summary").click();
+  await expect(financiamento).toBeVisible();
+  const [bp, bf] = await Promise.all([principal.boundingBox(), financiamento.boundingBox()]);
   expect(bp!.height).toBeGreaterThan(bf!.height);
   await expect(aside.getByText("Garantia de 3 meses")).toBeVisible();
   await expect(aside.getByText("Vistoria da loja", { exact: true })).toBeVisible();
   await expect(aside.getByText("Linhares/ES", { exact: true })).toBeVisible();
   await expect(aside).not.toContainText(/parcela|simul/i);
+  await expect(aside.getByRole("button", { name: "Copiar link do anúncio" })).toHaveCount(0);
 
-  // Atalho do card leva aos opcionais na coluna principal.
-  const atalho = aside.getByRole("link", { name: /^Ver os 19 opcionais/ });
+  // O selo "19 opcionais" do card leva à lista na coluna principal.
+  const atalho = aside.getByRole("link", { name: "19 opcionais", exact: true });
   await expect(atalho).toBeVisible();
   await atalho.click();
   await expect(page.locator("#opcionais-desktop")).toBeInViewport();
+
+  // Clicar num opcional depois de usar as abas não rola a página para cima.
+  await page.getByRole("navigation", { name: "Seções do anúncio" }).getByRole("link", { name: "Detalhes", exact: true }).click();
+  const chip = page.locator("#opcionais-desktop [data-accessory-chip]").last();
+  await chip.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
+  const antes = await page.evaluate(() => scrollY);
+  await chip.click();
+  await page.waitForTimeout(400);
+  expect(Math.abs((await page.evaluate(() => scrollY)) - antes)).toBeLessThanOrEqual(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

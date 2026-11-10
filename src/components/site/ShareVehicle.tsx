@@ -5,10 +5,17 @@ import { notifyError, notifySuccess } from "@/lib/notify";
 import { canonicalVehicleShareUrl, shareVehicleLink } from "@/lib/vehicle-share";
 import { site } from "@/lib/site";
 
-type Props = { title: string; path: string; vehicleId?: string; className?: string };
+type Props = {
+  title: string;
+  path: string;
+  vehicleId?: string;
+  className?: string;
+  /** `compact`: um link discreto "Compartilhar" (sem share nativo, copia o link). */
+  variant?: "default" | "compact";
+};
 const buttonClass = "inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation disabled:opacity-60";
 
-export function ShareVehicle({ title, path, className = "" }: Props) {
+export function ShareVehicle({ title, path, className = "", variant = "default" }: Props) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // O link compartilhado é sempre o anúncio público, mesmo em uma prévia.
@@ -37,6 +44,21 @@ export function ShareVehicle({ title, path, className = "" }: Props) {
     } catch {
       notifyError("Não foi possível compartilhar. Você pode usar Copiar link.");
     } finally { setBusy(false); }
+  }
+
+  if (variant === "compact") {
+    return (
+      <button
+        type="button"
+        onClick={() => void share()}
+        disabled={busy}
+        aria-busy={busy}
+        aria-label="Compartilhar anúncio"
+        className={`inline-flex min-h-[44px] items-center text-muted underline-offset-4 transition hover:text-cream hover:underline touch-manipulation disabled:opacity-60 ${className}`}
+      >
+        {copied ? "Link copiado" : "Compartilhar"}
+      </button>
+    );
   }
 
   return (

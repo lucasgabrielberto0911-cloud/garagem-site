@@ -9,16 +9,15 @@ import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleSeals } from "@/components/site/VehicleSeals";
 import { IconClipboardCheck, IconMapPin, IconShieldCheck } from "@/components/site/icons";
 import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { formatCurrencyBRL } from "@/lib/format";
 import {
-  SPEC_EMPTY,
   STORE_INSPECTION_LABEL,
   STORE_INSPECTION_NOTE,
+  type VehicleKeyFact,
   type VehicleSpecRow,
-  specsNotInChips,
-  formatVehicleYearRange,
   publicInspectionNote,
 } from "@/lib/vehicle-specs";
+import { VehicleKeyFacts } from "@/components/site/VehicleKeyFacts";
 import {
   publicStoreInspectionText,
   DEFAULT_VEHICLE_CONDITIONS,
@@ -34,8 +33,9 @@ import type { VehicleSeal } from "@/lib/vehicle-seals";
 /** Garantia e vistoria já aparecem na faixa de confiança. */
 const TRUST_LABELS = new Set(["Garantia", STORE_INSPECTION_LABEL]);
 
+/** Ficha técnica completa (ano, km, cor, câmbio, placa...), menos o que a faixa de confiança mostra. */
 function sheetSpecs(specs: VehicleSpecRow[]) {
-  return specsNotInChips(specs).filter((row) => !TRUST_LABELS.has(row.label));
+  return specs.filter((row) => !TRUST_LABELS.has(row.label));
 }
 
 /** A âncora Especificações cai na ficha técnica quando ela existe. */
@@ -48,12 +48,7 @@ export function VehicleMobileSummary({
   version,
   price,
   sold,
-  year,
-  yearModel,
-  km,
-  transmission,
-  fuel,
-  plateEnd,
+  facts,
   inspection,
   seals = [],
   specAnchor = false,
@@ -62,28 +57,14 @@ export function VehicleMobileSummary({
   version?: string | null;
   price: number;
   sold: boolean;
-  year: number;
-  yearModel: number;
-  km: number;
-  transmission: string;
-  fuel?: string | null;
-  plateEnd?: string | null;
+  /** Cor, ano e KM (`vehicleKeyFacts`). O resto da ficha fica em "Ficha técnica". */
+  facts: readonly VehicleKeyFact[];
   inspection?: string | null;
   /** Selos já filtrados (sem dado = sem selo). */
   seals?: readonly VehicleSeal[];
   /** Quando a ficha técnica não existe, a âncora aponta para estes fatos. */
   specAnchor?: boolean;
 }) {
-  const plate = (plateEnd ?? "").replace(/\s+/g, " ").trim();
-  const fuelText = (fuel ?? "").trim();
-  const facts = [
-    { label: "Ano", value: formatVehicleYearRange(year, yearModel) },
-    { label: "Km", value: formatNumberBR(km) },
-    { label: "Câmbio", value: transmission.trim() || SPEC_EMPTY },
-    ...(fuelText && fuelText !== SPEC_EMPTY ? [{ label: "Combustível", value: fuelText }] : []),
-    ...(plate ? [{ label: "Final da placa", value: plate }] : []),
-  ];
-
   return (
     <div className="ficha-mobile-sheet px-4 pb-3 pt-3 sm:px-6">
       <h1 className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream">
@@ -92,38 +73,24 @@ export function VehicleMobileSummary({
       {version ? (
         <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-muted">{version}</p>
       ) : null}
-      <p className="mt-1.5 font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand-light">
+      <p className="mt-1.5 font-display text-[1.75rem] font-bold leading-none tracking-tight text-brand-light">
         {sold ? (
           <span className="text-base text-muted">Já vendido</span>
         ) : (
-          formatCurrencyBRL(price)
+          <span className="ficha-price">{formatCurrencyBRL(price)}</span>
         )}
       </p>
+      <div
+        className={`mt-2.5${specAnchor ? " ficha-jump-target" : ""}`}
+        id={specAnchor ? "especificacoes" : undefined}
+        data-ficha-section={specAnchor ? "especificacoes" : undefined}
+      >
+        <VehicleKeyFacts facts={facts} />
+      </div>
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
       ) : null}
       {!sold ? <VehicleSeals seals={seals} className="mt-2.5" optionalsHref="#opcionais" /> : null}
-      <dl
-        className={`mt-2.5 grid grid-cols-2 gap-1.5${specAnchor ? " ficha-jump-target" : ""}`}
-        id={specAnchor ? "especificacoes" : undefined}
-        data-ficha-section={specAnchor ? "especificacoes" : undefined}
-      >
-        {facts.map((fact, index) => (
-          <div
-            key={fact.label}
-            className={`min-w-0 border border-white/10 bg-ink px-2.5 py-2${
-              facts.length % 2 === 1 && index === facts.length - 1 ? " col-span-2" : ""
-            }`}
-          >
-            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              {fact.label}
-            </dt>
-            <dd className="mt-0.5 font-display text-[13px] font-semibold leading-tight text-cream">
-              {fact.value}
-            </dd>
-          </div>
-        ))}
-      </dl>
     </div>
   );
 }
@@ -349,8 +316,7 @@ export function VehicleMobileBlocks({
 
       {!sold && quickActions ? (
         <DossierBlock title="Próximos passos" id="proximos-passos">
-          <p>Financiamento, troca, vídeo ou visita — a gente responde no WhatsApp.</p>
-          <div className="mt-3">
+          <div>
             <VehicleQuickActions
               contentId={vehicleId}
               contentSlug={whatsappContentFromVehicle({ id: vehicleId, path })}
@@ -370,6 +336,7 @@ export function VehicleMobileBlocks({
               finance={quickActions.finance}
               trade={quickActions.trade}
               visit={quickActions.visit}
+              variant="secondary"
               className="grid"
             />
           </div>
@@ -394,21 +361,23 @@ export function VehicleMobileBlocks({
             className="mt-4 w-full"
           />
         ) : null}
-        <ShareVehicle
-          title={fullLabel}
-          path={path}
-          vehicleId={vehicleId}
-          className="mt-3"
-        />
-        {!sold ? (
-          <Link
-            href={`/vender?interesse=${vehicleId}&label=${encodeURIComponent(fullLabel)}`}
-            prefetch={false}
-            className="mt-3 inline-flex min-h-11 items-center text-sm text-muted underline-offset-4 hover:text-cream hover:underline"
-          >
-            Ou preencha a avaliação do seu usado
-          </Link>
-        ) : null}
+        <div className="mt-2 flex flex-wrap items-center gap-x-5 text-sm">
+          <ShareVehicle
+            title={fullLabel}
+            path={path}
+            vehicleId={vehicleId}
+            variant="compact"
+          />
+          {!sold ? (
+            <Link
+              href={`/vender?interesse=${vehicleId}&label=${encodeURIComponent(fullLabel)}`}
+              prefetch={false}
+              className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-cream hover:underline"
+            >
+              Avaliar meu usado
+            </Link>
+          ) : null}
+        </div>
       </DossierBlock>
     </div>
   );

@@ -8,7 +8,7 @@ import {
   formatVehicleYearRange,
   publicInspectionBadge,
   publicInspectionNote,
-  specsNotInChips,
+  vehicleKeyFacts,
 } from "./vehicle-specs";
 
 test("ficha sempre mostra os campos centrais, sem buraco de cor vazia", () => {
@@ -190,10 +190,18 @@ test("selo da ficha mostra o texto salvo e some quando a vistoria está vazia", 
   );
 });
 
-test("ficha técnica não repete o que os chips já mostram", () => {
+test("topo da ficha: cor, ano e KM, sem quadradinho vazio", () => {
   const rows = buildVehiclePublicSpecs({
     category: "carro", year: 2020, yearModel: 2021, km: 50000, fuel: "Flex", transmission: "Automático",
     color: "Prata", engine: "1.5 16V", doors: 4, plateEnd: "7",
   });
-  assert.deepEqual(specsNotInChips(rows).map((row) => row.label), ["Tipo", "Cor", "Motor", "Portas"]);
+  assert.deepEqual(vehicleKeyFacts(rows), [
+    { label: "Cor", value: "Prata" },
+    { label: "Ano", value: "2020/2021" },
+    { label: "KM", value: "50.000" },
+  ]);
+  const semCor = buildVehiclePublicSpecs({
+    category: "moto", year: 2022, yearModel: 2022, km: 1200, fuel: "", transmission: "", color: "  ",
+  });
+  assert.deepEqual(vehicleKeyFacts(semCor).map((fact) => fact.label), ["Ano", "KM"]);
 });
