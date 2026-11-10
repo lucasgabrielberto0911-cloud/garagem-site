@@ -230,7 +230,9 @@ export function VehicleGallery({
                     srcSet={galleryPreviewSrcSet(photo)}
                     recoverable
                     priority={index === 0}
-                    className="object-cover [-webkit-touch-callout:none]"
+                    // Foto inteira no visor: cover cortava teto e chão de fotos
+                    // fora do 16:10 (Uno 2013). Sobra vira faixa escura (bg-asphalt).
+                    className="object-contain [-webkit-touch-callout:none]"
                   />
                 ) : (
                   <div
