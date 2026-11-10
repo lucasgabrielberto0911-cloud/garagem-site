@@ -120,10 +120,6 @@ test("a ficha marca fotos, especificações e o texto, e abre a foto grande em W
   assert.doesNotMatch(page, /99956-6161|5527999566161/);
   assert.doesNotMatch(page, /0-100|cavalos|potência/i);
 
-  const foldStart = css.indexOf(".ficha-mobile-fold {");
-  const fold = css.slice(foldStart, foldStart + 500);
-  assert.match(fold, /var\(--ficha-section-nav\)/);
-  assert.match(css, /\.ficha-section-nav/);
   assert.match(css, /scroll-margin-top/);
 });
 

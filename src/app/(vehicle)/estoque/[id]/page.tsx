@@ -360,7 +360,7 @@ export default async function VehicleDetailPage({
         <FichaSectionNav hasDetails={hasDetails} />
 
         {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
-        <div className="lg:mt-5 lg:grid lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
+        <div className="lg:mt-5 lg:grid lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-8">
           <div className="ficha-mobile-fold min-w-0 lg:order-1">
             <div
               id="fotos"

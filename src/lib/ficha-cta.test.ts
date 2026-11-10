@@ -121,24 +121,29 @@ test("primeira foto da galeria é a única com prioridade alta", () => {
   assert.match(gallery, /GALLERY_HERO_SIZES/);
   assert.match(
     readSrc("lib/stock-query.ts"),
-    /GALLERY_HERO_SIZES =\s*\n\s*"\(min-width: 1280px\) 710px, \(min-width: 1024px\) calc\(\(100vw - 96px\) \* 0\.6\), 100vw"/,
+    /GALLERY_HERO_SIZES =\s*\n\s*"\(min-width: 1440px\) 704px, \(min-width: 1024px\) calc\(\(100vw - 96px\) \* 0\.524\), 100vw"/,
   );
   assert.match(gallery, /sizes="96px"/);
   assert.match(header, /headerWordmarkPriority\(pathname\)/);
   assert.doesNotMatch(gallery, /downloadAttachment/);
 });
 
-test("dobra da ficha não cresce quando a barra do navegador volta", () => {
+test("dobra da ficha tem foto 4:3 fixa e não cresce quando a barra do navegador volta", () => {
   const css = readSrc("app/globals.css");
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
+  const gallery = readSrc("components/site/VehicleGallery.tsx");
   const start = css.indexOf(".ficha-mobile-fold {");
-  const fold = css.slice(start, start + 500);
-  assert.match(fold, /100svh/);
-  assert.match(fold, /--ficha-sticky-bar/);
+  const fold = css.slice(start, css.indexOf("}", start));
   assert.match(fold, /overflow-anchor:\s*none/);
-  assert.doesNotMatch(fold, /100dvh/);
+  assert.doesNotMatch(fold, /min-height|100dvh/);
   assert.match(page, /ficha-mobile-fold min-w-0/);
+  assert.match(page, /lg:grid-cols-\[1\.1fr_1fr\]/);
   assert.doesNotMatch(page, /lg:contents/);
+  assert.match(gallery, /gallery-frame relative aspect-\[4\/3\]/);
+  assert.doesNotMatch(gallery, /aspect-\[16\/10\]/);
+  // Faixa de miniaturas com altura reservada antes do JS; botão claro para abrir as fotos.
+  assert.match(gallery, /hidden h-\[4\.25rem\] lg:block/);
+  assert.match(gallery, /Ver as \$\{total\} fotos/);
 });
 
 test("blocos da ficha mobile ficam sempre abertos; só o saiba mais de vistoria e garantia fecha", () => {

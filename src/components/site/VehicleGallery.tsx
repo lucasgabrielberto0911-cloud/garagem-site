@@ -181,8 +181,8 @@ export function VehicleGallery({
 
   if (total === 0) {
     return (
-      <div className="gallery-root flex h-full min-h-0 flex-col">
-        <div className="gallery-frame relative min-h-[9rem] flex-1 overflow-hidden border border-white/10 bg-ink lg:aspect-[16/10] lg:min-h-0 lg:flex-none">
+      <div className="gallery-root">
+        <div className="gallery-frame relative aspect-[4/3] overflow-hidden border border-white/10 bg-ink">
           <VehicleImage
             src={null}
             alt={alt}
@@ -196,8 +196,8 @@ export function VehicleGallery({
   }
 
   return (
-    <div ref={rootRef} className="gallery-root flex h-full min-h-0 flex-col">
-      <div className="gallery-frame relative min-h-[9rem] flex-1 overflow-hidden border border-white/10 bg-ink lg:aspect-[16/10] lg:min-h-0 lg:flex-none">
+    <div ref={rootRef} className="gallery-root">
+      <div className="gallery-frame relative aspect-[4/3] overflow-hidden border border-white/10 bg-ink">
         <ul
           ref={scrollerRef}
           className="gallery-strip absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
@@ -231,7 +231,7 @@ export function VehicleGallery({
                     recoverable
                     priority={index === 0}
                     // Foto inteira no visor: cover cortava teto e chão de fotos
-                    // fora do 16:10 (Uno 2013). Sobra vira faixa escura (bg-asphalt).
+                    // fora do 4:3 (Uno 2013). Sobra vira faixa escura (bg-asphalt).
                     className="object-contain [-webkit-touch-callout:none]"
                   />
                 ) : (
@@ -245,12 +245,14 @@ export function VehicleGallery({
           })}
         </ul>
 
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex h-8 w-8 items-center justify-center border border-white/20 bg-asphalt/80 text-cream"
+        <button
+          type="button"
+          onClick={() => setZoomOpen(true)}
+          className="absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex min-h-11 items-center gap-2 border border-white/25 bg-asphalt/85 px-3 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-brand active:border-brand"
         >
           <ExpandIcon />
-        </span>
+          {total > 1 ? `Ver as ${total} fotos` : "Ampliar foto"}
+        </button>
 
         {total > 1 ? (
           <>
@@ -274,7 +276,7 @@ export function VehicleGallery({
             </button>
 
             <span
-              className="pointer-events-none absolute bottom-2 right-2 z-[2] bg-asphalt/80 px-2 py-1 text-xs font-medium text-cream lg:bottom-auto lg:top-2"
+              className="pointer-events-none absolute bottom-2 right-2 z-[2] bg-asphalt/80 px-2 py-1 text-sm font-medium text-cream lg:bottom-auto lg:top-2"
               aria-live="polite"
             >
               {active + 1}/{total}
@@ -283,38 +285,43 @@ export function VehicleGallery({
         ) : null}
       </div>
 
-      {total > 1 && showThumbs ? (
-        <div
-          ref={thumbsRef}
-          className="mt-2 hidden gap-2 overflow-x-auto overscroll-x-contain pb-1 scrollbar-hide [-webkit-overflow-scrolling:touch] lg:flex"
-          role="tablist"
-          aria-label="Miniaturas"
-        >
-          {photos.map((photo, index) => {
-            return (
-              <button
-                key={photo.id}
-                type="button"
-                role="tab"
-                onClick={() => goTo(index)}
-                aria-label={`Ver foto ${index + 1} de ${total}`}
-                aria-selected={index === active}
-                className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation sm:h-16 sm:w-24 ${
-                  index === active
-                    ? "border-brand"
-                    : "border-white/15 opacity-70 hover:opacity-100 active:opacity-100"
-                }`}
-              >
-                <VehicleImage
-                  src={galleryThumbSrc(photo)}
-                  alt={vehiclePhotoAlt(alt, index, total)}
-                  fill
-                  sizes="96px"
-                  className="object-cover"
-                />
-              </button>
-            );
-          })}
+      {/* A altura fica reservada desde o HTML: as miniaturas só entram depois do JS (CLS). */}
+      {total > 1 ? (
+        <div className="mt-2 hidden h-[4.25rem] lg:block">
+          {showThumbs ? (
+            <div
+              ref={thumbsRef}
+              className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 scrollbar-hide [-webkit-overflow-scrolling:touch]"
+              role="tablist"
+              aria-label="Miniaturas"
+            >
+              {photos.map((photo, index) => {
+                return (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    role="tab"
+                    onClick={() => goTo(index)}
+                    aria-label={`Ver foto ${index + 1} de ${total}`}
+                    aria-selected={index === active}
+                    className={`relative h-16 w-24 shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation ${
+                      index === active
+                        ? "border-brand"
+                        : "border-white/15 opacity-70 hover:opacity-100 active:opacity-100"
+                    }`}
+                  >
+                    <VehicleImage
+                      src={galleryThumbSrc(photo)}
+                      alt={vehiclePhotoAlt(alt, index, total)}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
