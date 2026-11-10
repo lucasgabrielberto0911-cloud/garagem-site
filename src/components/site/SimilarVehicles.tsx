@@ -6,8 +6,8 @@ import { WhatsAppButton } from "@/components/site/ui";
 
 /**
  * Outros disponíveis no fim da ficha.
- * A mesma peça do estoque e da home: o anúncio abre a ficha e a faixa
- * de interesse abre o WhatsApp do veículo.
+ * A mesma peça do estoque e da home, sem "Tenho interesse": o card só abre
+ * a ficha do outro carro. O contato é a barra do carro atual.
  */
 export function SimilarVehicles({
   vehicles,
@@ -52,7 +52,7 @@ export function SimilarVehicles({
       </div>
       {vehicles.length > 0 ? (
         <div className="mt-5">
-          <VehicleGrid vehicles={vehicles.slice(0, 3)} />
+          <VehicleGrid vehicles={vehicles.slice(0, 3)} hideInterest />
         </div>
       ) : null}
       {whatsapp ? (

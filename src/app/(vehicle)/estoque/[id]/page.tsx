@@ -17,7 +17,7 @@ import {
 import { VehicleConditions } from "@/components/site/VehicleConditions";
 import { VehicleVerifiedSection } from "@/components/site/VehicleVerifiedInfo";
 import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
-import { VehicleDescription } from "@/components/site/VehicleDescription";
+import { VehicleDescription, visibleDescriptionSegments } from "@/components/site/VehicleDescription";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
 import { VehicleLeadHit, VehicleViewContent } from "@/lib/funnel-events";
@@ -37,7 +37,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
-import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
+import { buildVehiclePublicSpecs, specsNotInChips } from "@/lib/vehicle-specs";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
@@ -247,8 +247,10 @@ export default async function VehicleDetailPage({
     inspection: vehicle.inspection,
   });
 
+  const hasAboutText =
+    !!description && visibleDescriptionSegments(description, vehicle, specs).length > 0;
   const hasDetails =
-    Boolean(description) || accessories.length > 0;
+    hasAboutText || accessories.length > 0;
   const updatedLabel = vehicle.updatedAt
     ? formatUpdatedAt(vehicle.updatedAt)
     : "";
@@ -408,7 +410,7 @@ export default async function VehicleDetailPage({
                 data-ficha-spec-grid=""
                 className="mt-3 grid grid-cols-3 gap-2 text-sm [&>:last-child:nth-child(3n+1)]:col-span-3 [&>:last-child:nth-child(3n+2)]:col-span-2"
               >
-                {specs.map((spec) => (
+                {specsNotInChips(specs).map((spec) => (
                   <div
                     key={spec.label}
                     className="min-w-0 border border-white/10 bg-ink px-3 py-2.5"
@@ -436,7 +438,7 @@ export default async function VehicleDetailPage({
                 data-ficha-section="detalhes"
                 className="ficha-jump-target hidden pt-6 lg:block"
               >
-                {description ? (
+                {hasAboutText && description ? (
                   <div>
                     <h2 className="font-display text-base font-semibold text-cream">
                       Sobre o veículo
@@ -444,6 +446,7 @@ export default async function VehicleDetailPage({
                     <VehicleDescription
                       text={description}
                       summaryFacts={vehicle}
+                      specRows={specs}
                       className="mt-2 text-sm sm:text-[15px]"
                     />
                   </div>
@@ -453,7 +456,7 @@ export default async function VehicleDetailPage({
                   <div
                     id="opcionais-desktop"
                     data-ficha-opcionais=""
-                    className={`ficha-jump-target ${description ? "mt-8 border-t border-white/10 pt-6" : ""}`}
+                    className={`ficha-jump-target ${hasAboutText ? "mt-8 border-t border-white/10 pt-6" : ""}`}
                   >
                     <h2 className="flex flex-wrap items-baseline gap-x-3 font-display text-xl font-bold tracking-tight text-cream">
                       Itens e acessórios

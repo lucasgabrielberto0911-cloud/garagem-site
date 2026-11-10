@@ -9,6 +9,7 @@ export function VehicleGrid({
   desktopCols = 3,
   destaqueLimit = 3,
   lgVisibleCount,
+  hideInterest = false,
 }: {
   vehicles: VehicleCardData[];
   priorityCount?: number;
@@ -17,6 +18,8 @@ export function VehicleGrid({
   destaqueLimit?: number;
   /** Esconde os cards a partir deste índice só entre lg e xl, para a última linha não ficar com card órfão. */
   lgVisibleCount?: number;
+  /** Esconde o "Tenho interesse" dos cards (ficha: o card só abre o anúncio). */
+  hideInterest?: boolean;
   /** Mantido para compatibilidade; todos os cards usam agora a mesma foto 4:3. */
   photoLayout?: "default" | "stock";
 }) {
@@ -34,6 +37,7 @@ export function VehicleGrid({
               eager={!high && index < priorityCount}
               returnTo={returnTo}
               showDestaque={destaqueIds.has(vehicle.id)}
+              hideInterest={hideInterest}
             />
           </div>
         );

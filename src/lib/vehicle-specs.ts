@@ -123,3 +123,11 @@ export function buildVehiclePublicSpecs(
 
   return rows;
 }
+
+/** Já aparecem nos chips da primeira dobra (ficha técnica não repete). */
+const CHIP_SPEC_LABELS = new Set(["Ano", "km", "Km", "Câmbio", "Combustível", "Final placa", "Final da placa"]);
+
+/** Ficha técnica: só o que não está nos chips (Tipo, Cor, Motor, Portas e extras). */
+export function specsNotInChips(specs: VehicleSpecRow[]): VehicleSpecRow[] {
+  return specs.filter((row) => !CHIP_SPEC_LABELS.has(row.label));
+}

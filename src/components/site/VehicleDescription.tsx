@@ -86,23 +86,39 @@ function FactGroup({ lines, hideEmoji }: { lines: DescriptionFact[]; hideEmoji: 
   );
 }
 
+const LABEL_ALIASES: Record<string, string> = {
+  quilometragem: "km",
+  transmissao: "cambio",
+  "final da placa": "final placa",
+  "final de placa": "final placa",
+  placa: "final placa",
+  "ano/modelo": "ano",
+};
+
 /** "Quilometragem: 106.000 km" e a linha "km: 106.000" da ficha são o mesmo dado. */
-function specKey(label: string, value: string) {
-  let key = normalizeSpec(label);
-  let val = normalizeSpec(value);
-  if (key === "quilometragem") key = "km";
-  if (key === "km") val = val.replace(/\s*km$/, "");
-  return `${key}:${val}`;
+function specKey(label: string) {
+  const key = normalizeSpec(label);
+  return LABEL_ALIASES[key] ?? key;
+}
+
+function specValue(key: string, value: string) {
+  const val = normalizeSpec(value);
+  return key === "km" ? val.replace(/\s*km$/, "") : val;
 }
 
 function normalizeSpec(text: string) {
   return text.normalize("NFD").replace(/\p{M}/gu, "").replace(/\s+/g, " ").trim().toLocaleLowerCase("pt-BR");
 }
 
+/** A linha do anúncio não diz nada além do que a ficha já mostra. Detalhe extra do anúncio fica. */
+function sameSpecValue(specValue: string, lineValue: string) {
+  return specValue === lineValue || specValue.includes(lineValue);
+}
+
 /**
- * Segmentos que a ficha mostra. `specRows` (celular) tira só as linhas
- * "Cor: Preta" cujo rótulo e valor já estão iguais na ficha técnica;
- * "Histórico: único dono" e afins ficam.
+ * Segmentos que a ficha mostra. `specRows` tira as linhas rotuladas
+ * ("Cor: Preta", "Câmbio: Automático") que a ficha técnica e os chips já mostram
+ * com o mesmo valor; "Histórico: único dono" e afins ficam.
  */
 export function visibleDescriptionSegments(
   text: string,
@@ -111,12 +127,21 @@ export function visibleDescriptionSegments(
 ): DescriptionSegment[] {
   const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
   if (!specRows?.length) return segments;
-  const known = new Set(specRows.map((row) => specKey(row.label, row.value)));
+  const known = new Map<string, string[]>();
+  for (const row of specRows) {
+    const key = specKey(row.label);
+    known.set(key, [...(known.get(key) ?? []), specValue(key, row.value)]);
+  }
   return segments.flatMap((segment): DescriptionSegment[] => {
     if (segment.kind !== "facts") return [segment];
     const lines = segment.lines.filter((line) => {
       const labeled = splitLabeled(line.text);
-      return !labeled || !known.has(specKey(labeled.label, labeled.value));
+      if (!labeled) return true;
+      const key = specKey(labeled.label);
+      const values = known.get(key);
+      if (!values) return true;
+      const value = specValue(key, labeled.value);
+      return !values.some((known) => sameSpecValue(known, value));
     });
     return lines.length > 0 ? [{ kind: "facts", lines }] : [];
   });

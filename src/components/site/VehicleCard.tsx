@@ -32,12 +32,15 @@ export function VehicleCard({
   eager = false,
   returnTo,
   showDestaque = false,
+  hideInterest = false,
 }: {
   vehicle: VehicleCardData;
   priority?: boolean;
   eager?: boolean;
   returnTo?: string;
   showDestaque?: boolean;
+  /** Ficha: o card só abre o anúncio, sem a faixa "Tenho interesse". */
+  hideInterest?: boolean;
   /** Compatibilidade com chamadas antigas: a foto agora é 4:3 em todas as listas. */
   largePhoto?: boolean;
 }) {
@@ -140,6 +143,7 @@ export function VehicleCard({
           size="sm"
         />
       </div>
+      {hideInterest ? null : (
       <div className="listing-card-interest">
         {vehicle.status !== "vendido" ? (
           <VehicleCardWhatsApp
@@ -159,6 +163,7 @@ export function VehicleCard({
           />
         ) : null}
       </div>
+      )}
     </article>
   );
 }

@@ -295,16 +295,17 @@ test("o bloco mostra foto, nome, ano, km e preço, e oferece contato se não hou
   assert.match(html, /R\$\s*87\.900/);
   assert.match(html, /href="\/estoque\/hyundai-hb20s-comfort-plus-2024-cmud192iz0000l6041ewv0ki6"/);
   assert.match(html, /wa\.me\/5527996330706/);
+  assert.match(html, /Pedir outros nesta faixa/);
   assert.doesNotMatch(html, /99956|5527999566161/);
-  assert.match(html, /Tenho interesse/);
+  assert.doesNotMatch(html, /Tenho interesse/);
   assert.doesNotMatch(html, /Equipamentos/);
   assert.doesNotMatch(html, /Confirmado neste anúncio/i);
   assert.doesNotMatch(html, /Consignado/i);
 
   const article = html.slice(html.indexOf("<article"), html.indexOf("</article>"));
   assert.match(article, /Hyundai HB20S/);
-  assert.match(article, /wa\.me\/5527996330706/);
-  assert.match(article, /Tenho interesse/);
+  assert.doesNotMatch(article, /wa\.me/);
+  assert.doesNotMatch(article, /Tenho interesse/);
   assert.doesNotMatch(article, /Ver ficha/);
 
   const empty = renderToStaticMarkup(
