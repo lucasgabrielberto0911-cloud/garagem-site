@@ -311,6 +311,8 @@ model SiteSettings {
   conditionsJson    Json?
   /** Foto original do sócio na página Sobre. URL pública do Storage, ou vazia. */
   founderPhotoUrl String?
+  /** Botões da página pública /links ({ label, href, visible }[]). Null = padrão de site-links.ts. */
+  linksJson       Json?
   updatedAt      DateTime @updatedAt
 }
 

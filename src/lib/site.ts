@@ -121,7 +121,8 @@ export type WhatsAppCampaign =
   | "favoritos"
   | "cidade"
   | "chat"
-  | "pwa";
+  | "pwa"
+  | "links";
 
 /** Atalho do app instalado. Tem que ser same-origin (o manifesto não aceita wa.me). */
 export const PWA_WHATSAPP_SHORTCUT_PATH = "/atalho/whatsapp";
@@ -455,6 +456,7 @@ export const SECONDARY_LINKS = [
   { href: "/modelos", label: "Marcas e modelos" },
   { href: "/guias", label: "Guias de compra" },
   { href: "/favoritos", label: "Favoritos" },
+  { href: "/links", label: "Links" },
   { href: "/privacidade", label: "Política de privacidade" },
 ] as const;
 
