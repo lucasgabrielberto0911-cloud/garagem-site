@@ -1,5 +1,5 @@
 import { isE2ePhotoFixtureEnabled } from "./e2e-photo-config";
-import { isPublicPhotoSource } from "./public-photo-source";
+import { isPublicPhotoBlob } from "./public-photo-url";
 /**
  * Feed CSV do estoque para o catálogo de VEÍCULOS da Meta (Automotive Inventory Ads).
  * Colunas iguais ao CSV manual do Commerce Manager.
@@ -337,7 +337,7 @@ export function catalogFeedImageUrl(
   const url = photo.url.trim();
   if (!url) return "";
   const fixture = isE2ePhotoFixtureEnabled();
-  if (!fixture && !isPublicPhotoSource(url)) return "";
+  if (!fixture && !isPublicPhotoBlob(url)) return "";
   const ext = extensionFromPhotoUrl(url);
   if (!fixture && (ext === "jpg" || ext === "png")) return url;
   if (!photo.id) return "";
