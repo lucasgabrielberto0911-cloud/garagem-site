@@ -24,8 +24,9 @@ loader._load = function(id, parent, main) {
   return original.call(this, id, parent, main);
 };
 let getHistory: typeof import("./fipe-history-store").getFipeHistory;
+let codes: typeof import("./fipe-history-store").findPurchaseFipeCodes;
 let match: typeof import("./fipe-history-store").findFipeCandidates;
-try { const loaded = require("./fipe-history-store.ts"); getHistory = loaded.getFipeHistory; match = loaded.findFipeCandidates; } finally { loader._load = original; }
+try { const loaded = require("./fipe-history-store.ts"); getHistory = loaded.getFipeHistory; match = loaded.findFipeCandidates; codes = loaded.findPurchaseFipeCodes; } finally { loader._load = original; }
 const identity: FipeIdentity = { code: "014045-7", modelYear: 2018, expectedFuel: "Flex", versionLabel: "Fit EX/S 1.5 Flex/Flexone 16V 5p Aut.", transmission: "CVT", confirmed: true, fuelDecision: "Divergência conferida pelo operador nesta fixture." };
 const current = { codigo_fipe: identity.code, value_cents: "7591200", periodo: "2026-11", brand_name: "Honda", model_name: identity.versionLabel, model_year: 2018, fuel_name: "Gasolina" };
 beforeEach(() => { cache.clear(); budget = 0; enabled = true; monthlyWrites = 0; });
@@ -57,4 +58,19 @@ test("budget é compartilhado e lease deduplica a mesma consulta em andamento", 
   await new Promise(resolve => setTimeout(resolve, 10));
   await assert.rejects(match("Honda", "Fit EX", 2018)); release(); await first; assert.equal(calls, 1);
   cache.clear(); budget = 30; await assert.rejects(match("Honda", "Civic", 2020)); assert.equal(calls, 1);
+});
+
+test("códigos vindos da placa preservam todas as versões sem match ou confirmação automática", async t => {
+  t.mock.method(globalThis, "fetch", async (url: string | URL | Request) => {
+    const code = String(url).includes("014045-7") ? "014045-7" : "014046-5";
+    return Response.json({ codigo_fipe: code, atual: { ...current, codigo_fipe: code } });
+  });
+  const result = await codes(["014045-7", "014046-5"], 2018);
+  assert.deepEqual(result.candidates.map(c => c.code), ["014045-7", "014046-5"]);
+  assert.equal(monthlyWrites, 0);
+  await assert.rejects(codes(["inválido"], 2018));
+});
+test("não oculta versão quando um código da placa falha", async t => {
+  t.mock.method(globalThis, "fetch", async (url: string | URL | Request) => String(url).includes("014045-7") ? Response.json({ codigo_fipe: "014045-7", atual: current }) : new Response(null, { status: 404 }));
+  await assert.rejects(codes(["014045-7", "014046-5"], 2018), /versões.*indisponíveis/);
 });

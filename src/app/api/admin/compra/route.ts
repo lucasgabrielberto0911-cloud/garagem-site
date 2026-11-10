@@ -2,6 +2,9 @@ import { listPurchases, savePurchase } from "@/lib/purchase-store";
 import { purchaseBody, saveBody, withPurchaseAccess } from "@/lib/purchase-http";
 import { PurchaseError } from "@/lib/purchase-input";
 
+// Duas chamadas de IA têm timeout próprio e degradam para o cálculo financeiro.
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   return withPurchaseAccess(request, async adminId => {
     const cursor = new URL(request.url).searchParams.get("cursor") ?? undefined;
