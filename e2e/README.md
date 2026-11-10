@@ -8,6 +8,16 @@ Para executar, use um banco exclusivo `ci` ou `garagem_e2e` em localhost, sem no
 
 Os PRs só devem ser mergeados depois dos checks **e** da leitura do diff/conferência visual. Configure o check `CI / check` como obrigatório na proteção da main para impedir o merge manual com falhas; este PR não muda permissões do GitHub.
 
+## IA privada do admin
+
+`e2e/admin-ia.spec.ts` cobre revisão e melhoria da legenda, textos do site/FAQ/links e ajuda.
+Com o banco local e o build já preparados, rode `E2E_ADMIN_AI_MOCK=1 npm run test:e2e -- e2e/admin-ia.spec.ts`.
+O servidor carrega `e2e/admin-ai-provider.cjs`, que intercepta a chamada NVIDIA e aceita somente uma chave fictícia.
+Sessão, origem, limite por admin, parsers e formulários usam o código real. Não há modo mock na aplicação publicada.
+O CI executa essa rodada no shard 1; a rodada normal cobre o aviso sem chave.
+Para repetir só a indisponibilidade: `ADMIN_AI_NVIDIA_API_KEY='' NVIDIA_API_KEY='' npm run test:e2e -- e2e/admin-ia.spec.ts --grep 'sem chave'`.
+Os testes criam e removem apenas um admin e um veículo fictícios no banco local; aplicar/descartar sugestões não salva anúncio nem dados do site.
+
 ## Compatibilidade WebKit e service worker
 
 Com as mesmas variáveis e build local, execute `npx playwright install --with-deps webkit`
