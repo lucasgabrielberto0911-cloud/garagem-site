@@ -95,6 +95,8 @@ const nextConfig = {
     ];
     return [
       { source: "/(.*)", headers: security },
+      { source: "/api/admin/compra/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }] },
+      { source: "/api/admin/fipe-historico", headers: [{ key: "Cache-Control", value: "private, no-store" }] },
       {
         source: "/admin",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
