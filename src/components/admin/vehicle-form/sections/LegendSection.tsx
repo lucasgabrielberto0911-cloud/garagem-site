@@ -8,6 +8,9 @@ export function LegendSection({
 }: {
   form: Pick<
     VehicleFormModel,
+    | "brand"
+    | "model"
+    | "version"
     | "errors"
     | "accessories"
     | "priceMismatch"
@@ -70,6 +73,7 @@ export function LegendSection({
       <LegendPasteField
         key={legendRevision}
         description={description}
+        identity={{ brand: form.brand, model: form.model, version: form.version }}
         accessories={accessories}
         data={{ ...values, year, yearModel, color, transmission, fuel, engine }}
         onChange={applyLegend}
