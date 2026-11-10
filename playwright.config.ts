@@ -34,7 +34,7 @@ export default defineConfig({
   ],
   webServer: {
     // Segredo exclusivo do servidor E2E, limitado ao banco local acima.
-    env: { JWT_SECRET: "garagem-e2e-local-sem-acesso-externo" },
+    env: { JWT_SECRET: "garagem-e2e-local-sem-acesso-externo", PURCHASE_EVALUATOR_ENABLED: "1", PURCHASE_FIPE_HISTORY_ENABLED: "0" },
     command: `npm run start -- --hostname 127.0.0.1 --port ${port}`,
     url: baseURL,
     reuseExistingServer: false,

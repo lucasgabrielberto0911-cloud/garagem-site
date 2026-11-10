@@ -1,0 +1,7 @@
+import { newPurchaseInput, type PurchaseInput } from "./purchase-input";
+
+/** Exemplo inteiramente fictício da seção 7.2 do plano; não é média da loja. */
+export function fictionalPurchase(): PurchaseInput {
+  const input = newPurchaseInput();
+  return { ...input, title: "Exemplo fictício de compra", askedPriceCents: 6_000_000, identity: { brand: "Honda", model: "Fit", version: "EX fictício", modelYear: 2018, fuel: "Flex", transmission: "CVT", confirmed: true }, resaleCents: { rapida: 7_350_000, normal: 7_550_000, demorada: 7_100_000 }, resaleEvidence: { source: "Hipótese numérica fictícia do plano; evidência simulada para teste", date: new Date().toISOString().slice(0, 10), verified: true }, costs: input.costs.map((c, i) => ({ ...c, status: "ok", minCents: i === 0 ? 230_000 : 0, baseCents: i === 0 ? 230_000 : 0, maxCents: i === 0 ? 230_000 : 0, note: "Valor fictício; ausência de custo confirmada apenas para esta fixture.", source: "premissa", fromProfile: false })), conditions: Object.fromEntries(Object.keys(input.conditions).map(k => [k, { state: "verificado", note: "Condição verificada apenas nesta fixture fictícia." }])) as PurchaseInput["conditions"], inspection: "aprovado", inspectionVerified: true, inspectionNote: "Laudo fictício, conferido na fixture.", restriction: "resolvida", manual: "verificado", spareKey: "verificado", maintenanceHistory: "verificado", liquidity: { days: 30, sampleCount: 10, effectiveSampleSize: 8, source: "Amostra fictícia de teste, sem vendas reais.", date: new Date().toISOString().slice(0, 10), verified: true } };
+}

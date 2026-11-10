@@ -57,7 +57,18 @@ WITH alvos(migration, tipo, tabela, objeto) AS (VALUES
   ('20261029000100_nota_promissoria','constraint','PromissoryNote','promissory_values'),
   ('20261101000100_lead_venda_request_key','coluna','LeadVenda','requestKey'),
   ('20261101000100_lead_venda_request_key','indice','LeadVenda','LeadVenda_requestKey_key'),
-  ('20261110120000_site_links_json','coluna','SiteSettings','linksJson')
+  ('20261110120000_site_links_json','coluna','SiteSettings','linksJson'),
+  ('20261110150000_avaliador_de_compra','tabela','PurchaseEvaluation',NULL),
+  ('20261110150000_avaliador_de_compra','tabela','PurchaseEvaluationRevision',NULL),
+  ('20261110150000_avaliador_de_compra','tabela','FipeMonthlyPrice',NULL),
+  ('20261110150000_avaliador_de_compra','tabela','VehicleFipeIdentity',NULL),
+  ('20261110150000_avaliador_de_compra','tabela','VehicleAcquisitionMetadata',NULL),
+  ('20261110150000_avaliador_de_compra','tabela','PurchasePolicyVersion',NULL),
+  ('20261110150000_avaliador_de_compra','tabela','FipeHistoryCache',NULL),
+  ('20261110150000_avaliador_de_compra','indice','PurchaseEvaluationRevision','PurchaseEvaluationRevision_evaluationId_number_key'),
+  ('20261110150000_avaliador_de_compra','indice','FipeMonthlyPrice','FipeMonthlyPrice_provider_code_modelYear_fuel_referenceMont_key'),
+  ('20261110150000_avaliador_de_compra','constraint','PurchaseEvaluationRevision','purchase_revision_values'),
+  ('20261110150000_avaliador_de_compra','constraint','FipeMonthlyPrice','fipe_monthly_values')
 )
 SELECT a.migration, a.tipo, a.tabela, a.objeto,
   CASE a.tipo

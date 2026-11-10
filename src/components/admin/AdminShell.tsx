@@ -60,6 +60,13 @@ const NAV: NavItem[] = [
     match: (pathname) => pathname.startsWith("/admin/leads"),
   },
   {
+    href: "/admin/compra",
+    label: "Compra",
+    group: "Estoque",
+    Icon: IconCash,
+    match: (pathname) => pathname.startsWith("/admin/compra"),
+  },
+  {
     href: "/admin/em-preparacao",
     label: "Em preparação",
     group: "Estoque",

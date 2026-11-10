@@ -85,6 +85,8 @@ jobs:
           key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
       - run: npx prisma generate
       - run: npx prisma db push --skip-generate
+      - name: Estrutura e imutabilidade do avaliador de compra (banco local)
+        run: psql "${DATABASE_URL%%\?*}" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110150000_avaliador_de_compra.sql
       - run: npm run e2e:seed
       - run: npm run build
       - run: npx playwright test --shard=${{ matrix.shard }}/4

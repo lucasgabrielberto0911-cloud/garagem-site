@@ -87,6 +87,9 @@ model Vehicle {
   assessment VehicleAssessment?
   simulations FinanceSimulation[]
   commercialDocuments CommercialDocument[]
+  fipeIdentity VehicleFipeIdentity?
+  acquisitionMetadata VehicleAcquisitionMetadata?
+  purchaseEvaluations PurchaseEvaluation[]
 
   @@index([status, createdAt])
   @@index([status, price])
@@ -226,6 +229,7 @@ model Admin {
   name         String
   email        String @unique
   passwordHash String
+  purchaseEvaluations PurchaseEvaluation[]
 }
 
 model LeadVenda {
@@ -252,6 +256,7 @@ model LeadVenda {
   requestKey        String?  @unique
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  purchaseEvaluations PurchaseEvaluation[]
 
   @@index([status, createdAt])
 }
@@ -472,4 +477,146 @@ model PreparationVehicle {
   updatedAt     DateTime  @updatedAt
 
   @@index([createdAt])
+}
+
+/**
+ * Avaliador de compra (/admin/compra). Privado: nada daqui vai para o site, Assistente ou cache offline.
+ * A avaliação pertence ao admin criador; leitura de outro admin responde 404. Salvar não cria veículo,
+ * compra, venda nem custo. As tabelas são aditivas e o módulo fica atrás da flag PURCHASE_EVALUATOR_ENABLED.
+ */
+model PurchaseEvaluation {
+  id             String   @id @default(cuid())
+  adminId        String
+  admin          Admin    @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  /// Chave da solicitação de criação (idempotência por admin): reenvio não cria outra avaliação.
+  requestKey     String?
+  title          String
+  /// Placa normalizada (ABC1234 / ABC1D23), só identificação privada. Nunca sai para busca ou LLM.
+  plate          String?
+  vehicleId      String?
+  vehicle        Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  leadId         String?
+  lead           LeadVenda? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  /// rascunho | avaliada | arquivada
+  status         String   @default("rascunho")
+  /// Número da última revisão (controle otimista: expectedVersion).
+  currentVersion Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+  revisions      PurchaseEvaluationRevision[]
+
+  @@unique([adminId, requestKey])
+  @@index([adminId, updatedAt])
+  @@index([vehicleId])
+  @@index([leadId])
+}
+
+/// Revisão imutável: entrada validada, snapshots (FIPE, política, evidências) e saída recalculada no servidor.
+model PurchaseEvaluationRevision {
+  id               String   @id @default(cuid())
+  evaluationId     String
+  evaluation       PurchaseEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Restrict)
+  number           Int
+  requestKey       String?
+  createdById      String
+  askedPriceCents  Int
+  /// fixo | negociavel
+  priceMode        String
+  input            Json
+  fipeSnapshot     Json?
+  policySnapshot   Json
+  /// MVP: evidências usadas ficam em JSON dentro da revisão (rastreabilidade sem tabela própria).
+  evidenceSnapshot Json?
+  output           Json
+  score            Json
+  scoreTotal       Int?
+  scoreMin         Int?
+  scoreMax         Int?
+  /// compensa | atencao | nao_atende | pendente
+  verdict          String
+  /// baixa | media | alta
+  confidence       String
+  engineVersion    String
+  scoreVersion     String
+  createdAt        DateTime @default(now())
+
+  @@unique([evaluationId, number])
+  @@unique([evaluationId, requestKey])
+  @@index([createdById, createdAt])
+}
+
+/// Cache persistente do histórico FIPE por provedor + identidade + mês. Correções não reescrevem snapshots antigos.
+model FipeMonthlyPrice {
+  id             String   @id @default(cuid())
+  provider       String
+  code           String
+  modelYear      Int
+  /// Combustível canônico: gasolina | alcool | diesel | flex | eletrico | hibrido | desconhecido
+  fuel           String
+  /// YYYY-MM
+  referenceMonth String
+  valueCents     Int
+  brandRaw       String?
+  modelRaw       String?
+  fuelRaw        String?
+  sourceUrl      String?
+  parserVersion  String
+  fetchedAt      DateTime @default(now())
+
+  @@unique([provider, code, modelYear, fuel, referenceMonth])
+  @@index([provider, code, modelYear])
+}
+
+/// Identidade FIPE confirmada por um admin para um veículo do estoque (sem preenchimento automático em massa).
+model VehicleFipeIdentity {
+  id            String    @id @default(cuid())
+  vehicleId     String    @unique
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  provider      String
+  code          String
+  modelYear     Int
+  fuel          String
+  versionLabel  String?
+  confirmedById String?
+  confirmedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+}
+
+/// Metadados de aquisição: entrada real em estoque e completude dos custos. Não sobrescreve datas antigas.
+model VehicleAcquisitionMetadata {
+  id             String    @id @default(cuid())
+  vehicleId      String    @unique
+  vehicle        Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  stockEnteredAt DateTime?
+  costsComplete  Boolean   @default(false)
+  costsScope     String?
+  verifiedById   String?
+  verifiedAt     DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+}
+
+/// Política versionada do avaliador (custos, metas, risco, pesos). Versão publicada é imutável.
+model PurchasePolicyVersion {
+  id            String    @id @default(cuid())
+  key           String    @default("padrao")
+  version       Int
+  schemaVersion Int       @default(1)
+  body          Json
+  publishedAt   DateTime?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+
+  @@unique([key, version])
+}
+
+/// Cache privado de respostas, leases distribuídos e cooldown de 429 do provedor.
+model FipeHistoryCache {
+  key       String   @id
+  payload   Json?
+  expiresAt DateTime
+  status    Int
+  updatedAt DateTime @default(now()) @updatedAt
 }
