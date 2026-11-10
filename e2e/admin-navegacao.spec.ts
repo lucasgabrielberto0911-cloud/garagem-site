@@ -6,7 +6,7 @@ import { randomInt, randomUUID } from "node:crypto";
 const prisma = new PrismaClient();
 const grupos = {
   Hoje: [["Dashboard", "/admin"], ["Agenda", "/admin/agenda"]],
-  Estoque: [["Veículos", "/admin/veiculos"], ["Em preparação", "/admin/em-preparacao"]],
+  Estoque: [["Veículos", "/admin/veiculos"], ["Compra", "/admin/compra"], ["Em preparação", "/admin/em-preparacao"]],
   Relacionamento: [["Leads", "/admin/leads"], ["Clientes", "/admin/clientes"], ["Vendas", "/admin/vendas"], ["Promissórias", "/admin/promissorias"]],
   Site: [["Depoimentos", "/admin/depoimentos"], ["Dados do site", "/admin/site"]],
 };
@@ -73,7 +73,7 @@ test("menu agrupado mantém todas as rotas e indica a página atual", async ({ p
   await expect(container.getByRole("button", { name: "Sair", exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("menu-agrupado.png") });
 
-  for (const href of ["/admin/agenda", "/admin/clientes", "/admin/vendas", "/admin/em-preparacao", "/admin/depoimentos", "/admin/site", "/admin/conta", "/admin/leads", "/admin/veiculos", "/admin"]) {
+  for (const href of ["/admin/agenda", "/admin/clientes", "/admin/vendas", "/admin/compra", "/admin/em-preparacao", "/admin/depoimentos", "/admin/site", "/admin/conta", "/admin/leads", "/admin/veiculos", "/admin"]) {
     if (mobile && !(await container.isVisible())) await mais.click();
     const destino = href === "/admin"
       ? container.getByRole("link", { name: "Dashboard", exact: true })
