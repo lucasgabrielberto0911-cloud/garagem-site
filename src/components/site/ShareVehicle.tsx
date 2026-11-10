@@ -13,7 +13,7 @@ type Props = {
   /** `compact`: um link discreto "Compartilhar" (sem share nativo, copia o link). */
   variant?: "default" | "compact";
 };
-const buttonClass = "inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation disabled:opacity-60";
+const buttonClass = "inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-sm font-medium text-cream transition hover:border-brand touch-manipulation disabled:opacity-60";
 
 export function ShareVehicle({ title, path, className = "", variant = "default" }: Props) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);

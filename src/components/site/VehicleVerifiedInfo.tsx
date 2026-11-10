@@ -23,7 +23,7 @@ export function VehicleVerifiedList({
       <ul className="space-y-3">
         {items.map((item) => (
           <li key={item.key} className="border-l-2 border-brand/80 pl-3">
-            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream">
+            <p className="font-display text-sm font-semibold text-cream">
               {item.label}
             </p>
             <p className="mt-1 text-[15px] leading-relaxed text-cream/90 [overflow-wrap:anywhere]">
@@ -50,7 +50,7 @@ export function VehicleVerifiedList({
         ))}
       </ul>
       {showVideoHint ? (
-        <p className="text-xs text-muted">
+        <p className="text-sm text-muted">
           Quer ver algum detalhe específico? Peça um vídeo pelo WhatsApp.
         </p>
       ) : null}
@@ -82,7 +82,7 @@ export function VehicleVerifiedSection({
         <IconShieldCheck className="h-4 w-4 text-brand-light" />
         {heading}
       </h2>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-sm text-muted">
         Informações da loja sobre este exemplar.
       </p>
       <div className="mt-3">

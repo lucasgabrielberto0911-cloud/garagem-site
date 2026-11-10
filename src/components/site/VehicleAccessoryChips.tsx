@@ -232,7 +232,7 @@ export function VehicleAccessoryChips({ items }: { items: readonly string[] }) {
           >
             {ICONS[accessoryIconKey(accessoryGroup(item).text)]}
           </svg>
-          <span className="text-[13px] leading-snug sm:text-sm first-letter:uppercase">{accessoryGroup(item).text}</span>
+          <span className="text-sm leading-snug first-letter:uppercase">{accessoryGroup(item).text}</span>
         </li>
       ))}
     </ul>

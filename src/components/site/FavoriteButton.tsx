@@ -107,7 +107,7 @@ export function FavoriteButton({
         type="button"
         onClick={onClick}
         aria-pressed={active}
-        className={`inline-flex min-h-[48px] items-center justify-center gap-2 border px-5 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation sm:text-sm ${
+        className={`inline-flex min-h-[48px] items-center justify-center gap-2 border px-5 font-display text-sm font-semibold uppercase tracking-wide transition touch-manipulation ${
           active
             ? "border-brand bg-brand/10 text-brand-light"
             : "border-white/20 text-cream hover:border-brand hover:bg-white/5"
