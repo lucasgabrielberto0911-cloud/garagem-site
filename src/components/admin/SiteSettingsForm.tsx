@@ -12,6 +12,7 @@ import {
   cleanupOrphanPhotos,
   backfillMissingThumbnails,
 } from "@/app/admin/site/cleanup-actions";
+import { ReviewedInput } from "@/components/admin/ReviewedTextField";
 import { SiteContentEditor } from "@/components/admin/SiteContentEditor";
 import { SiteLinksEditor } from "@/components/admin/SiteLinksEditor";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
@@ -102,7 +103,7 @@ export function SiteSettingsForm({
         <Card title="Localização e contato público">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Cidade / região" required error={errors.region}>
-              <input
+              <ReviewedInput reviewable onValueChange={() => setDirty(true)}
                 name="region"
                 defaultValue={
                   initial.region.includes("[") ? "" : initial.region
@@ -133,7 +134,7 @@ export function SiteSettingsForm({
               hint='Loja digital: use "Loja digital — atendimento online". Com showroom, informe o endereço completo.'
               className="sm:col-span-2"
             >
-              <input
+              <ReviewedInput reviewable onValueChange={() => setDirty(true)}
                 name="address"
                 defaultValue={
                   initial.address.includes("[") ? "" : initial.address
@@ -155,7 +156,7 @@ export function SiteSettingsForm({
               hint="Texto curto, ex.: Todos os dias, 8h às 23h (online)"
               className="sm:col-span-2"
             >
-              <input
+              <ReviewedInput reviewable onValueChange={() => setDirty(true)}
                 name="hours"
                 defaultValue={initial.hours.includes("[") ? "" : initial.hours}
                 placeholder="Todos os dias, 8h às 23h (online)"
@@ -168,7 +169,7 @@ export function SiteSettingsForm({
               required
               error={errors.hoursWeekdays}
             >
-              <input
+              <ReviewedInput reviewable onValueChange={() => setDirty(true)}
                 name="hoursWeekdays"
                 defaultValue={
                   initial.hoursWeekdays.includes("[")
@@ -181,7 +182,7 @@ export function SiteSettingsForm({
               />
             </Field>
             <Field label="Sábado" required error={errors.hoursSaturday}>
-              <input
+              <ReviewedInput reviewable onValueChange={() => setDirty(true)}
                 name="hoursSaturday"
                 defaultValue={
                   initial.hoursSaturday.includes("[")

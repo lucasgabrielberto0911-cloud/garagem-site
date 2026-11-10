@@ -90,6 +90,11 @@ jobs:
       - run: npm run e2e:seed
       - run: npm run build
       - run: npx playwright test --shard=${{ matrix.shard }}/4
+      - name: IA do admin com provedor mockado (sem rede externa)
+        if: matrix.shard == 1
+        env:
+          E2E_ADMIN_AI_MOCK: "1"
+        run: npx playwright test e2e/admin-ia.spec.ts
       - name: WebKit e service worker real
         if: matrix.shard == 1
         run: npx playwright test --config=playwright.compat.config.ts

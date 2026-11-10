@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminAiReview } from "./AdminAiReview";
 import { useState } from "react";
 import { inputClass } from "./ui";
 import {
@@ -10,6 +11,7 @@ import { parseMoneyBR } from "@/lib/admin-money";
 import { parseVehicleKm } from "@/lib/admin-vehicle-fields";
 
 type Props = {
+  identity?: { brand: string; model: string; version: string };
   description: string;
   accessories: string[];
   data: Record<LegendField, string>;
@@ -25,7 +27,7 @@ function sameValue(field: LegendField, a: string, b: string) {
   return fold(a.trim()) === fold(b.trim());
 }
 
-export function LegendPasteField({ description, accessories, data, onChange, onRemoveDescription, onRemoveItem, onFieldChange }: Props) {
+export function LegendPasteField({ description, accessories, data, identity, onChange, onRemoveDescription, onRemoveItem, onFieldChange }: Props) {
   const [text, setText] = useState(() => legendText(description, accessories, data));
   const [detected, setDetected] = useState<LegendData>({});
   function syncPreview(nextDescription: string, nextAccessories: string[], nextData = data) {
@@ -43,6 +45,12 @@ export function LegendPasteField({ description, accessories, data, onChange, onR
         setDetected(parsed.data);
         onChange(parsed);
       }} />
+    <AdminAiReview value={text} facts={identity ? { ...identity, description, accessories, data } : undefined} onApply={next => {
+      setText(next);
+      const parsed = parseLegend(next);
+      setDetected(parsed.data);
+      onChange(parsed);
+    }} />
     <div aria-label="Prévia da legenda" className="space-y-4">
       {description && <section><h3 className="font-display font-semibold">Descrição</h3>
         <div className="flex items-start gap-2"><p className="whitespace-pre-line break-words text-sm">{description}</p>

@@ -116,6 +116,13 @@ const NAV: NavItem[] = [
     Icon: IconMapPin,
     match: (pathname) => pathname.startsWith("/admin/site"),
   },
+  {
+    href: "/admin/ajuda",
+    label: "Ajuda",
+    group: "Site",
+    Icon: IconQuote,
+    match: (pathname) => pathname.startsWith("/admin/ajuda"),
+  },
 ];
 
 const NAV_GROUPS: NavItem["group"][] = ["Hoje", "Estoque", "Relacionamento", "Site"];

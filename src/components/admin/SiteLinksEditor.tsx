@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ReviewedInput } from "./ReviewedTextField";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
 import {
   MAX_SITE_LINKS,
@@ -74,11 +75,11 @@ export function SiteLinksEditor({
           <li key={row.key} className="border border-white/10 p-3">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
               <Field label="Rótulo">
-                <input
+                <ReviewedInput reviewable
                   value={row.label}
                   maxLength={MAX_SITE_LINK_LABEL}
-                  onChange={(event) =>
-                    patch(row.key, { label: event.target.value })
+                  onValueChange={(value) =>
+                    patch(row.key, { label: value })
                   }
                   placeholder="Ex.: Ver estoque"
                   className={inputClass}

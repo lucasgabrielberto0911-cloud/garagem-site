@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import { resolve } from "node:path";
 
 if (process.env.E2E_TEST !== "1") throw new Error("Use E2E_TEST=1 com o banco local de testes.");
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
@@ -34,7 +35,13 @@ export default defineConfig({
   ],
   webServer: {
     // Segredo exclusivo do servidor E2E, limitado ao banco local acima.
-    env: { JWT_SECRET: "garagem-e2e-local-sem-acesso-externo", PURCHASE_EVALUATOR_ENABLED: "1", PURCHASE_FIPE_HISTORY_ENABLED: "0" },
+    env: {
+      JWT_SECRET: "garagem-e2e-local-sem-acesso-externo", PURCHASE_EVALUATOR_ENABLED: "1", PURCHASE_FIPE_HISTORY_ENABLED: "0",
+      ...(process.env.E2E_ADMIN_AI_MOCK === "1" ? {
+        NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require=${resolve("e2e/admin-ai-provider.cjs")}`,
+        ADMIN_AI_NVIDIA_API_KEY: "e2e-admin-ia-sem-valor",
+      } : {}),
+    },
     command: `npm run start -- --hostname 127.0.0.1 --port ${port}`,
     url: baseURL,
     reuseExistingServer: false,

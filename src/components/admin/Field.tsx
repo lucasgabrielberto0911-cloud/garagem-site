@@ -13,6 +13,7 @@ type ControlProps = {
   name?: string;
   type?: string;
   loadOptions?: unknown;
+  reviewable?: boolean;
   children?: ReactNode;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
@@ -21,7 +22,7 @@ function isControl(element: ReactElement<ControlProps>) {
   return typeof element.type === "string"
     ? ["input", "textarea", "select"].includes(element.type) &&
         element.props.type !== "hidden"
-    : Boolean(element.props.loadOptions);
+    : Boolean(element.props.loadOptions || element.props.reviewable);
 }
 function firstControl(
   children: ReactNode,

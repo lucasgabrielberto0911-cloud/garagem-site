@@ -1,5 +1,6 @@
 "use client";
 
+import { ReviewedInput, ReviewedTextarea } from "./ReviewedTextField";
 import Image from "next/image";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -204,7 +205,7 @@ export function SiteContentEditor({
         <div className="space-y-4">
           {faqItems.map((item, index) => (
             <div
-              key={`${item.question}-${index}`}
+              key={index}
               className="border border-white/10 p-3"
             >
               <div className="grid gap-3 sm:grid-cols-[10rem_1fr_auto]">
@@ -233,13 +234,13 @@ export function SiteContentEditor({
                   </select>
                 </Field>
                 <Field label="Pergunta">
-                  <input
+                  <ReviewedInput reviewable
                     value={item.question}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       setFaqItems((current) =>
                         current.map((row, rowIndex) =>
                           rowIndex === index
-                            ? { ...row, question: event.target.value }
+                            ? { ...row, question: value }
                             : row,
                         ),
                       )
@@ -262,13 +263,13 @@ export function SiteContentEditor({
                 </div>
               </div>
               <Field label="Resposta" className="mt-3">
-                <textarea
+                <ReviewedTextarea reviewable
                   value={item.answer}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setFaqItems((current) =>
                       current.map((row, rowIndex) =>
                         rowIndex === index
-                          ? { ...row, answer: event.target.value }
+                          ? { ...row, answer: value }
                           : row,
                       ),
                     )
@@ -300,7 +301,7 @@ export function SiteContentEditor({
         </p>
         <div className="grid gap-4">
           <Field label="Título">
-            <input
+            <ReviewedInput reviewable onValueChange={() => onDirty?.()}
               name="conditionsTitle"
               defaultValue={initial.conditions.title}
               className={inputClass}
@@ -310,7 +311,7 @@ export function SiteContentEditor({
             label="Introdução"
             hint="Opcional. Some do site se ainda tiver PREENCHER."
           >
-            <textarea
+            <ReviewedTextarea reviewable onValueChange={() => onDirty?.()}
               name="conditionsIntro"
               defaultValue={initial.conditions.intro}
               className={textareaClass}
@@ -320,17 +321,17 @@ export function SiteContentEditor({
         <div className="mt-4 space-y-3">
           {conditionItems.map((item, index) => (
             <div
-              key={`${item.label}-${index}`}
+              key={index}
               className="grid gap-3 sm:grid-cols-[12rem_1fr_auto]"
             >
               <Field label="Item">
-                <input
+                <ReviewedInput reviewable
                   value={item.label}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setConditionItems((current) =>
                       current.map((row, rowIndex) =>
                         rowIndex === index
-                          ? { ...row, label: event.target.value }
+                          ? { ...row, label: value }
                           : row,
                       ),
                     )
@@ -339,13 +340,13 @@ export function SiteContentEditor({
                 />
               </Field>
               <Field label="Texto">
-                <input
+                <ReviewedInput reviewable
                   value={item.text}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setConditionItems((current) =>
                       current.map((row, rowIndex) =>
                         rowIndex === index
-                          ? { ...row, text: event.target.value }
+                          ? { ...row, text: value }
                           : row,
                       ),
                     )
