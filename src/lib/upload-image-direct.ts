@@ -12,8 +12,6 @@ type SignResponse = {
   signedUrl?: string;
   publicUrl?: string;
   contentType?: string;
-  /** Upload temporário privado: a publicação no R2 é feita pelo servidor. */
-  staged?: boolean;
 };
 
 type UploadApiResponse = {
@@ -34,18 +32,16 @@ export type UploadedPhoto = {
  * Não borra placa. O admin marca o retângulo depois, na foto já enviada.
  * Com `master: true`, também grava um JPEG maior no bucket privado
  * `documentos` — sem URL pública. O formulário de venda não usa isso.
- * Se a Vercel recusar por tamanho (413), cai no upload assinado. Com R2 ativo,
- * o arquivo vai a um objeto privado e o servidor publica só no R2; sem R2,
- * segue o caminho legado (bucket público do Storage + miniatura).
+ * Se a Vercel recusar por tamanho (413), cai no upload assinado direto
+ * ao Storage e gera a miniatura em seguida.
  */
 export async function uploadImageDirect(
   file: File,
   options?: { master?: boolean; id?: string },
-  deps: { prepare?: (file: File) => Promise<File> } = {},
 ): Promise<UploadedPhoto> {
   const heic =
     /\.(heic|heif)$/i.test(file.name) || /image\/hei[cf]/i.test(file.type);
-  const prepared = await (deps.prepare ?? prepareImageForUpload)(file);
+  const prepared = await prepareImageForUpload(file);
   // Evita decodificar simultaneamente a versão pública e o original no celular.
   const masterId =
     options?.master && !heic
@@ -198,7 +194,7 @@ async function uploadViaSignedUrl(
   if (
     !signResponse.ok ||
     !signData.signedUrl ||
-    (!signData.staged && !signData.publicUrl) ||
+    !signData.publicUrl ||
     !signData.path ||
     !signData.token
   ) {
@@ -209,20 +205,6 @@ async function uploadViaSignedUrl(
 
   const contentType =
     signData.contentType || prepared.type || "application/octet-stream";
-
-  if (signData.staged) {
-    // R2 ativo: nada público é gravado no Supabase; se a publicação falhar, o upload falha.
-    await putWithCacheControl({
-      bucket: "documentos",
-      path: signData.path,
-      token: signData.token,
-      signedUrl: signData.signedUrl,
-      prepared,
-      contentType,
-    });
-    return publishStaged(signData.path);
-  }
-
   const uploaded = await putWithCacheControl({
     bucket: "veiculos",
     path: signData.path,
@@ -236,26 +218,7 @@ async function uploadViaSignedUrl(
     throw new Error("Falha no Storage. Tente de novo.");
   }
 
-  return deriveThumbnail(signData.publicUrl as string);
-}
-
-async function publishStaged(path: string): Promise<UploadedPhoto> {
-  const response = await fetch("/api/upload/publish-staged", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path }),
-  });
-  let data: { error?: string; url?: string; thumbnailUrl?: string | null } = {};
-  try {
-    data = (await response.json()) as typeof data;
-  } catch {
-    // resposta sem JSON: cai no erro genérico
-  }
-  if (!response.ok || !data.url) {
-    throw new Error(data.error || `Falha ao publicar a foto (${response.status}). Tente de novo.`);
-  }
-  return { url: data.url, thumbnailUrl: data.thumbnailUrl ?? null };
+  return deriveThumbnail(signData.publicUrl);
 }
 
 async function putWithCacheControl({
