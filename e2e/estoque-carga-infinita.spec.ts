@@ -15,6 +15,9 @@ test("mobile: botão, retorno da ficha e rolagem carregam o estoque", async ({ p
     })) });
     const image = readFileSync("public/branding/placeholder-car.png");
     await page.route("**/fotos/**", route => route.fulfill({ contentType: "image/png", body: image }));
+    // Isolamento: o prefetch do rodapé (/guia, /seminovos) rodaria getCityShowcaseVehicles com os 33
+    // veículos de teste no banco e gravaria o resultado no cache (3600 s), contaminando outros specs.
+    await page.route(url => /^\/(guia|seminovos)(\/|$)/.test(url.pathname), route => route.abort());
     const pages: string[] = [];
     page.on("request", request => {
       const url = new URL(request.url());
