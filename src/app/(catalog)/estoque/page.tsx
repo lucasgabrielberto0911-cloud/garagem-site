@@ -7,7 +7,6 @@ import { StockCatalogGate } from "@/components/site/StockCatalogGate";
 import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
 import { StockFilters } from "@/components/site/StockFilters";
 import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles";
-import { StockFiltersSkeleton } from "@/components/site/StockFiltersSkeleton";
 import { StockBrowseShell } from "@/components/site/StockPending";
 import { Container, PageHeader } from "@/components/site/ui";
 import { breadcrumbJsonLd, buildPageMetadata, itemListJsonLd } from "@/lib/seo";
@@ -57,13 +56,7 @@ export default async function EstoquePage() {
         <RecentlyViewedVehicles />
 
         <StockBrowseShell
-          filters={
-            <Suspense
-              fallback={<StockFiltersSkeleton facets={facets} />}
-            >
-              <StockFilters facets={facets} />
-            </Suspense>
-          }
+          filters={<StockFilters facets={facets} />}
           results={<EstoqueBrowse initialStock={stock} />}
         />
 

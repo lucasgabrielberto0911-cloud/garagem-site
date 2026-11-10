@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { Suspense, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
 import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
@@ -63,9 +63,18 @@ function ShareSearchButton({ className = "" }: { className?: string }) {
   return <ShareStockSearch className={className} icon={<IconShare className="h-4 w-4" />} />;
 }
 
+/** Só a leitura da URL aguarda hidratação; o campo de busca permanece no HTML. */
+function StockFilterQueryObserver({ onChange }: { onChange: (search: string) => void }) {
+  const params = useSearchParams();
+  const search = params.toString();
+  useEffect(() => { onChange(search); }, [search, onChange]);
+  return null;
+}
+
 export function StockFilters({ facets }: { facets: Facets }) {
   const router = useRouter();
-  const params = useSearchParams();
+  const [search, setSearch] = useState("");
+  const params = useMemo(() => new URLSearchParams(search), [search]);
   const { isPending, startTransition } = useStockPendingOptional();
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLElement>(null);
@@ -92,7 +101,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
     sort: params.get("sort") ?? "destaques",
   };
   const [draft, setDraft] = useState(current);
-  const [qText, setQText] = useState(current.q);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<number | undefined>(undefined);
   const currentRef = useRef(current);
@@ -161,7 +169,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
   useEffect(() => {
     // Mantém o campo igual à URL (ex.: Limpar filtros), sem atropelar quem está digitando.
-    if (document.activeElement !== searchRef.current) setQText(params.get("q") ?? "");
+    if (searchRef.current && document.activeElement !== searchRef.current) {
+      searchRef.current.value = params.get("q") ?? "";
+    }
     return () => window.clearTimeout(searchTimer.current);
   }, [params]);
 
@@ -408,6 +418,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
   return (
     <>
+      <Suspense fallback={null}>
+        <StockFilterQueryObserver onChange={setSearch} />
+      </Suspense>
       <div
         aria-busy={isPending}
         data-pending={isPending}
@@ -416,10 +429,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
         }`}
       >
         <form
+          action="/estoque"
+          method="get"
           onSubmit={(event) => {
             event.preventDefault();
             if (searchTimer.current) window.clearTimeout(searchTimer.current);
-            update({ q: qText.trim() });
+            update({ q: searchRef.current?.value.trim() ?? "" });
           }}
           className="mx-auto max-w-2xl"
           role="search"
@@ -435,10 +450,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
               name="q"
               type="search"
               enterKeyHint="search"
-              value={qText}
+              defaultValue={current.q}
               onChange={(event) => {
                 const value = event.target.value;
-                setQText(value);
                 if (searchTimer.current) window.clearTimeout(searchTimer.current);
                 searchTimer.current = window.setTimeout(() => {
                   if (value.trim() !== currentRef.current.q) updateRef.current({ q: value.trim() }, { replace: true });
