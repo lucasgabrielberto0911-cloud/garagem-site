@@ -11,6 +11,7 @@ import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge
 import { VehicleMobileBlocks, VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
+import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import { FavoritesProvider } from "@/lib/favorites";
 import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
@@ -36,7 +37,10 @@ test("CTAs da ficha passam pelo helper ficha — não reutilizam home", () => {
 
   assert.match(bar, /fichaWhatsAppTracking/);
   assert.match(bar, /Chamar no WhatsApp/);
-  assert.doesNotMatch(bar, /Agendar visita|Financiamento, troca ou vídeo|formatCurrencyBRL/);
+  assert.doesNotMatch(bar, /Agendar visita|Financiamento, troca ou vídeo/);
+  // Preço na barra só no ramo à venda: vendido sai antes, sem valor.
+  assert.ok(bar.indexOf("{sold ?") < bar.indexOf("formatCurrencyBRL(price)"));
+  assert.ok(bar.indexOf("{soldLabel}") < bar.indexOf("formatCurrencyBRL(price)"));
   assert.doesNotMatch(bar, /IntersectionObserver/);
   assert.doesNotMatch(bar, /translate-y-full/);
   assert.doesNotMatch(bar, /campaign:\s*"home"/);
@@ -222,10 +226,10 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
   );
   const titles = [...html.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)].map((match) => match[1]);
   assert.deepEqual(titles, [
-    "Sobre o veículo",
-    "Itens e acessórios",
     "Ficha técnica",
     "Próximos passos",
+    "Sobre o veículo",
+    "Itens e acessórios",
     "Onde estamos",
   ]);
   assert.match(html, /Linhares\/ES/);
@@ -267,8 +271,8 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
 
   // Nada de parcela nem simulador.
   const steps = section("Próximos passos");
-  assert.match(steps, /Financiamento/);
-  assert.match(steps, /Troca/);
+  assert.match(steps, /Perguntar sobre financiamento/);
+  assert.match(steps, /Tenho um usado para trocar/);
   assert.match(steps, /Pedir vídeo/);
   assert.doesNotMatch(html, /parcela|simulador|simular/i);
   assert.doesNotMatch(html, /Chave reserva/);
@@ -677,9 +681,14 @@ test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna prin
   assert.ok(aside.indexOf("ficha-price") < aside.indexOf("<VehicleKeyFacts"));
   assert.ok(aside.indexOf("<VehicleKeyFacts") < aside.indexOf("Falar no WhatsApp"));
 
-  // Um botão principal de WhatsApp; financiamento/troca/vídeo/visita recolhidos.
-  assert.equal((aside.match(/<WhatsAppButton/g) ?? []).length, 2); // vendido + à venda
-  assert.match(aside, /<details data-ficha-more-actions/);
+  // WhatsApp principal, segundo botão no fim da coluna; financiamento/troca/vídeo/visita à vista.
+  assert.equal((aside.match(/<WhatsAppButton/g) ?? []).length, 3); // vendido + à venda + fim da coluna
+  assert.match(aside, /<div data-ficha-more-actions/);
+  assert.doesNotMatch(aside, /<details/);
+  const secondCta = aside.slice(aside.indexOf("data-ficha-second-cta"));
+  assert.match(secondCta, /<VehicleLeadHit/);
+  assert.match(secondCta, /trackingLabel="ficha-coluna"/);
+  assert.ok(aside.indexOf("<VehicleConditions") < aside.indexOf("data-ficha-second-cta"));
   assert.match(aside, /variant="secondary"/);
   assert.match(aside, /variant="ghost"/);
   assert.match(aside, /variant="compact"/);
@@ -698,6 +707,19 @@ test("faixa de confiança do desktop: garantia, vistoria da loja e Linhares/ES",
   assert.match(html, /Vistoria da loja/);
   assert.match(html, /Linhares\/ES/);
   assert.doesNotMatch(html, /parcela/i);
+});
+
+test("galeria com várias fotos: botão com a contagem e faixa de miniaturas reservada no HTML", () => {
+  const photo = (id: string) => ({ id, url: `/fotos/${id}.webp` });
+  const render = (photos: ReturnType<typeof photo>[]) =>
+    renderToStaticMarkup(createElement(VehicleGallery, { photos: photos as never, alt: "Honda CG" }));
+
+  const many = render([photo("a"), photo("b"), photo("c")]);
+  assert.match(many, />Ver as 3 fotos</);
+  assert.match(many, /hidden h-\[4\.25rem\] lg:block/);
+  const one = render([photo("a")]);
+  assert.match(one, />Ampliar foto</);
+  assert.doesNotMatch(one, /h-\[4\.25rem\]/);
 });
 
 test("garantia usa o dado do veículo nas duas telas e fala veículo, não carro", () => {
@@ -720,17 +742,16 @@ test("garantia usa o dado do veículo nas duas telas e fala veículo, não carro
   assert.doesNotMatch(desktop, /Garantia de 3 meses/);
 });
 
-test("desktop rola junto: aba e card do anúncio sem sticky e sem coluna com scroll próprio", () => {
+test("desktop rola junto: card do anúncio sem sticky, sem coluna com scroll próprio e sem abas", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const css = readSrc("app/globals.css");
-  const nav = readSrc("components/site/FichaSectionNav.tsx");
   const asideTag = page.slice(page.indexOf("<aside"), page.indexOf(">", page.indexOf("<aside")));
   assert.doesNotMatch(asideTag, /sticky/);
   assert.doesNotMatch(page, /overflow-y-(auto|scroll)/);
-  const navRule = css.slice(css.indexOf(".ficha-section-nav {"), css.indexOf("}", css.indexOf(".ficha-section-nav {")));
-  assert.doesNotMatch(navRule, /sticky/);
+  assert.doesNotMatch(css, /\.ficha-section-nav|--ficha-section-nav/);
   assert.doesNotMatch(css, /\.ficha-aside\s*\{/);
-  assert.doesNotMatch(nav, /className="[^"]*\bsticky\b/);
+  // Aviso de cookies no canto direito do computador: nunca sobre a galeria.
+  assert.match(css, /@media \(min-width: 1024px\) \{\s*body:has\(\[data-ficha-page\]\) \.site-consent \{\s*left: auto;\s*right: 1\.5rem;/);
   // A barra de WhatsApp do celular continua.
   assert.match(page, /<VehicleMobileBar/);
 });

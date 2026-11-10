@@ -19,15 +19,12 @@ for (const sample of [samples[0], { ...samples[0], id: "ce2esold0000000000000000
     for (const width of larguras) {
       await page.setViewportSize({ width, height: page.viewportSize()!.height });
       await page.goto(`${vehiclePath(sample)}?from=%2Festoque`);
-      const abas = page.getByRole("navigation", { name: "Seções do anúncio" });
-      // Abas FOTOS/ESPECIFICAÇÕES/DETALHES existem só no desktop.
-      if (width >= 1024) await expect(abas).toBeVisible();
-      else await expect(abas).toBeHidden();
+      // A ficha é um scroll só: sem abas de seção em nenhuma tela.
+      await expect(page.getByRole("navigation", { name: "Seções do anúncio" })).toHaveCount(0);
       // Os similares precisam existir para reproduzir a reserva lateral indevida.
       await expect(page.locator("[data-similar-vehicles] .listing-card-grid")).toHaveCount(1);
       const fotos = page.locator("#fotos");
       const foto = (await fotos.boundingBox())!;
-      const nav = width >= 1024 ? (await abas.boundingBox())! : null;
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 
       if (width >= 1024) {
@@ -42,10 +39,8 @@ for (const sample of [samples[0], { ...samples[0], id: "ce2esold0000000000000000
         expect(Math.abs(foto.x - (width - painel.x - painel.width))).toBeLessThanOrEqual(1);
         expect(Math.abs(foto.x - header.left)).toBeLessThanOrEqual(1);
         expect(Math.abs(painel.x + painel.width - header.right)).toBeLessThanOrEqual(1);
-        for (const bloco of [nav!, breadcrumb]) {
-          expect(Math.abs(bloco.x - header.left)).toBeLessThanOrEqual(1);
-          expect(Math.abs(bloco.x + bloco.width - header.right)).toBeLessThanOrEqual(1);
-        }
+        expect(Math.abs(breadcrumb.x - header.left)).toBeLessThanOrEqual(1);
+        expect(Math.abs(breadcrumb.x + breadcrumb.width - header.right)).toBeLessThanOrEqual(1);
         expect(Math.abs(voltar.x - header.left)).toBeLessThanOrEqual(1);
       } else {
         expect(Math.abs(foto.x - (width - foto.x - foto.width))).toBeLessThanOrEqual(1);
@@ -53,25 +48,17 @@ for (const sample of [samples[0], { ...samples[0], id: "ce2esold0000000000000000
       }
 
       if (width < 1024) continue;
-      // Um scroll só: aba e card do anúncio sobem junto com a página.
+      // Um scroll só: o card do anúncio sobe junto com a página.
       const painelAntes = (await page.locator(".ficha-aside").boundingBox())!;
-      const abasAntes = (await abas.boundingBox())!;
       await page.mouse.wheel(0, 600);
       await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(300);
       const rolou = await page.evaluate(() => scrollY);
       const painelDepois = (await page.locator(".ficha-aside").boundingBox())!;
-      const abasDepois = (await abas.boundingBox())!;
       expect(Math.abs(painelAntes.y - painelDepois.y - rolou)).toBeLessThanOrEqual(2);
-      expect(Math.abs(abasAntes.y - abasDepois.y - rolou)).toBeLessThanOrEqual(2);
       await page.evaluate(() => scrollTo(0, 0));
-      for (const nome of ["Especificações", "Detalhes", "Fotos"]) {
-        const link = abas.getByRole("link", { name: nome, exact: true });
-        if (!(await link.count())) continue;
-        await link.click();
-        await expect(link).toHaveAttribute("aria-current", "true");
-        const id = (await link.getAttribute("href"))!;
-        await expect(page.locator(id)).toBeVisible();
-      }
+      // Sem abas, os links diretos para as seções continuam funcionando.
+      await page.goto(`${vehiclePath(sample)}#especificacoes`);
+      await expect(page.locator("#especificacoes")).toBeInViewport();
     }
     await page.screenshot({ path: info.outputPath("ficha-alinhada.png"), fullPage: true });
     expect(errors).toEqual([]);

@@ -6,7 +6,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { FichaSectionNav } from "@/components/site/FichaSectionNav";
+import { FichaSectionAnchors } from "@/components/site/FichaSectionAnchors";
 import { VehicleMobileBlocks } from "@/components/site/VehicleMobileDossier";
 import { FavoritesProvider } from "@/lib/favorites";
 import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
@@ -72,20 +72,11 @@ test("âncoras da ficha são fotos, especificações e detalhes", () => {
   assert.equal(fichaSectionScrollTop(400, 120, 800), 1072);
   assert.equal(fichaSectionScrollTop(10, 200, 0), 0);
 
-  const withDetails = renderToStaticMarkup(
-    createElement(FichaSectionNav, { hasDetails: true }),
+  // Sem abas visíveis: o componente só cuida das âncoras.
+  assert.equal(
+    renderToStaticMarkup(createElement(FichaSectionAnchors, { hasDetails: true })),
+    "",
   );
-  assert.match(withDetails, /href="#fotos"/);
-  assert.match(withDetails, /href="#especificacoes"/);
-  assert.match(withDetails, /href="#detalhes"/);
-  assert.match(withDetails, /Seções do anúncio/);
-  assert.doesNotMatch(withDetails, /WhatsApp|99633|99956|Confirmado|Equipamentos/);
-
-  const photosOnly = renderToStaticMarkup(
-    createElement(FichaSectionNav, { hasDetails: false }),
-  );
-  assert.match(photosOnly, /href="#fotos"/);
-  assert.doesNotMatch(photosOnly, /href="#detalhes"/);
 });
 
 test("a ficha marca fotos, especificações e o texto, e abre a foto grande em WebP", () => {
@@ -94,7 +85,7 @@ test("a ficha marca fotos, especificações e o texto, e abre a foto grande em W
   const lightbox = readSrc("components/site/PhotoLightbox.tsx");
   const css = readSrc("app/globals.css");
 
-  assert.match(page, /FichaSectionNav/);
+  assert.match(page, /FichaSectionAnchors/);
   assert.match(page, /data-ficha-section="fotos"/);
   assert.match(page, /data-ficha-section="especificacoes"/);
   assert.match(page, /data-ficha-section="detalhes"/);

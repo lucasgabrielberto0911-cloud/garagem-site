@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { VehicleLeadHit } from "@/lib/funnel-events";
 import { IconWhatsApp } from "@/components/site/icons";
+import { formatCurrencyBRL } from "@/lib/format";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import {
@@ -30,10 +31,10 @@ function openWhatsApp(
 }
 
 /**
- * Barra fixa no mobile: um único botão de WhatsApp, largura total, flutuando
- * com margem (respeita a safe-area do iPhone). A altura reservada está em
- * `--ficha-sticky-bar` para a primeira dobra e o fim da página não ficarem
- * por baixo. Financiamento, troca, vídeo e visita seguem na ficha.
+ * Barra fixa no mobile: preço à esquerda e botão de WhatsApp à direita,
+ * flutuando com margem (respeita a safe-area do iPhone). Vendido não mostra
+ * preço. A altura reservada está em `--ficha-sticky-bar` para o fim da página
+ * não ficar por baixo. Financiamento, troca, vídeo e visita seguem na ficha.
  */
 export function VehicleMobileBar({
   vehicleId,
@@ -98,6 +99,13 @@ export function VehicleMobileBar({
             {soldLabel}
           </Link>
         ) : (
+          <div className="flex items-center gap-2">
+          <p
+            data-mobile-bar-price=""
+            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/10 bg-asphalt/95 px-3 font-display text-lg font-bold tracking-tight text-brand-light"
+          >
+            {formatCurrencyBRL(price)}
+          </p>
           <VehicleLeadHit
             contentId={vehicleId}
             contentName={contentName}
@@ -121,12 +129,15 @@ export function VehicleMobileBar({
               onClick={(event) =>
                 openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
               }
-              className="ficha-whatsapp-cta pointer-events-auto flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-[#25D366] px-5 font-display text-base font-bold text-asphalt shadow-[0_6px_18px_rgba(0,0,0,0.4)] touch-manipulation transition active:scale-[0.98] active:bg-[#1FB858] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
+              className="ficha-whatsapp-cta pointer-events-auto flex h-14 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#25D366] px-3 font-display text-[15px] font-bold text-asphalt shadow-[0_6px_18px_rgba(0,0,0,0.4)] touch-manipulation transition active:scale-[0.98] active:bg-[#1FB858] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
             >
-              <IconWhatsApp className="h-6 w-6" />
-              Chamar no WhatsApp
+              <IconWhatsApp className="h-5 w-5 shrink-0" />
+              <span>
+                <span className="max-[399px]:hidden">Chamar no </span>WhatsApp
+              </span>
             </a>
           </VehicleLeadHit>
+          </div>
         )}
       </div>
     </div>

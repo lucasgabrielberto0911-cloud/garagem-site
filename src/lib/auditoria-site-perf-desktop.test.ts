@@ -286,7 +286,7 @@ test("Auditoria Site #10, #11, #12, #13 e Fluxo Melhoria #4: galeria, foco em se
   assert.match(gallerySrc, /!root\.contains\(activeEl\)/);
   assert.match(gallerySrc, /new ResizeObserver\(realign\)/);
 
-  const navSrc = readSrc("components/site/FichaSectionNav.tsx");
+  const navSrc = readSrc("components/site/FichaSectionAnchors.tsx");
   assert.match(navSrc, /focusSectionTarget/);
 
   const zoomSrc = readSrc("components/site/ZoomDetailImage.tsx");

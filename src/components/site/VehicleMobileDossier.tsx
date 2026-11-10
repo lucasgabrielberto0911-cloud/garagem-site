@@ -205,6 +205,57 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-2 lg:hidden">
+      {extraSpecs.length > 0 ? (
+        <DossierBlock title="Ficha técnica" section="especificacoes">
+          {listedLine ? (
+            <p className="mb-3 text-sm tracking-wide text-muted">{listedLine}</p>
+          ) : null}
+          <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
+            {extraSpecs.map((spec) => (
+              <div key={spec.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
+                <dt className="text-sm font-medium text-muted">{spec.label}</dt>
+                <dd
+                  className={`mt-1 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
+                    spec.empty ? "font-medium text-muted" : "font-semibold text-cream"
+                  }`}
+                >
+                  {spec.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </DossierBlock>
+      ) : null}
+
+      {!sold && quickActions ? (
+        <DossierBlock title="Próximos passos" id="proximos-passos">
+          <div>
+            <VehicleQuickActions
+              contentId={vehicleId}
+              contentSlug={whatsappContentFromVehicle({ id: vehicleId, path })}
+              contentPath={quickActions.contentPath}
+              contentName={fullLabel}
+              value={price}
+              make={make}
+              model={model}
+              year={yearModel}
+              stateOfVehicle={quickActions.stateOfVehicle}
+              exteriorColor={quickActions.exteriorColor}
+              transmission={quickActions.transmission}
+              bodyStyle={quickActions.bodyStyle}
+              fuelType={quickActions.fuelType}
+              postalCode={quickActions.postalCode}
+              video={quickActions.video}
+              finance={quickActions.finance}
+              trade={quickActions.trade}
+              visit={quickActions.visit}
+              variant="secondary"
+              className="grid"
+            />
+          </div>
+        </DossierBlock>
+      ) : null}
+
       {verified.length > 0 ? (
         <DossierBlock title={verifiedHeading ?? "Verificado neste carro"}>
           <VehicleVerifiedList items={verified} alt={fullLabel} showVideoHint={!sold} />
@@ -225,30 +276,6 @@ export function VehicleMobileBlocks({
           <div id="opcionais" className="scroll-mt-24">
             <VehicleFeatures items={accessories} />
           </div>
-        </DossierBlock>
-      ) : null}
-
-      {extraSpecs.length > 0 ? (
-        <DossierBlock title="Ficha técnica" section="especificacoes">
-          {listedLine ? (
-            <p className="mb-3 text-xs tracking-wide text-muted">{listedLine}</p>
-          ) : null}
-          <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
-            {extraSpecs.map((spec) => (
-              <div key={spec.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
-                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                  {spec.label}
-                </dt>
-                <dd
-                  className={`mt-1 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
-                    spec.empty ? "font-medium text-muted" : "font-semibold text-cream"
-                  }`}
-                >
-                  {spec.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
         </DossierBlock>
       ) : null}
 
@@ -279,7 +306,7 @@ export function VehicleMobileBlocks({
               <ul className="mt-3 space-y-3">
                 {otherConditions.map((item) => (
                   <li key={item.label} className="border-l-2 border-brand/80 pl-3">
-                    <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-cream">
+                    <p className="font-display text-sm font-semibold text-cream">
                       {item.label}
                     </p>
                     <p className="mt-1 text-cream/80">
@@ -293,35 +320,6 @@ export function VehicleMobileBlocks({
             ) : null}
           </div>
         </details>
-      ) : null}
-
-      {!sold && quickActions ? (
-        <DossierBlock title="Próximos passos" id="proximos-passos">
-          <div>
-            <VehicleQuickActions
-              contentId={vehicleId}
-              contentSlug={whatsappContentFromVehicle({ id: vehicleId, path })}
-              contentPath={quickActions.contentPath}
-              contentName={fullLabel}
-              value={price}
-              make={make}
-              model={model}
-              year={yearModel}
-              stateOfVehicle={quickActions.stateOfVehicle}
-              exteriorColor={quickActions.exteriorColor}
-              transmission={quickActions.transmission}
-              bodyStyle={quickActions.bodyStyle}
-              fuelType={quickActions.fuelType}
-              postalCode={quickActions.postalCode}
-              video={quickActions.video}
-              finance={quickActions.finance}
-              trade={quickActions.trade}
-              visit={quickActions.visit}
-              variant="secondary"
-              className="grid"
-            />
-          </div>
-        </DossierBlock>
       ) : null}
 
       <DossierBlock title="Onde estamos" id="onde-estamos">

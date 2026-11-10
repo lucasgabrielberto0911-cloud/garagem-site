@@ -20,8 +20,6 @@
   --admin-nav-h: 0px;
   /* Barra fixa da ficha. A primeira dobra desconta esta altura para a foto não ficar embaixo. */
   --ficha-sticky-bar: calc(5rem + env(safe-area-inset-bottom, 0px));
-  /* Âncoras Fotos / Especificações / Detalhes. A dobra do celular desconta esta faixa. */
-  --ficha-section-nav: 2.75rem;
   /*
    * Chip “Ajuda para escolher” fechado no celular: h-11 (2.75rem),
    * acima da bottom nav (4.5rem) com 0.75rem de folga. De sm até o
@@ -815,6 +813,15 @@ body:has([data-ficha-page]) .site-consent {
   bottom: calc(var(--ficha-sticky-bar) + 0.25rem);
 }
 
+/* Ficha no computador: canto direito, para o aviso nunca cobrir a galeria. */
+@media (min-width: 1024px) {
+  body:has([data-ficha-page]) .site-consent {
+    left: auto;
+    right: 1.5rem;
+    bottom: 1.5rem;
+  }
+}
+
 /* Convite de instalação espera a escolha de cookies: nunca empilha os dois. */
 body:has(.site-consent) [data-install-coach] {
   display: none;
@@ -1289,30 +1296,17 @@ textarea:-webkit-autofill:focus {
 }
 
 /*
- * Âncoras da ficha. Rolam junto com a página (Lucas, ficha do Uno 2013):
- * aba e card do anúncio parados pareciam dois scrolls separados no computador.
- * Nada de sticky aqui nem no `.ficha-aside`; só o header do site fica fixo.
+ * Âncoras da ficha. Card do anúncio parado parecia um segundo scroll no
+ * computador (Lucas, ficha do Uno 2013). Nada de sticky no `.ficha-aside`;
+ * só o header do site fica fixo.
  */
-.ficha-section-nav {
-  position: relative;
-}
-
 .ficha-jump-target {
-  scroll-margin-top: calc(
-    4.5rem + env(safe-area-inset-top, 0px) + var(--ficha-section-nav) + 0.5rem
-  );
+  scroll-margin-top: calc(4.5rem + env(safe-area-inset-top, 0px) + 0.5rem);
 }
 
 @media (min-width: 1024px) {
   .ficha-jump-target {
     scroll-margin-top: calc(4.75rem + 1px + 0.75rem);
-  }
-}
-
-/* Sem abas de seção no celular: nada a descontar do scroll nem da dobra. */
-@media (max-width: 1023px) {
-  :root {
-    --ficha-section-nav: 0rem;
   }
 }
 

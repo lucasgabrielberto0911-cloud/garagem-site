@@ -350,7 +350,7 @@ test("a ficha mantém âncoras, filtros e formulário; cidades exibem até seis 
 
   assert.match(page, /SimilarVehicles/);
   assert.match(page, /display\.transmission/);
-  assert.match(page, /FichaSectionNav/);
+  assert.match(page, /FichaSectionAnchors/);
   assert.match(page, /data-ficha-section="fotos"/);
   assert.match(page, /data-ficha-section="especificacoes"/);
   assert.match(page, /data-ficha-section="detalhes"/);
