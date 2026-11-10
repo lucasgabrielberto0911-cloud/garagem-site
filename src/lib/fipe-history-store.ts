@@ -73,6 +73,22 @@ export async function findFipeCandidates(brand: string, model: string, year: num
   return { candidates: parseFipeCandidates(result.data), stale: result.stale, fetchedAt: result.fetchedAt, warning: "Sugestões sem seleção automática. Confirme versão, ano e câmbio; scores empatados não resolvem identidade." };
 }
 
+/** Código informado pela fonte de placa: obtém rótulo/valor sem confirmar a seleção. */
+export async function findPurchaseFipeCodes(codes: string[], year: number) {
+  if (!codes.length || codes.length > 10 || codes.some(code => !/^\d{6}-\d$/.test(code)) || !Number.isInteger(year) || year < 1950 || year > new Date().getUTCFullYear() + 1) throw new PurchaseError("Códigos FIPE da placa inválidos.");
+  const results = await Promise.allSettled(codes.map(async code => {
+    const response = await providerRequest(`/fipe/${code}?ano=${year}`);
+    const data = response.data as { codigo_fipe?: unknown; atual?: { codigo_fipe?: unknown; model_year?: unknown; brand_name?: unknown; model_name?: unknown; fuel_name?: unknown; value_cents?: unknown } };
+    const current = data.atual;
+    if (!current || data.codigo_fipe !== code || current.codigo_fipe !== code || current.model_year !== year) throw new PurchaseError("FIPE não corresponde ao ano/código da placa.", 503);
+    return parseFipeCandidates({ candidatos: [{ codigo_fipe: code, ano: year, marca: current.brand_name, modelo: current.model_name, combustivel: current.fuel_name, valor_centavos: current.value_cents, score: 1 }] })[0];
+  }));
+  const candidates = results.flatMap(r => r.status === "fulfilled" ? [r.value] : []);
+  if (!candidates.length) throw new PurchaseError("Nenhuma versão FIPE disponível para os códigos da placa.", 503);
+  if (candidates.length !== codes.length) throw new PurchaseError("Há versões da placa indisponíveis. Consulte novamente antes de escolher.", 503);
+  return { candidates };
+}
+
 export async function getFipeHistory(identity: FipeIdentity) {
   validateFipeIdentity(identity);
   const reference = await providerRequest("/referencia");
