@@ -50,6 +50,7 @@ export function VehicleMobileSummary({
   price,
   sold,
   facts,
+  color,
   inspection,
   warranty,
   seals = [],
@@ -59,8 +60,9 @@ export function VehicleMobileSummary({
   version?: string | null;
   price: number;
   sold: boolean;
-  /** Cor, ano e KM (`vehicleKeyFacts`). O resto da ficha fica em "Ficha técnica". */
+  /** Ano, KM, câmbio e combustível (`vehicleKeyFacts`). O resto fica em "Ficha técnica". */
   facts: readonly VehicleKeyFact[];
+  color?: string | null;
   inspection?: string | null;
   warranty?: string | null;
   /** Selos já filtrados (sem dado = sem selo). */
@@ -90,7 +92,7 @@ export function VehicleMobileSummary({
         id={specAnchor ? "especificacoes" : undefined}
         data-ficha-section={specAnchor ? "especificacoes" : undefined}
       >
-        <VehicleKeyFacts facts={facts} />
+        <VehicleKeyFacts facts={facts} color={color} />
       </div>
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />

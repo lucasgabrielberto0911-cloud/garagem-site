@@ -75,14 +75,14 @@ test("desktop: ficha técnica e opcionais na coluna principal, card só com o es
   await expect(page.locator("details", { has: specs })).toHaveCount(0);
   await expect(specs.locator("dt")).toContainText(["Ano", "km", "Câmbio", "Combustível", "Cor"]);
 
-  // Topo do card: preço em vermelho e quadradinhos de cor, ano e KM.
+  // Topo do card: preço em vermelho, quadradinhos e a cor em linha própria.
   const preco = aside.locator("[data-ficha-price]");
   await expect(preco).toContainText("R$");
   const corPreco = await preco.evaluate((el) => getComputedStyle(el).color.match(/\d+/g)!.map(Number));
   expect(corPreco[0]).toBeGreaterThan(200);
   expect(corPreco[1]).toBeLessThan(100);
   const fatos = aside.locator("[data-key-facts] dt");
-  await expect(fatos).toHaveText(["Cor", "Ano", "KM"]);
+  await expect(fatos).toHaveText(["Ano", "KM", "Câmbio", "Combustível", "Cor"]);
 
   // Card: um único botão principal; financiamento, troca, vídeo e visita recolhidos.
   const principal = aside.getByRole("link", { name: "Falar no WhatsApp", exact: true });

@@ -15,7 +15,7 @@ import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import { FavoritesProvider } from "@/lib/favorites";
 import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
 import { DEFAULT_VEHICLE_CONDITIONS } from "@/lib/vehicle-conditions";
-import { buildVehiclePublicSpecs, vehicleKeyFacts, type VehicleSpecRow } from "@/lib/vehicle-specs";
+import { buildVehiclePublicSpecs, vehicleColorFact, vehicleKeyFacts, type VehicleSpecRow } from "@/lib/vehicle-specs";
 import { focusFichaSection } from "@/lib/ficha-sections";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -353,7 +353,7 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.match(accessories, /Direção hidráulica/);
 });
 
-test("dobra do celular mostra cor, ano e KM; final da placa vai para a ficha técnica", () => {
+test("dobra do celular mostra ano, KM, câmbio, combustível e cor; final da placa vai para a ficha técnica", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   assert.match(page, /facts=\{keyFacts\}/);
   assert.match(page, /vehicleKeyFacts\(specs\)/);
@@ -372,20 +372,23 @@ test("dobra do celular mostra cor, ano e KM; final da placa vai para a ficha té
   const props = { title: "Fiat Uno", price: 29900, sold: false, city: "Serra" };
   const withPlate = specsFor("  7  ", "Branco");
   const summary = renderToStaticMarkup(
-    createElement(VehicleMobileSummary, { ...props, facts: vehicleKeyFacts(withPlate) }),
+    createElement(VehicleMobileSummary, {
+      ...props,
+      facts: vehicleKeyFacts(withPlate),
+      color: vehicleColorFact(withPlate),
+    }),
   );
   assert.deepEqual(
     [...summary.matchAll(/<dt[^>]*>([^<]+)<\/dt>/g)].map((match) => match[1]),
-    ["Cor", "Ano", "KM"],
+    ["Ano", "KM", "Câmbio", "Combustível", "Cor"],
   );
   assert.match(summary, />Branco</);
   assert.match(summary, />2012\/<wbr\/>2013</);
   assert.match(summary, />98\.000</);
-  assert.doesNotMatch(summary, /Final da placa|Câmbio|Serra|Cidade/);
+  assert.doesNotMatch(summary, /Final da placa|Serra|Cidade/);
 
   // Sem cor cadastrada, nada de "Não informada" no topo.
-  const noColor = vehicleKeyFacts(specsFor(null, null));
-  assert.deepEqual(noColor.map((fact) => fact.label), ["Ano", "KM"]);
+  assert.equal(vehicleColorFact(specsFor(null, null)), null);
 
   const blocks = (specs: VehicleSpecRow[]) =>
     renderToStaticMarkup(

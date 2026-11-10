@@ -37,7 +37,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
-import { buildVehiclePublicSpecs, vehicleKeyFacts } from "@/lib/vehicle-specs";
+import { buildVehiclePublicSpecs, vehicleColorFact, vehicleKeyFacts } from "@/lib/vehicle-specs";
 import { VehicleKeyFacts } from "@/components/site/VehicleKeyFacts";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
@@ -250,6 +250,7 @@ export default async function VehicleDetailPage({
 
   // Cor, ano e KM: quadradinhos do topo (desktop e celular).
   const keyFacts = vehicleKeyFacts(specs);
+  const keyColor = vehicleColorFact(specs);
 
   const hasAboutText =
     !!description && visibleDescriptionSegments(description, vehicle, specs).length > 0;
@@ -380,6 +381,7 @@ export default async function VehicleDetailPage({
                 price={sold ? 0 : vehicle.price}
                 sold={sold}
                 facts={keyFacts}
+                color={keyColor}
                 inspection={sold ? null : vehicle.inspection}
                 warranty={sold ? null : vehicle.warranty}
                 seals={seals}
@@ -536,7 +538,7 @@ export default async function VehicleDetailPage({
                 )}
               </p>
 
-              <VehicleKeyFacts facts={keyFacts} onInk />
+              <VehicleKeyFacts facts={keyFacts} color={keyColor} onInk />
 
               {!sold ? (
                 <VehicleInspectionBadge inspection={vehicle.inspection} />
