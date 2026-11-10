@@ -52,14 +52,20 @@ function reveal(target: HTMLElement) {
 }
 
 export function focusSectionTarget(target: HTMLElement) {
-  if (!target.hasAttribute("tabindex")) {
-    target.setAttribute("tabindex", "-1");
-  }
   try {
-    target.focus({ preventScroll: true });
+    focusFichaSection(target);
   } catch {
     // Ambientes sem suporte a preventScroll.
   }
+}
+
+/**
+ * Linha livre abaixo do que fica fixo na tela. As abas rolam com a página
+ * (sem sticky), então só o header do site cobre o topo.
+ */
+function fixedTop() {
+  const header = document.querySelector("header");
+  return Math.max(0, header?.getBoundingClientRect().bottom ?? 0);
 }
 
 /**
@@ -73,11 +79,9 @@ function scrollToSection(id: string, behavior: ScrollBehavior, moveFocus = false
   if (moveFocus) {
     focusSectionTarget(target);
   }
-  const nav = document.querySelector(".ficha-section-nav");
-  const navBottom = nav?.getBoundingClientRect().bottom ?? 0;
   const top = fichaSectionScrollTop(
     target.getBoundingClientRect().top,
-    navBottom,
+    fixedTop(),
     window.scrollY,
   );
   window.scrollTo({ top, behavior });
@@ -86,8 +90,7 @@ function scrollToSection(id: string, behavior: ScrollBehavior, moveFocus = false
 }
 
 function sectionAtFold(sections: ReadonlyArray<{ id: FichaSectionId }>) {
-  const nav = document.querySelector(".ficha-section-nav");
-  const line = (nav?.getBoundingClientRect().bottom ?? 0) + 16;
+  const line = fixedTop() + 16;
   const reached: { id: FichaSectionId; top: number; left: number }[] = [];
   for (const section of sections) {
     const target = visibleSection(section.id);

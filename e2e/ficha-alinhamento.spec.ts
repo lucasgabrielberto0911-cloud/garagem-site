@@ -53,6 +53,17 @@ for (const sample of [samples[0], { ...samples[0], id: "ce2esold0000000000000000
       }
 
       if (width < 1024) continue;
+      // Um scroll só: aba e card do anúncio sobem junto com a página.
+      const painelAntes = (await page.locator(".ficha-aside").boundingBox())!;
+      const abasAntes = (await abas.boundingBox())!;
+      await page.mouse.wheel(0, 600);
+      await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(300);
+      const rolou = await page.evaluate(() => scrollY);
+      const painelDepois = (await page.locator(".ficha-aside").boundingBox())!;
+      const abasDepois = (await abas.boundingBox())!;
+      expect(Math.abs(painelAntes.y - painelDepois.y - rolou)).toBeLessThanOrEqual(2);
+      expect(Math.abs(abasAntes.y - abasDepois.y - rolou)).toBeLessThanOrEqual(2);
+      await page.evaluate(() => scrollTo(0, 0));
       for (const nome of ["Especificações", "Detalhes", "Fotos"]) {
         const link = abas.getByRole("link", { name: nome, exact: true });
         if (!(await link.count())) continue;

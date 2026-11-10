@@ -37,7 +37,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
-import { buildVehiclePublicSpecs, specsNotInChips } from "@/lib/vehicle-specs";
+import { buildVehiclePublicSpecs, vehicleKeyFacts } from "@/lib/vehicle-specs";
+import { VehicleKeyFacts } from "@/components/site/VehicleKeyFacts";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
@@ -247,6 +248,9 @@ export default async function VehicleDetailPage({
     inspection: vehicle.inspection,
   });
 
+  // Cor, ano e KM: quadradinhos do topo (desktop e celular).
+  const keyFacts = vehicleKeyFacts(specs);
+
   const hasAboutText =
     !!description && visibleDescriptionSegments(description, vehicle, specs).length > 0;
   const hasDetails =
@@ -375,13 +379,8 @@ export default async function VehicleDetailPage({
                 version={collapseWhitespace(vehicle.version ?? "")}
                 price={sold ? 0 : vehicle.price}
                 sold={sold}
-                year={vehicle.year}
-                yearModel={vehicle.yearModel}
-                km={vehicle.km}
-                transmission={display.transmission}
-                plateEnd={vehicle.plateEnd}
+                facts={keyFacts}
                 inspection={sold ? null : vehicle.inspection}
-                fuel={specs.find((row) => row.label === "Combustível")?.value}
                 seals={seals}
                 specAnchor={!hasMobileFichaSpecs(specs)}
               />
@@ -410,7 +409,8 @@ export default async function VehicleDetailPage({
                 data-ficha-spec-grid=""
                 className="mt-3 grid grid-cols-3 gap-2 text-sm [&>:last-child:nth-child(3n+1)]:col-span-3 [&>:last-child:nth-child(3n+2)]:col-span-2"
               >
-                {specsNotInChips(specs).map((spec) => (
+                {/* Ficha técnica completa: ano, km, câmbio, cor... (cor/ano/KM também no topo). */}
+                {specs.map((spec) => (
                   <div
                     key={spec.label}
                     className="min-w-0 border border-white/10 bg-ink px-3 py-2.5"
@@ -487,8 +487,9 @@ export default async function VehicleDetailPage({
             ) : null}
           </div>
 
-          <aside className="ficha-aside order-2 hidden lg:sticky lg:z-20 lg:block">
-            <div className="space-y-4 border border-white/10 bg-ink p-4 sm:p-6">
+          <aside className="ficha-aside order-2 hidden lg:block">
+            {/* Sem sticky: o card rola junto com a página (um scroll só). */}
+            <div className="space-y-4 border border-white/10 bg-ink p-5 xl:p-6">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand-light">
                   {vehicleCategoryLabel(vehicle.category)}
@@ -515,26 +516,31 @@ export default async function VehicleDetailPage({
                 ) : null}
               </div>
               <div>
-                <p className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-cream sm:text-2xl sm:text-[1.75rem]">
+                <p className="font-display text-[1.75rem] font-bold leading-tight tracking-tight text-cream">
                   {title}
                 </p>
                 {vehicle.version?.trim() ? (
-                  <p className="mt-1 text-sm text-muted">{collapseWhitespace(vehicle.version ?? "")}</p>
+                  <p className="mt-1 text-[15px] leading-snug text-muted">{collapseWhitespace(vehicle.version ?? "")}</p>
                 ) : null}
               </div>
 
-              <p className="font-display text-3xl font-bold leading-none text-cream">
+              <p
+                data-ficha-price=""
+                className="font-display text-[2.25rem] font-bold leading-none tracking-tight text-brand-light"
+              >
                 {sold ? (
                   <span className="text-base text-muted">Já vendido</span>
                 ) : (
-                  formatCurrencyBRL(vehicle.price)
+                  <span className="ficha-price">{formatCurrencyBRL(vehicle.price)}</span>
                 )}
               </p>
+
+              <VehicleKeyFacts facts={keyFacts} onInk />
+
               {!sold ? (
                 <VehicleInspectionBadge inspection={vehicle.inspection} />
               ) : null}
-              <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} />
-              {!sold ? <VehicleTrustNotes warranty={vehicle.warranty} /> : null}
+              <VehicleSeals seals={seals} optionalsHref="#opcionais-desktop" />
 
               {sold ? (
                 <div className="space-y-2">
@@ -561,50 +567,75 @@ export default async function VehicleDetailPage({
                 </div>
               ) : (
                 <>
-                  <VehicleLeadHit
-                    contentId={vehicle.id}
-                    contentName={fullLabel}
-                    value={sold ? undefined : vehicle.price}
-                    make={formatBrandName(vehicle.brand)}
-                    model={formatModelName(vehicle.model)}
-                    year={vehicle.yearModel}
-                    {...autoHit}
-                  >
-                    <WhatsAppButton
-                      size="lg"
-                      className="hidden w-full lg:inline-flex lg:text-lg"
-                      trackingLabel="ficha"
-                      campaign="ficha"
-                      content={fichaTrack.content}
-                      vehicleId={vehicle.id}
-                      slug={canonicalSlug}
-                      message={whatsapp.interest}
+                  <div>
+                    <VehicleLeadHit
+                      contentId={vehicle.id}
+                      contentName={fullLabel}
+                      value={sold ? undefined : vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
+                      {...autoHit}
                     >
-                      Falar no WhatsApp
-                    </WhatsAppButton>
-                  </VehicleLeadHit>
-                  <p className="text-xs leading-relaxed text-muted">
-                    Abre o WhatsApp com este anúncio — modelo, ano e preço.
-                  </p>
+                      <WhatsAppButton
+                        size="lg"
+                        className="hidden w-full lg:inline-flex lg:text-lg"
+                        trackingLabel="ficha"
+                        campaign="ficha"
+                        content={fichaTrack.content}
+                        vehicleId={vehicle.id}
+                        slug={canonicalSlug}
+                        message={whatsapp.interest}
+                      >
+                        Falar no WhatsApp
+                      </WhatsAppButton>
+                    </VehicleLeadHit>
+                    <p className="mt-2 text-center text-xs leading-relaxed text-muted">
+                      Abre o WhatsApp com este anúncio — modelo, ano e preço.
+                    </p>
+                  </div>
 
-                  <VehicleQuickActions
-                    contentId={vehicle.id}
-                    contentSlug={canonicalSlug}
-                    contentPath={path}
-                    contentName={fullLabel}
-                    value={sold ? 0 : vehicle.price}
-                    make={formatBrandName(vehicle.brand)}
-                    model={formatModelName(vehicle.model)}
-                    year={vehicle.yearModel}
-                    {...autoHit}
-                    video={whatsapp.video}
-                    finance={whatsapp.finance}
-                    trade={whatsapp.trade}
-                    visit={whatsapp.visit}
-                    variant="secondary"
-                  />
+                  {/* Financiamento, troca, vídeo e visita: recolhidos, sem competir com o botão principal. */}
+                  <details data-ficha-more-actions="" className="group border-t border-white/10 pt-1">
+                    <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-cream transition hover:text-brand-light [&::-webkit-details-marker]:hidden">
+                      <span>Financiamento, troca, vídeo ou visita</span>
+                      <svg
+                        aria-hidden="true"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        className="shrink-0 text-muted transition-transform duration-200 group-open:rotate-180"
+                      >
+                        <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
+                      </svg>
+                    </summary>
+                    <VehicleQuickActions
+                      contentId={vehicle.id}
+                      contentSlug={canonicalSlug}
+                      contentPath={path}
+                      contentName={fullLabel}
+                      value={sold ? 0 : vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
+                      {...autoHit}
+                      video={whatsapp.video}
+                      finance={whatsapp.finance}
+                      trade={whatsapp.trade}
+                      visit={whatsapp.visit}
+                      variant="secondary"
+                      className="pb-2 pt-1"
+                    />
+                  </details>
 
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs">
+                  <VehicleTrustNotes warranty={vehicle.warranty} />
+                </>
+              )}
+
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+                {!sold ? (
+                  <>
                     <ChatOpenButton
                       source="ficha"
                       prompt={`Tenho dúvida sobre o ${title}`}
@@ -619,34 +650,20 @@ export default async function VehicleDetailPage({
                     >
                       Avaliar meu usado
                     </Link>
-                  </div>
-                </>
-              )}
+                  </>
+                ) : null}
+                <ShareVehicle
+                  title={fullLabel}
+                  path={path}
+                  vehicleId={vehicle.id}
+                  variant="compact"
+                />
+              </div>
 
-              {accessories.length > 0 ? (
-                <a
-                  href="#opcionais-desktop"
-                  data-ficha-opcionais-link=""
-                  className="flex min-h-[44px] items-center justify-between gap-3 border-t border-white/10 text-sm font-semibold text-cream transition hover:text-brand-light"
-                >
-                  <span>
-                    {accessories.length === 1 ? "Ver o opcional" : `Ver os ${accessories.length} opcionais`}
-                  </span>
-                  <span aria-hidden="true">↓</span>
-                </a>
-              ) : null}
-
-              <ShareVehicle
-                title={fullLabel}
-                path={path}
-                vehicleId={vehicle.id}
-                className="border-t border-white/10 pt-3"
-              />
-
-              <p className="text-xs leading-relaxed text-muted">
+              <p className="text-[11px] leading-relaxed text-muted">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
-                  : `Valores e disponibilidade sujeitos a alteração. Financiamento em até 60x e cartão em até 18x, sujeitos a análise de crédito. Combine pelo WhatsApp ${site.whatsappLabel}.`}
+                  : `Valores sujeitos a alteração. Financiamento e cartão com análise de crédito; condições pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
             </div>
           </aside>

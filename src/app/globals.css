@@ -1288,11 +1288,13 @@ textarea:-webkit-autofill:focus {
   transition: background-color 99999s ease-out 0s;
 }
 
-/* Âncoras da ficha, logo abaixo do header fixo. */
+/*
+ * Âncoras da ficha. Rolam junto com a página (Lucas, ficha do Uno 2013):
+ * aba e card do anúncio parados pareciam dois scrolls separados no computador.
+ * Nada de sticky aqui nem no `.ficha-aside`; só o header do site fica fixo.
+ */
 .ficha-section-nav {
-  position: sticky;
-  top: calc(4.5rem + env(safe-area-inset-top, 0px));
-  z-index: 30;
+  position: relative;
 }
 
 .ficha-jump-target {
@@ -1302,16 +1304,8 @@ textarea:-webkit-autofill:focus {
 }
 
 @media (min-width: 1024px) {
-  .ficha-section-nav {
-    top: calc(4.75rem + 1px);
-  }
-
-  .ficha-aside {
-    top: calc(4.75rem + 1px + var(--ficha-section-nav) + 0.75rem);
-  }
-
   .ficha-jump-target {
-    scroll-margin-top: calc(4.75rem + 1px + var(--ficha-section-nav) + 0.75rem);
+    scroll-margin-top: calc(4.75rem + 1px + 0.75rem);
   }
 }
 
@@ -2120,6 +2114,61 @@ html[data-consent="essential"] .site-consent {
     animation: none;
   }
   .assistant-cta::after {
+    opacity: 0;
+  }
+}
+
+/*
+ * Preço da ficha: reflexo diagonal de tempos em tempos + glow vermelho suave,
+ * no espírito do CTA do assistente (não é botão). Só transform/opacity;
+ * desligado com prefers-reduced-motion.
+ */
+.ficha-price {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 0.25rem 0.5rem;
+  margin: -0.25rem -0.5rem;
+}
+
+.ficha-price::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(232, 24, 28, 0.32) 0%, transparent 70%);
+  opacity: 0.25;
+  animation: assistantGlow 4.6s ease-in-out 2s infinite both;
+}
+
+.ficha-price::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 32%;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 140, 130, 0.14) 40%,
+    rgba(255, 235, 228, 0.32) 50%,
+    rgba(255, 140, 130, 0.14) 60%,
+    transparent 100%
+  );
+  transform: translateX(-160%) skewX(-18deg);
+  animation: assistantSheen 4.6s ease-in-out 2s infinite both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ficha-price::before,
+  .ficha-price::after {
+    animation: none;
+  }
+  .ficha-price::after {
     opacity: 0;
   }
 }

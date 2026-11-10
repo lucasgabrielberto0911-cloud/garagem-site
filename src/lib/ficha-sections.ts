@@ -36,14 +36,22 @@ export function fichaSectionScrollTop(
   return Math.max(0, scrollY + targetTop - navBottom - 8);
 }
 
-/** Move o foco do teclado para a seção de destino sem salto brusco de scroll. */
+/**
+ * Move o foco do teclado para a seção de destino sem salto brusco de scroll.
+ * O tabindex provisório sai no blur: se ficasse, um clique em qualquer
+ * coisa dentro da seção (ex.: um opcional) focava a seção inteira e o
+ * navegador rolava a página de volta para o topo dela.
+ */
 export function focusFichaSection(target: {
   hasAttribute(name: string): boolean;
   setAttribute(name: string, value: string): void;
+  removeAttribute?(name: string): void;
+  addEventListener?(type: "blur", listener: () => void, options?: { once?: boolean }): void;
   focus(options?: { preventScroll?: boolean }): void;
 }) {
   if (!target.hasAttribute("tabindex")) {
     target.setAttribute("tabindex", "-1");
+    target.addEventListener?.("blur", () => target.removeAttribute?.("tabindex"), { once: true });
   }
   target.focus({ preventScroll: true });
 }

@@ -1,5 +1,6 @@
 import {
   parseVehicleDescription,
+  splitFactLine,
   withoutRepeatedDescriptionFacts,
   type DescriptionSummaryFacts,
   type DescriptionSegment,
@@ -116,33 +117,79 @@ function sameSpecValue(specValue: string, lineValue: string) {
 }
 
 /**
+ * Cor, ano e km ficam nos quadradinhos do topo e na ficha técnica. No
+ * "Sobre o veículo" a linha rotulada some mesmo escrita de outro jeito
+ * ("Quilometragem: 98 mil km", "Cor: branco perolizado").
+ */
+const TOP_KEYS = new Set(["km", "ano", "cor"]);
+
+const PURE_KM =
+  /^(?:com\s+|apenas\s+|so\s+)?(?:km\s*:?\s*)?\d[\d.,\s]*(?:mil\s*)?(?:km|quilometros)(?:\s*rodados?)?(?:\s*originais?)?$/;
+const PURE_YEAR = /^(?:(?:ano|modelo)(?:\s*\/\s*modelo)?\s*:?\s*)?(?:19|20)\d{2}(?:\s*\/\s*(?:19|20)\d{2})?$/;
+
+type SpecContext = { known: Map<string, string[]> };
+
+/** Linha que só repete cor, ano ou km ("🛣️ 98.000 km", "2012/2013", "Branco"). */
+function isBareTopFact(text: string, ctx: SpecContext) {
+  const line = normalizeSpec(splitFactLine(text)?.text ?? text).replace(/[.!;,]+$/, "").trim();
+  if (!line || line.length > 40) return false;
+  if (ctx.known.has("km") && PURE_KM.test(line)) return true;
+  if (ctx.known.has("ano") && PURE_YEAR.test(line)) return true;
+  const colors = ctx.known.get("cor");
+  if (colors?.length) {
+    const bare = line.replace(/^cor\s*:?\s*/, "");
+    if (colors.includes(bare)) return true;
+    if (/^cor\s/.test(line) && colors.some((color) => bare.startsWith(color))) return true;
+  }
+  return false;
+}
+
+/** Linha rotulada ("Cor: Prata") que a ficha já mostra. */
+function isRepeatedLabeled(text: string, ctx: SpecContext) {
+  const labeled = splitLabeled(text);
+  if (!labeled) return false;
+  const key = specKey(labeled.label);
+  const values = ctx.known.get(key);
+  if (!values) return false;
+  if (TOP_KEYS.has(key)) return true;
+  const value = specValue(key, labeled.value);
+  return values.some((known) => sameSpecValue(known, value));
+}
+
+function repeatsSpec(text: string, ctx: SpecContext) {
+  return isRepeatedLabeled(text, ctx) || isBareTopFact(text, ctx);
+}
+
+/**
  * Segmentos que a ficha mostra. `specRows` tira as linhas rotuladas
- * ("Cor: Preta", "Câmbio: Automático") que a ficha técnica e os chips já mostram
- * com o mesmo valor; "Histórico: único dono" e afins ficam.
+ * ("Cor: Preta", "Câmbio: Automático") que a ficha técnica e os quadradinhos
+ * já mostram com o mesmo valor, e qualquer linha que só repita cor, ano ou km.
+ * "Histórico: único dono", ressalvas e o texto do anúncio ficam.
  */
 export function visibleDescriptionSegments(
   text: string,
   summaryFacts?: DescriptionSummaryFacts,
-  specRows?: { label: string; value: string }[],
+  specRows?: { label: string; value: string; empty?: boolean }[],
 ): DescriptionSegment[] {
   const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
   if (!specRows?.length) return segments;
   const known = new Map<string, string[]>();
   for (const row of specRows) {
+    if (row.empty) continue;
     const key = specKey(row.label);
     known.set(key, [...(known.get(key) ?? []), specValue(key, row.value)]);
   }
+  const ctx: SpecContext = { known };
   return segments.flatMap((segment): DescriptionSegment[] => {
-    if (segment.kind !== "facts") return [segment];
-    const lines = segment.lines.filter((line) => {
-      const labeled = splitLabeled(line.text);
-      if (!labeled) return true;
-      const key = specKey(labeled.label);
-      const values = known.get(key);
-      if (!values) return true;
-      const value = specValue(key, labeled.value);
-      return !values.some((known) => sameSpecValue(known, value));
-    });
+    if (segment.kind === "prose") {
+      // Parágrafo sem emoji também pode ser uma lista "Km: ... / Ano: ...".
+      const lines = segment.text.split("\n");
+      const kept = lines.filter((line) => !repeatsSpec(line.trim(), ctx));
+      if (kept.length === lines.length) return [segment];
+      const rest = kept.join("\n").trim();
+      return rest ? [{ kind: "prose", text: rest }] : [];
+    }
+    const lines = segment.lines.filter((line) => !repeatsSpec(line.text, ctx));
     return lines.length > 0 ? [{ kind: "facts", lines }] : [];
   });
 }
@@ -158,7 +205,7 @@ export function VehicleDescription({
   text: string;
   className?: string;
   summaryFacts?: DescriptionSummaryFacts;
-  specRows?: { label: string; value: string }[];
+  specRows?: { label: string; value: string; empty?: boolean }[];
   /** Celular: sem emoji nas linhas. Desktop mantém como o anúncio foi escrito. */
   hideEmoji?: boolean;
 }) {
