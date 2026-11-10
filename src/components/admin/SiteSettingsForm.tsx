@@ -13,6 +13,7 @@ import {
   backfillMissingThumbnails,
 } from "@/app/admin/site/cleanup-actions";
 import { SiteContentEditor } from "@/components/admin/SiteContentEditor";
+import { SiteLinksEditor } from "@/components/admin/SiteLinksEditor";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
 import type { SiteContent } from "@/lib/site-content";
 import type { EditableSiteFields } from "@/lib/site-settings";
@@ -266,6 +267,12 @@ export function SiteSettingsForm({
             </Field>
           </div>
         </Card>
+
+        <SiteLinksEditor
+          initial={content.links}
+          error={errors.linksJson}
+          onDirty={() => setDirty(true)}
+        />
 
         <SiteContentEditor
           initial={content}

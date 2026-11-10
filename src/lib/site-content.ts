@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { resolveSiteLinks, type SiteLink } from "@/lib/site-links";
 import {
   FAQ_ITEMS,
   isFaqAnswerReady,
@@ -31,6 +33,8 @@ export type SiteContent = {
   conditions: VehicleConditionsContent;
   /** Foto original do sócio na Sobre. Vazio = seção sem retrato. */
   founderPhotoUrl: string | null;
+  /** Botões da página /links (já com o padrão aplicado quando nada foi salvo). */
+  links: SiteLink[];
 };
 
 const FOUNDER_PHOTO_HOST = "vesmqhyxautgtvgccweo.supabase.co";
@@ -58,6 +62,7 @@ const EMPTY_SITE_CONTENT: SiteContent = {
   faqItems: FAQ_ITEMS,
   conditions: DEFAULT_VEHICLE_CONDITIONS,
   founderPhotoUrl: null,
+  links: resolveSiteLinks(null),
 };
 
 const SITE_CONTENT_SELECT = {
@@ -193,19 +198,37 @@ export function parseConditionItems(raw: unknown): ConditionItem[] | null {
   return items.length > 0 ? items : null;
 }
 
+type BaseSiteRow = Prisma.SiteSettingsGetPayload<{
+  select: typeof SITE_CONTENT_SELECT;
+}>;
+
+type OptionalSiteColumns = {
+  founderPhotoUrl?: string | null;
+  linksJson?: unknown;
+};
+
 async function loadSiteSettingsRow() {
-  try {
-    return await prisma.siteSettings.findUnique({
-      where: { id: "default" },
-      select: { ...SITE_CONTENT_SELECT, founderPhotoUrl: true },
-    });
-  } catch {
-    // Coluna nova: o painel funciona antes do `prisma db push`.
-    return await prisma.siteSettings.findUnique({
-      where: { id: "default" },
-      select: SITE_CONTENT_SELECT,
-    });
+  // Colunas novas: o painel funciona antes da migration, tentando do mais
+  // completo para o mais antigo.
+  const optionalSelects = [
+    { founderPhotoUrl: true, linksJson: true },
+    { founderPhotoUrl: true },
+    {},
+  ] as const;
+  let lastError: unknown;
+  for (const optional of optionalSelects) {
+    try {
+      return (await prisma.siteSettings.findUnique({
+        where: { id: "default" },
+        select: { ...SITE_CONTENT_SELECT, ...optional },
+      })) as
+        | (BaseSiteRow & OptionalSiteColumns)
+        | null;
+    } catch (error) {
+      lastError = error;
+    }
   }
+  throw lastError;
 }
 
 const loadSiteContentCached = unstable_cache(
@@ -228,12 +251,11 @@ const loadSiteContentCached = unstable_cache(
         row.conditionsIntro,
         row.conditionsJson,
       ),
-      founderPhotoUrl: parseFounderPhotoUrl(
-        "founderPhotoUrl" in row ? row.founderPhotoUrl : null,
-      ),
+      founderPhotoUrl: parseFounderPhotoUrl(row.founderPhotoUrl ?? null),
+      links: resolveSiteLinks(row.linksJson),
     };
   },
-  ["public-site-content-v6"],
+  ["public-site-content-v7"],
   // Mesmo piso do site-settings: FAQ, avaliações e condições entram no layout.
   { revalidate: 3600, tags: ["site-settings"] },
 );

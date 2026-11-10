@@ -25,7 +25,7 @@ export default async function AdminSitePage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Dados do site"
-        subtitle="Endereço, horários, foto do Elias, Google, FAQ e condições da ficha — sem editar arquivo."
+        subtitle="Endereço, horários, foto do Elias, Google, FAQ, condições da ficha e a página de links (/links) — sem editar arquivo."
       />
 
       {placeholders.length > 0 ? (

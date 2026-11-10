@@ -8,6 +8,7 @@ import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { parseFaqItems } from "@/lib/faq";
 import { parseConditionItems, parseFounderPhotoUrl } from "@/lib/site-content";
+import { DEFAULT_LINKS, validateSiteLinks } from "@/lib/site-links";
 
 export type SiteSettingsState = {
   ok: boolean;
@@ -78,7 +79,20 @@ export async function updateSiteSettings(
   const founderPhotoRaw = text(formData, "founderPhotoUrl");
   const founderPhotoUrl = parseFounderPhotoUrl(founderPhotoRaw);
 
+  // Sem o campo (formulário antigo em cache), a lista salva não é tocada.
+  let links: ReturnType<typeof validateSiteLinks> | null = null;
+  if (formData.has("linksJson")) {
+    let rawLinks: unknown = null;
+    try {
+      rawLinks = JSON.parse(text(formData, "linksJson") || "[]");
+    } catch {
+      rawLinks = null;
+    }
+    links = validateSiteLinks(rawLinks);
+  }
+
   const fieldErrors: Record<string, string> = {};
+  if (links && !links.ok) fieldErrors.linksJson = links.error;
   if (region.length < 2) fieldErrors.region = "Informe a cidade ou região.";
   if (email && !email.includes("@")) fieldErrors.email = "E-mail inválido.";
   if (address.length < 5) {
@@ -141,7 +155,11 @@ export async function updateSiteSettings(
     conditionsIntro: conditionsIntro || null,
     conditionsJson: conditionsItems ?? Prisma.DbNull,
     founderPhotoUrl,
+    ...(links?.ok ? { linksJson: links.links } : {}),
   };
+  const linksChanged =
+    links?.ok === true &&
+    JSON.stringify(links.links) !== JSON.stringify(DEFAULT_LINKS);
 
   try {
     try {
@@ -153,7 +171,9 @@ export async function updateSiteSettings(
         }),
       );
     } catch {
-      const { founderPhotoUrl: photoUrl, ...legacy } = payload;
+      // Banco sem as colunas novas: salva o resto e avisa o que ficou de fora.
+      const { founderPhotoUrl: photoUrl, linksJson, ...legacy } = payload;
+      void linksJson;
       await withAdminStorageLock((tx) =>
         tx.siteSettings.upsert({
           where: { id: "default" },
@@ -161,11 +181,14 @@ export async function updateSiteSettings(
           update: legacy,
         }),
       );
-      if (photoUrl) {
+      const missing = [
+        photoUrl ? "A foto do Elias" : null,
+        linksChanged ? "A página de links" : null,
+      ].filter(Boolean);
+      if (missing.length > 0) {
         return {
           ok: false,
-          message:
-            "A foto do Elias precisa do campo novo no banco. Rode `prisma db push` e envie de novo.",
+          message: `${missing.join(" e ")} precisa${missing.length > 1 ? "m" : ""} do campo novo no banco. Aplique a migration em supabase/migrations e envie de novo.`,
         };
       }
     }
@@ -183,6 +206,7 @@ export async function updateSiteSettings(
   revalidatePath("/contato");
   revalidatePath("/sobre");
   revalidatePath("/estoque");
+  revalidatePath("/links");
   revalidatePath("/admin");
   expireAdminData();
   revalidatePath("/admin/site");
