@@ -12,7 +12,9 @@ Se você usa **várias IAs** (Cursor, Claude, Codex, ChatGPT, etc.) no mesmo rep
 1. **[`AGENTS.md`](AGENTS.md)** — regras obrigatórias (cache, marca, produção, PRs, fotos).
 2. **[`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md)** — mapa do repositório e checklist.
 
-Atalhos úteis: [`docs/GLOSSARIO.md`](docs/GLOSSARIO.md) · [`docs/ANTI-PATTERNS.md`](docs/ANTI-PATTERNS.md) · [`docs/areas/`](docs/areas/) · [`docs/prompts/`](docs/prompts/) · [`docs/TESTES.md`](docs/TESTES.md) · [`docs/pesquisas/INDICE.md`](docs/pesquisas/INDICE.md)
+Índice completo: [`docs/README.md`](docs/README.md). Contribuição: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+Atalhos: [`GLOSSARIO`](docs/GLOSSARIO.md) · [`ANTI-PATTERNS`](docs/ANTI-PATTERNS.md) · [`areas/`](docs/areas/) · [`prompts/`](docs/prompts/) · [`TESTES`](docs/TESTES.md) · [`E2E-PARA-IAS`](docs/E2E-PARA-IAS.md)
 
 O `CLAUDE.md` e as regras em `.cursor/rules/` reforçam o `AGENTS.md` (incluindo dicas por área ao editar ficha, estoque ou admin).
 

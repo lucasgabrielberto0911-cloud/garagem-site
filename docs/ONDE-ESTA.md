@@ -11,7 +11,10 @@ Use `rg -n "termo" caminho` (ou o buscador do editor). Tabela de atalhos para ta
 | Home e destaques | `src/app/(catalog)/page.tsx`, `src/lib/vehicles.ts` |
 | JSON-LD / metadata SEO | `src/lib/seo.ts`, `rg JsonLd src` |
 | Sitemap / robots | `src/app/sitemap.ts`, `src/app/robots.ts` |
-| Feed Meta CSV | `src/lib/catalog-feed.ts`, `src/app/api/meta/catalog.csv/` |
+| Feed Meta CSV | `src/lib/catalog-feed.ts`, `src/app/api/meta/catalog.csv/` (ver `areas/api-meta.md`) |
+| Leads / pedido | `src/app/admin/leads/`, `(site)/pedido/`, `src/lib/leads.ts` |
+| Home | `src/app/(catalog)/page.tsx` |
+| CI / Vercel | `.github/workflows/ci.yml`, `vercel.json`, `scripts/vercel-ignore.sh` |
 | URLs de fotos públicas | `src/lib/public-photo-url.ts`, `src/app/fotos/` |
 | Upload / R2 | `src/lib/r2-photos.ts`, `src/app/api/upload/` |
 | SEO metadata / JSON-LD | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts` |

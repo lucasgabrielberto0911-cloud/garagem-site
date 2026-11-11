@@ -1,0 +1,7 @@
+---
+description: Contexto ao editar CI, Vercel e scripts de ops
+globs: .github/**/*,vercel.json,scripts/vercel-ignore.sh,scripts/ci-*.sh,scripts/check-migrations.sh
+alwaysApply: false
+---
+- Leia docs/areas/infra.md e AGENTS.md — gru1, preview sob demanda, sem produção.
+- SQL novo: supabase/migrations + CI migrations job.

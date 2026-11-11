@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Antes de abrir: leia AGENTS.md e confira PRs abertos na mesma área.
+        Antes de abrir: AGENTS.md, docs/README.md, guia da área em docs/areas/. Confira PRs abertos na mesma área.
   - type: dropdown
     id: area
     attributes:

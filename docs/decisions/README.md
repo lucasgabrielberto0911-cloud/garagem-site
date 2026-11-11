@@ -9,5 +9,6 @@ Registro do **porquê** de escolhas que IAs tendem a reverter. Formato: contexto
 | 0003 | CSS do admin separado do site | [0003-css-admin-separado.md](0003-css-admin-separado.md) |
 | 0004 | Meta otimiza AddToCart no WhatsApp | [0004-meta-addtocart-whatsapp.md](0004-meta-addtocart-whatsapp.md) |
 | 0005 | Novas fotos no R2 | [0005-fotos-r2.md](0005-fotos-r2.md) |
+| 0006 | Feed Meta dinâmico + cache CDN | [0006-feed-meta-cdn.md](0006-feed-meta-cdn.md) |
 
 Novas ADRs: arquivo `NNNN-titulo-kebab.md` + linha nesta tabela.

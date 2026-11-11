@@ -62,8 +62,17 @@ npm run test:e2e -- e2e/ficha-v2.spec.ts
 | Você mexeu em… | Rode pelo menos… |
 | --- | --- |
 | `src/lib` com regra de negócio | `npm test` (+ teste novo se couber) |
+| Home | `public-journeys` ou `lote-site` |
 | Ficha pública | specs `ficha-*` / `seo-fichas` |
 | Estoque / cards | `estoque-*` ou `public-journeys` |
+| SEO global | `seo.test.ts`, `seo-fichas` |
+| Feed Meta | `catalog-feed*.test.ts` |
 | Admin veículo | `admin-veiculo-*` |
+| Vendas / promissória | `admin-vendas-*` |
+| Leads / pedido | `admin-leads-fluxo`, `pedido-compacto` |
+| Compra (admin) | `admin-compra` |
 | Chat | `chat-*.test.ts` + um e2e chat |
+| Links / institucional | `links.spec.ts` |
 | CSS global site | build + e2e de jornada (LCP indireto) |
+
+Setup Playwright: [`E2E-PARA-IAS.md`](E2E-PARA-IAS.md).

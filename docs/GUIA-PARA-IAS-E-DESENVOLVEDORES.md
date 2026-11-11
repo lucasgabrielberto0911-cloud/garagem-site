@@ -42,8 +42,11 @@ O site não é um vitrine estática: há **estoque com cache**, **ficha com SEO/
 | **[`GLOSSARIO.md`](GLOSSARIO.md)** | Termos de negócio e técnicos do repo |
 | **[`ANTI-PATTERNS.md`](ANTI-PATTERNS.md)** | Erros típicos de IA (revisar antes do push) |
 | **[`ONDE-ESTA.md`](ONDE-ESTA.md)** | Atalho “onde acho X no código?” |
-| **[`areas/README.md`](areas/README.md)** | Guias por área (ficha, estoque, admin, chat, fotos) |
-| **[`TESTES.md`](TESTES.md)** | Qual teste/e2e rodar após cada tipo de mudança |
+| **[`docs/README.md`](README.md)** | Índice mestre de toda documentação |
+| **[`areas/README.md`](areas/README.md)** | Guias por área (home, estoque, ficha, seo, chat, meta, admin, infra…) |
+| **[`TESTES.md`](TESTES.md)** | Qual teste unitário rodar |
+| **[`E2E-PARA-IAS.md`](E2E-PARA-IAS.md)** | Playwright: setup e specs por mudança |
+| **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)** | Contribuição humana + agentes |
 | **[`prompts/README.md`](prompts/README.md)** | Textos prontos para Cursor, Claude, ChatGPT, Codex |
 | **[`decisions/README.md`](decisions/README.md)** | ADRs — por que a arquitetura é assim |
 | **[`runbooks/README.md`](runbooks/README.md)** | Preview Vercel, migrations, Meta catalog |
@@ -173,17 +176,21 @@ Centenas de outros arquivos (`chat-*`, `admin-*`, compra, vendas…) seguem o me
 
 Antes de começar uma tarefa, confira PRs abertos (`gh pr list`). **Não trabalhe na mesma área que outro PR em andamento.**
 
-| Área | Pastas / rotas típicas | Cuidados |
+| Área | Guia | Cuidados |
 | --- | --- | --- |
-| `home` | `(catalog)/page.tsx`, componentes home | LCP, primeira leva de veículos no HTML |
-| `estoque` | `(catalog)/estoque`, filtros, busca | Mobile 2 colunas; chips discretos |
-| `ficha` | `(vehicle)/estoque/[id]` | Vendido, JSON-LD, WhatsApp + pixel |
-| `admin` | `app/admin`, `components/admin` | CSS separado; Server Actions |
-| `admin` (vendas) | `admin/vendas`, promissórias, clientes | Guia `areas/admin-vendas.md`; `revalidatePublicStock` ao vender |
-| `chat` | `api/chat`, `lib/chat-*` | Não vazar cidade do veículo; sem preço vendido |
-| `seo` | `sitemap.ts`, `robots.ts`, `seo.ts` | Guia `areas/seo.md`; canonical por slug |
-| `api/meta` | `api/meta/catalog.csv` | `vehicle_id` = CUID = `content_ids` |
-| `infra` | `vercel.json`, workflows, migrations | Região `gru1`; não force-dynamic sem motivo |
+| `home` | [`areas/home.md`](areas/home.md) | LCP, HTML inicial, wordmark |
+| `estoque` | [`areas/estoque.md`](areas/estoque.md) | 2 colunas mobile; chips discretos |
+| `ficha` | [`areas/ficha.md`](areas/ficha.md) | Vendido, JSON-LD, WhatsApp + pixel |
+| `seo` | [`areas/seo.md`](areas/seo.md) | Sitemap 200, canonical, regional vs cidade do carro |
+| `chat` | [`areas/chat.md`](areas/chat.md) | Sem cidade do veículo; sem preço vendido |
+| `api/meta` | [`areas/api-meta.md`](areas/api-meta.md) | Feed CSV, CUID, AddToCart |
+| institucional | [`areas/site-institucional.md`](areas/site-institucional.md) | vender, pedido, links, guias |
+| `admin` | [`areas/admin-veiculos.md`](areas/admin-veiculos.md) | CSS admin; fotos; `revalidatePublicStock` |
+| vendas | [`areas/admin-vendas.md`](areas/admin-vendas.md) | Venda → vendido público sem preço |
+| leads | [`areas/admin-leads.md`](areas/admin-leads.md) | Privacidade; sem automação de disparo |
+| compra | [`areas/admin-compra.md`](areas/admin-compra.md) | Fluxo privado até publicar |
+| fotos | [`areas/fotos.md`](areas/fotos.md) | R2, egress, ops.md |
+| `infra` | [`areas/infra.md`](areas/infra.md) | `gru1`, CI, migrations, preview |
 
 ---
 

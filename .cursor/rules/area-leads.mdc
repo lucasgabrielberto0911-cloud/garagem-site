@@ -1,0 +1,7 @@
+---
+description: Contexto ao editar leads e pedidos
+globs: src/app/admin/leads/**/*,src/app/admin/agenda/**/*,src/app/(site)/pedido/**/*,src/lib/leads.ts,src/lib/lead-funnel.ts
+alwaysApply: false
+---
+- Leia docs/areas/admin-leads.md — dados privados, expireAdminData, sem spam automático.
+- e2e: admin-leads-fluxo.spec.ts, pedido-compacto.spec.ts.
