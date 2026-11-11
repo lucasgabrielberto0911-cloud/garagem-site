@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentação para IAs
+    url: https://github.com/lucasgabrielberto0911-cloud/garagem-site/blob/main/docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md
+    about: Guia de arquitetura e limites antes de pedir mudança

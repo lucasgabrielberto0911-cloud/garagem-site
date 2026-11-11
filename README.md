@@ -10,9 +10,11 @@ Produção: <https://www.suagaragem.net>.
 Se você usa **várias IAs** (Cursor, Claude, Codex, ChatGPT, etc.) no mesmo repositório:
 
 1. **[`AGENTS.md`](AGENTS.md)** — regras obrigatórias (cache, marca, produção, PRs, fotos).
-2. **[`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md)** — como o código funciona, mapa de pastas, o que pode e não pode mudar, padrões e checklist.
+2. **[`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md)** — mapa do repositório e checklist.
 
-O `CLAUDE.md` e as regras em `.cursor/rules/` apenas apontam para o `AGENTS.md`.
+Atalhos úteis: [`docs/GLOSSARIO.md`](docs/GLOSSARIO.md) · [`docs/ANTI-PATTERNS.md`](docs/ANTI-PATTERNS.md) · [`docs/areas/`](docs/areas/) · [`docs/prompts/`](docs/prompts/) · [`docs/TESTES.md`](docs/TESTES.md) · [`docs/pesquisas/INDICE.md`](docs/pesquisas/INDICE.md)
+
+O `CLAUDE.md` e as regras em `.cursor/rules/` reforçam o `AGENTS.md` (incluindo dicas por área ao editar ficha, estoque ou admin).
 
 ## Stack
 

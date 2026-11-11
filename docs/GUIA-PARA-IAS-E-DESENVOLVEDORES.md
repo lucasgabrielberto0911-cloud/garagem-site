@@ -39,12 +39,24 @@ O site não é um vitrine estática: há **estoque com cache**, **ficha com SEO/
 | --- | --- |
 | **[`AGENTS.md`](../AGENTS.md)** | Sempre, antes de codar ou abrir PR |
 | **Este guia** | Arquitetura, pastas, padrões, o que mexer / não mexer |
+| **[`GLOSSARIO.md`](GLOSSARIO.md)** | Termos de negócio e técnicos do repo |
+| **[`ANTI-PATTERNS.md`](ANTI-PATTERNS.md)** | Erros típicos de IA (revisar antes do push) |
+| **[`ONDE-ESTA.md`](ONDE-ESTA.md)** | Atalho “onde acho X no código?” |
+| **[`areas/README.md`](areas/README.md)** | Guias por área (ficha, estoque, admin, chat, fotos) |
+| **[`TESTES.md`](TESTES.md)** | Qual teste/e2e rodar após cada tipo de mudança |
+| **[`prompts/README.md`](prompts/README.md)** | Textos prontos para Cursor, Claude, ChatGPT, Codex |
+| **[`decisions/README.md`](decisions/README.md)** | ADRs — por que a arquitetura é assim |
+| **[`runbooks/README.md`](runbooks/README.md)** | Preview Vercel, migrations, Meta catalog |
+| **[`CHANGELOG-AGENTES.md`](CHANGELOG-AGENTES.md)** | Mudanças de processo para bots |
 | **[`README.md`](../README.md)** | Setup local, comandos rápidos, regras resumidas |
 | **[`docs/ops.md`](ops.md)** | Vercel, Meta, imagens, deploys, performance |
 | **[`supabase/README.md`](../supabase/README.md)** | Migrations SQL (única pasta oficial) |
 | **[`e2e/README.md`](../e2e/README.md)** | Percursos Playwright |
+| **[`pesquisas/INDICE.md`](pesquisas/INDICE.md)** | Índice dos relatórios Codex |
 | **`docs/pesquisas/`** | Relatórios do Codex (diagnóstico; Codex **não** altera código) |
 | **`docs/admin/implementacao.md`** | Contexto histórico do painel (referência) |
+| **`.github/pull_request_template.md`** | Checklist ao abrir PR |
+| **`.github/ISSUE_TEMPLATE/`** | Issues com área e agente |
 
 Se uma IA sugerir algo que contradiz `AGENTS.md` ou este guia, **a documentação do repo vence**.
 

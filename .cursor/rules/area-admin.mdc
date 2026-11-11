@@ -1,0 +1,7 @@
+---
+description: Contexto ao editar painel administrativo
+globs: src/app/admin/**/*,src/components/admin/**/*
+alwaysApply: false
+---
+- Leia docs/areas/admin-veiculos.md — admin.css separado; revalidatePublicStock após mudança pública.
+- Não rodar scripts nem db push em produção.

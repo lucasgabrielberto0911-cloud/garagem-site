@@ -1,0 +1,7 @@
+---
+description: Contexto ao editar home/estoque do catálogo
+globs: src/app/(catalog)/**/*
+alwaysApply: false
+---
+- Leia docs/areas/estoque.md — chips pequenos, 2 colunas no mobile, HTML inicial.
+- Não expor cidade do veículo nos filtros/API pública.
