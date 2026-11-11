@@ -52,7 +52,7 @@ test("página de cidades só lista botões para as páginas que já existem", ()
   }
   assert.doesNotMatch(html, /Todas as cidades/);
 
-  const buttonClasses = [...html.matchAll(/class="([^"]*min-h-28[^"]*)"/g)].map(
+  const buttonClasses = [...html.matchAll(/class="([^"]*min-h-16[^"]*)"/g)].map(
     (match) => match[1],
   );
   assert.equal(buttonClasses.length, SERVICE_CITIES.length);
