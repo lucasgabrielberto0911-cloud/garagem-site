@@ -121,9 +121,9 @@ export default async function HomePage() {
               </ul>
             </div>
 
-            {/* Grade única: celular = WhatsApp / [Ver estoque | Assistente] / sugestões;
-                tablet = empilhado; computador = [WhatsApp | Ver estoque] / Assistente / caixinha,
-                alinhada ao topo do logo e com a altura do hero de antes. */}
+            {/* Grade única: celular = [WhatsApp] / [Ver estoque] (o assistente fica só do
+                tablet em diante); tablet = empilhado; computador = [WhatsApp | Ver estoque] /
+                Assistente / caixinha, alinhada ao topo do logo e com a altura do hero de antes. */}
             <div className="hero-cta grid w-full shrink-0 grid-cols-2 gap-2 sm:max-w-xs sm:grid-cols-1 sm:gap-2.5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[1fr_1fr_1fr_auto] lg:gap-2 xl:grid-rows-[1fr_1fr_auto] xl:gap-3">
               <WhatsAppButton
                 size="lg"
@@ -133,13 +133,13 @@ export default async function HomePage() {
               >
                 Falar no WhatsApp
               </WhatsAppButton>
-              <ButtonLink href="/estoque" size="lg" className="w-full !px-3 sm:!px-7 lg:col-span-2 lg:!px-3 xl:col-span-1 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap">
+              <ButtonLink href="/estoque" size="lg" className="col-span-2 w-full !px-3 sm:col-span-1 sm:!px-7 lg:col-span-2 lg:!px-3 xl:col-span-1 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap">
                 Ver estoque
               </ButtonLink>
-              <div className="lg:col-span-2">
+              <div className="hidden sm:block lg:col-span-2">
                 <HomeAssistantButton />
               </div>
-              <div className="col-span-2 sm:col-span-1 lg:col-span-2">
+              <div className="hidden sm:block lg:col-span-2">
                 <HomeAssistantAsk />
               </div>
               {/* O telefone já está no header e no WhatsApp; fica só no tablet, como antes. */}
@@ -149,7 +149,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="hero-stats mx-auto mt-4 hidden w-full max-w-2xl sm:mt-8 sm:block lg:col-start-1 lg:row-start-2 lg:mx-0 lg:self-end">
+          <div className="hero-stats mx-auto mt-4 w-full max-w-2xl sm:mt-8 lg:col-start-1 lg:row-start-2 lg:mx-0 lg:self-end">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>
@@ -245,13 +245,7 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="mt-5 w-full max-w-2xl max-sm:order-5 sm:hidden">
-          <Suspense fallback={<StatsBarSkeleton />}>
-            <StatsBar />
-          </Suspense>
-        </div>
-
-        <div className="mt-5 max-sm:order-6">
+        <div className="mt-5 max-sm:order-5">
           <WantedVehicleCta />
         </div>
         </div>

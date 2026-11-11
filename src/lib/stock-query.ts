@@ -270,9 +270,24 @@ export function shouldLoadGallerySlide(index: number, active: number) {
   return Math.abs(index - active) <= 1;
 }
 
+/** Carrocerias oferecidas como atalho em /estoque (moto já é `category=moto`). */
+export const STOCK_BODY_OPTIONS = [
+  { value: "suv", label: "SUV" },
+  { value: "sedan", label: "Sedan" },
+  { value: "hatch", label: "Hatch" },
+  { value: "pickup", label: "Picape" },
+] as const;
+
+export function normalizeStockBody(value?: string | null) {
+  const body = (value ?? "").trim().toLowerCase();
+  return STOCK_BODY_OPTIONS.some((option) => option.value === body) ? body : undefined;
+}
+
 export type StockFilters = {
   q?: string;
   category?: string;
+  /** Carroceria (suv, sedan, hatch, pickup), inferida do modelo. Só vale para carros. */
+  body?: string;
   brand?: string;
   /** Modelo do anúncio — o campo `model`, não a versão. */
   model?: string;
@@ -297,6 +312,7 @@ export type StockFilters = {
 export const STOCK_FILTER_KEYS = [
   "q",
   "category",
+  "body",
   "brand",
   "model",
   "transmission",
@@ -419,6 +435,8 @@ export function sanitizeFiltersForCategory<
   models?: readonly StockModelOption[],
 ): T {
   const updated: T = { ...current, category: nextCategory };
+  // Carroceria só existe para carros.
+  if (nextCategory === "moto" && "body" in updated) (updated as { body?: string }).body = "";
   if (!isVehicleCategory(nextCategory)) return updated;
 
   const allowedFuels = new Set(
@@ -587,6 +605,7 @@ export function parseStockFilters(
   return {
     q: pickParam(input, "q"),
     category: pickParam(input, "category"),
+    body: normalizeStockBody(pickParam(input, "body")),
     brand: pickParam(input, "brand"),
     model: pickParam(input, "model"),
     transmission: pickParam(input, "transmission"),

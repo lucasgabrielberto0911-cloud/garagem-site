@@ -22,6 +22,7 @@ export function FavoriteButton({
   variant = "icon",
   size = "md",
   appearance = "ghost",
+  showLabel = false,
   className = "",
 }: {
   vehicleId: string;
@@ -35,6 +36,8 @@ export function FavoriteButton({
   size?: "sm" | "md";
   /** `ghost`: ícone pequeno, alvo de 44px, sem caixa — para o card do estoque. */
   appearance?: "chip" | "ghost";
+  /** Mostra o texto "Salvar"/"Salvo" ao lado do coração, no card do estoque. */
+  showLabel?: boolean;
   className?: string;
 }) {
   const { has, toggle, ready } = useFavorites();
@@ -121,6 +124,30 @@ export function FavoriteButton({
 
   const compact = size === "sm";
   const ghost = appearance === "ghost";
+
+  if (showLabel) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        aria-label={active ? `Remover ${label} dos favoritos` : `Salvar ${label} nos favoritos`}
+        className={`relative z-20 inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-2.5 font-display text-[12px] font-semibold uppercase tracking-wide backdrop-blur transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand sm:min-h-[44px] sm:px-3 ${
+          active
+            ? "border-brand bg-brand/90 text-cream"
+            : "border-white/25 bg-asphalt/80 text-cream hover:border-brand hover:text-brand-light"
+        } ${className}`}
+      >
+        <Heart
+          filled={active}
+          className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} ${
+            pulse ? "animate-fade-in-scale" : ""
+          }`}
+        />
+        {active ? "Salvo" : "Salvar"}
+      </button>
+    );
+  }
 
   return (
     <button

@@ -130,7 +130,7 @@ export function VehicleCard({
           {card.priceLabel ? <p className="listing-card-price font-display text-brand-light">{card.priceLabel}</p> : null}
         </div>
       </StockVehicleLink>
-      <div className="vehicle-card-favorite">
+      <div className="vehicle-card-favorite vehicle-card-favorite--label">
         <FavoriteButton
           vehicleId={vehicle.id}
           label={display.titleWithYear}
@@ -141,6 +141,7 @@ export function VehicleCard({
           snapshot={favoriteSnapshot}
           appearance="ghost"
           size="sm"
+          showLabel
         />
       </div>
       {hideInterest ? null : (

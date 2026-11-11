@@ -33,7 +33,7 @@ function Stat({
     <div className="px-3 py-2.5 text-center sm:px-4 sm:py-3">
       <dd className="font-display text-xl font-semibold text-cream sm:text-2xl">
         {formatNumberBR(value)}
-        <span className="ml-1.5 align-middle font-body text-[10px] font-medium uppercase tracking-wider text-muted sm:ml-2 sm:text-xs">
+        <span className="ml-1.5 align-middle font-body text-xs font-medium uppercase tracking-wider text-muted sm:ml-2">
           {suffix}
         </span>
       </dd>

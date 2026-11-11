@@ -10,6 +10,7 @@ import {
   modelAfterBrandChange,
   modelFilterOptions,
   sanitizeFiltersForCategory,
+  STOCK_BODY_OPTIONS,
   type StockModelOption,
 } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
@@ -38,6 +39,7 @@ export type Facets = {
 export type FilterValues = {
   q: string;
   category: string;
+  body: string;
   brand: string;
   model: string;
   transmission: string;
@@ -86,6 +88,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const current: FilterValues = {
     q: params.get("q") ?? "",
     category: params.get("category") ?? "",
+    body: params.get("body") ?? "",
     brand: params.get("brand") ?? "",
     model: params.get("model") ?? "",
     transmission: params.get("transmission") ?? "",
@@ -190,6 +193,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
     activeFilters.push({
       key: "category",
       label: `Tipo: ${vehicleCategoryLabel(current.category)}`,
+    });
+  }
+  if (current.body) {
+    activeFilters.push({
+      key: "body",
+      label: `Carroceria: ${STOCK_BODY_OPTIONS.find((option) => option.value === current.body)?.label ?? current.body}`,
     });
   }
   if (current.brand) {
@@ -316,6 +325,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     navigate({
       q: "",
       category: "",
+      body: "",
       brand: "",
       model: "",
       transmission: "",
@@ -364,6 +374,17 @@ export function StockFilters({ facets }: { facets: Facets }) {
           ),
         ),
     },
+    ...STOCK_BODY_OPTIONS.map((option) => ({
+      key: `body-${option.value}`,
+      label: option.label,
+      active: current.body === option.value,
+      onClick: () =>
+        navigate({
+          ...current,
+          category: option.value === current.body ? current.category : "carro",
+          body: current.body === option.value ? "" : option.value,
+        }),
+    })),
     {
       key: "automatico",
       label: "Automático",
