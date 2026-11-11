@@ -540,7 +540,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 .listing-card-badges span {
   padding: 0.2rem 0.4rem;
   border-radius: 0.2rem;
-  font-size: 0.55rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -549,8 +549,8 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 .listing-card-brand {
   margin: 0 0 0.2rem;
   color: #c1c1c8;
-  font-size: 0.6rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -563,7 +563,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 .listing-card-version {
   padding: 0 0.625rem 0.625rem;
   color: #d1d1d7;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 .listing-card-version p { margin: 0; }
@@ -587,7 +587,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   padding: 0.3rem 0.35rem;
   border-radius: 0.25rem;
   background: rgba(255, 255, 255, 0.055);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -612,12 +612,15 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   min-height: 44px;
   padding: 0.625rem 0.375rem;
   line-height: 1.4;
-  border-top-color: rgba(37, 211, 102, 0.18);
-  background: #14231b;
-  font-size: 0.625rem;
-  letter-spacing: 0.02em;
+  border-top-color: rgba(37, 211, 102, 0.35);
+  background: #25d366;
+  color: #0d0d0f;
+  font-size: 0.875rem;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
 }
-.listing-card .listing-card-interest a:hover { background: #1a3424; }
+.listing-card .listing-card-interest a:hover { background: #1fbe5a; }
 
 /* No celular, ajuda fica no cabeçalho e deixa as duas margens dos cards livres. */
 .mobile-header-help { display: none; }
@@ -989,12 +992,12 @@ body:has([data-ficha-page]) .whatsapp-float {
 .stock-chip-label {
   display: flex;
   align-items: center;
-  flex: 0 0 2.875rem;
+  flex: 0 0 3.5rem;
   height: 2.75rem;
   margin: 0;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1042,9 +1045,9 @@ body:has([data-ficha-page]) .whatsapp-float {
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: #17171a;
   font-family: var(--font-display), sans-serif;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   line-height: 1;
   text-transform: uppercase;
   color: #f7f5f2;
@@ -1536,6 +1539,15 @@ textarea:-webkit-autofill:focus {
   border-radius: 999px;
   background: rgba(13, 13, 15, 0.55);
   pointer-events: none;
+}
+
+.vehicle-card-favorite--label {
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+.vehicle-card-favorite--label button::before {
+  display: none;
 }
 
 .vehicle-card-favorite svg {

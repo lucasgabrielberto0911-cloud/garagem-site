@@ -20,7 +20,8 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.match(hero, /Falar no WhatsApp/);
   assert.match(hero, /<ButtonLink href="\/estoque" size="lg"/);
   assert.match(hero, /hero-cta grid w-full shrink-0 grid-cols-2/);
-  // Celular: "Ver estoque" e o assistente dividem a linha para os cards ficarem na 1ª dobra.
+  // Celular: só WhatsApp e "Ver estoque"; o assistente aparece do tablet em diante.
+  assert.match(hero, /hidden sm:block lg:col-span-2">\s*<HomeAssistantButton/);
   assert.match(hero, /<HomeAssistantButton \/>/);
   assert.match(hero, /<HomeAssistantAsk \/>/);
   assert.doesNotMatch(hero, /hero-brand hidden/);
@@ -37,11 +38,12 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.ok(chat > page.indexOf('id="destaques"'));
   assert.match(page.slice(chat, chat + 220), /variant="outline"/);
   assert.match(page.slice(chat, chat + 220), /source="home-final"/);
-  assert.match(hero, /hidden w-full max-w-2xl sm:mt-8 sm:block/);
+  // Números da loja logo abaixo das ações, também no celular.
+  assert.match(hero, /hero-stats mx-auto mt-4 w-full max-w-2xl sm:mt-8/);
+  assert.doesNotMatch(hero, /hero-stats[^"]*\bhidden\b/);
   assert.doesNotMatch(readSrc("components/site/HeroSearch.tsx"), /pb-16/);
   const afterStock = page.slice(page.indexOf("Ver todos os veículos"));
-  assert.match(afterStock, /sm:hidden/);
-  assert.match(afterStock, /<StatsBar/);
+  assert.doesNotMatch(afterStock, /<StatsBar/);
   assert.match(hero, /Seminovos com procedência para todo o norte do ES\./);
   assert.doesNotMatch(hero, /publicSite\.region/);
   assert.match(page, /\(27\) 99633-0706|whatsappLabel/);

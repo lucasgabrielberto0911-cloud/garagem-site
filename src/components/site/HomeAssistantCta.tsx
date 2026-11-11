@@ -15,8 +15,8 @@ function openAssistant(source: Source, prompt?: string) {
 }
 
 /**
- * Botão do assistente no hero. No celular divide a linha com "Ver estoque"
- * para os cards do estoque continuarem na primeira dobra (LCP = foto do carro).
+ * Botão do assistente no hero (do tablet em diante: no celular o topo fica só com
+ * WhatsApp e "Ver estoque", e o assistente segue no botão Ajuda do cabeçalho).
  * O chat continua preguiçoso (DeferredSiteChat): só baixa no clique.
  */
 export function HomeAssistantButton() {
