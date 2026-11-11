@@ -15,11 +15,12 @@ Escreva código, comentários de PR e textos do site em **português do Brasil**
 ```bash
 npm ci
 npx prisma generate
-npm test          # tsx --test src/lib/*.test.ts
-npm run lint
-npm run build     # prisma generate && next build
-npm run test:e2e  # Playwright (precisa do banco local com seed: npm run e2e:seed)
+npm run check       # test + lint + scripts/check-footguns.sh + tsc (job unit do CI)
+npm run build       # prisma generate && next build (ou npm run check:build)
+npm run test:e2e    # Playwright (precisa do banco local com seed: npm run e2e:seed)
 ```
+
+Atalhos: `npm run test:one -- src/lib/arquivo.test.ts` · `npm run test:e2e:one -- e2e/arquivo.spec.ts`
 O PR só sai de rascunho com `test`, `lint` e `build` passando. Mexeu em tela pública? Rode ou ajuste o e2e correspondente.
 
 ### Economia de tokens (vale para todos os agentes)

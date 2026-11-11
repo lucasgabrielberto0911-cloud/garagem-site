@@ -24,10 +24,11 @@
 ## Testes locais antes de PR infra
 
 ```bash
-npm test && npm run lint && npm run build
-# Se mexeu em SQL:
-# scripts do job migrations (ver ci.yml)
+npm run check        # ou check:build se mexeu no Next
+bash scripts/check-footguns.sh
 ```
+
+PR **só com docs/markdown**: o CI pula e2e e migrations (`job changes` em `ci.yml`). Push na `main` continua rodando tudo.
 
 ## Erros comuns de IA
 

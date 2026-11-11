@@ -86,6 +86,9 @@ export async function revalidatePublicStockMany(ids: string[]) {
  * Limpeza que altera o HTML de muitas fichas sem uma lista fechada de slugs
  * (miniaturas em lote). Aí a invalidação de página é necessária: slug a slug
  * não alcança fichas que o lote não enumerou.
+ *
+ * Único ponto do repo que pode chamar `revalidatePath("/estoque/[id]", "page")`
+ * (ver scripts/check-footguns.sh e ADR 0001).
  */
 export function revalidateAllPublicFichas() {
   revalidateSharedPublicStock("server-action", false);
