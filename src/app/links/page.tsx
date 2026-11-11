@@ -25,7 +25,7 @@ export default async function LinksPage() {
         <Link
           href="/"
           aria-label={`${site.name} — ir para o início do site`}
-          className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-4 focus-visible:ring-offset-asphalt"
+          className="inline-flex min-h-12 items-center justify-center rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-4 focus-visible:ring-offset-asphalt"
         >
           <SiteWordmark size="hero" priority />
         </Link>
