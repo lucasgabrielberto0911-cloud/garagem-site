@@ -20,7 +20,7 @@ function conditionText(item: ConditionItem, warranty: string | null) {
 }
 
 /**
- * Garantia compacta da coluna esquerda (desktop). Usa os mesmos dados do painel
+ * Garantia compacta da coluna direita (desktop). Usa os mesmos dados do painel
  * que o bloco mobile (`VehicleMobileDossier`): título, itens editados e itens ocultados.
  */
 export function VehicleConditions({

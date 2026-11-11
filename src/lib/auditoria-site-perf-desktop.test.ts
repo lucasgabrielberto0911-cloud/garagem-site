@@ -286,7 +286,7 @@ test("Auditoria Site #10, #11, #12, #13 e Fluxo Melhoria #4: galeria, foco em se
   assert.match(gallerySrc, /!root\.contains\(activeEl\)/);
   assert.match(gallerySrc, /new ResizeObserver\(realign\)/);
 
-  const navSrc = readSrc("components/site/FichaSectionNav.tsx");
+  const navSrc = readSrc("components/site/FichaSectionAnchors.tsx");
   assert.match(navSrc, /focusSectionTarget/);
 
   const zoomSrc = readSrc("components/site/ZoomDetailImage.tsx");
@@ -316,7 +316,7 @@ test("Auditoria Site #10, #11, #12, #13 e Fluxo Melhoria #4: galeria, foco em se
 test("Auditoria Técnica #06, #07 e #08: GALLERY_HERO_SIZES 100vw no mobile, wordmark 180w e flush offline em idle", () => {
   assert.equal(
     GALLERY_HERO_SIZES,
-    "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), 100vw",
+    "(min-width: 1440px) 704px, (min-width: 1024px) calc((100vw - 96px) * 0.524), 100vw",
   );
   assert.match(WORDMARK_SRC_SET, /\/branding\/logo-wordmark-180\.webp 180w/);
   assert.equal(existsSync(join(root, "public/branding/logo-wordmark-180.webp")), true);

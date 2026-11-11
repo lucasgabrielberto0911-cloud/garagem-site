@@ -127,19 +127,30 @@ export function buildVehiclePublicSpecs(
 
 export type VehicleKeyFact = { label: string; value: string };
 
+function filledSpecValue(specs: VehicleSpecRow[], label: string) {
+  const row = specs.find((item) => item.label === label);
+  return row && !row.empty && row.value.trim() ? row.value : null;
+}
+
 /**
- * Os três quadradinhos do topo da ficha, junto do nome e do preço:
- * cor, ano e km. Campo vazio não vira quadradinho ("Não informada" no topo
- * só polui). A ficha técnica completa continua na seção de especificações.
+ * Os quadradinhos do topo da ficha, junto do nome e do preço: ano, km, câmbio
+ * e combustível. Sem câmbio (comum em moto), entra o motor, se houver. Campo
+ * vazio não vira quadradinho ("Não informada" no topo só polui).
  */
 export function vehicleKeyFacts(specs: VehicleSpecRow[]): VehicleKeyFact[] {
-  const pick = [
-    { from: "Cor", label: "Cor" },
-    { from: "Ano", label: "Ano" },
-    { from: "km", label: "KM" },
+  const transmission = filledSpecValue(specs, "Câmbio");
+  const facts = [
+    { label: "Ano", value: filledSpecValue(specs, "Ano") },
+    { label: "KM", value: filledSpecValue(specs, "km") },
+    transmission
+      ? { label: "Câmbio", value: transmission }
+      : { label: "Motor", value: filledSpecValue(specs, "Motor") },
+    { label: "Combustível", value: filledSpecValue(specs, "Combustível") },
   ];
-  return pick.flatMap(({ from, label }) => {
-    const row = specs.find((item) => item.label === from);
-    return row && !row.empty && row.value.trim() ? [{ label, value: row.value }] : [];
-  });
+  return facts.filter((fact): fact is VehicleKeyFact => fact.value !== null);
+}
+
+/** Cor do topo da ficha, em linha própria: nome longo não estica os quadradinhos. */
+export function vehicleColorFact(specs: VehicleSpecRow[]) {
+  return filledSpecValue(specs, "Cor");
 }

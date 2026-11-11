@@ -11,11 +11,12 @@ import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge
 import { VehicleMobileBlocks, VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
+import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import { FavoritesProvider } from "@/lib/favorites";
 import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
 import { DEFAULT_VEHICLE_CONDITIONS } from "@/lib/vehicle-conditions";
-import { buildVehiclePublicSpecs, vehicleKeyFacts, type VehicleSpecRow } from "@/lib/vehicle-specs";
+import { buildVehiclePublicSpecs, vehicleColorFact, vehicleKeyFacts, type VehicleSpecRow } from "@/lib/vehicle-specs";
 import { focusFichaSection } from "@/lib/ficha-sections";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,7 +37,10 @@ test("CTAs da ficha passam pelo helper ficha — não reutilizam home", () => {
 
   assert.match(bar, /fichaWhatsAppTracking/);
   assert.match(bar, /Chamar no WhatsApp/);
-  assert.doesNotMatch(bar, /Agendar visita|Financiamento, troca ou vídeo|formatCurrencyBRL/);
+  assert.doesNotMatch(bar, /Agendar visita|Financiamento, troca ou vídeo/);
+  // Preço na barra só no ramo à venda: vendido sai antes, sem valor.
+  assert.ok(bar.indexOf("{sold ?") < bar.indexOf("formatCurrencyBRL(price)"));
+  assert.ok(bar.indexOf("{soldLabel}") < bar.indexOf("formatCurrencyBRL(price)"));
   assert.doesNotMatch(bar, /IntersectionObserver/);
   assert.doesNotMatch(bar, /translate-y-full/);
   assert.doesNotMatch(bar, /campaign:\s*"home"/);
@@ -121,24 +125,29 @@ test("primeira foto da galeria é a única com prioridade alta", () => {
   assert.match(gallery, /GALLERY_HERO_SIZES/);
   assert.match(
     readSrc("lib/stock-query.ts"),
-    /GALLERY_HERO_SIZES =\s*\n\s*"\(min-width: 1280px\) 710px, \(min-width: 1024px\) calc\(\(100vw - 96px\) \* 0\.6\), 100vw"/,
+    /GALLERY_HERO_SIZES =\s*\n\s*"\(min-width: 1440px\) 704px, \(min-width: 1024px\) calc\(\(100vw - 96px\) \* 0\.524\), 100vw"/,
   );
   assert.match(gallery, /sizes="96px"/);
   assert.match(header, /headerWordmarkPriority\(pathname\)/);
   assert.doesNotMatch(gallery, /downloadAttachment/);
 });
 
-test("dobra da ficha não cresce quando a barra do navegador volta", () => {
+test("dobra da ficha tem foto 4:3 fixa e não cresce quando a barra do navegador volta", () => {
   const css = readSrc("app/globals.css");
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
+  const gallery = readSrc("components/site/VehicleGallery.tsx");
   const start = css.indexOf(".ficha-mobile-fold {");
-  const fold = css.slice(start, start + 500);
-  assert.match(fold, /100svh/);
-  assert.match(fold, /--ficha-sticky-bar/);
+  const fold = css.slice(start, css.indexOf("}", start));
   assert.match(fold, /overflow-anchor:\s*none/);
-  assert.doesNotMatch(fold, /100dvh/);
+  assert.doesNotMatch(fold, /min-height|100dvh/);
   assert.match(page, /ficha-mobile-fold min-w-0/);
+  assert.match(page, /lg:grid-cols-\[1\.1fr_1fr\]/);
   assert.doesNotMatch(page, /lg:contents/);
+  assert.match(gallery, /gallery-frame relative aspect-\[4\/3\]/);
+  assert.doesNotMatch(gallery, /aspect-\[16\/10\]/);
+  // Faixa de miniaturas com altura reservada antes do JS; botão claro para abrir as fotos.
+  assert.match(gallery, /hidden h-\[4\.25rem\] lg:block/);
+  assert.match(gallery, /Ver as \$\{total\} fotos/);
 });
 
 test("blocos da ficha mobile ficam sempre abertos; só o saiba mais de vistoria e garantia fecha", () => {
@@ -151,7 +160,7 @@ test("blocos da ficha mobile ficam sempre abertos; só o saiba mais de vistoria 
   assert.match(dossier, /verified\.length > 0 \?\s*\(\s*<DossierBlock/);
   assert.ok(dossier.indexOf("verifiedHeading ??") < dossier.indexOf('title="Sobre o veículo"'));
   assert.match(dossier, /publicStoreInspectionText/);
-  assert.match(dossier, /VehicleTrustStrip/);
+  assert.match(dossier, /<VehicleTrustNotes warranty=\{warranty\} compact/);
   assert.doesNotMatch(dossier, /Não é documento oficial/);
   assert.doesNotMatch(conditions, /Não é documento oficial/);
   assert.match(conditions, /óleo/);
@@ -174,7 +183,6 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
-        address: site.address,
         hours: site.hours,
         fullLabel: "Honda HR-V",
         path: "/estoque/hrv",
@@ -217,16 +225,15 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
   );
   const titles = [...html.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)].map((match) => match[1]);
   assert.deepEqual(titles, [
-    "Sobre o veículo",
-    "Itens e acessórios",
     "Ficha técnica",
     "Próximos passos",
-    "Onde estamos",
+    "Sobre o veículo",
+    "Itens e acessórios",
+    "Atendimento",
   ]);
-  // Garantia, vistoria e cidade visíveis sem clicar.
-  assert.match(html, /data-trust-strip/);
-  assert.match(html, /Garantia de 3 meses/);
-  assert.match(html, /Linhares\/ES/);
+  assert.match(html, /Loja digital em Linhares\/ES/);
+  assert.match(html, /hora marcada pelo WhatsApp/);
+  assert.doesNotMatch(html, /Onde estamos|Nossa loja|visite nossa loja/i);
   const details = [...html.matchAll(/<details([^>]*)>/g)];
   assert.equal(details.length, 1);
   assert.doesNotMatch(details[0]?.[1] ?? "", /\sopen=""/);
@@ -265,8 +272,8 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
 
   // Nada de parcela nem simulador.
   const steps = section("Próximos passos");
-  assert.match(steps, /Financiamento/);
-  assert.match(steps, /Troca/);
+  assert.match(steps, /Perguntar sobre financiamento/);
+  assert.match(steps, /Tenho um usado para trocar/);
   assert.match(steps, /Pedir vídeo/);
   assert.doesNotMatch(html, /parcela|simulador|simular/i);
   assert.doesNotMatch(html, /Chave reserva/);
@@ -303,7 +310,7 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.match(page, /VehicleInspectionBadge/);
   assert.match(page, /Falar no WhatsApp/);
   assert.match(page, /Abre o WhatsApp com este anúncio — modelo, ano e preço\./);
-  assert.match(dossier, /VehicleTrustStrip/);
+  assert.match(dossier, /VehicleTrustNotes/);
 
   // Hierarquia de anúncio: o WhatsApp principal vem antes da faixa de confiança.
   const trustAt = page.indexOf("<VehicleTrustNotes");
@@ -315,7 +322,6 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
-        address: site.address,
         hours: site.hours,
         fullLabel: "Renault Sandero",
         path: "/estoque/sandero",
@@ -356,7 +362,7 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.match(accessories, /Direção hidráulica/);
 });
 
-test("dobra do celular mostra cor, ano e KM; final da placa vai para a ficha técnica", () => {
+test("dobra do celular mostra ano, KM, câmbio, combustível e cor; final da placa vai para a ficha técnica", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   assert.match(page, /facts=\{keyFacts\}/);
   assert.match(page, /vehicleKeyFacts\(specs\)/);
@@ -375,20 +381,23 @@ test("dobra do celular mostra cor, ano e KM; final da placa vai para a ficha té
   const props = { title: "Fiat Uno", price: 29900, sold: false, city: "Serra" };
   const withPlate = specsFor("  7  ", "Branco");
   const summary = renderToStaticMarkup(
-    createElement(VehicleMobileSummary, { ...props, facts: vehicleKeyFacts(withPlate) }),
+    createElement(VehicleMobileSummary, {
+      ...props,
+      facts: vehicleKeyFacts(withPlate),
+      color: vehicleColorFact(withPlate),
+    }),
   );
   assert.deepEqual(
     [...summary.matchAll(/<dt[^>]*>([^<]+)<\/dt>/g)].map((match) => match[1]),
-    ["Cor", "Ano", "KM"],
+    ["Ano", "KM", "Câmbio", "Combustível", "Cor"],
   );
   assert.match(summary, />Branco</);
   assert.match(summary, />2012\/<wbr\/>2013</);
   assert.match(summary, />98\.000</);
-  assert.doesNotMatch(summary, /Final da placa|Câmbio|Serra|Cidade/);
+  assert.doesNotMatch(summary, /Final da placa|Serra|Cidade/);
 
   // Sem cor cadastrada, nada de "Não informada" no topo.
-  const noColor = vehicleKeyFacts(specsFor(null, null));
-  assert.deepEqual(noColor.map((fact) => fact.label), ["Ano", "KM"]);
+  assert.equal(vehicleColorFact(specsFor(null, null)), null);
 
   const blocks = (specs: VehicleSpecRow[]) =>
     renderToStaticMarkup(
@@ -396,7 +405,6 @@ test("dobra do celular mostra cor, ano e KM; final da placa vai para a ficha té
         FavoritesProvider,
         null,
         createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
-          address: site.address,
           hours: site.hours,
           fullLabel: "Fiat Uno",
           path: "/estoque/uno",
@@ -577,7 +585,6 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
-        address: site.address,
         hours: site.hours,
         fullLabel: "Chevrolet Onix Premier",
         path: "/estoque/onix",
@@ -672,9 +679,14 @@ test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna prin
   assert.ok(aside.indexOf("ficha-price") < aside.indexOf("<VehicleKeyFacts"));
   assert.ok(aside.indexOf("<VehicleKeyFacts") < aside.indexOf("Falar no WhatsApp"));
 
-  // Um botão principal de WhatsApp; financiamento/troca/vídeo/visita recolhidos.
-  assert.equal((aside.match(/<WhatsAppButton/g) ?? []).length, 2); // vendido + à venda
-  assert.match(aside, /<details data-ficha-more-actions/);
+  // WhatsApp principal, segundo botão no fim da coluna; financiamento/troca/vídeo/visita à vista.
+  assert.equal((aside.match(/<WhatsAppButton/g) ?? []).length, 3); // vendido + à venda + fim da coluna
+  assert.match(aside, /<div data-ficha-more-actions/);
+  assert.doesNotMatch(aside, /<details/);
+  const secondCta = aside.slice(aside.indexOf("data-ficha-second-cta"));
+  assert.match(secondCta, /<VehicleLeadHit/);
+  assert.match(secondCta, /trackingLabel="ficha-coluna"/);
+  assert.ok(aside.indexOf("<VehicleConditions") < aside.indexOf("data-ficha-second-cta"));
   assert.match(aside, /variant="secondary"/);
   assert.match(aside, /variant="ghost"/);
   assert.match(aside, /variant="compact"/);
@@ -695,17 +707,49 @@ test("faixa de confiança do desktop: garantia, vistoria da loja e Linhares/ES",
   assert.doesNotMatch(html, /parcela/i);
 });
 
-test("desktop rola junto: aba e card do anúncio sem sticky e sem coluna com scroll próprio", () => {
+test("galeria com várias fotos: botão com a contagem e faixa de miniaturas reservada no HTML", () => {
+  const photo = (id: string) => ({ id, url: `/fotos/${id}.webp` });
+  const render = (photos: ReturnType<typeof photo>[]) =>
+    renderToStaticMarkup(createElement(VehicleGallery, { photos: photos as never, alt: "Honda CG" }));
+
+  const many = render([photo("a"), photo("b"), photo("c")]);
+  assert.match(many, />Ver as 3 fotos</);
+  assert.match(many, /hidden h-\[4\.25rem\] lg:block/);
+  const one = render([photo("a")]);
+  assert.match(one, />Ampliar foto</);
+  assert.doesNotMatch(one, /h-\[4\.25rem\]/);
+});
+
+test("garantia usa o dado do veículo nas duas telas e fala veículo, não carro", () => {
+  const props = { title: "Honda CG", price: 15900, sold: false, facts: [] };
+  const render = (warranty: string | null, sold = false) =>
+    renderToStaticMarkup(createElement(VehicleMobileSummary, { ...props, sold, warranty }));
+
+  const own = render("6 meses de motor");
+  assert.match(own, /Garantia deste veículo: 6 meses de motor/);
+  assert.doesNotMatch(own, /Garantia de 3 meses|deste carro/);
+  assert.match(own, /Vistoria da loja/);
+  assert.match(render(null), /Garantia de 3 meses/);
+  assert.match(render("   "), /Garantia de 3 meses/);
+  assert.doesNotMatch(render("6 meses de motor", true), /Garantia|Vistoria da loja/);
+
+  const desktop = renderToStaticMarkup(
+    createElement(VehicleTrustNotes, { warranty: "6 meses de motor" }),
+  );
+  assert.match(desktop, /Garantia deste veículo: 6 meses de motor/);
+  assert.doesNotMatch(desktop, /Garantia de 3 meses/);
+});
+
+test("desktop rola junto: card do anúncio sem sticky, sem coluna com scroll próprio e sem abas", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const css = readSrc("app/globals.css");
-  const nav = readSrc("components/site/FichaSectionNav.tsx");
   const asideTag = page.slice(page.indexOf("<aside"), page.indexOf(">", page.indexOf("<aside")));
   assert.doesNotMatch(asideTag, /sticky/);
   assert.doesNotMatch(page, /overflow-y-(auto|scroll)/);
-  const navRule = css.slice(css.indexOf(".ficha-section-nav {"), css.indexOf("}", css.indexOf(".ficha-section-nav {")));
-  assert.doesNotMatch(navRule, /sticky/);
+  assert.doesNotMatch(css, /\.ficha-section-nav|--ficha-section-nav/);
   assert.doesNotMatch(css, /\.ficha-aside\s*\{/);
-  assert.doesNotMatch(nav, /className="[^"]*\bsticky\b/);
+  // Aviso de cookies no canto direito do computador: nunca sobre a galeria.
+  assert.match(css, /@media \(min-width: 1024px\) \{\s*body:has\(\[data-ficha-page\]\) \.site-consent \{\s*left: auto;\s*right: 1\.5rem;/);
   // A barra de WhatsApp do celular continua.
   assert.match(page, /<VehicleMobileBar/);
 });
@@ -722,11 +766,23 @@ test("preço da ficha em vermelho com reflexo e glow, desligados sem movimento",
   assert.doesNotMatch(block, /gold|#ffc72c|#ffd700/i);
 });
 
-test("foto grande encaixa inteira (contain); miniaturas continuam cover", () => {
+test("foto grande encaixa inteira sobre a própria foto desfocada, sem faixa de cor sólida; miniaturas cover", () => {
   const gallery = readSrc("components/site/VehicleGallery.tsx");
   assert.match(gallery, /className="object-contain \[-webkit-touch-callout:none\]"/);
   assert.doesNotMatch(gallery, /className="object-cover \[-webkit-touch-callout:none\]"/);
-  assert.match(gallery, /snap-always bg-asphalt/);
+  // Fundo: mesma foto, desfocada, escondida dos leitores de tela.
+  assert.match(gallery, /aria-hidden="true"[\s\S]{0,120}overflow-hidden[\s\S]{0,400}alt=""[\s\S]{0,300}object-cover blur-2xl/);
+  assert.doesNotMatch(gallery, /Sobra vira faixa escura/);
+  // Miniaturas seguem cover.
+  assert.match(gallery, /sizes="96px"\s+className="object-cover"/);
+});
+
+test("galeria renderiza foto com fundo desfocado atrás da foto inteira", () => {
+  const html = renderToStaticMarkup(
+    createElement(VehicleGallery, { photos: [{ id: "a", url: "/fotos/a.webp" }, { id: "b", url: "/fotos/b.webp" }] as never, alt: "Fiat Uno" }),
+  );
+  assert.match(html, /<div aria-hidden="true"[^>]*><img[^>]*alt=""[^>]*class="[^"]*blur-2xl/);
+  assert.match(html, /<img[^>]*alt="[^"]*Fiat Uno[^"]*"[^>]*object-contain/);
 });
 
 test("Sobre o veículo fica com o gancho; cor, ano e km saem mesmo escritos de outro jeito", () => {

@@ -62,7 +62,7 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     }
     await expect(page.locator('nav[aria-label="Explore marcas, modelos e cidades"]')).toHaveCount(0);
     await expect(page.getByText("Encontre seu próximo seminovo")).toHaveCount(0);
-    const photo = page.locator('[data-ficha-page] img').first();
+    const photo = page.locator('[data-ficha-page] img:not([alt=""])').first();
     await expect(photo).toHaveAttribute("alt", `${buildVehicleFullLabel(car)} · ${car.color} em Linhares/ES - foto 1 de ${car.photos.length}`);
     await expect(page.locator("[data-ficha-page]")).not.toContainText(/Localização do veículo/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

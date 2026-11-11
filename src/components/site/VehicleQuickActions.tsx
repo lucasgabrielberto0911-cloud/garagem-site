@@ -64,13 +64,13 @@ export function VehicleQuickActions({
     {
       trackingLabel: "ficha-finance",
       hrefMessage: finance,
-      label: "Financiamento",
+      label: "Perguntar sobre financiamento",
       ariaLabel: "Falar sobre financiamento deste veículo no WhatsApp",
     },
     {
       trackingLabel: "ficha-trade",
       hrefMessage: trade,
-      label: "Troca",
+      label: "Tenho um usado para trocar",
       ariaLabel: "Avaliar uma troca deste veículo no WhatsApp",
     },
     {
@@ -91,10 +91,8 @@ export function VehicleQuickActions({
       : []),
   ];
 
-  const colsClass = actions.length === 4 ? "grid-cols-2" : "grid-cols-3";
-
   return (
-    <div className={`grid ${colsClass} gap-2 ${className}`}>
+    <div className={`grid grid-cols-2 gap-2 ${className}`}>
       {actions.map((action) => (
         <VehicleLeadHit
           key={action.trackingLabel}
@@ -119,7 +117,7 @@ export function VehicleQuickActions({
             slug={contentSlug}
             className={
               variant === "secondary"
-                ? "inline-flex min-h-[44px] items-center justify-center border border-white/10 px-2 text-center font-display text-xs font-medium text-cream/80 transition touch-manipulation hover:border-white/30 hover:text-cream"
+                ? "inline-flex min-h-[44px] items-center justify-center border border-white/10 px-2 py-1 text-center font-display text-sm font-medium text-cream/80 transition touch-manipulation hover:border-white/30 hover:text-cream"
                 : "inline-flex min-h-[48px] items-center justify-center border border-white/10 bg-ink px-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
             }
           >

@@ -197,7 +197,7 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
     await expect(mobileBar).toBeVisible();
 
     // Valida que o preço está visível na barra móvel
-    await expect(mobileBar).not.toContainText("74.900");
+    await expect(mobileBar).toContainText("74.900");
     await expect(mobileBar).not.toContainText("Agendar visita");
 
     // Botão principal de WhatsApp na barra fixa

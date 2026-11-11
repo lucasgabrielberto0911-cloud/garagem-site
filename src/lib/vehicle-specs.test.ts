@@ -8,6 +8,7 @@ import {
   formatVehicleYearRange,
   publicInspectionBadge,
   publicInspectionNote,
+  vehicleColorFact,
   vehicleKeyFacts,
 } from "./vehicle-specs";
 
@@ -190,18 +191,25 @@ test("selo da ficha mostra o texto salvo e some quando a vistoria está vazia", 
   );
 });
 
-test("topo da ficha: cor, ano e KM, sem quadradinho vazio", () => {
+test("topo da ficha: ano, KM, câmbio e combustível, sem quadradinho vazio", () => {
   const rows = buildVehiclePublicSpecs({
     category: "carro", year: 2020, yearModel: 2021, km: 50000, fuel: "Flex", transmission: "Automático",
     color: "Prata", engine: "1.5 16V", doors: 4, plateEnd: "7",
   });
   assert.deepEqual(vehicleKeyFacts(rows), [
-    { label: "Cor", value: "Prata" },
     { label: "Ano", value: "2020/2021" },
     { label: "KM", value: "50.000" },
+    { label: "Câmbio", value: "Automático" },
+    { label: "Combustível", value: "Flex" },
   ]);
+  assert.equal(vehicleColorFact(rows), "Prata");
   const semCor = buildVehiclePublicSpecs({
     category: "moto", year: 2022, yearModel: 2022, km: 1200, fuel: "", transmission: "", color: "  ",
   });
   assert.deepEqual(vehicleKeyFacts(semCor).map((fact) => fact.label), ["Ano", "KM"]);
+  assert.equal(vehicleColorFact(semCor), null);
+  const motoComMotor = buildVehiclePublicSpecs({
+    category: "moto", year: 2022, yearModel: 2022, km: 1200, fuel: "Gasolina", transmission: "", color: "Preta", engine: "160cc",
+  });
+  assert.deepEqual(vehicleKeyFacts(motoComMotor).map((fact) => fact.label), ["Ano", "KM", "Motor", "Combustível"]);
 });

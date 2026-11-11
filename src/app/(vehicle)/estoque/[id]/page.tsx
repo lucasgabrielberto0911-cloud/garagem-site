@@ -5,7 +5,7 @@ import Link from "next/link";
 import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
-import { FichaSectionNav } from "@/components/site/FichaSectionNav";
+import { FichaSectionAnchors } from "@/components/site/FichaSectionAnchors";
 import { DeferredSimilarVehicles } from "@/components/site/DeferredSimilarVehicles";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
@@ -37,7 +37,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
-import { buildVehiclePublicSpecs, vehicleKeyFacts } from "@/lib/vehicle-specs";
+import { buildVehiclePublicSpecs, vehicleColorFact, vehicleKeyFacts } from "@/lib/vehicle-specs";
 import { VehicleKeyFacts } from "@/components/site/VehicleKeyFacts";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
@@ -250,6 +250,7 @@ export default async function VehicleDetailPage({
 
   // Cor, ano e KM: quadradinhos do topo (desktop e celular).
   const keyFacts = vehicleKeyFacts(specs);
+  const keyColor = vehicleColorFact(specs);
 
   const hasAboutText =
     !!description && visibleDescriptionSegments(description, vehicle, specs).length > 0;
@@ -337,7 +338,7 @@ export default async function VehicleDetailPage({
           </Suspense>
           <nav
             aria-label="Você está aqui"
-            className="text-xs text-muted sm:text-center"
+            className="text-sm text-muted sm:text-center"
           >
             {breadcrumbs.map((item, index) => (
               <span key={item.path}>
@@ -356,10 +357,10 @@ export default async function VehicleDetailPage({
 
         {/* No celular o título visível do resumo é o h1; aqui só o desktop. */}
         <h1 className="sr-only hidden lg:block">{title}</h1>
-        <FichaSectionNav hasDetails={hasDetails} />
+        <FichaSectionAnchors hasDetails={hasDetails} />
 
         {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
-        <div className="lg:mt-5 lg:grid lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
+        <div className="lg:mt-5 lg:grid lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-8">
           <div className="ficha-mobile-fold min-w-0 lg:order-1">
             <div
               id="fotos"
@@ -380,7 +381,9 @@ export default async function VehicleDetailPage({
                 price={sold ? 0 : vehicle.price}
                 sold={sold}
                 facts={keyFacts}
+                color={keyColor}
                 inspection={sold ? null : vehicle.inspection}
+                warranty={sold ? null : vehicle.warranty}
                 seals={seals}
                 specAnchor={!hasMobileFichaSpecs(specs)}
               />
@@ -394,7 +397,7 @@ export default async function VehicleDetailPage({
                 Ficha técnica
               </h2>
               {vehicle.createdAt || updatedLabel ? (
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-1 text-sm text-muted">
                   <ListedAgo
                     listedAt={
                       vehicle.createdAt
@@ -415,9 +418,7 @@ export default async function VehicleDetailPage({
                     key={spec.label}
                     className="min-w-0 border border-white/10 bg-ink px-3 py-2.5"
                   >
-                    <dt className="text-[11px] uppercase tracking-wider text-muted">
-                      {spec.label}
-                    </dt>
+                    <dt className="text-sm text-muted">{spec.label}</dt>
                     {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
                     <dd
                       className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
@@ -470,13 +471,6 @@ export default async function VehicleDetailPage({
               </section>
             ) : null}
 
-            {!sold ? (
-              <VehicleConditions
-                vehicleWarranty={vehicle.warranty}
-                conditions={conditions}
-              />
-            ) : null}
-
             {verified.length > 0 ? (
               <VehicleVerifiedSection
                 items={verified}
@@ -491,15 +485,15 @@ export default async function VehicleDetailPage({
             {/* Sem sticky: o card rola junto com a página (um scroll só). */}
             <div className="space-y-4 border border-white/10 bg-ink p-5 xl:p-6">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand-light">
+                <span className="font-display text-sm font-semibold uppercase tracking-wider text-brand-light">
                   {vehicleCategoryLabel(vehicle.category)}
                 </span>
                 {sold ? (
-                  <span className="bg-white/15 px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-cream">
+                  <span className="bg-white/15 px-2 py-0.5 font-display text-sm font-semibold uppercase tracking-wider text-cream">
                     Vendido
                   </span>
                 ) : vehicle.status === "reservado" ? (
-                  <span className="bg-brand-orange px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-asphalt">
+                  <span className="bg-brand-orange px-2 py-0.5 font-display text-sm font-semibold uppercase tracking-wider text-asphalt">
                     Reservado
                   </span>
                 ) : null}
@@ -535,7 +529,7 @@ export default async function VehicleDetailPage({
                 )}
               </p>
 
-              <VehicleKeyFacts facts={keyFacts} onInk />
+              <VehicleKeyFacts facts={keyFacts} color={keyColor} onInk />
 
               {!sold ? (
                 <VehicleInspectionBadge inspection={vehicle.inspection} />
@@ -590,26 +584,13 @@ export default async function VehicleDetailPage({
                         Falar no WhatsApp
                       </WhatsAppButton>
                     </VehicleLeadHit>
-                    <p className="mt-2 text-center text-xs leading-relaxed text-muted">
+                    <p className="mt-2 text-center text-sm leading-relaxed text-muted">
                       Abre o WhatsApp com este anúncio — modelo, ano e preço.
                     </p>
                   </div>
 
-                  {/* Financiamento, troca, vídeo e visita: recolhidos, sem competir com o botão principal. */}
-                  <details data-ficha-more-actions="" className="group border-t border-white/10 pt-1">
-                    <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-cream transition hover:text-brand-light [&::-webkit-details-marker]:hidden">
-                      <span>Financiamento, troca, vídeo ou visita</span>
-                      <svg
-                        aria-hidden="true"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        className="shrink-0 text-muted transition-transform duration-200 group-open:rotate-180"
-                      >
-                        <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
-                      </svg>
-                    </summary>
+                  {/* Financiamento, troca, vídeo e visita: à vista, em estilo discreto para não competir com o botão principal. */}
+                  <div data-ficha-more-actions="" className="border-t border-white/10 pt-3">
                     <VehicleQuickActions
                       contentId={vehicle.id}
                       contentSlug={canonicalSlug}
@@ -625,15 +606,15 @@ export default async function VehicleDetailPage({
                       trade={whatsapp.trade}
                       visit={whatsapp.visit}
                       variant="secondary"
-                      className="pb-2 pt-1"
+                      className=""
                     />
-                  </details>
+                  </div>
 
                   <VehicleTrustNotes warranty={vehicle.warranty} />
                 </>
               )}
 
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
                 {!sold ? (
                   <>
                     <ChatOpenButton
@@ -641,7 +622,7 @@ export default async function VehicleDetailPage({
                       prompt={`Tenho dúvida sobre o ${title}`}
                       size="compact"
                       variant="ghost"
-                      className="-ml-3"
+                      className="-ml-3 !text-sm"
                     />
                     <Link
                       href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
@@ -660,17 +641,56 @@ export default async function VehicleDetailPage({
                 />
               </div>
 
-              <p className="text-[11px] leading-relaxed text-muted">
+              <p className="text-sm leading-relaxed text-muted">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
                   : `Valores sujeitos a alteração. Financiamento e cartão com análise de crédito; condições pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
             </div>
+
+            {!sold ? (
+              <>
+                <VehicleConditions
+                  vehicleWarranty={vehicle.warranty}
+                  conditions={conditions}
+                />
+                {/* Fecha a coluna: o botão do card já saiu da tela quando a pessoa chega aqui. */}
+                <div data-ficha-second-cta="" className="mt-6 border-t border-white/10 pt-5">
+                  <p className="font-display text-base font-semibold text-cream">
+                    Ficou com alguma dúvida?
+                  </p>
+                  <p className="mt-1 text-sm leading-snug text-muted">
+                    A loja responde sobre este anúncio pelo WhatsApp.
+                  </p>
+                  <VehicleLeadHit
+                    contentId={vehicle.id}
+                    contentName={fullLabel}
+                    value={vehicle.price}
+                    make={formatBrandName(vehicle.brand)}
+                    model={formatModelName(vehicle.model)}
+                    year={vehicle.yearModel}
+                    {...autoHit}
+                  >
+                    <WhatsAppButton
+                      size="md"
+                      className="mt-3 w-full"
+                      trackingLabel="ficha-coluna"
+                      campaign="ficha"
+                      content={fichaTrack.content}
+                      vehicleId={vehicle.id}
+                      slug={canonicalSlug}
+                      message={whatsapp.interest}
+                    >
+                      Tirar dúvidas no WhatsApp
+                    </WhatsAppButton>
+                  </VehicleLeadHit>
+                </div>
+              </>
+            ) : null}
           </aside>
         </div>
 
         <VehicleMobileBlocks
-          address={publicSite.address}
           hours={publicSite.hours}
           fullLabel={fullLabel}
           path={path}
@@ -739,21 +759,24 @@ export default async function VehicleDetailPage({
           />
         </Suspense>
 
-        <MissingModelDisclosure>
-          <MissingModelForm
-            idPrefix="ficha"
-            sourcePage="ficha"
-            contextLabel={fullLabel}
-            pagePath={path}
-            interestVehicleId={vehicle.id}
-            initialModel={sold ? title : ""}
-            description={
-              sold
-                ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`
-                : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
-            }
-          />
-        </MissingModelDisclosure>
+        {/* O formulário também serve a /pedido: o mínimo de 14px vale só na ficha. */}
+        <div className="[&_.text-xs]:text-sm">
+          <MissingModelDisclosure>
+            <MissingModelForm
+              idPrefix="ficha"
+              sourcePage="ficha"
+              contextLabel={fullLabel}
+              pagePath={path}
+              interestVehicleId={vehicle.id}
+              initialModel={sold ? title : ""}
+              description={
+                sold
+                  ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`
+                  : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
+              }
+            />
+          </MissingModelDisclosure>
+        </div>
         <SeoInternalLinks />
       </Container>
 

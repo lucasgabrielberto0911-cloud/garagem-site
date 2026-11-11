@@ -27,7 +27,7 @@ test("capa, JSON-LD e navegação respeitam a ordem salva, independente da inser
     await expect(slides).toHaveCount(7);
     for (let order = 0; order < 7; order++) {
       await expect(slides.nth(order)).toBeInViewport({ ratio: 0.8 });
-      await expect(slides.nth(order).locator("img")).toHaveAttribute("src", url(order));
+      await expect(slides.nth(order).locator(`img:not([alt=""])`)).toHaveAttribute("src", url(order));
       if (order < 6) await page.getByRole("button", { name: "Próxima foto", exact: true }).click();
     }
     await expect(page.getByRole("button", { name: "Próxima foto", exact: true })).toBeDisabled();

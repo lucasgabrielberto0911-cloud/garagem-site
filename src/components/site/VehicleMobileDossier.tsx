@@ -7,7 +7,8 @@ import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge
 import { VehicleDescription, visibleDescriptionSegments } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleSeals } from "@/components/site/VehicleSeals";
-import { IconClipboardCheck, IconMapPin, IconShieldCheck } from "@/components/site/icons";
+import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import { IconMapPin } from "@/components/site/icons";
 import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
 import { formatCurrencyBRL } from "@/lib/format";
 import {
@@ -49,7 +50,9 @@ export function VehicleMobileSummary({
   price,
   sold,
   facts,
+  color,
   inspection,
+  warranty,
   seals = [],
   specAnchor = false,
 }: {
@@ -57,9 +60,11 @@ export function VehicleMobileSummary({
   version?: string | null;
   price: number;
   sold: boolean;
-  /** Cor, ano e KM (`vehicleKeyFacts`). O resto da ficha fica em "Ficha técnica". */
+  /** Ano, KM, câmbio e combustível (`vehicleKeyFacts`). O resto fica em "Ficha técnica". */
   facts: readonly VehicleKeyFact[];
+  color?: string | null;
   inspection?: string | null;
+  warranty?: string | null;
   /** Selos já filtrados (sem dado = sem selo). */
   seals?: readonly VehicleSeal[];
   /** Quando a ficha técnica não existe, a âncora aponta para estes fatos. */
@@ -80,12 +85,14 @@ export function VehicleMobileSummary({
           <span className="ficha-price">{formatCurrencyBRL(price)}</span>
         )}
       </p>
+      {/* Logo abaixo do preço: é o que ainda cabe na primeira tela em celular baixo. */}
+      {!sold ? <VehicleTrustNotes warranty={warranty} compact className="mt-2.5" /> : null}
       <div
         className={`mt-2.5${specAnchor ? " ficha-jump-target" : ""}`}
         id={specAnchor ? "especificacoes" : undefined}
         data-ficha-section={specAnchor ? "especificacoes" : undefined}
       >
-        <VehicleKeyFacts facts={facts} />
+        <VehicleKeyFacts facts={facts} color={color} />
       </div>
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
@@ -119,30 +126,6 @@ function DossierBlock({
   );
 }
 
-const TRUST_PILLS = [
-  { Icon: IconShieldCheck, label: "Garantia de 3 meses (motor e câmbio)" },
-  { Icon: IconClipboardCheck, label: "Vistoria da loja" },
-  { Icon: IconMapPin, label: "Linhares/ES" },
-] as const;
-
-/** Confiança sempre visível: garantia, vistoria e cidade, sem clicar. */
-function VehicleTrustStrip() {
-  return (
-    <ul
-      aria-label="Garantia e vistoria"
-      data-trust-strip=""
-      className="grid gap-2 border-b border-white/10 py-4"
-    >
-      {TRUST_PILLS.map(({ Icon, label }) => (
-        <li key={label} className="flex items-center gap-2.5 text-sm leading-snug text-cream">
-          <Icon className="h-5 w-5 shrink-0 text-brand-light" />
-          {label}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export function VehicleMobileBlocks({
   fullLabel,
   path,
@@ -163,7 +146,6 @@ export function VehicleMobileBlocks({
   verified = [],
   verifiedHeading,
   warranty,
-  address,
   hours,
 }: {
   fullLabel: string;
@@ -185,8 +167,7 @@ export function VehicleMobileBlocks({
   verified?: PublicVerifiedItem[];
   verifiedHeading?: string;
   warranty?: string | null;
-  /** Endereço e horário do painel (getPublicSite), iguais ao rodapé. */
-  address: string;
+  /** Horário do painel (getPublicSite), igual ao rodapé. Não há endereço de loja. */
   hours: string;
   quickActions?: {
     contentPath: string;
@@ -222,42 +203,15 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-2 lg:hidden">
-      {!sold ? <VehicleTrustStrip /> : null}
-
-      {verified.length > 0 ? (
-        <DossierBlock title={verifiedHeading ?? "Verificado neste carro"}>
-          <VehicleVerifiedList items={verified} alt={fullLabel} showVideoHint={!sold} />
-        </DossierBlock>
-      ) : null}
-
-      {hasAbout ? (
-        <DossierBlock title="Sobre o veículo" section="detalhes">
-          <VehicleDescription text={description!} summaryFacts={summaryFacts} specRows={specs} hideEmoji />
-        </DossierBlock>
-      ) : null}
-
-      {accessories.length > 0 ? (
-        <DossierBlock
-          title="Itens e acessórios"
-          section={hasAbout ? undefined : "detalhes"}
-        >
-          <div id="opcionais" className="scroll-mt-24">
-            <VehicleFeatures items={accessories} />
-          </div>
-        </DossierBlock>
-      ) : null}
-
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha técnica" section="especificacoes">
           {listedLine ? (
-            <p className="mb-3 text-xs tracking-wide text-muted">{listedLine}</p>
+            <p className="mb-3 text-sm tracking-wide text-muted">{listedLine}</p>
           ) : null}
           <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
             {extraSpecs.map((spec) => (
               <div key={spec.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
-                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                  {spec.label}
-                </dt>
+                <dt className="text-sm font-medium text-muted">{spec.label}</dt>
                 <dd
                   className={`mt-1 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
                     spec.empty ? "font-medium text-muted" : "font-semibold text-cream"
@@ -269,49 +223,6 @@ export function VehicleMobileBlocks({
             ))}
           </dl>
         </DossierBlock>
-      ) : null}
-
-      {!sold ? (
-        <details className="group border-b border-white/10" data-vistoria-garantia="">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
-            <span>Saiba mais sobre vistoria e garantia</span>
-            <span
-              aria-hidden="true"
-              className="text-muted transition-transform duration-200 group-open:rotate-180"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
-            </span>
-          </summary>
-          <div className="pb-4 text-[15px] leading-relaxed text-cream/80">
-            <h3 className="font-display text-sm font-semibold text-cream">{STORE_INSPECTION_LABEL}</h3>
-            {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
-              <p className="mt-1.5 text-cream">{inspectionNote}</p>
-            ) : null}
-            <p className="mt-1.5">{publicStoreInspectionText(vistoria?.text)}</p>
-            {intro || otherConditions.length > 0 ? (
-              <h3 className="mt-4 font-display text-sm font-semibold text-cream">{conditions.title}</h3>
-            ) : null}
-            {intro ? <p className="mt-1.5">{intro}</p> : null}
-            {otherConditions.length > 0 ? (
-              <ul className="mt-3 space-y-3">
-                {otherConditions.map((item) => (
-                  <li key={item.label} className="border-l-2 border-brand/80 pl-3">
-                    <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-cream">
-                      {item.label}
-                    </p>
-                    <p className="mt-1 text-cream/80">
-                      {item.label.toLocaleLowerCase("pt-BR") === "garantia" && warranty
-                        ? warranty
-                        : item.text}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </details>
       ) : null}
 
       {!sold && quickActions ? (
@@ -343,12 +254,80 @@ export function VehicleMobileBlocks({
         </DossierBlock>
       ) : null}
 
-      <DossierBlock title="Onde estamos" id="onde-estamos">
+      {verified.length > 0 ? (
+        <DossierBlock title={verifiedHeading ?? "Verificado neste carro"}>
+          <VehicleVerifiedList items={verified} alt={fullLabel} showVideoHint={!sold} />
+        </DossierBlock>
+      ) : null}
+
+      {hasAbout ? (
+        <DossierBlock title="Sobre o veículo" section="detalhes">
+          <VehicleDescription text={description!} summaryFacts={summaryFacts} specRows={specs} hideEmoji />
+        </DossierBlock>
+      ) : null}
+
+      {accessories.length > 0 ? (
+        <DossierBlock
+          title="Itens e acessórios"
+          section={hasAbout ? undefined : "detalhes"}
+        >
+          <div id="opcionais" className="scroll-mt-24">
+            <VehicleFeatures items={accessories} />
+          </div>
+        </DossierBlock>
+      ) : null}
+
+      {!sold ? (
+        <details className="group border-b border-white/10" data-vistoria-garantia="">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
+            <span>Saiba mais sobre vistoria e garantia</span>
+            <span
+              aria-hidden="true"
+              className="text-muted transition-transform duration-200 group-open:rotate-180"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </span>
+          </summary>
+          <div className="pb-4 text-[15px] leading-relaxed text-cream/80">
+            <h3 className="font-display text-sm font-semibold text-cream">{STORE_INSPECTION_LABEL}</h3>
+            {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
+              <p className="mt-1.5 text-cream">{inspectionNote}</p>
+            ) : null}
+            <p className="mt-1.5">{publicStoreInspectionText(vistoria?.text)}</p>
+            {intro || otherConditions.length > 0 ? (
+              <h3 className="mt-4 font-display text-sm font-semibold text-cream">{conditions.title}</h3>
+            ) : null}
+            {intro ? <p className="mt-1.5">{intro}</p> : null}
+            {otherConditions.length > 0 ? (
+              <ul className="mt-3 space-y-3">
+                {otherConditions.map((item) => (
+                  <li key={item.label} className="border-l-2 border-brand/80 pl-3">
+                    <p className="font-display text-sm font-semibold text-cream">
+                      {item.label}
+                    </p>
+                    <p className="mt-1 text-cream/80">
+                      {item.label.toLocaleLowerCase("pt-BR") === "garantia" && warranty
+                        ? warranty
+                        : item.text}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
+
+      <DossierBlock title="Atendimento" id="atendimento">
         <p className="flex items-start gap-2 text-cream">
           <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
-          <span>Linhares/ES — {address}</span>
+          <span>Loja digital em Linhares/ES</span>
         </p>
-        <p className="mt-1.5">{hours}</p>
+        <p className="mt-1.5">
+          Atendimento com hora marcada pelo WhatsApp. {hours}
+        </p>
         {!sold ? (
           <FavoriteButton
             vehicleId={vehicleId}

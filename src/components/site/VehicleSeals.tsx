@@ -26,7 +26,7 @@ export function VehicleSeals({
         <li
           key={seal.id}
           data-vehicle-seal={seal.id}
-          className="inline-flex items-center gap-2 border border-white/15 bg-white/[0.04] px-2.5 py-1 text-xs font-semibold leading-snug text-cream"
+          className="inline-flex items-center gap-2 border border-white/15 bg-white/[0.04] px-2.5 py-1 text-sm font-semibold leading-snug text-cream"
         >
           <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 bg-brand" />
           {optionalsHref && seal.id === "opcionais" ? (

@@ -37,14 +37,12 @@ export type VehicleCardRecord = {
 };
 
 /**
- * LCP da ficha. O container é max-w-7xl com px-8; a coluna da foto é
- * 1.35 / 2.25 do miolo (menos o gap-8). No xl isso dá 710px, não 60vw
- * de um monitor largo. A foto continua full-bleed no celular; o slot
- * abaixo de 640px é 60vw para o DPR 3 cair no WebP 800 já existente,
- * e não no arquivo 1280.
+ * LCP da ficha. O container é max-w-[90rem] com px-8; a coluna da foto é
+ * 1.1 / 2.1 do miolo (menos o gap-8). De 1440px para cima isso dá 704px.
+ * A foto continua de ponta a ponta no celular.
  */
 export const GALLERY_HERO_SIZES =
-  "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), 100vw";
+  "(min-width: 1440px) 704px, (min-width: 1024px) calc((100vw - 96px) * 0.524), 100vw";
 
 /**
  * Card dentro do mesmo container: 2 colunas, 3 no lg, 4 no xl da home.

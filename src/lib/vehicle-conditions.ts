@@ -10,7 +10,7 @@
  * Tom de consultor: o que a loja confere, sem aviso de documento oficial.
  */
 export const STORE_INSPECTION_BODY =
-  "Antes de anunciar, a gente vistoria cada carro. Confere óleo, fluidos e a condição geral — é assim com todo seminovo do estoque.";
+  "Antes de anunciar, a gente vistoria cada veículo. Confere óleo, fluidos e a condição geral — é assim com todo seminovo do estoque.";
 
 const LEGACY_STORE_INSPECTION =
   /checagem interna de proced[eê]ncia/i;
@@ -48,6 +48,12 @@ export const STORE_WARRANTY = {
   body:
     "Todo seminovo passa por checagem na loja antes do anúncio. A loja oferece garantia comercial de 3 meses para motor e câmbio. Desgaste natural, mau uso e itens de manutenção (pneus, pastilhas, filtros) ficam de fora. Detalhes do seu caso: WhatsApp.",
 } as const;
+
+/** Linha de garantia da ficha: a do veículo, quando cadastrada, ou a padrão da loja. */
+export function vehicleWarrantyNote(warranty: string | null | undefined) {
+  const own = warranty?.trim();
+  return own ? `Garantia deste veículo: ${own}` : STORE_WARRANTY.title;
+}
 
 /** Parágrafo antigo que amarrava a garantia a uma “revisão completa”. */
 const LEGACY_STORE_WARRANTY =

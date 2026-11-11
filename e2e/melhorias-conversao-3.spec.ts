@@ -55,8 +55,7 @@ test("agendamento de visita na ficha e em 1 toque no painel do chat", async ({
   await page.goto(vehiclePath(civic));
 
   if (page.viewportSize()!.width >= 1024) {
-    // No card do desktop, visita/financiamento/troca/vídeo ficam recolhidos sob o WhatsApp.
-    await page.locator("[data-ficha-page] aside [data-ficha-more-actions] summary").click();
+    // No card do desktop, visita/financiamento/troca/vídeo ficam à vista sob o WhatsApp.
     const desktopVisit = page
       .locator("[data-ficha-page] aside")
       .getByRole("link", {

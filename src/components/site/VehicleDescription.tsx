@@ -32,7 +32,7 @@ function FactGroup({ lines, hideEmoji }: { lines: DescriptionFact[]; hideEmoji: 
       {shouts.map((line) => (
         <p
           key={`${line.emoji}-${line.text}`}
-          className="flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light"
+          className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-[0.12em] text-brand-light"
         >
           {hideEmoji ? null : <span aria-hidden="true">{line.emoji}</span>}
           <span>{line.text}</span>
@@ -71,7 +71,7 @@ function FactGroup({ lines, hideEmoji }: { lines: DescriptionFact[]; hideEmoji: 
                   </span>
                 )}
                 <span className="min-w-0">
-                  <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                  <span className="block text-sm font-medium text-muted">
                     {labeled.label}
                   </span>
                   <span className="mt-0.5 block text-[15px] font-medium leading-snug text-cream">

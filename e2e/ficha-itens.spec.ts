@@ -75,27 +75,28 @@ test("desktop: ficha técnica e opcionais na coluna principal, card só com o es
   await expect(page.locator("details", { has: specs })).toHaveCount(0);
   await expect(specs.locator("dt")).toContainText(["Ano", "km", "Câmbio", "Combustível", "Cor"]);
 
-  // Topo do card: preço em vermelho e quadradinhos de cor, ano e KM.
+  // Topo do card: preço em vermelho, quadradinhos e a cor em linha própria.
   const preco = aside.locator("[data-ficha-price]");
   await expect(preco).toContainText("R$");
   const corPreco = await preco.evaluate((el) => getComputedStyle(el).color.match(/\d+/g)!.map(Number));
   expect(corPreco[0]).toBeGreaterThan(200);
   expect(corPreco[1]).toBeLessThan(100);
   const fatos = aside.locator("[data-key-facts] dt");
-  await expect(fatos).toHaveText(["Cor", "Ano", "KM"]);
+  await expect(fatos).toHaveText(["Ano", "KM", "Câmbio", "Combustível", "Cor"]);
 
-  // Card: um único botão principal; financiamento, troca, vídeo e visita recolhidos.
+  // Card: botão principal maior; financiamento, troca, vídeo e visita à vista e discretos.
   const principal = aside.getByRole("link", { name: "Falar no WhatsApp", exact: true });
   await expect(principal).toBeVisible();
   const financiamento = aside.getByRole("link", { name: /financiamento deste veículo/ });
-  await expect(financiamento).toBeHidden();
-  await aside.locator("[data-ficha-more-actions] summary").click();
   await expect(financiamento).toBeVisible();
+  await expect(financiamento).toHaveText("Perguntar sobre financiamento");
+  await expect(aside.getByRole("link", { name: "Tirar dúvidas no WhatsApp", exact: true })).toBeVisible();
   const [bp, bf] = await Promise.all([principal.boundingBox(), financiamento.boundingBox()]);
   expect(bp!.height).toBeGreaterThan(bf!.height);
-  await expect(aside.getByText("Garantia de 3 meses")).toBeVisible();
-  await expect(aside.getByText("Vistoria da loja", { exact: true })).toBeVisible();
-  await expect(aside.getByText("Linhares/ES", { exact: true })).toBeVisible();
+  const confianca = aside.locator("[data-trust-notes]");
+  await expect(confianca.getByText("Garantia de 3 meses")).toBeVisible();
+  await expect(confianca.getByText("Vistoria da loja", { exact: true })).toBeVisible();
+  await expect(confianca.getByText("Linhares/ES", { exact: true })).toBeVisible();
   await expect(aside).not.toContainText(/parcela|simul/i);
   await expect(aside.getByRole("button", { name: "Copiar link do anúncio" })).toHaveCount(0);
 
@@ -105,8 +106,7 @@ test("desktop: ficha técnica e opcionais na coluna principal, card só com o es
   await atalho.click();
   await expect(page.locator("#opcionais-desktop")).toBeInViewport();
 
-  // Clicar num opcional depois de usar as abas não rola a página para cima.
-  await page.getByRole("navigation", { name: "Seções do anúncio" }).getByRole("link", { name: "Detalhes", exact: true }).click();
+  // Clicar num opcional não rola a página para cima.
   const chip = page.locator("#opcionais-desktop [data-accessory-chip]").last();
   await chip.scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
