@@ -1,0 +1,20 @@
+name: Pesquisa (Codex — só documentação)
+description: Diagnóstico sem alterar código — relatório em docs/pesquisas/
+title: "[pesquisa] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Codex não altera src/. Saída em docs/pesquisas/AAAA-MM-DD-tema.md
+  - type: textarea
+    id: pergunta
+    attributes:
+      label: Pergunta ou hipótese
+    validations:
+      required: true
+  - type: textarea
+    id: escopo
+    attributes:
+      label: Arquivos ou áreas para investigar
+    validations:
+      required: true

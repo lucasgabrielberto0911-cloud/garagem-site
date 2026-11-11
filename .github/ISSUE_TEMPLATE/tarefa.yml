@@ -1,0 +1,46 @@
+name: Tarefa (feature ou correção)
+description: Pedido de mudança no site ou painel — humano ou agente
+title: "[área] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de abrir: AGENTS.md, docs/README.md, guia da área em docs/areas/. Confira PRs abertos na mesma área.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - home
+        - estoque
+        - ficha
+        - admin
+        - chat
+        - seo
+        - api/meta
+        - infra
+        - docs
+    validations:
+      required: true
+  - type: dropdown
+    id: agente
+    attributes:
+      label: Agente (se for bot)
+      options:
+        - humano
+        - agente:cursor
+        - agente:claude
+        - agente:codex
+        - grok-bot
+    validations:
+      required: true
+  - type: textarea
+    id: descricao
+    attributes:
+      label: Descrição
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Critérios de pronto

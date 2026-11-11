@@ -1,0 +1,7 @@
+---
+description: Contexto ao editar feed e integração Meta
+globs: src/app/api/meta/**/*,src/app/catalog/**/*,src/lib/catalog-feed*.ts
+alwaysApply: false
+---
+- Leia docs/areas/api-meta.md e docs/runbooks/meta-catalog.md.
+- vehicle_id = CUID; não remover AddToCart do WhatsApp em PR de Meta.

@@ -1,0 +1,7 @@
+---
+description: Contexto ao editar testes Playwright
+globs: e2e/**/*
+alwaysApply: false
+---
+- Leia docs/E2E-PARA-IAS.md e e2e/README.md — E2E_TEST=1, placeholder-car.png, banco local.
+- Não baixar fotos de produção; não desabilitar checagem de erro JS sem motivo.

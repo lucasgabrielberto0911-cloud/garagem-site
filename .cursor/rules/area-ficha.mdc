@@ -1,0 +1,7 @@
+---
+description: Contexto ao editar ficha do veículo
+globs: src/app/(vehicle)/**/*
+alwaysApply: false
+---
+- Leia docs/areas/ficha.md e AGENTS.md (vendido sem preço, revalidatePublicStock).
+- E2E sugerido: e2e/ficha-v2.spec.ts, seo-fichas.spec.ts.

@@ -1,0 +1,8 @@
+---
+description: Contexto ao editar pipeline de upload de fotos
+globs: src/app/api/upload/**/*,src/lib/r2-photos.ts,src/lib/photo-*.ts
+alwaysApply: false
+---
+- Leia docs/areas/fotos.md e docs/ops.md (sharp, R2, sem next/image pago).
+- Não baixar bucket/fotos de produção; backfill só com ambiente de teste combinado.
+- Mudança que afeta capa pública: painel deve revalidatePublicStock após publicar.

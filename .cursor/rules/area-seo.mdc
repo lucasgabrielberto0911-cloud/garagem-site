@@ -1,0 +1,7 @@
+---
+description: Contexto ao editar SEO global
+globs: src/app/sitemap.ts,src/app/robots.ts,src/lib/seo.ts,src/lib/seo-guides.ts,src/lib/stock-landings.ts
+alwaysApply: false
+---
+- Leia docs/areas/seo.md — canonical, vendido, sitemap 200, robots.
+- Testes: seo.test.ts, e2e/seo-fichas.spec.ts.

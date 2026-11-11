@@ -5,6 +5,19 @@
 Site público de seminovos da Garagem (Linhares/ES) e painel administrativo da loja.
 Produção: <https://www.suagaragem.net>.
 
+## Documentação para IAs e quem entra no código
+
+Se você usa **várias IAs** (Cursor, Claude, Codex, ChatGPT, etc.) no mesmo repositório:
+
+1. **[`AGENTS.md`](AGENTS.md)** — regras obrigatórias (cache, marca, produção, PRs, fotos).
+2. **[`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md)** — mapa do repositório e checklist.
+
+Índice completo: [`docs/README.md`](docs/README.md). Contribuição: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+Atalhos: [`GLOSSARIO`](docs/GLOSSARIO.md) · [`ANTI-PATTERNS`](docs/ANTI-PATTERNS.md) · [`areas/`](docs/areas/) · [`prompts/`](docs/prompts/) · [`TESTES`](docs/TESTES.md) · [`E2E-PARA-IAS`](docs/E2E-PARA-IAS.md)
+
+O `CLAUDE.md` e as regras em `.cursor/rules/` reforçam o `AGENTS.md` (incluindo dicas por área ao editar ficha, estoque ou admin).
+
 ## Stack
 
 - Next.js (App Router, React 19, React Compiler) e Tailwind CSS 3
