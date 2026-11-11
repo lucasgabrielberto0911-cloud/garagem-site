@@ -10,6 +10,40 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run_full: ${{ steps.decide.outputs.run_full }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          filters: |
+            app:
+              - "src/**"
+              - "e2e/**"
+              - "prisma/**"
+              - "supabase/**"
+              - "scripts/**"
+              - "public/**"
+              - "package.json"
+              - "package-lock.json"
+              - "**/*.config.*"
+              - "vercel.json"
+              - "tsconfig*.json"
+              - ".github/workflows/**"
+      - id: decide
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "run_full=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.filter.outputs.app }}" = "true" ]; then
+            echo "run_full=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_full=false" >> "$GITHUB_OUTPUT"
+          fi
+
   unit:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -22,12 +56,15 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npm audit --omit=dev --audit-level=critical
+      - run: bash scripts/check-footguns.sh
       - run: npm test
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npx tsc --noEmit --project tsconfig.test.json
 
   e2e:
+    needs: changes
+    if: needs.changes.outputs.run_full == 'true'
     # Playwright 1.57 não oferece WebKit para o Ubuntu 26.04.
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -112,12 +149,25 @@ jobs:
     steps:
       - name: Falha se algum job não passou
         run: |
-          if [ "${{ needs.unit.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ] || [ "${{ needs.migrations.result }}" != "success" ]; then
-            echo "unit=${{ needs.unit.result }} e2e=${{ needs.e2e.result }} migrations=${{ needs.migrations.result }}"
+          ok_result() {
+            [ "$1" = "success" ] || [ "$1" = "skipped" ]
+          }
+          if ! ok_result "${{ needs.unit.result }}"; then
+            echo "unit=${{ needs.unit.result }}"
+            exit 1
+          fi
+          if ! ok_result "${{ needs.e2e.result }}"; then
+            echo "e2e=${{ needs.e2e.result }}"
+            exit 1
+          fi
+          if ! ok_result "${{ needs.migrations.result }}"; then
+            echo "migrations=${{ needs.migrations.result }}"
             exit 1
           fi
 
   migrations:
+    needs: changes
+    if: needs.changes.outputs.run_full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:

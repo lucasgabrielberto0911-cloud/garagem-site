@@ -12,8 +12,14 @@ Obrigado por contribuir. Este repositório é mantido por humanos e **vários ag
 
 ```bash
 npm ci && npx prisma generate
-npm test && npm run lint && npm run build
+npm run check          # test + lint + footguns + tsc (igual ao job unit do CI)
+npm run check:build    # check + build (antes do push com mudança de tela)
 ```
+
+Teste unitário isolado: `npm run test:one -- src/lib/nome.test.ts`  
+E2E isolado: `npm run test:e2e:one -- e2e/nome.spec.ts`
+
+Node: use `.nvmrc` (24, alinhado ao CI).
 
 E2E (quando mexer em UI): ver [`docs/E2E-PARA-IAS.md`](docs/E2E-PARA-IAS.md) e [`e2e/README.md`](e2e/README.md).
 
