@@ -18,19 +18,6 @@ export type R2Config = {
   apiToken: string;
 };
 
-/**
- * Modo R2: qualquer variável R2_* presente. Config parcial falha fechado
- * (erro no upload) em vez de voltar a gravar foto pública no Supabase.
- */
-export function hasAnyR2Config(): boolean {
-  return Boolean(
-    process.env.R2_ACCOUNT_ID ||
-      process.env.R2_BUCKET ||
-      process.env.R2_PUBLIC_URL ||
-      process.env.R2_API_TOKEN,
-  );
-}
-
 /** Verifica se todas as 4 variáveis de configuração do R2 estão presentes. */
 export function hasR2Config(): boolean {
   return Boolean(
