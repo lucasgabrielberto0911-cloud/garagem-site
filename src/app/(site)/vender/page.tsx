@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import { SellForm } from "@/components/site/SellForm";
-import { Container, PageHeader } from "@/components/site/ui";
+import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
-import { site } from "@/lib/site";
+import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { getVehicleById } from "@/lib/vehicles";
 
@@ -113,6 +114,27 @@ export default async function VenderPage({
           </div>
 
           <section className="lg:mt-10">
+            <div className="mb-6 border border-brand/30 bg-ink p-4 sm:p-5">
+              <h2 className="font-display text-lg font-bold tracking-tight text-cream">
+                Prefere falar direto no WhatsApp?
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">
+                Sem formulário: você manda as fotos e os dados do carro na conversa e a gente avalia por lá.
+              </p>
+              <div className="mt-4">
+                <SiteLeadHit contentName="Vender/Trocar">
+                  <WhatsAppButton
+                    size="lg"
+                    className="w-full"
+                    trackingLabel="vender"
+                    message={WHATSAPP_MESSAGES.sell}
+                  >
+                    Mandar fotos e dados pelo WhatsApp
+                  </WhatsAppButton>
+                </SiteLeadHit>
+              </div>
+              <p className="mt-4 text-xs text-muted">Ou, se preferir, preencha o formulário abaixo.</p>
+            </div>
             <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
               Dados do seu veículo
             </h2>

@@ -25,8 +25,10 @@ test("contato mostra o telefone da loja e um WhatsApp", () => {
   assert.doesNotMatch(contato, /\(\d{2}\) \d{4,5}-\d{4}/);
 });
 
-test("vender explica os passos sem outro WhatsApp nem carrossel", () => {
-  assert.equal((vender.match(/WhatsAppButton/g) ?? []).length, 0);
+test("vender explica os passos, com um único atalho de WhatsApp antes do formulário e sem carrossel", () => {
+  assert.equal((vender.match(/<WhatsAppButton/g) ?? []).length, 1);
+  assert.match(vender, /Mandar fotos e dados pelo WhatsApp/);
+  assert.ok(vender.indexOf("<WhatsAppButton") < vender.indexOf("<SellForm"));
   assert.match(vender, /Como funciona/);
   assert.match(vender, /Você manda os dados/);
   assert.match(vender, /A gente avalia/);

@@ -70,7 +70,7 @@ export default async function ContatoPage() {
                 WhatsApp — resposta mais rápida
               </h2>
               <p className="mt-1.5 max-w-xl text-sm leading-snug text-muted sm:text-base sm:leading-relaxed">
-                Para vídeo, parcela, troca ou fechamento, o canal é o WhatsApp.
+                Para vídeo, financiamento e condições, troca ou fechamento, o canal é o WhatsApp.
               </p>
 
               {phone ? (

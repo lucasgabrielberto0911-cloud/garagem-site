@@ -13,7 +13,7 @@ import {
 export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Não encontrou o modelo? | ${site.name}`,
+  title: `Peça o carro que você procura | ${site.name}`,
   description:
     "Deixa o modelo que você procura. A loja guarda o pedido e te chama quando aparecer.",
   path: "/pedido",
@@ -44,7 +44,7 @@ export default async function PedidoPage({
       <div className="wanted-vehicle-sheet">
         <Link
           href={copy.pagePath}
-          className="inline-flex items-center py-1 text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
+          className="inline-flex min-h-11 items-center text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
         >
           <span className="mr-2 text-brand-light" aria-hidden="true">
             ←
@@ -61,6 +61,7 @@ export default async function PedidoPage({
             rememberDraft
             draftContextKey={draftContext}
             sourcePage="estoque"
+            title="Peça o carro que você procura"
             titleAs="h1"
             contextLabel={copy.contextLabel}
             pagePath={copy.pagePath}
