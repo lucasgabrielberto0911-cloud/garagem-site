@@ -91,6 +91,14 @@ export default async function SobrePage() {
           description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region}.`}
         />
 
+        <p className="mx-auto mt-6 max-w-3xl border border-white/10 bg-ink px-4 py-3 text-center text-sm leading-relaxed text-muted">
+          <span className="font-semibold text-cream">Elias Netto</span>, dono e sócio-administrador
+          {" · "}
+          {publicSite.legalName}
+          {" · "}
+          CNPJ <span className="whitespace-nowrap text-cream">{publicSite.cnpj}</span>
+        </p>
+
         <FounderSection photoUrl={siteContent.founderPhotoUrl} />
 
         <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
