@@ -59,3 +59,27 @@ test("filtro de opcionais casa com valores crus gravados no estoque", () => {
   assert.ok(conditionFrontais.accessories.hasSome.includes("Airbag duplo"));
   assert.ok(conditionFrontais.accessories.hasSome.includes("Airbags frontais"));
 });
+
+test("carroceria filtra por modelo do catálogo e só para carros", () => {
+  const catalog = [
+    { brand: "Hyundai", model: "Creta", version: "Comfort" },
+    { brand: "Fiat", model: "Argo", version: null },
+    { brand: "Honda", model: "Civic", version: "EXL" },
+  ];
+  const where = buildStockWhere({ body: "suv" }, catalog) as {
+    category: string;
+    AND: { OR: { model: string; version: string | null }[] }[];
+  };
+  assert.equal(where.category, "carro");
+  assert.deepEqual(where.AND[0].OR, [{ model: "Creta", version: "Comfort" }]);
+
+  const sedan = buildStockWhere({ body: "sedan" }, catalog) as typeof where;
+  assert.deepEqual(sedan.AND[0].OR, [{ model: "Civic", version: "EXL" }]);
+});
+
+test("carroceria sem modelo no estoque devolve lista vazia, não tudo", () => {
+  const where = buildStockWhere({ body: "pickup" }, [{ brand: "Fiat", model: "Argo" }]) as {
+    AND: { id: { in: string[] } }[];
+  };
+  assert.deepEqual(where.AND[0], { id: { in: [] } });
+});

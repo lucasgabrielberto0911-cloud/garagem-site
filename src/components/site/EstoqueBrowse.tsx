@@ -64,6 +64,7 @@ function stockQuery(params: EstoqueSearchParams) {
   return {
     q: params.q,
     category: params.category,
+    body: params.body,
     brand: params.brand,
     model: params.model,
     transmission: params.transmission,

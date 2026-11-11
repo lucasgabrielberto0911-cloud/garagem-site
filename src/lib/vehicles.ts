@@ -25,6 +25,7 @@ import {
 } from "@/lib/vehicle-display";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
+import { mapCatalogBodyStyle } from "@/lib/catalog-feed";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
 import { pickRelatedVehicles, priceBandRange } from "@/lib/related-vehicles";
 
@@ -450,6 +451,32 @@ export const getRelatedVehicles = cache(
     ),
 );
 
+const BODY_TO_CATALOG_STYLE = { suv: "SUV", sedan: "SEDAN", hatch: "HATCHBACK", pickup: "PICKUP" } as const;
+
+/** Carroceria vem do modelo/versão (mesma regra do feed), pois não há coluna própria. */
+function stockBodyWhere(
+  body: string | undefined,
+  catalog: { model: string; version?: string | null }[],
+) {
+  const style = BODY_TO_CATALOG_STYLE[body as keyof typeof BODY_TO_CATALOG_STYLE];
+  if (!style) return null;
+  const seen = new Set<string>();
+  const matches: object[] = [];
+  for (const item of catalog) {
+    if (mapCatalogBodyStyle("carro", item.model, item.version ?? null) !== style) continue;
+    const key = `${item.model}\u0000${item.version ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    matches.push({ model: item.model, version: item.version ?? null });
+  }
+  // Sem modelo dessa carroceria no estoque: lista vazia, não "tudo".
+  return matches.length ? { OR: matches } : { id: { in: [] as string[] } };
+}
+
+function stockNeedsCatalog(filters: StockFilters) {
+  return Boolean(filters.q?.trim() || filters.body);
+}
+
 export function buildStockWhere(filters: StockFilters, catalog: { brand: string; model: string; version?: string | null }[] = []) {
   const priceFilter =
     filters.minPrice || filters.maxPrice
@@ -491,9 +518,12 @@ export function buildStockWhere(filters: StockFilters, catalog: { brand: string;
     }
   }
 
+  const bodyWhere = stockBodyWhere(filters.body, catalog);
+  if (bodyWhere) and.push(bodyWhere);
+
   return {
     ...PUBLIC_SITEMAP_VEHICLE_WHERE,
-    ...(filters.category ? { category: filters.category } : {}),
+    ...(filters.category ? { category: filters.category } : filters.body ? { category: "carro" } : {}),
     ...(filters.brand
       ? { brand: { equals: filters.brand, mode: "insensitive" as const } }
       : {}),
@@ -524,6 +554,7 @@ function stockQueryKey(filters: StockFilters) {
   return JSON.stringify({
     q: (filters.q ?? "").trim(),
     category: filters.category ?? "",
+    body: filters.body ?? "",
     brand: filters.brand ?? "",
     model: (filters.model ?? "").trim().toLocaleLowerCase("pt-BR"),
     transmission: filters.transmission ?? "",
@@ -557,7 +588,7 @@ const loadStockSearchCatalog = unstable_cache(
 const loadDailyStockPoolCached = unstable_cache(
   async (key: string) => {
     const filters = JSON.parse(key) as StockFilters;
-    const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
+    const catalog = stockNeedsCatalog(filters) ? await loadStockSearchCatalog() : [];
     return orderStockDaily(await findCardVehicles({
       where: buildStockWhere(filters, catalog),
       orderBy: stockOrderBy(filters.sort),
@@ -571,7 +602,7 @@ const loadDailyStockPoolCached = unstable_cache(
 const loadStockCountCached = unstable_cache(
   async (key: string) => {
     const filters = JSON.parse(key) as StockFilters;
-    const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
+    const catalog = stockNeedsCatalog(filters) ? await loadStockSearchCatalog() : [];
     return prisma.vehicle.count({ where: buildStockWhere(filters, catalog) });
   },
   ["stock-count-v1"],
@@ -584,7 +615,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
     48,
   );
   const page = Math.max(filters.page ?? 1, 1);
-  const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
+  const catalog = stockNeedsCatalog(filters) ? await loadStockSearchCatalog() : [];
   const where = buildStockWhere(filters, catalog);
   const orderBy = stockOrderBy(filters.sort);
 

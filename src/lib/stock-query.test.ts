@@ -288,3 +288,9 @@ test("modelo acompanha a marca escolhida", () => {
   assert.equal(modelAfterBrandChange(models, "honda", "civic"), "Civic");
   assert.deepEqual(modelFilterOptions(models, "Fiat", "Civic"), ["Civic", "Mobi"]);
 });
+
+test("body na URL só aceita carrocerias conhecidas", () => {
+  assert.equal(parseStockFilters({ body: "SUV" }).body, "suv");
+  assert.equal(parseStockFilters({ body: "picape" }).body, undefined);
+  assert.equal(parseStockFilters({}).body, undefined);
+});
