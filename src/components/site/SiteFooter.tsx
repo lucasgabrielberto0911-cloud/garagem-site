@@ -23,6 +23,20 @@ import { CITIES_DIRECTORY_PATH } from "@/lib/seo";
 import { getGoogleReviews } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 
+/**
+ * Navegação do rodapé no celular: sem destino repetido (Compra = Estoque,
+ * Venda e Troca = Vender/Trocar) e sem Privacidade, que já está na linha final.
+ */
+const MOBILE_FOOTER_LINKS = [
+  ...NAV_LINKS,
+  ...SECONDARY_LINKS,
+  ...SERVICES,
+].filter(
+  (link, index, all) =>
+    link.href !== "/privacidade" &&
+    all.findIndex((other) => other.href === link.href) === index,
+);
+
 export async function SiteFooter() {
   const [site, google] = await Promise.all([
     getPublicSite(),
@@ -186,8 +200,8 @@ export async function SiteFooter() {
           <nav aria-label="Navegação do rodapé" className="mb-5">
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">Navegação e serviços</h2>
             <ul className="mt-3 grid grid-cols-2 gap-2 text-left">
-              {[...NAV_LINKS, ...SECONDARY_LINKS, ...SERVICES.map(({ label, href }) => ({ label, href }))].map((link) => (
-                <li key={`${link.href}-${link.label}`}>
+              {MOBILE_FOOTER_LINKS.map((link) => (
+                <li key={link.href}>
                   <Link href={link.href} prefetch={false} className="flex min-h-11 items-center border border-white/10 px-3 text-sm text-muted transition hover:text-cream">
                     {link.label}
                   </Link>
@@ -237,7 +251,7 @@ export async function SiteFooter() {
             <Link href="/privacidade" prefetch={false} className="inline-flex min-h-11 items-center px-2 transition hover:text-cream lg:min-h-0 lg:px-0">
               Privacidade
             </Link>
-            <Link href="/faq" prefetch={false} className="inline-flex min-h-11 items-center px-2 transition hover:text-cream lg:min-h-0 lg:px-0">
+            <Link href="/faq" prefetch={false} className="hidden min-h-11 items-center px-2 sm:inline-flex transition hover:text-cream lg:min-h-0 lg:px-0">
               Dúvidas
             </Link>
           </div>
