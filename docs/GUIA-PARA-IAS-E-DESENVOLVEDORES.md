@@ -179,8 +179,9 @@ Antes de começar uma tarefa, confira PRs abertos (`gh pr list`). **Não trabalh
 | `estoque` | `(catalog)/estoque`, filtros, busca | Mobile 2 colunas; chips discretos |
 | `ficha` | `(vehicle)/estoque/[id]` | Vendido, JSON-LD, WhatsApp + pixel |
 | `admin` | `app/admin`, `components/admin` | CSS separado; Server Actions |
+| `admin` (vendas) | `admin/vendas`, promissórias, clientes | Guia `areas/admin-vendas.md`; `revalidatePublicStock` ao vender |
 | `chat` | `api/chat`, `lib/chat-*` | Não vazar cidade do veículo; sem preço vendido |
-| `seo` | `sitemap.ts`, `robots.ts`, `seo.ts` | Canonical por slug |
+| `seo` | `sitemap.ts`, `robots.ts`, `seo.ts` | Guia `areas/seo.md`; canonical por slug |
 | `api/meta` | `api/meta/catalog.csv` | `vehicle_id` = CUID = `content_ids` |
 | `infra` | `vercel.json`, workflows, migrations | Região `gru1`; não force-dynamic sem motivo |
 

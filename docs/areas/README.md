@@ -9,5 +9,7 @@ Leia o guia da área **antes** de codar. Regras globais continuam em [`AGENTS.md
 | Admin veículos / fotos | [`admin-veiculos.md`](admin-veiculos.md) | `admin-veiculo-*.spec.ts`, `ordem-fotos-blob.spec.ts` |
 | Chat | [`chat.md`](chat.md) | `chat-*.spec.ts`, `src/lib/chat-*.test.ts` |
 | Fotos públicas | [`fotos.md`](fotos.md) | `fotos-publicas.spec.ts`, `docs/ops.md` |
+| SEO / sitemap | [`seo.md`](seo.md) | `seo-fichas.spec.ts`, `seo.test.ts` |
+| Admin vendas / clientes | [`admin-vendas.md`](admin-vendas.md) | `admin-vendas-*.spec.ts` |
 
 Coordenação: não abrir PR na mesma área que outro agente (`gh pr list`).

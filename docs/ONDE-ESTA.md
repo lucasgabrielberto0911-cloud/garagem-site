@@ -14,6 +14,8 @@ Use `rg -n "termo" caminho` (ou o buscador do editor). Tabela de atalhos para ta
 | Feed Meta CSV | `src/lib/catalog-feed.ts`, `src/app/api/meta/catalog.csv/` |
 | URLs de fotos públicas | `src/lib/public-photo-url.ts`, `src/app/fotos/` |
 | Upload / R2 | `src/lib/r2-photos.ts`, `src/app/api/upload/` |
+| SEO metadata / JSON-LD | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts` |
+| Vendas no painel | `src/app/admin/vendas/actions.ts` |
 | WhatsApp + pixel | `rg AddToCart src`, `src/components/site/` (CTAs ficha/card) |
 | Chat assistente | `src/app/api/chat/`, `src/lib/chat-turn.ts`, `src/lib/chat-http.ts` |
 | Login / sessão admin | `src/lib/auth.ts`, `src/app/admin/login/` |

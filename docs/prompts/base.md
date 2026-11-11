@@ -4,7 +4,7 @@ Repositório: garagem-site (loja Garagem, seminovos Linhares/ES).
 Leia na ordem:
 1. AGENTS.md (obrigatório)
 2. docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md
-3. Se souber a área: docs/areas/<area>.md (ficha, estoque, admin-veiculos, chat, fotos)
+3. Se souber a área: docs/areas/<area>.md (ficha, estoque, seo, admin-veiculos, admin-vendas, chat, fotos)
 4. Antes de commitar: docs/ANTI-PATTERNS.md
 
 Tarefa: [DESCREVA AQUI]

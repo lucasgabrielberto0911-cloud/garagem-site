@@ -1,0 +1,8 @@
+---
+description: Contexto ao editar assistente (chat)
+globs: src/app/api/chat/**/*,src/lib/chat-*.ts,src/components/**/Chat*.tsx
+alwaysApply: false
+---
+- Leia docs/areas/chat.md e AGENTS.md (vendido sem preço; sem cidade do veículo; não inventar estoque).
+- Testes: src/lib/chat-*.test.ts; e2e chat-*.spec.ts.
+- Chaves GEMINI_* / OPENROUTER_* só servidor; não force-dynamic sem motivo.
