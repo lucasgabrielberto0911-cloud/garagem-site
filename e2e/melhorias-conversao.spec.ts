@@ -61,7 +61,7 @@ test("capa da ficha baixa só a variante escolhida pelo navegador", async ({ bro
     const ficha = await context.newPage();
     await ficha.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
     await ficha.goto(vehiclePath(samples[0]));
-    const cover = ficha.locator(".gallery-frame img").first();
+    const cover = ficha.locator(".gallery-frame img:not([alt=\"\"])").first();
     await expect(cover).toBeVisible();
     await expect.poll(() => cover.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const src = await cover.evaluate((img: HTMLImageElement) => img.currentSrc);
