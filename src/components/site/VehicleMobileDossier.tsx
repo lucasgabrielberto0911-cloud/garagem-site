@@ -146,7 +146,6 @@ export function VehicleMobileBlocks({
   verified = [],
   verifiedHeading,
   warranty,
-  address,
   hours,
 }: {
   fullLabel: string;
@@ -168,8 +167,7 @@ export function VehicleMobileBlocks({
   verified?: PublicVerifiedItem[];
   verifiedHeading?: string;
   warranty?: string | null;
-  /** Endereço e horário do painel (getPublicSite), iguais ao rodapé. */
-  address: string;
+  /** Horário do painel (getPublicSite), igual ao rodapé. Não há endereço de loja. */
   hours: string;
   quickActions?: {
     contentPath: string;
@@ -322,12 +320,14 @@ export function VehicleMobileBlocks({
         </details>
       ) : null}
 
-      <DossierBlock title="Onde estamos" id="onde-estamos">
+      <DossierBlock title="Atendimento" id="atendimento">
         <p className="flex items-start gap-2 text-cream">
           <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
-          <span>Linhares/ES — {address}</span>
+          <span>Loja digital em Linhares/ES</span>
         </p>
-        <p className="mt-1.5">{hours}</p>
+        <p className="mt-1.5">
+          Atendimento com hora marcada pelo WhatsApp. {hours}
+        </p>
         {!sold ? (
           <FavoriteButton
             vehicleId={vehicleId}

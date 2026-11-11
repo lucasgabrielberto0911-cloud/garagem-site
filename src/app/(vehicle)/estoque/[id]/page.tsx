@@ -691,7 +691,6 @@ export default async function VehicleDetailPage({
         </div>
 
         <VehicleMobileBlocks
-          address={publicSite.address}
           hours={publicSite.hours}
           fullLabel={fullLabel}
           path={path}

@@ -222,18 +222,37 @@ export function VehicleGallery({
                 </button>
                 {index === active ||
                 (speculativeLoading && neighbors && shouldLoadGallerySlide(index, active)) ? (
-                  <VehicleImage
-                    src={index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo)}
-                    alt={vehiclePhotoAlt(alt, index, total)}
-                    fill
-                    sizes={GALLERY_HERO_SIZES}
-                    srcSet={galleryPreviewSrcSet(photo)}
-                    recoverable
-                    priority={index === 0}
-                    // Foto inteira no visor: cover cortava teto e chão de fotos
-                    // fora do 4:3 (Uno 2013). Sobra vira faixa escura (bg-asphalt).
-                    className="object-contain [-webkit-touch-callout:none]"
-                  />
+                  <>
+                    {/* Foto fora do 4:3: a sobra mostra a própria foto desfocada (mesma src e
+                        srcSet, então o navegador reaproveita o download), nunca faixa preta.
+                        Em foto 4:3 o primeiro plano cobre o fundo por inteiro. */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 overflow-hidden"
+                    >
+                      <VehicleImage
+                        src={index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo)}
+                        alt=""
+                        fill
+                        sizes={GALLERY_HERO_SIZES}
+                        srcSet={galleryPreviewSrcSet(photo)}
+                        eager
+                        className="scale-125 object-cover blur-2xl"
+                      />
+                    </div>
+                    <VehicleImage
+                      src={index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo)}
+                      alt={vehiclePhotoAlt(alt, index, total)}
+                      fill
+                      sizes={GALLERY_HERO_SIZES}
+                      srcSet={galleryPreviewSrcSet(photo)}
+                      recoverable
+                      priority={index === 0}
+                      // Foto inteira no visor: cover cortava teto e chão de fotos
+                      // fora do 4:3 (Uno 2013); a sobra é preenchida pelo fundo desfocado.
+                      className="object-contain [-webkit-touch-callout:none]"
+                    />
+                  </>
                 ) : (
                   <div
                     className="absolute inset-0 bg-asphalt"

@@ -4,7 +4,7 @@ import { vehicleWarrantyNote } from "@/lib/vehicle-conditions";
 /**
  * Faixa de confiança da ficha: garantia (a do veículo, se cadastrada), vistoria
  * e cidade da loja. `compact` é a versão da primeira tela do celular: sem
- * bordas e sem a cidade, que aparece em "Onde estamos".
+ * bordas e sem a cidade, que aparece em "Atendimento".
  */
 export function VehicleTrustNotes({
   className = "",

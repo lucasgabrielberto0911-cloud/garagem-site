@@ -183,7 +183,6 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
-        address: site.address,
         hours: site.hours,
         fullLabel: "Honda HR-V",
         path: "/estoque/hrv",
@@ -230,9 +229,11 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     "Próximos passos",
     "Sobre o veículo",
     "Itens e acessórios",
-    "Onde estamos",
+    "Atendimento",
   ]);
-  assert.match(html, /Linhares\/ES/);
+  assert.match(html, /Loja digital em Linhares\/ES/);
+  assert.match(html, /hora marcada pelo WhatsApp/);
+  assert.doesNotMatch(html, /Onde estamos|Nossa loja|visite nossa loja/i);
   const details = [...html.matchAll(/<details([^>]*)>/g)];
   assert.equal(details.length, 1);
   assert.doesNotMatch(details[0]?.[1] ?? "", /\sopen=""/);
@@ -321,7 +322,6 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
-        address: site.address,
         hours: site.hours,
         fullLabel: "Renault Sandero",
         path: "/estoque/sandero",
@@ -405,7 +405,6 @@ test("dobra do celular mostra ano, KM, câmbio, combustível e cor; final da pla
         FavoritesProvider,
         null,
         createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
-          address: site.address,
           hours: site.hours,
           fullLabel: "Fiat Uno",
           path: "/estoque/uno",
@@ -586,7 +585,6 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
       FavoritesProvider,
       null,
       createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
-        address: site.address,
         hours: site.hours,
         fullLabel: "Chevrolet Onix Premier",
         path: "/estoque/onix",
@@ -768,11 +766,23 @@ test("preço da ficha em vermelho com reflexo e glow, desligados sem movimento",
   assert.doesNotMatch(block, /gold|#ffc72c|#ffd700/i);
 });
 
-test("foto grande encaixa inteira (contain); miniaturas continuam cover", () => {
+test("foto grande encaixa inteira sobre a própria foto desfocada, sem faixa de cor sólida; miniaturas cover", () => {
   const gallery = readSrc("components/site/VehicleGallery.tsx");
   assert.match(gallery, /className="object-contain \[-webkit-touch-callout:none\]"/);
   assert.doesNotMatch(gallery, /className="object-cover \[-webkit-touch-callout:none\]"/);
-  assert.match(gallery, /snap-always bg-asphalt/);
+  // Fundo: mesma foto, desfocada, escondida dos leitores de tela.
+  assert.match(gallery, /aria-hidden="true"[\s\S]{0,120}overflow-hidden[\s\S]{0,400}alt=""[\s\S]{0,300}object-cover blur-2xl/);
+  assert.doesNotMatch(gallery, /Sobra vira faixa escura/);
+  // Miniaturas seguem cover.
+  assert.match(gallery, /sizes="96px"\s+className="object-cover"/);
+});
+
+test("galeria renderiza foto com fundo desfocado atrás da foto inteira", () => {
+  const html = renderToStaticMarkup(
+    createElement(VehicleGallery, { photos: [{ id: "a", url: "/fotos/a.webp" }, { id: "b", url: "/fotos/b.webp" }] as never, alt: "Fiat Uno" }),
+  );
+  assert.match(html, /<div aria-hidden="true"[^>]*><img[^>]*alt=""[^>]*class="[^"]*blur-2xl/);
+  assert.match(html, /<img[^>]*alt="[^"]*Fiat Uno[^"]*"[^>]*object-contain/);
 });
 
 test("Sobre o veículo fica com o gancho; cor, ano e km saem mesmo escritos de outro jeito", () => {
