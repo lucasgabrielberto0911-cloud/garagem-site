@@ -11,8 +11,9 @@ test("chips de carroceria filtram o estoque e somem com a carroceria ao trocar p
   await page.goto("/estoque");
   const cards = page.locator("article.listing-card");
   await expect(cards).not.toHaveCount(0);
-  const suv = page.getByRole("button", { name: "SUV", exact: true }).first();
-  await suv.click();
+  // No celular a fileira rola e o chip pode ficar parcialmente fora da tela (aria-hidden, depende da fonte do runner):
+  // dispara o clique direto no botão em vez de procurar pelo papel.
+  await page.locator("button", { hasText: /^SUV$/ }).first().dispatchEvent("click");
   await expect(page).toHaveURL(/body=suv/);
   await expect(page).toHaveURL(/category=carro/);
   await expect(cards.filter({ has: page.getByRole("heading", { name: "Civic", exact: true }) })).toHaveCount(0);
