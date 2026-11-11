@@ -4,6 +4,8 @@ Este arquivo vale para **todos** os agentes: Codex (GPT), Claude Code e Cursor (
 O `CLAUDE.md` importa este arquivo. As regras do Cursor em `.cursor/rules/` só reforçam o que está aqui.
 Escreva código, comentários de PR e textos do site em **português do Brasil**.
 
+Mapa de arquitetura, pastas, padrões de código e checklist para humanos/outras IAs: [`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md).
+
 ## Projeto
 - Site da loja de seminovos **Garagem** (Linhares/ES): https://www.suagaragem.net
 - Stack: Next.js 16 (App Router) + React 19, Tailwind 3, Prisma 6 + Postgres no Supabase (`sa-east-1`), Vercel Hobby com Functions em `gru1` (ver `vercel.json` e `docs/ops.md`).
