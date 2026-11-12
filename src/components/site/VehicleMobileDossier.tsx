@@ -48,6 +48,7 @@ export function hasMobileFichaSpecs(specs: VehicleSpecRow[]) {
 export function VehicleMobileSummary({
   title,
   version,
+  yearLabel,
   price,
   sold,
   facts,
@@ -59,6 +60,7 @@ export function VehicleMobileSummary({
 }: {
   title: string;
   version?: string | null;
+  yearLabel?: string;
   price: number;
   sold: boolean;
   /** Ano, KM, câmbio e combustível (`vehicleKeyFacts`). O resto fica em "Ficha técnica". */
@@ -73,9 +75,16 @@ export function VehicleMobileSummary({
 }) {
   return (
     <div className="ficha-mobile-sheet px-4 pb-3 pt-3 sm:px-6">
-      <h1 className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream">
-        {title}
-      </h1>
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <h1 className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream">
+          {title}
+        </h1>
+        {yearLabel ? (
+          <span className="inline-flex shrink-0 items-center border border-white/20 bg-ink px-2 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap">
+            {yearLabel}
+          </span>
+        ) : null}
+      </div>
       {version ? (
         <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-muted">{version}</p>
       ) : null}
@@ -203,7 +212,7 @@ export function VehicleMobileBlocks({
     visibleDescriptionSegments(description, summaryFacts, specs).length > 0;
 
   return (
-    <div className="mt-2 lg:hidden">
+    <div className="mt-2 pb-6 lg:hidden">
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha técnica" section="especificacoes">
           {listedLine ? (
@@ -211,10 +220,10 @@ export function VehicleMobileBlocks({
           ) : null}
           <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
             {extraSpecs.map((spec) => (
-              <div key={spec.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
-                <dt className="text-sm font-medium text-muted">{spec.label}</dt>
+              <div key={spec.label} className="min-w-0 border border-white/20 bg-ink px-3 py-2.5">
+                <dt className="text-sm font-medium text-cream/75">{spec.label}</dt>
                 <dd
-                  className={`mt-1 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
+                  className={`mt-1 font-display text-sm leading-snug [overflow-wrap:break-word] ${
                     spec.empty ? "font-medium text-muted" : "font-semibold text-cream"
                   }`}
                 >

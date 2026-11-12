@@ -42,9 +42,10 @@ export function StockBackLink({
         prefetch={false}
         scroll={href ? false : undefined}
         aria-label={href ? "Voltar aos resultados" : "Voltar ao estoque"}
-        className="inline-flex h-10 w-10 items-center justify-center border border-white/15 bg-asphalt text-lg leading-none text-cream"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/25 bg-asphalt/85 px-3.5 font-display text-xs font-semibold text-cream shadow-md backdrop-blur-sm transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         <span aria-hidden="true">←</span>
+        <span>{href ? "Voltar" : "Estoque"}</span>
       </Link>
     );
   }

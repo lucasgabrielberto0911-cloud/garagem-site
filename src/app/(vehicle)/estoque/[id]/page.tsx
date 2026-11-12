@@ -37,7 +37,13 @@ import { JsonLd } from "@/components/JsonLd";
 import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
-import { buildVehiclePublicSpecs, vehicleColorFact, vehicleKeyFacts } from "@/lib/vehicle-specs";
+import {
+  buildVehiclePublicSpecs,
+  formatVehicleYearRange,
+  SPEC_EMPTY,
+  vehicleColorFact,
+  vehicleKeyFacts,
+} from "@/lib/vehicle-specs";
 import { VehicleKeyFacts } from "@/components/site/VehicleKeyFacts";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
@@ -251,6 +257,7 @@ export default async function VehicleDetailPage({
   // Cor, ano e KM: quadradinhos do topo (desktop e celular).
   const keyFacts = vehicleKeyFacts(specs);
   const keyColor = vehicleColorFact(specs);
+  const yearBadge = formatVehicleYearRange(vehicle.year, vehicle.yearModel);
 
   const hasAboutText =
     !!description && visibleDescriptionSegments(description, vehicle, specs).length > 0;
@@ -378,6 +385,7 @@ export default async function VehicleDetailPage({
               <VehicleMobileSummary
                 title={title}
                 version={collapseWhitespace(vehicle.version ?? "")}
+                yearLabel={yearBadge !== SPEC_EMPTY ? yearBadge : undefined}
                 price={sold ? 0 : vehicle.price}
                 sold={sold}
                 facts={keyFacts}
@@ -416,12 +424,12 @@ export default async function VehicleDetailPage({
                 {specs.map((spec) => (
                   <div
                     key={spec.label}
-                    className="min-w-0 border border-white/10 bg-ink px-3 py-2.5"
+                    className="min-w-0 border border-white/20 bg-ink px-3 py-2.5"
                   >
-                    <dt className="text-sm text-muted">{spec.label}</dt>
+                    <dt className="text-sm text-cream/75">{spec.label}</dt>
                     {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
                     <dd
-                      className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
+                      className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:break-word] ${
                         spec.empty
                           ? "font-medium text-muted"
                           : "font-semibold text-cream"
@@ -510,9 +518,16 @@ export default async function VehicleDetailPage({
                 ) : null}
               </div>
               <div>
-                <p className="font-display text-[1.75rem] font-bold leading-tight tracking-tight text-cream">
-                  {title}
-                </p>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <p className="font-display text-[1.75rem] font-bold leading-tight tracking-tight text-cream">
+                    {title}
+                  </p>
+                  {yearBadge !== SPEC_EMPTY ? (
+                    <span className="inline-flex shrink-0 items-center border border-white/20 bg-asphalt/80 px-2.5 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap">
+                      {yearBadge}
+                    </span>
+                  ) : null}
+                </div>
                 {vehicle.version?.trim() ? (
                   <p className="mt-1 text-[15px] leading-snug text-muted">{collapseWhitespace(vehicle.version ?? "")}</p>
                 ) : null}

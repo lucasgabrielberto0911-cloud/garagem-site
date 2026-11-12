@@ -35,7 +35,7 @@ export function VehicleKeyFacts({
   onInk?: boolean;
 }) {
   if (facts.length === 0 && !color) return null;
-  const surface = `border border-white/10 px-2.5 ${onInk ? "bg-asphalt/70" : "bg-ink"}`;
+  const surface = `border border-white/20 px-2.5 ${onInk ? "bg-asphalt/80" : "bg-ink"}`;
   return (
     <dl
       data-key-facts=""
@@ -49,16 +49,25 @@ export function VehicleKeyFacts({
             index === facts.length - 1 && facts.length % 2 === 1 ? "col-span-2 xl:col-span-1" : ""
           }`}
         >
-          <dt className="text-sm font-medium text-muted">{fact.label}</dt>
-          <dd className="mt-0.5 font-display text-sm font-semibold leading-tight text-cream [overflow-wrap:break-word] sm:text-[15px]">
+          <dt className="text-sm font-medium text-cream/75">{fact.label}</dt>
+          <dd
+            className={`mt-0.5 font-display font-semibold leading-tight text-cream sm:text-[15px] ${
+              fact.label === "Ano"
+                ? "whitespace-nowrap text-[13px] min-[360px]:text-sm"
+                : "text-sm [overflow-wrap:break-word]"
+            }`}
+          >
             {breakAfterSlash(fact.value)}
+            {fact.label === "KM" && !/\bkm\b/i.test(fact.value) ? (
+              <span className="font-medium text-cream/75"> km</span>
+            ) : null}
           </dd>
         </div>
       ))}
       {color ? (
         <div data-key-fact="Cor" className={`col-span-full flex min-w-0 items-baseline gap-2 py-1.5 ${surface}`}>
-          <dt className="shrink-0 text-sm font-medium text-muted">Cor</dt>
-          <dd className="min-w-0 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:anywhere]">
+          <dt className="shrink-0 text-sm font-medium text-cream/75">Cor</dt>
+          <dd className="min-w-0 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:break-word]">
             {color}
           </dd>
         </div>
