@@ -106,6 +106,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const [draft, setDraft] = useState(current);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<number | undefined>(undefined);
+  const [searchText, setSearchText] = useState(current.q);
+  const [searchDebouncing, setSearchDebouncing] = useState(false);
   const currentRef = useRef(current);
   currentRef.current = current;
   const [draftCount, setDraftCount] = useState<{ key: string; total: number } | null>(null);
@@ -173,8 +175,11 @@ export function StockFilters({ facets }: { facets: Facets }) {
   useEffect(() => {
     // Mantém o campo igual à URL (ex.: Limpar filtros), sem atropelar quem está digitando.
     if (searchRef.current && document.activeElement !== searchRef.current) {
-      searchRef.current.value = params.get("q") ?? "";
+      const nextQ = params.get("q") ?? "";
+      searchRef.current.value = nextQ;
+      setSearchText(nextQ);
     }
+    setSearchDebouncing(false);
     return () => window.clearTimeout(searchTimer.current);
   }, [params]);
 
@@ -455,13 +460,21 @@ export function StockFilters({ facets }: { facets: Facets }) {
           onSubmit={(event) => {
             event.preventDefault();
             if (searchTimer.current) window.clearTimeout(searchTimer.current);
+            setSearchDebouncing(false);
             update({ q: searchRef.current?.value.trim() ?? "" });
           }}
           className="mx-auto max-w-2xl"
           role="search"
         >
           <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:outline focus-within:outline-2 focus-within:outline-offset-[3px] focus-within:outline-brand lg:min-h-[48px]">
-            <IconSearch className="h-4 w-4 shrink-0 text-muted" />
+            {searchDebouncing || isPending ? (
+              <span
+                className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-brand border-r-transparent"
+                aria-hidden="true"
+              />
+            ) : (
+              <IconSearch className="h-4 w-4 shrink-0 text-muted" />
+            )}
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
             </label>
@@ -474,14 +487,38 @@ export function StockFilters({ facets }: { facets: Facets }) {
               defaultValue={current.q}
               onChange={(event) => {
                 const value = event.target.value;
+                setSearchText(value);
                 if (searchTimer.current) window.clearTimeout(searchTimer.current);
+                setSearchDebouncing(true);
                 searchTimer.current = window.setTimeout(() => {
+                  setSearchDebouncing(false);
                   if (value.trim() !== currentRef.current.q) updateRef.current({ q: value.trim() }, { replace: true });
                 }, 600);
               }}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none lg:text-sm"
+              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none [&::-webkit-search-cancel-button]:appearance-none lg:text-sm"
             />
+            {searchText ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (searchTimer.current) window.clearTimeout(searchTimer.current);
+                  setSearchDebouncing(false);
+                  setSearchText("");
+                  if (searchRef.current) {
+                    searchRef.current.value = "";
+                    searchRef.current.focus();
+                  }
+                  if (currentRef.current.q) {
+                    updateRef.current({ q: "" }, { replace: true });
+                  }
+                }}
+                aria-label="Limpar busca"
+                className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-lg leading-none text-muted transition hover:text-cream touch-manipulation"
+              >
+                ×
+              </button>
+            ) : null}
           </div>
         </form>
 
@@ -898,6 +935,8 @@ function MobileChipRow({
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const labelId = useId();
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useLayoutEffect(() => {
     const track = trackRef.current;
@@ -917,6 +956,9 @@ function MobileChipRow({
         insetLeft > 0 || insetRight > 0
           ? `inset(0px ${Math.ceil(insetRight)}px 0px ${Math.ceil(insetLeft)}px)`
           : "";
+      const { scrollLeft, scrollWidth, clientWidth } = track;
+      setCanScrollLeft(scrollLeft > 4);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
       chips.forEach((chip, index) => {
         if (hidden[index]) {
           chip.setAttribute("aria-hidden", "true");
@@ -954,8 +996,22 @@ function MobileChipRow({
   return (
     <div className="stock-chip-row">
       <p id={labelId} className="stock-chip-label">{label}</p>
-      <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
-        {children}
+      <div className="relative min-w-0 flex-1">
+        <div
+          className={`pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-6 bg-gradient-to-r from-ink to-transparent transition-opacity duration-200 ${
+            canScrollLeft ? "opacity-100" : "opacity-0"
+          }`}
+          aria-hidden="true"
+        />
+        <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
+          {children}
+        </div>
+        <div
+          className={`pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-6 bg-gradient-to-l from-ink to-transparent transition-opacity duration-200 ${
+            canScrollRight ? "opacity-100" : "opacity-0"
+          }`}
+          aria-hidden="true"
+        />
       </div>
     </div>
   );

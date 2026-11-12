@@ -70,7 +70,7 @@ export function WantedVehicleCta({
             onChange={(event) => setWanted(event.target.value)}
             placeholder="Ex.: Corolla automático 2020"
             autoComplete="off"
-            className="w-full min-h-[48px] border border-white/10 bg-asphalt px-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand"
+            className="w-full min-h-[48px] border border-white/10 bg-asphalt px-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand focus-visible:ring-2 focus-visible:ring-brand"
           />
         </label>
         <label className="block sm:col-span-1 sm:w-44">
@@ -78,7 +78,7 @@ export function WantedVehicleCta({
           <select
             value={budget}
             onChange={(event) => setBudget(event.target.value)}
-            className="w-full min-h-[48px] border border-white/10 bg-asphalt px-3 text-base text-cream outline-none transition focus:border-brand"
+            className="w-full min-h-[48px] border border-white/10 bg-asphalt px-3 text-base text-cream outline-none transition focus:border-brand focus-visible:ring-2 focus-visible:ring-brand"
           >
             <option value="">Faixa (opcional)</option>
             {WANTED_BUDGET_OPTIONS.map((option) => (

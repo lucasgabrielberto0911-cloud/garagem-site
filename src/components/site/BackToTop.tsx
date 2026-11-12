@@ -42,7 +42,10 @@ export function BackToTop() {
   return (
     <button
       type="button"
-      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      onClick={() => {
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+      }}
       aria-label="Voltar ao topo"
       className="fixed bottom-40 right-6 z-40 hidden h-11 w-11 items-center justify-center border border-white/15 bg-ink text-cream shadow-lg transition hover:border-brand active:scale-95 touch-manipulation lg:flex"
     >

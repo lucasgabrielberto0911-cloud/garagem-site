@@ -266,7 +266,7 @@ export function StockInfiniteList({
               data-stock-load-more=""
               className="min-h-[48px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand touch-manipulation"
             >
-              Ver mais veículos
+              {`Ver mais veículos · ${vehicles.length} de ${total}`}
             </button>
           )}
         </InfiniteSentinel>
@@ -276,6 +276,22 @@ export function StockInfiniteList({
             ? "1 veículo neste filtro"
             : `Você viu os ${vehicles.length} veículos`}
         </p>
+      ) : null}
+
+      {vehicles.length > pageSize ? (
+        <div className="mt-4 flex justify-center lg:hidden">
+          <button
+            type="button"
+            onClick={() => {
+              const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+              window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+            }}
+            className="inline-flex min-h-[44px] items-center gap-1.5 border border-white/15 px-4 text-xs uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream touch-manipulation"
+          >
+            <span aria-hidden="true">↑</span>
+            Voltar ao topo
+          </button>
+        </div>
       ) : null}
     </>
   );

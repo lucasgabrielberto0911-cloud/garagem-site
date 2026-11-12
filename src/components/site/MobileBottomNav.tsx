@@ -65,7 +65,7 @@ export function MobileBottomNav() {
             onClick={() => trackWhatsAppClick("nav-mobile")}
             className="-mt-3 flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 touch-manipulation"
           >
-            <span className="whatsapp-pulse flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-green-500/30">
+            <span className="whatsapp-pulse flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-asphalt shadow-lg shadow-green-500/30">
               <IconWhatsApp className="h-7 w-7" />
             </span>
             <span className="text-[12px] font-semibold text-[#25D366]">
