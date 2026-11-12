@@ -460,7 +460,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto max-w-2xl"
           role="search"
         >
-          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:outline focus-within:outline-2 focus-within:outline-offset-[3px] focus-within:outline-brand lg:min-h-[48px]">
+          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand lg:min-h-[48px]">
             <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -482,6 +482,24 @@ export function StockFilters({ facets }: { facets: Facets }) {
               placeholder="Marca, modelo ou versão"
               className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none lg:text-sm"
             />
+            {current.q ? (
+              <button
+                type="button"
+                onClick={() => {
+                  clearTimeout(searchTimer.current);
+                  const input = searchRef.current;
+                  if (input) {
+                    input.value = "";
+                    input.focus();
+                  }
+                  updateRef.current({ q: "" }, { replace: true });
+                }}
+                aria-label="Limpar busca"
+                className="-mr-2 flex h-11 w-11 items-center justify-center text-lg text-muted hover:text-cream"
+              >
+                ×
+              </button>
+            ) : null}
           </div>
         </form>
 

@@ -211,9 +211,9 @@ export function SiteHeader() {
               source="header-mobile"
               size="compact"
               variant="solid"
-              className="mobile-header-help h-11 min-w-11 shrink-0 gap-1.5 rounded-full px-3 [&_svg]:h-5 [&_svg]:w-5"
+              className="mobile-header-help h-11 w-11 shrink-0 gap-1.5 rounded-full px-0 min-[400px]:w-auto min-[400px]:px-3 [&_svg]:h-5 [&_svg]:w-5"
             >
-              <span className="max-[359px]:sr-only">Ajuda</span>
+              <span className="max-[399px]:sr-only">Ajuda</span>
             </ChatOpenButton>
           </div>
         </div>
@@ -299,7 +299,7 @@ export function SiteHeader() {
                     trackCatalogWhatsAppClick(whatsapp.catalogParams);
                     closeMenu();
                   }}
-                  className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2.5 bg-[#25D366] px-4 py-4 font-display text-base font-semibold text-asphalt hover:bg-[#1fbe5a] touch-manipulation"
                 >
                   <IconWhatsApp className="h-5 w-5" />
                   Falar no WhatsApp

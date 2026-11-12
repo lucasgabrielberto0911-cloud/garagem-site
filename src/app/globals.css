@@ -586,10 +586,17 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   margin: 0;
   padding: 0.3rem 0.35rem;
   border-radius: 0.25rem;
-  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.09);
+  color: #f7f5f2;
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.4;
+}
+@media (max-width: 379px) {
+  .listing-card-fact dd {
+    font-size: 0.75rem;
+  }
 }
 .listing-card-transmission { margin: 0 0.625rem 0.375rem; }
 .listing-card-price-row {
@@ -599,7 +606,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 }
 .listing-card-price {
   margin: 0;
-  font-size: clamp(1.2rem, 5.9vw, 1.7rem);
+  font-size: clamp(1.05rem, 5.4vw, 1.7rem);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.045em;
@@ -2099,9 +2106,8 @@ html[data-consent="essential"] .site-consent {
 }
 
 /*
- * Preço da ficha: reflexo diagonal de tempos em tempos + glow vermelho suave,
- * no espírito do CTA do assistente (não é botão). Só transform/opacity;
- * desligado com prefers-reduced-motion.
+ * Preço da ficha: glow vermelho suave atrás (sem reflexo sobre o texto).
+ * Só transform/opacity; desligado com prefers-reduced-motion.
  */
 .ficha-price {
   position: relative;
@@ -2123,33 +2129,9 @@ html[data-consent="essential"] .site-consent {
   animation: assistantGlow 4.6s ease-in-out 2s infinite both;
 }
 
-.ficha-price::after {
-  content: "";
-  position: absolute;
-  top: -20%;
-  bottom: -20%;
-  left: 0;
-  width: 32%;
-  pointer-events: none;
-  background: linear-gradient(
-    105deg,
-    transparent 0%,
-    rgba(255, 140, 130, 0.14) 40%,
-    rgba(255, 235, 228, 0.32) 50%,
-    rgba(255, 140, 130, 0.14) 60%,
-    transparent 100%
-  );
-  transform: translateX(-160%) skewX(-18deg);
-  animation: assistantSheen 4.6s ease-in-out 2s infinite both;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .ficha-price::before,
-  .ficha-price::after {
+  .ficha-price::before {
     animation: none;
-  }
-  .ficha-price::after {
-    opacity: 0;
   }
 }
 

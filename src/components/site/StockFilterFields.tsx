@@ -169,11 +169,14 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   ))}
                 </select>
               </MobileField>
-              <details className="border border-white/10 bg-asphalt/30 px-3.5 py-1">
+              <details
+                className="border border-white/10 bg-asphalt/30 px-3.5 py-1"
+                open={Boolean(draft.fuel || draft.color || draft.accessory || draft.laudo)}
+              >
                 <summary className="flex min-h-[48px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream [&::-webkit-details-marker]:hidden">
                   Mais opções
                   <span className="ml-auto text-[10px] font-medium normal-case tracking-wide text-muted">
-                    cor e combustível
+                    cor, combustível e acessórios
                   </span>
                 </summary>
                 <div className="space-y-5 pb-4 pt-1">
@@ -238,6 +241,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
               <div className="grid grid-cols-[auto_1fr] gap-3">
                 <button
                   type="button"
+                  disabled={draftFilterCount === 0}
                   onClick={() =>
                     setDraft({
                       ...draft,
@@ -256,7 +260,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                       maxKm: "",
                     })
                   }
-                  className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted"
+                  className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted disabled:opacity-40"
                 >
                   Limpar
                 </button>

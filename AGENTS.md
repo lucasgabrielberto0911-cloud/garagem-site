@@ -35,11 +35,11 @@ O PR só sai de rascunho com `test`, `lint` e `build` passando. Mexeu em tela p�
 | Codex (GPT) | Pesquisa profunda e diagnóstico | **Não**: só escreve relatórios em `docs/pesquisas/AAAA-MM-DD-tema.md` |
 | Claude Code (Sonnet) | Aplica mudanças em PR rascunho e cuida de vídeos complexos | Sim |
 | Cursor (cloud agent) | Segundo programador, trabalha em paralelo | Sim |
-| Antigravity (Gemini) | Programador local do Lucas, trabalha em paralelo com o Claude Code | Sim, sempre via Draft PR |
+| Antigravity (Gemini) | Programador local em paralelo com o Claude Code | Sim |
 
 Regras:
 1. **1 tarefa = 1 branch = 1 PR rascunho.** Não junte assuntos diferentes no mesmo PR. Para economizar deploys na Vercel, **junte várias correções pequenas do mesmo assunto num único PR** (lote), em vez de um PR por microcorreção.
-2. **Prefixo de branch por agente:** `claude/<tema>`, `codex/<tema>` (só relatórios), `cursor/<tema>`, `antigravity/<tema>`. No GitHub todos os commits saem com a conta do Lucas, então o prefixo é a única forma de saber de quem é a branch: **nunca use o prefixo de outro agente.** Use temas curtos em kebab-case, por exemplo `claude/ficha-jsonld-veiculo`.
+2. **Prefixo de branch por agente:** `claude/<tema>`, `codex/<tema>` (só relatórios), `cursor/<tema>`, `agy/<tema>` (Antigravity). Use temas curtos em kebab-case, por exemplo `claude/ficha-jsonld-veiculo`.
 3. **Sempre abrir como Draft PR.** O título fica em português e o corpo diz o que mudou, por quê, como foi validado (comandos e telas) e o que falta.
 4. **Merge fica com o Grok Bot (coordenador).** Em 2026-10-10 o Lucas autorizou: o Grok Bot revisa CI e preview e faz o squash-merge. Os outros agentes **sempre** abrem Draft PR e **nunca** fazem merge, force-push em `main`, rebase de branch alheia ou fecham PR de outro agente.
 5. **Não trabalhar na mesma área ao mesmo tempo.** Áreas: `ficha`, `estoque`, `home`, `admin`, `chat`, `seo`, `api/meta`, `infra`. Antes de começar, confira os PRs abertos (`gh pr list`). Se já houver um PR aberto na mesma área, avise o coordenador em vez de começar. **Rode `bash scripts/agentes-conflitos.sh <pasta-ou-arquivo>` antes de começar** (mostra quem já mexe ali) **e `bash scripts/agentes-conflitos.sh` antes de cada push** (compara a sua branch com os PRs abertos). Saída 2 = sobreposição: pare e avise o Lucas.
@@ -47,12 +47,10 @@ Regras:
 7. **Produção é intocável:** não rode `prisma db push`, migrações, seeds ou scripts (`scripts/*.ts`) contra o banco real. Também não altere variáveis de ambiente na Vercel. Teste com banco local/isolado (igual ao CI).
 8. Nunca commitar `.env*`, fotos originais de anúncio, chaves ou tokens.
 9. **Egress de fotos é proibido:** agentes e scripts nunca baixam fotos do site em produção nem do Storage do Supabase. Use fixtures ou cópia local (ver "Fotos e egress do Supabase").
-10. **Agentes locais em paralelo (Claude Code + Antigravity no PC do Lucas):**
-    - Cada agente trabalha na **sua própria pasta** (clone separado ou `git worktree add ../garagem-site-<agente> -b <prefixo>/<tema>`). Nunca dois agentes editam a mesma pasta.
-    - Há um quadro compartilhado **fora do repo**, `C:\Users\Lucas Gabriel\Documents\claude\QUADRO-AGENTES.md`. Leia antes de começar, reserve a sua linha (agente, branch, área, arquivos) e remova ao terminar (passe para "Concluído recente" com o link do PR). Se o arquivo não existir na sua máquina, vale só o `gh pr list` e o script acima.
-    - Abra o Draft PR **cedo** (assim que fizer o primeiro commit): ele reserva a área no GitHub para todos.
-    - Arquivo compartilhado de verdade (`package.json`, `package-lock.json`, `src/lib` comum, `AGENTS.md`, `tailwind.config`): só um agente por vez. Avise o Lucas antes de tocar.
-    - Antes do push final, atualize a branch com `git fetch origin && git merge origin/main` para o conflito aparecer no seu PR, não no do outro.
+10. **Claude e Antigravity em paralelo:** dois agentes trabalham no repo, CLAUDE (branches `claude/...`) e ANTIGRAVITY (branches `agy/...`). Nunca commite na `main` nem mexa na branch do outro.
+    - **Antes de começar:** `git fetch`, veja os PRs abertos e o [`.agentes/em-andamento.md`](.agentes/em-andamento.md). Ao começar, adicione uma linha (agente, branch, tarefa, arquivos). Ao terminar, remova a linha.
+    - **Só com ok do Lucas:** arquivos compartilhados (layout, `globals.css`, `schema.prisma`, `package.json`, `package-lock.json`, middleware) e dependências novas.
+    - **Produção intocável (reforço da regra 7):** nunca rode `db push`, `migrate`, seed nem e2e contra o banco de produção. PR sempre em rascunho, sem merge.
 
 ## Marca (obrigatório em qualquer texto, tela, arte ou vídeo)
 - O nome da marca é **Garagem**, não "Sua Garagem". `suagaragem.net` é só o domínio. Não crie novas ocorrências visíveis de "Sua Garagem". As ocorrências antigas (metadados, aviso de consentimento, assistente) só mudam em PR próprio, combinado com o Lucas.

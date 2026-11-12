@@ -340,12 +340,22 @@ export function EstoqueBrowse({
                   </div>
                 ) : null}
                 {filtered && !error ? (
-                  <Link
-                    href="/estoque"
-                    className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-md border border-white/25 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:w-auto"
-                  >
-                    Ver todos os veículos
-                  </Link>
+                  <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                    {params.q ? (
+                      <Link
+                        href={buildReturnTo({ ...params, q: undefined })}
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-md border border-brand/50 bg-brand/10 px-4 py-3 text-sm font-semibold text-cream hover:border-brand sm:w-auto"
+                      >
+                        Retirar só o texto da busca
+                      </Link>
+                    ) : null}
+                    <Link
+                      href="/estoque"
+                      className="inline-flex min-h-12 w-full items-center justify-center rounded-md border border-white/25 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:w-auto"
+                    >
+                      Ver todos os veículos
+                    </Link>
+                  </div>
                 ) : null}
                 <div className="mt-5 flex flex-col items-center gap-3">
                   <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -382,14 +392,6 @@ export function EstoqueBrowse({
                       : "Abre o WhatsApp para você dizer o que procura."}
                   </p>
                 </div>
-                {filtered && params.q ? (
-                  <Link
-                    href={buildReturnTo({ ...params, q: undefined })}
-                    className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-white/25 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand sm:w-auto"
-                  >
-                    Retirar só o texto da busca
-                  </Link>
-                ) : null}
               </div>
             }
           />

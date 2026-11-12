@@ -27,6 +27,8 @@ export function HeroSearch({
   className?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -59,21 +61,37 @@ export function HeroSearch({
             trackSearch({ content_ids: [], search_string: search });
           }
         }}
-        className="flex flex-row items-center gap-1.5 border border-white/15 bg-asphalt/95 p-1 transition focus-within:border-brand/60 sm:gap-2 sm:p-1.5 sm:bg-asphalt/85 sm:backdrop-blur-md"
+        className="flex flex-row items-center gap-1.5 border border-white/15 bg-asphalt/95 p-1 transition focus-within:border-brand/60 focus-within:outline focus-within:outline-2 focus-within:outline-offset-[3px] focus-within:outline-brand sm:gap-2 sm:p-1.5 sm:bg-asphalt/85 sm:backdrop-blur-md"
         role="search"
       >
         <label htmlFor="hero-busca" className="sr-only">
           Buscar por marca ou modelo
         </label>
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-2 sm:px-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2 pl-2 sm:pl-2.5">
           <IconSearch className="h-4 w-4 shrink-0 text-muted" />
           <input
+            ref={inputRef}
             id="hero-busca"
             type="search"
             name="q"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Ex.: Civic"
-            className="w-full min-w-0 bg-transparent py-1.5 font-body text-sm text-cream placeholder:text-muted focus:outline-none sm:py-2.5 sm:text-base"
+            className="w-full min-w-0 bg-transparent py-1.5 font-body text-sm text-cream placeholder:text-muted focus:outline-none [&::-webkit-search-cancel-button]:appearance-none sm:py-2.5 sm:text-base"
           />
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                inputRef.current?.focus();
+              }}
+              aria-label="Limpar busca"
+              className="flex h-11 w-11 shrink-0 items-center justify-center text-lg leading-none text-muted transition hover:text-cream touch-manipulation"
+            >
+              ×
+            </button>
+          )}
         </div>
         <button
           type="submit"
