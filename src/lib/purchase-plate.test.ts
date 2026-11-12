@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { lookupPurchasePlate, normalizePurchasePlate, parsePurchasePlate } from "./purchase-plate";
+delete process.env.CONSULTA_PLACA_API_KEY; // estes testes cobrem a fonte de reserva, sem chave
 const fixture = readFileSync("e2e/fixtures/compra-placa.html", "utf8");
 test("parser da placa preserva todas as versões e só devolve identidade permitida", () => {
   const result = parsePurchasePlate(fixture);
