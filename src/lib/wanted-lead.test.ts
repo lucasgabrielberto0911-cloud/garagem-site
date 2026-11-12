@@ -157,6 +157,9 @@ test("o formulário público tem quatro campos ordenados e aviso de privacidade 
   assert.ok(consentAt > 0);
   assert.ok(sendAt > consentAt);
   assert.match(html, /name="model"/);
+  assert.match(html, /name="website"/);
+  assert.match(html, /hidden/);
+  assert.doesNotMatch(html, />Website</);
   assert.doesNotMatch(html, /name="email"|name="yearMin"|name="yearMax"|name="priceMin"|name="kmMin"|name="kmMax"/);
   const fields = [...html.matchAll(/<input[^>]*name="(phone|name|model|priceMax)"/g)].map(match => match[1]);
   assert.deepEqual(fields, ["phone", "name", "model", "priceMax"]);

@@ -11,6 +11,7 @@ import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import {
   IconArrowRight,
   IconChat,
+  IconFileText,
   IconGearShift,
   IconPlay,
   IconShieldCheck,
@@ -45,6 +46,7 @@ import {
   type ChatMessage,
 } from "@/lib/chat-history";
 import { chatPageKey } from "@/lib/chat-page";
+import { suggestionIconKind } from "@/lib/chat-suggestion-icon";
 import {
   chatKeyboardShellStyle,
   chatMobileKeyboardCovered,
@@ -108,17 +110,17 @@ const VEHICLE_SUGGESTIONS = [
   "Falar com um consultor",
 ];
 
-/** Ícone pelo assunto do atalho, não pela posição: a lista muda com o contexto. */
 function SuggestionIcon({ text, index }: { text: string; index: number }) {
-  const t = text.toLowerCase();
-  if (/autom[aá]tic|c[aâ]mbio/.test(t)) return <IconGearShift className="h-4 w-4" />;
-  if (/financ|parcel|mil\b/.test(t)) {
+  const kind = suggestionIconKind(text);
+  if (kind === "gear") return <IconGearShift className="h-4 w-4" />;
+  if (kind === "finance") return <IconFileText className="h-4 w-4" />;
+  if (kind === "price") {
     return <span className="font-display text-[15px] font-semibold">R$</span>;
   }
-  if (/v[ií]deo/.test(t)) return <IconPlay className="h-4 w-4" />;
-  if (/troca|usado/.test(t)) return <IconSwap className="h-4 w-4" />;
-  if (/garantia|condi[cç]/.test(t)) return <IconShieldCheck className="h-4 w-4" />;
-  if (/consultor|avisar|encomendar/.test(t)) return <IconWhatsApp className="h-4 w-4" />;
+  if (kind === "video") return <IconPlay className="h-4 w-4" />;
+  if (kind === "trade") return <IconSwap className="h-4 w-4" />;
+  if (kind === "warranty") return <IconShieldCheck className="h-4 w-4" />;
+  if (kind === "whatsapp") return <IconWhatsApp className="h-4 w-4" />;
   return index === 0 ? (
     <span className="font-display text-[15px] font-semibold">R$</span>
   ) : (
