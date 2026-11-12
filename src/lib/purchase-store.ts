@@ -62,10 +62,10 @@ export async function preparePurchase(raw: unknown) {
   const fipeSnapshot = await fipeEvidence(input);
   if (quick) input = mapQuickPurchase(quick, [], policy);
   if (input.source) await loadPurchaseSource(input.source);
-  const extracted = quick ? await cachedPurchaseAi("custos-v1", { input: purchaseAiPayload(input, quick), parameters: input.parameters, profile: policy.defaultCostItems }, () => extractPurchaseCosts(input, quick)) : null;
+  const extracted = quick ? await cachedPurchaseAi("custos-v2", { input: purchaseAiPayload(input, quick), parameters: input.parameters, profile: policy.defaultCostItems }, () => extractPurchaseCosts(input, quick)) : null;
   if (quick) input = mapQuickPurchase(quick, extracted!.items, policy);
   const output = simulatePurchase(input, quick ? quickPolicy(quick, policy) : policy), score = scorePurchase(input, output);
-  const opinion = quick ? await cachedPurchaseAi("parecer-v1", { input: purchaseAiPayload(input, quick), output, costs: extracted!.items }, () => writePurchaseOpinion(input, quick, output, extracted!.available)) : null;
+  const opinion = quick ? await cachedPurchaseAi("parecer-v1", { input: purchaseAiPayload(input, quick), output, costs: extracted!.items }, () => writePurchaseOpinion(input, quick, output, extracted!.available, extracted!)) : null;
   if (quick) {
     score.scoreVersion = "2.0.0-rapido";
     score.total = opinion!.grade === null ? null : Math.round(opinion!.grade * 10);
