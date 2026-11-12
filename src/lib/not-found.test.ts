@@ -10,6 +10,8 @@ test("root not-found envolve o conteúdo no SiteLayout para garantir header e fo
   assert.match(rootNotFound, /import SiteLayout from "@\/app\/\(site\)\/layout"/);
   assert.match(rootNotFound, /<SiteLayout>/);
   assert.match(rootNotFound, /<NotFoundContent \/>/);
+  assert.match(rootNotFound, /export const metadata/);
+  assert.match(rootNotFound, /Página não encontrada/);
 });
 
 test("(site)/not-found reutiliza NotFoundContent sem duplicar layout", () => {

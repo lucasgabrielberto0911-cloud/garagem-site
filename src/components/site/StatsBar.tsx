@@ -31,10 +31,15 @@ function Stat({
 }) {
   return (
     <div className="px-3 py-2.5 text-center sm:px-4 sm:py-3">
-      <dd className="font-display text-xl font-semibold text-cream sm:text-2xl">
-        {formatNumberBR(value)}
-        <span className="ml-1.5 align-middle font-body text-xs font-medium uppercase tracking-wider text-muted sm:ml-2">
-          {suffix}
+      <dd
+        className="font-display text-xl font-semibold text-cream sm:text-2xl"
+        aria-label={`${formatNumberBR(value)} ${suffix}`}
+      >
+        <span aria-hidden="true">
+          {formatNumberBR(value)}{" "}
+          <span className="align-middle font-body text-xs font-medium tracking-wide text-muted sm:text-[0.8125rem]">
+            {suffix}
+          </span>
         </span>
       </dd>
       <dt className="mt-1 text-xs uppercase tracking-wider text-muted sm:mt-1.5">
