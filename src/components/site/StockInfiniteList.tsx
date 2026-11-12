@@ -280,17 +280,12 @@ export function StockInfiniteList({
 
       {vehicles.length > pageSize ? (
         <div className="mt-4 flex justify-center lg:hidden">
-          <button
-            type="button"
-            onClick={() => {
-              const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-              window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
-            }}
-            className="inline-flex min-h-[44px] items-center gap-1.5 border border-white/15 px-4 text-xs uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream touch-manipulation"
+          <a
+            href="#top"
+            className="inline-flex min-h-[44px] items-center gap-1.5 border border-white/15 px-4 text-xs uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream"
           >
-            <span aria-hidden="true">↑</span>
-            Voltar ao topo
-          </button>
+            ↑ Voltar ao topo
+          </a>
         </div>
       ) : null}
     </>

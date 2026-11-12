@@ -107,7 +107,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const searchRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<number | undefined>(undefined);
   const [searchText, setSearchText] = useState(current.q);
-  const [searchDebouncing, setSearchDebouncing] = useState(false);
   const currentRef = useRef(current);
   currentRef.current = current;
   const [draftCount, setDraftCount] = useState<{ key: string; total: number } | null>(null);
@@ -179,7 +178,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
       searchRef.current.value = nextQ;
       setSearchText(nextQ);
     }
-    setSearchDebouncing(false);
     return () => window.clearTimeout(searchTimer.current);
   }, [params]);
 
@@ -460,21 +458,13 @@ export function StockFilters({ facets }: { facets: Facets }) {
           onSubmit={(event) => {
             event.preventDefault();
             if (searchTimer.current) window.clearTimeout(searchTimer.current);
-            setSearchDebouncing(false);
             update({ q: searchRef.current?.value.trim() ?? "" });
           }}
           className="mx-auto max-w-2xl"
           role="search"
         >
           <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:outline focus-within:outline-2 focus-within:outline-offset-[3px] focus-within:outline-brand lg:min-h-[48px]">
-            {searchDebouncing || isPending ? (
-              <span
-                className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-brand border-r-transparent"
-                aria-hidden="true"
-              />
-            ) : (
-              <IconSearch className="h-4 w-4 shrink-0 text-muted" />
-            )}
+            <IconSearch className={`h-4 w-4 shrink-0 ${isPending ? "animate-pulse text-brand" : "text-muted"}`} />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
             </label>
@@ -489,9 +479,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 const value = event.target.value;
                 setSearchText(value);
                 if (searchTimer.current) window.clearTimeout(searchTimer.current);
-                setSearchDebouncing(true);
                 searchTimer.current = window.setTimeout(() => {
-                  setSearchDebouncing(false);
                   if (value.trim() !== currentRef.current.q) updateRef.current({ q: value.trim() }, { replace: true });
                 }, 600);
               }}
@@ -503,7 +491,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 type="button"
                 onClick={() => {
                   if (searchTimer.current) window.clearTimeout(searchTimer.current);
-                  setSearchDebouncing(false);
                   setSearchText("");
                   if (searchRef.current) {
                     searchRef.current.value = "";
@@ -991,11 +978,8 @@ function MobileChipRow({
   return (
     <div className="stock-chip-row">
       <p id={labelId} className="stock-chip-label">{label}</p>
-      <div className="relative min-w-0 flex-1">
-        <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
-          {children}
-        </div>
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-ink to-transparent" aria-hidden="true" />
+      <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
+        {children}
       </div>
     </div>
   );
