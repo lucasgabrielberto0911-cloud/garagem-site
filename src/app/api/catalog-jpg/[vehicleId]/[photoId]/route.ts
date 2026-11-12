@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { e2ePhotoFixture } from "@/lib/e2e-photo-fixture";
 import { loadCatalogJpeg } from "@/lib/photo-archive-download";
 import { prisma } from "@/lib/prisma";
-import { isPublicPhotoSource } from "@/lib/public-photo-source";
+import { isPublicPhotoBlob } from "@/lib/public-photo-url";
 import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
 
 export const runtime = "nodejs";
@@ -41,7 +41,7 @@ export async function GET(
   }
 
   const fixture = await e2ePhotoFixture();
-  if (!fixture && !isPublicPhotoSource(photo.url)) {
+  if (!fixture && !isPublicPhotoBlob(photo.url)) {
     return NextResponse.json({ error: "Foto não encontrada." }, { status: 404, headers: noCache });
   }
 
