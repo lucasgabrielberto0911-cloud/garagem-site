@@ -42,7 +42,7 @@ export function simulatePurchase(input: PurchaseInput, policy: PurchasePolicy = 
       cents(valueCents, c.label);
       fixedCents += valueCents;
       if (c.upfront !== false) upfrontCents += valueCents;
-      return { key: c.key, label: c.label, valueCents, status: c.status, provisional: c.fromProfile || c.status === "desconhecido" || c.source === "premissa" };
+      return { key: c.key, label: c.label, valueCents, status: c.status, provisional: c.fromProfile || c.status === "desconhecido" || c.source === "premissa", ...(c.note ? { note: c.note.slice(0, 500) } : {}) };
     });
     const holdingCents = config.days * p.holdingDailyCents;
     fixedCents += holdingCents;

@@ -27,6 +27,7 @@ export function quickPolicy(q: QuickPurchase, policy: PurchasePolicy): PurchaseP
   // Repasse usa apenas a hipótese rápida publicada, sem inferir giro real da loja.
   return { ...policy, scenarios: Object.fromEntries(SCENARIO_KEYS.map(key => [key, { ...policy.scenarios.rapida }])) as PurchasePolicy["scenarios"] };
 }
+export const MIN_AI_COST_ITEMS = 5;
 export function mapQuickPurchase(q: QuickPurchase, items: CostItem[], policy = DEFAULT_PURCHASE_POLICY): PurchaseInput {
   const input = newPurchaseInput(), p = quickPolicy(q, policy);
   input.title = `${q.identity.brand} ${q.identity.version || q.identity.model} ${q.identity.modelYear}`.slice(0, 160);
@@ -35,7 +36,9 @@ export function mapQuickPurchase(q: QuickPurchase, items: CostItem[], policy = D
   input.resaleCents = Object.fromEntries(SCENARIO_KEYS.map(key => [key, q.fipe ? Number(BigInt(q.fipe.valueCents) * BigInt(Math.floor(p.scenarios[key].resaleFactor * 100_000_000)) / BigInt(100_000_000)) : null])) as PurchaseInput["resaleCents"];
   input.resaleEvidence = { source: "Hipótese: FIPE × fatores da política provisória; não é venda observada.", date: new Date().toISOString().slice(0, 10), verified: false };
   // Custos de IA substituem a categoria do perfil; extras entram uma única vez.
-  input.costs = [...p.defaultCostItems.map(c => items.find(item => item.key === c.key) ?? { ...c, upfront: c.upfront ?? !["garantia", "contingencia"].includes(c.key) }), ...items.filter(c => !p.defaultCostItems.some(base => base.key === c.key))];
+  // A IA estima todos os custos a partir do texto e do perfil do carro: sua lista substitui a média padrão.
+  // Lista curta ou vazia (IA indisponível ou sem resposta útil) mantém as reservas da política como piso.
+  input.costs = items.length >= MIN_AI_COST_ITEMS ? items : [...p.defaultCostItems.map(c => items.find(item => item.key === c.key) ?? { ...c, upfront: c.upfront ?? !["garantia", "contingencia"].includes(c.key) }), ...items.filter(c => !p.defaultCostItems.some(base => base.key === c.key))];
   return input;
 }
 export function quickFromStored(input: PurchaseInput, quick?: QuickPurchase): QuickPurchase {
