@@ -187,7 +187,8 @@ test("agregador do CI espera migrations e falha se elas não passam", () => {
   const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
   const check = workflow.split("  check:")[1].split("  migrations:")[0];
   assert.match(check, /needs: \[unit, e2e, migrations\]/);
-  assert.match(check, /needs\.migrations\.result.*!= "success"/);
+  assert.match(check, /\[ "\$1" = "success" \] \|\| \[ "\$1" = "skipped" \]/);
+  assert.match(check, /needs\.migrations\.result/);
 });
 
 test("clientes lista sem updatedAt durante implantação, com versão indisponível", async () => {
