@@ -6,6 +6,7 @@ import { sellReceivedLine } from "./sell-receipt";
 const contato = readFileSync("src/app/(site)/contato/page.tsx", "utf8");
 const vender = readFileSync("src/app/(site)/vender/page.tsx", "utf8");
 const sell = readFileSync("src/components/site/SellForm.tsx", "utf8");
+const honeypot = readFileSync("src/components/site/HoneypotWebsiteField.tsx", "utf8");
 const photos = readFileSync("src/components/site/SellPhotoUpload.tsx", "utf8");
 const css = readFileSync("src/app/globals.css", "utf8");
 
@@ -53,13 +54,15 @@ test("o formulário de venda mantém os campos e o envio de hoje", () => {
     "plate",
     "km",
     "notes",
-    "website",
     "photoUrls",
     "source",
     "interestVehicleId",
   ]) {
     assert.match(name === "photoUrls" ? photos : sell, new RegExp(`name="${name}"`));
   }
+  assert.match(sell, /<HoneypotWebsiteField id="website"/);
+  assert.match(honeypot, /name="website"/);
+  assert.match(honeypot, /hidden/);
   assert.match(sell, /<SellPhotoUpload/);
   assert.doesNotMatch(photos, /prepareMasterForUpload|master: true/);
   assert.match(sell, /createSellLead\(data\)/);
