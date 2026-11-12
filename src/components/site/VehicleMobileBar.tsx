@@ -102,7 +102,7 @@ export function VehicleMobileBar({
           <div className="flex items-center gap-2">
           <p
             data-mobile-bar-price=""
-            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/10 bg-asphalt/95 px-3 font-display text-lg font-bold tracking-tight text-brand-light"
+            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/15 bg-asphalt/95 px-2.5 font-display text-base font-bold tracking-tight text-brand-light min-[380px]:px-3 min-[380px]:text-lg"
           >
             {formatCurrencyBRL(price)}
           </p>
@@ -133,7 +133,7 @@ export function VehicleMobileBar({
             >
               <IconWhatsApp className="h-5 w-5 shrink-0" />
               <span>
-                <span className="max-[399px]:hidden">Chamar no </span>WhatsApp
+                <span className="max-[379px]:hidden">Chamar no </span>WhatsApp
               </span>
             </a>
           </VehicleLeadHit>

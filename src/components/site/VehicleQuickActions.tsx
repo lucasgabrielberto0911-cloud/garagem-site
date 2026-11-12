@@ -1,3 +1,4 @@
+import { IconWhatsApp } from "@/components/site/icons";
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
 import { VehicleLeadHit } from "@/lib/funnel-events";
 import { fichaWhatsAppTracking, whatsappUrl } from "@/lib/site";
@@ -117,11 +118,12 @@ export function VehicleQuickActions({
             slug={contentSlug}
             className={
               variant === "secondary"
-                ? "inline-flex min-h-[44px] items-center justify-center border border-white/10 px-2 py-1 text-center font-display text-sm font-medium text-cream/80 transition touch-manipulation hover:border-white/30 hover:text-cream"
-                : "inline-flex min-h-[48px] items-center justify-center border border-white/10 bg-ink px-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
+                ? "inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/[0.04] px-2.5 py-2 text-center font-display text-sm font-medium text-cream transition touch-manipulation hover:border-[#25D366]/60 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                : "inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-ink px-2.5 py-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:min-h-[44px]"
             }
           >
-            {action.label}
+            <IconWhatsApp className="h-3.5 w-3.5 shrink-0 text-[#25D366]" />
+            <span>{action.label}</span>
           </TrackedWhatsAppLink>
         </VehicleLeadHit>
       ))}
