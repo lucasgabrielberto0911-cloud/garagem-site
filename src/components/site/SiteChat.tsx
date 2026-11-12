@@ -1182,7 +1182,7 @@ export function SiteChat() {
       {open ? (
         <section
           role="dialog"
-          aria-label="Chat da Garagem"
+          aria-labelledby="site-chat-title"
           aria-modal={mobileDialog || undefined}
           className="site-chat-panel pointer-events-auto flex min-h-0 w-full flex-col overflow-hidden rounded-[20px] border border-white/[0.08] bg-asphalt shadow-[0_32px_80px_-16px_rgba(0,0,0,0.85),0_0_0_1px_rgba(0,0,0,0.5)]"
           aria-busy={pending}
