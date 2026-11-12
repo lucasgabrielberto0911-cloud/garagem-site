@@ -106,7 +106,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const [draft, setDraft] = useState(current);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<number | undefined>(undefined);
-  const [searchText, setSearchText] = useState(current.q);
   const currentRef = useRef(current);
   currentRef.current = current;
   const [draftCount, setDraftCount] = useState<{ key: string; total: number } | null>(null);
@@ -174,9 +173,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   useEffect(() => {
     // Mantém o campo igual à URL (ex.: Limpar filtros), sem atropelar quem está digitando.
     if (searchRef.current && document.activeElement !== searchRef.current) {
-      const nextQ = params.get("q") ?? "";
-      searchRef.current.value = nextQ;
-      setSearchText(nextQ);
+      searchRef.current.value = params.get("q") ?? "";
     }
     return () => window.clearTimeout(searchTimer.current);
   }, [params]);
@@ -463,8 +460,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto max-w-2xl"
           role="search"
         >
-          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:outline focus-within:outline-2 focus-within:outline-offset-[3px] focus-within:outline-brand lg:min-h-[48px]">
-            <IconSearch className={`h-4 w-4 shrink-0 ${isPending ? "animate-pulse text-brand" : "text-muted"}`} />
+          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand lg:min-h-[48px]">
+            <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
             </label>
@@ -477,31 +474,27 @@ export function StockFilters({ facets }: { facets: Facets }) {
               defaultValue={current.q}
               onChange={(event) => {
                 const value = event.target.value;
-                setSearchText(value);
                 if (searchTimer.current) window.clearTimeout(searchTimer.current);
                 searchTimer.current = window.setTimeout(() => {
                   if (value.trim() !== currentRef.current.q) updateRef.current({ q: value.trim() }, { replace: true });
                 }, 600);
               }}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none [&::-webkit-search-cancel-button]:appearance-none lg:text-sm"
+              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none lg:text-sm"
             />
-            {searchText ? (
+            {current.q ? (
               <button
                 type="button"
                 onClick={() => {
                   if (searchTimer.current) window.clearTimeout(searchTimer.current);
-                  setSearchText("");
                   if (searchRef.current) {
                     searchRef.current.value = "";
                     searchRef.current.focus();
                   }
-                  if (currentRef.current.q) {
-                    updateRef.current({ q: "" }, { replace: true });
-                  }
+                  updateRef.current({ q: "" }, { replace: true });
                 }}
                 aria-label="Limpar busca"
-                className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-lg leading-none text-muted transition hover:text-cream touch-manipulation"
+                className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-lg leading-none text-muted hover:text-cream"
               >
                 ×
               </button>
