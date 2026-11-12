@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { AdminPageHeader, btn, Card, inputClass } from "@/components/admin/ui";
+import { confirmDiscard, useConfirmDialog } from "@/components/admin/useConfirmDialog";
 import type { PurchaseInput } from "@/lib/purchase-input";
 import { newQuickPurchase, quickFromStored, type QuickPurchase } from "@/lib/purchase-quick";
 import type { PreparedPurchase, listPurchases, readPurchase } from "@/lib/purchase-store";
@@ -21,6 +22,7 @@ export function PurchaseForm({ initialList, fipeEnabled }: { initialList: List; 
   const [manual, setManual] = useState(false), [dirty, setDirty] = useState(false);
   const [id, setId] = useState<string | null>(null), [version, setVersion] = useState(0), [key, setKey] = useState<string | null>(null);
   const lookup = useRef("");
+  const [confirm, confirmDialog] = useConfirmDialog();
   function change(next: QuickPurchase) { setInput(next); setResult(null); setKey(null); setDirty(true); setMessage(""); setError(""); }
   function patch<K extends keyof QuickPurchase>(field: K, value: QuickPurchase[K]) { change({ ...input, [field]: value }); }
   function identity(field: "brand" | "model" | "modelYear", value: string | number | null) { setCandidates([]); change({ ...input, fipe: null, identity: { ...input.identity, [field]: value, version: "", confirmed: false } }); }
@@ -53,7 +55,7 @@ export function PurchaseForm({ initialList, fipeEnabled }: { initialList: List; 
     setCandidates([]); setSources([]); lookup.current = ""; setKey(null); setDirty(false); setStep(2);
   }
   async function open(evaluationId: string) {
-    if (dirty && !window.confirm("Descartar alterações não salvas?")) return;
+    if (dirty && !(await confirmDiscard(confirm, "desta avaliação"))) return;
     setBusy(true); setError(""); setMessage("");
     try { const data = await purchaseRequest<Detail>(`/api/admin/compra/${evaluationId}`); setDetail(data); setId(data.id); setVersion(data.currentVersion); displayRevision(data.revisions[0]); }
     catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -67,8 +69,8 @@ export function PurchaseForm({ initialList, fipeEnabled }: { initialList: List; 
       setMessage(`Avaliação salva. Revisão ${saved.currentVersion}.`); setList(await purchaseRequest<List>("/api/admin/compra"));
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
-  function reset() {
-    if (dirty && !window.confirm("Descartar alterações não salvas?")) return;
+  async function reset() {
+    if (dirty && !(await confirmDiscard(confirm, "desta avaliação"))) return;
     setSources([]); setCandidates([]); setInput(newQuickPurchase()); setResult(null); setDetail(null); setId(null); setVersion(0); setKey(null); setStep(0); setDirty(false); setManual(false); setError(""); setMessage(""); lookup.current = "";
   }
   const canContinue = Boolean(input.identity.brand.trim() && input.identity.model.trim() && input.identity.modelYear && (!candidates.length || input.identity.confirmed));
@@ -102,7 +104,8 @@ export function PurchaseForm({ initialList, fipeEnabled }: { initialList: List; 
       {step === 2 && result && <><PurchaseResult result={result} askedPriceCents={input.askedPriceCents} dealType={input.dealType} /><div className="flex flex-wrap gap-2"><button type="button" className={btn.primary} onClick={save}>{id ? "Salvar nova revisão" : "Salvar avaliação"}</button><button type="button" className={btn.outline} onClick={() => setStep(1)}>Ajustar compra</button></div></>}
     </fieldset>
     {busy && <p role="status" className="text-sm">Aguarde…</p>}
-    {detail && <details className="text-sm"><summary className="cursor-pointer py-2">Revisões de {detail.title}</summary><div className="flex flex-wrap gap-2">{detail.revisions.map(r => <button type="button" disabled={busy} className={btn.outline} key={r.id} onClick={() => { if (!dirty || window.confirm("Descartar alterações não salvas?")) displayRevision(r); }}>Revisão {r.number}</button>)}</div></details>}
+    {detail && <details className="text-sm"><summary className="cursor-pointer py-2">Revisões de {detail.title}</summary><div className="flex flex-wrap gap-2">{detail.revisions.map(r => <button type="button" disabled={busy} className={btn.outline} key={r.id} onClick={async () => { if (!dirty || await confirmDiscard(confirm, "desta avaliação")) displayRevision(r); }}>Revisão {r.number}</button>)}</div></details>}
     <details className="text-sm"><summary className="cursor-pointer py-2">Minhas avaliações</summary><ul className="space-y-2">{list.evaluations.map(e => <li key={e.id}><button type="button" className={`${btn.outline} w-full whitespace-normal justify-start text-left`} disabled={busy} onClick={() => void open(e.id)}>{e.title} · revisão {e.currentVersion}</button></li>)}</ul>{!list.evaluations.length && <p className="text-muted">Nenhuma avaliação salva.</p>}{list.nextCursor && <button type="button" className={`${btn.outline} mt-3`} disabled={busy} onClick={async () => { setBusy(true); try { const next = await purchaseRequest<List>(`/api/admin/compra?cursor=${list.nextCursor}`); setList({ evaluations: [...list.evaluations, ...next.evaluations], nextCursor: next.nextCursor }); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}>Carregar mais avaliações</button>}</details>
+    {confirmDialog}
   </div>;
 }

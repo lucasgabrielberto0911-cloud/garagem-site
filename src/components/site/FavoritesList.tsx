@@ -13,6 +13,7 @@ import { useFavorites } from "@/lib/favorites";
 import { snapshotsForIds, writeFavoriteSnapshots } from "@/lib/offline-queue";
 import { formatVehicleLabel } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
+import { notify } from "@/lib/notify";
 import { favoritesListWhatsApp, WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -27,7 +28,7 @@ const retryClass =
   "inline-flex min-h-12 w-full items-center justify-center border border-white/20 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand disabled:opacity-60 sm:w-auto";
 
 export function FavoritesList() {
-  const { ids, ready, clear, remove } = useFavorites();
+  const { ids, ready, clear, remove, restore } = useFavorites();
   const [result, setResult] = useState<FavoritesResult>({
     key: "", vehicles: [], status: "loading", refreshing: false,
   });
@@ -224,9 +225,12 @@ export function FavoritesList() {
         <button
           type="button"
           onClick={() => {
-            if (window.confirm("Limpar todos os favoritos deste aparelho?")) {
-              clear();
-            }
+            const previous = ids;
+            clear();
+            notify("Favoritos removidos deste aparelho.", {
+              duration: 10000,
+              action: { label: "Desfazer", onClick: () => restore(previous) },
+            });
           }}
           className="min-h-[40px] text-xs uppercase tracking-wider text-muted underline-offset-4 transition hover:text-cream hover:underline"
         >
