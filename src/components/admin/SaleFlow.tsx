@@ -7,6 +7,7 @@ import { stages } from "./SaleFlowStages";
 import { useRouter } from "next/navigation";
 import { finalizeSaleFlow } from "@/app/admin/vendas/actions";
 import { AdminPageHeader, btn } from "@/components/admin/ui";
+import { useConfirmDialog } from "@/components/admin/useConfirmDialog";
 import { CustomerStage, PaymentStage, ReviewStage, SaleResult, SellerStage, StageProgress, VehicleStage } from "@/components/admin/SaleFlowStages";
 import type { Customer, SaleIds, SaleResultData, Vehicle, VehicleOption } from "@/components/admin/SaleFlowStages";
 import { adminMutation } from "@/lib/admin-mutation";
@@ -35,6 +36,7 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
   const [newCustomer, setNewCustomer] = useState(false);
   const [ids, setIds] = useState<SaleIds>({ chassis: initialVehicle?.chassis ?? "", renavam: initialVehicle?.renavam ?? "", rg: initialCustomer?.rg ?? "" });
   const section = useRef<HTMLElement>(null);
+  const [confirm, confirmDialog] = useConfirmDialog();
   const restoreDraft = useCallback((saved: ReturnType<typeof saleDraftFields>) => {
     // Cliente e veículo escolhidos na busca precisam ser selecionados novamente.
     const restoredVehicle = initialVehicle?.id === saved.vehicleId ? initialVehicle : null;
@@ -190,7 +192,11 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
       <p className="text-sm text-muted">Dados pessoais e textos livres digitados não ficam guardados no rascunho.</p>
       <button type="button" className={btn.outline} onClick={recovery.retry}>Guardar rascunho agora</button>
       <button type="button" className={btn.ghost} disabled={busy || issuingNotes || !recovery.ready} onClick={async () => {
-        if (!window.confirm("Descartar o rascunho desta venda? Notas já emitidas continuam no histórico.")) return;
+        if (!(await confirm({
+          title: "Descartar o rascunho desta venda?",
+          description: "Notas já emitidas continuam no histórico.",
+          confirmLabel: "Descartar rascunho",
+        }))) return;
         try { await recovery.clear(); window.location.reload(); } catch (error) { setError(error instanceof Error ? error.message : "Não foi possível descartar."); }
       }}>Descartar rascunho</button>
       <StageProgress stage={stage} />
@@ -209,6 +215,7 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
         </fieldset>
       </section>
       {stage === 4 && <button type="button" className={`${btn.primary} w-full sm:w-auto`} disabled={busy || issuingNotes} onClick={submit}>{busy ? "Registrando…" : "Gerar contrato e registrar venda"}</button>}
+      {confirmDialog}
     </div>
   );
 }

@@ -24,6 +24,18 @@ function write(ids: string[]) {
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
 }
 
+/**
+ * Devolve favoritos removidos (ex.: "Desfazer" depois de limpar a lista).
+ * Mantém o que a pessoa salvou nesse meio tempo, na frente, e recoloca os
+ * antigos na ordem original, sem duplicar.
+ */
+export function restoreFavoriteIds(previous: string[]): string[] {
+  const current = readFavoriteIds();
+  const next = [...current.filter((id) => !previous.includes(id)), ...previous];
+  write(next);
+  return next;
+}
+
 type FavoritesContextValue = {
   ids: string[];
   ready: boolean;
@@ -32,6 +44,7 @@ type FavoritesContextValue = {
   toggle: (id: string) => boolean;
   remove: (id: string) => void;
   clear: () => void;
+  restore: (previous: string[]) => void;
 };
 
 const FavoritesContext = createContext<FavoritesContextValue | null>(null);
@@ -73,11 +86,15 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     write([]);
   }, []);
 
+  const restore = useCallback((previous: string[]) => {
+    restoreFavoriteIds(previous);
+  }, []);
+
   const has = useCallback((id: string) => ids.includes(id), [ids]);
 
   const value = useMemo(
-    () => ({ ids, ready, has, toggle, remove, clear, count: ids.length }),
-    [ids, ready, has, toggle, remove, clear],
+    () => ({ ids, ready, has, toggle, remove, clear, restore, count: ids.length }),
+    [ids, ready, has, toggle, remove, clear, restore],
   );
 
   return createElement(FavoritesContext.Provider, { value }, children);
