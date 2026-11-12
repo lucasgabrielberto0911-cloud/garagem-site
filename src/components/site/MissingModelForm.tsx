@@ -13,6 +13,7 @@ import {
   WANTED_LEAD_SUCCESS,
   type WantedLeadPage,
 } from "@/lib/wanted-lead";
+import { HoneypotWebsiteField } from "@/components/site/HoneypotWebsiteField";
 
 const inputClass =
   "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand";
@@ -203,19 +204,7 @@ export function MissingModelForm({
         onInput={rememberDraft ? draft.remember : undefined}
         onChange={rememberDraft ? draft.remember : undefined}>
         <fieldset disabled={isPending} className="min-w-0">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
-          >
-            <label htmlFor={`${idPrefix}-website`}>Website</label>
-            <input
-              id={`${idPrefix}-website`}
-              name="website"
-              type="text"
-              tabIndex={-1}
-              autoComplete="off"
-            />
-          </div>
+          <HoneypotWebsiteField id={`${idPrefix}-website`} />
 
           <input type="hidden" name="sourcePage" value={sourcePage} />
           <input type="hidden" name="contextLabel" value={contextLabel} />

@@ -22,6 +22,7 @@ import {
   isValidBrazilPhone,
   isValidPlate,
 } from "@/lib/format";
+import { HoneypotWebsiteField } from "@/components/site/HoneypotWebsiteField";
 import { SellPhotoUpload } from "./SellPhotoUpload";
 import { useSellDraft } from "./useSellDraft";
 import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
@@ -226,20 +227,7 @@ export function SellForm({
             {!draft.failed ? <p className="text-[11px] leading-relaxed text-muted">Os textos ficam guardados por até 24 horas nesta aba (se recarregar a página, escolha as fotos novamente).</p> : null}
           </div>
         ) : null}
-        {/* Honeypot anti-spam — oculto de leitores de tela e usuários. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
-        >
-          <label htmlFor="website">Website</label>
-          <input
-            id="website"
-            name="website"
-            type="text"
-            tabIndex={-1}
-            autoComplete="off"
-          />
-        </div>
+        <HoneypotWebsiteField id="website" />
 
         <FormBlock title="Seus dados" hint="Nome e telefone para o retorno.">
           <Field label="Seu nome" error={errors.name} htmlFor="name">

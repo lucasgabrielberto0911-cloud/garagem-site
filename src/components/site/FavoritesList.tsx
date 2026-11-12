@@ -110,7 +110,14 @@ export function FavoritesList() {
   const unavailable = unavailableFavoriteIds(ids, vehicles.map(vehicle => vehicle.id), current?.status === "fresh" && !refreshing);
 
   if (!ready || (key && (!current || current.status === "loading"))) {
-    return <VehicleCardSkeletonGrid count={4} />;
+    return (
+      <div aria-busy="true">
+        <p role="status" className="mb-6 text-sm text-muted">
+          Carregando os veículos que você salvou…
+        </p>
+        <VehicleCardSkeletonGrid count={ids.length || 4} />
+      </div>
+    );
   }
 
   if (failed) {
