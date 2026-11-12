@@ -304,7 +304,7 @@ export function SellForm({
 
         <details open={Boolean(errors.plate)} className="border border-white/10">
           <summary className="min-h-11 cursor-pointer px-4 py-3 font-display text-sm text-cream">
-            Adicionar fotos, km ou placa (opcional · agiliza a avaliação)
+            Complementar com placa, km ou fotos (opcional)
           </summary>
           <FormBlock title="Detalhes para a avaliação">
             <Field label="Placa do veículo" error={errors.plate} htmlFor="plate" optional>
