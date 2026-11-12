@@ -53,12 +53,12 @@ export default async function EstoquePage() {
           description={`Seminovos revisados e com garantia em ${SEO_LOCAL_LOCATION}. Troca, financiamento e vídeo do carro pelo WhatsApp.`}
         />
 
-        <RecentlyViewedVehicles />
-
         <StockBrowseShell
           filters={<StockFilters facets={facets} />}
           results={<EstoqueBrowse initialStock={stock} />}
         />
+
+        <RecentlyViewedVehicles />
 
         <Suspense fallback={<StockCatalogLinks vehicles={catalog} />}>
           <StockCatalogGate>

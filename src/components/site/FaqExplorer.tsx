@@ -43,7 +43,7 @@ export function FaqExplorer({ items }: { items: FaqItem[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por palavra-chave…"
-            className="w-full min-h-[48px] border border-white/10 bg-ink py-2.5 pl-10 pr-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand"
+            className="w-full min-h-[48px] border border-white/10 bg-ink py-2.5 pl-10 pr-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand focus-visible:ring-2 focus-visible:ring-brand"
           />
         </label>
       </div>
