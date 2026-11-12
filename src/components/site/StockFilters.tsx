@@ -935,8 +935,6 @@ function MobileChipRow({
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const labelId = useId();
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useLayoutEffect(() => {
     const track = trackRef.current;
@@ -956,9 +954,6 @@ function MobileChipRow({
         insetLeft > 0 || insetRight > 0
           ? `inset(0px ${Math.ceil(insetRight)}px 0px ${Math.ceil(insetLeft)}px)`
           : "";
-      const { scrollLeft, scrollWidth, clientWidth } = track;
-      setCanScrollLeft(scrollLeft > 4);
-      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
       chips.forEach((chip, index) => {
         if (hidden[index]) {
           chip.setAttribute("aria-hidden", "true");
@@ -997,21 +992,10 @@ function MobileChipRow({
     <div className="stock-chip-row">
       <p id={labelId} className="stock-chip-label">{label}</p>
       <div className="relative min-w-0 flex-1">
-        <div
-          className={`pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-6 bg-gradient-to-r from-ink to-transparent transition-opacity duration-200 ${
-            canScrollLeft ? "opacity-100" : "opacity-0"
-          }`}
-          aria-hidden="true"
-        />
         <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
           {children}
         </div>
-        <div
-          className={`pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-6 bg-gradient-to-l from-ink to-transparent transition-opacity duration-200 ${
-            canScrollRight ? "opacity-100" : "opacity-0"
-          }`}
-          aria-hidden="true"
-        />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-ink to-transparent" aria-hidden="true" />
       </div>
     </div>
   );

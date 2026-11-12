@@ -298,21 +298,8 @@ export function EstoqueBrowse({
         {loading && (!hasFetchedFilterResult || shown.vehicles.length === 0) ? (
           <VehicleCardSkeletonGrid count={6} largePhoto />
         ) : (
-          <div className="relative">
-            {loading ? (
-              <div
-                role="status"
-                className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cream"
-              >
-                <span
-                  className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand border-r-transparent"
-                  aria-hidden="true"
-                />
-                Atualizando resultados…
-              </div>
-            ) : null}
-            <div className={loading ? "pointer-events-none opacity-45 transition-opacity" : "transition-opacity"}>
-              <StockInfiniteList
+          <div className={loading ? "pointer-events-none opacity-45 transition-opacity" : "transition-opacity"}>
+            <StockInfiniteList
                 key={`${shownResult.key}:${shownResult.version}`}
                 initialVehicles={shown.vehicles}
                 total={shown.total}
@@ -409,7 +396,6 @@ export function EstoqueBrowse({
                   </div>
                 }
               />
-            </div>
           </div>
         )}
       </div>
