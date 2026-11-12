@@ -277,17 +277,6 @@ export function StockInfiniteList({
             : `Você viu os ${vehicles.length} veículos`}
         </p>
       ) : null}
-
-      {vehicles.length > pageSize ? (
-        <div className="mt-4 flex justify-center lg:hidden">
-          <a
-            href="#top"
-            className="inline-flex min-h-[44px] items-center gap-1.5 border border-white/15 px-4 text-xs uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream"
-          >
-            ↑ Voltar ao topo
-          </a>
-        </div>
-      ) : null}
     </>
   );
 }

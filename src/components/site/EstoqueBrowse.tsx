@@ -298,8 +298,7 @@ export function EstoqueBrowse({
         {loading && (!hasFetchedFilterResult || shown.vehicles.length === 0) ? (
           <VehicleCardSkeletonGrid count={6} largePhoto />
         ) : (
-          <div className={loading ? "pointer-events-none opacity-45 transition-opacity" : "transition-opacity"}>
-            <StockInfiniteList
+          <StockInfiniteList
                 key={`${shownResult.key}:${shownResult.version}`}
                 initialVehicles={shown.vehicles}
                 total={shown.total}
@@ -395,8 +394,7 @@ export function EstoqueBrowse({
                     </div>
                   </div>
                 }
-              />
-          </div>
+            />
         )}
       </div>
 
