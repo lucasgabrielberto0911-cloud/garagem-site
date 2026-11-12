@@ -101,7 +101,7 @@ export function VehicleCard({
           <div className="listing-card-badges">
             {badge ? <span className={badge.className}>{badge.label}</span> : null}
             {!badge && isNewListing(vehicle.createdAt) ? (
-              <span className="bg-cream text-asphalt">Novo esta semana</span>
+              <span className="bg-cream text-asphalt">Novo nesta semana</span>
             ) : null}
             {!badge && vehicle.priceDrop ? (
               <span className="bg-brand text-cream">
