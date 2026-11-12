@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "test": "tsx --test src/lib/*.test.ts",
     "test:one": "tsx --test",
+    "agentes:conflitos": "bash scripts/agentes-conflitos.sh",
     "test:e2e:one": "playwright test",
     "check": "npm test && npm run lint && bash scripts/check-footguns.sh && npx tsc --noEmit && npx tsc --noEmit --project tsconfig.test.json",
     "check:build": "npm run check && npm run build",

@@ -18,4 +18,4 @@ Leia o guia da área **antes** de codar. Regras globais: [`AGENTS.md`](../../AGE
 | fotos | [`fotos.md`](fotos.md) | `fotos-publicas.spec.ts` |
 | `infra` | [`infra.md`](infra.md) | CI local (`npm test` / `build`) |
 
-Coordenação: `gh pr list` — não duplicar área com PR aberto.
+Coordenação entre agentes: `bash scripts/agentes-conflitos.sh <caminho>` e a regra 10 do `AGENTS.md`. Também: `gh pr list` — não duplicar área com PR aberto.
