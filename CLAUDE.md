@@ -1,3 +1,5 @@
+Você é o agente CLAUDE.
+
 @AGENTS.md
 
 # Claude Code
