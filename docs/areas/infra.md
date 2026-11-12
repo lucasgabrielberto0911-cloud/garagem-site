@@ -25,7 +25,7 @@
 
 ```bash
 npm run check        # ou check:build se mexeu no Next
-bash scripts/check-footguns.sh
+bash scripts/check-footguns.sh   # GNU grep; não exige ripgrep no CI
 ```
 
 PR **só com docs/markdown**: o CI pula e2e e migrations (`job changes` em `ci.yml`). Push na `main` continua rodando tudo.
