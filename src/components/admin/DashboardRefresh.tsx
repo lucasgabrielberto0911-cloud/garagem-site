@@ -16,8 +16,10 @@ export function DashboardRefresh() {
         start(async () => {
           try {
             const result = await refreshDashboard();
-            if (result.ok) router.refresh();
-            else toast.error(result.message);
+            if (result.ok) {
+              router.refresh();
+              toast.success("Dados atualizados.");
+            } else toast.error(result.message);
           } catch {
             toast.error("Não foi possível atualizar. Tente novamente.");
           }

@@ -5,7 +5,7 @@ import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWa
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateSiteSettings } from "@/app/admin/site/actions";
 import {
@@ -35,6 +35,19 @@ export function SiteSettingsForm({
   const [uploading, setUploading] = useState(false);
   useUnsavedChangesWarning(dirty || uploading);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (isPending || uploading) return;
+        formRef.current?.requestSubmit();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPending, uploading]);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -94,6 +107,7 @@ export function SiteSettingsForm({
 
   return (
     <form
+      ref={formRef}
       onSubmit={submit}
       onChange={() => setDirty(true)}
       className="space-y-4 pb-36 lg:pb-0"
@@ -282,7 +296,13 @@ export function SiteSettingsForm({
           onDirty={() => setDirty(true)}
         />
 
-        <div className="fixed inset-x-0 bottom-admin-nav z-20 mt-2 border-t border-white/10 bg-ink/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:pb-0">
+        <div
+          className={`fixed inset-x-0 bottom-admin-nav z-20 mt-2 border-t border-white/10 bg-ink/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur ${
+            dirty
+              ? "lg:sticky lg:bottom-0 lg:mx-0 lg:border lg:border-white/10 lg:bg-ink/95 lg:px-4 lg:py-3"
+              : "lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:pb-0"
+          }`}
+        >
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"

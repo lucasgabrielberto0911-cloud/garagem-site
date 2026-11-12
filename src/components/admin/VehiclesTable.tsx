@@ -175,6 +175,10 @@ export function VehiclesTable({
   const [reservedCount, setReservedCount] = useState(reservedCountProp);
   const [loadingMore, setLoadingMore] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [searchTerm, setSearchTerm] = useState(q);
+  useEffect(() => {
+    setSearchTerm(q);
+  }, [q]);
   const [loadingSort, setLoadingSort] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const requestRef = useRef<AbortController | null>(null);
@@ -839,15 +843,14 @@ export function VehiclesTable({
       ) : null}
 
       <div className="space-y-2">
-        <div className="flex items-stretch gap-2">
+        <div className="flex flex-wrap items-stretch gap-2 sm:flex-nowrap">
           <form
-            className="flex min-w-0 flex-1 items-stretch gap-2"
+            className="flex min-w-0 flex-1 basis-full items-stretch gap-2 sm:basis-auto"
             role="search"
             onSubmit={(event) => {
               event.preventDefault();
-              const form = event.currentTarget;
               applyFilters({
-                q: (form.elements.namedItem("q") as HTMLInputElement).value,
+                q: searchTerm.trim(),
               });
             }}
           >
@@ -856,7 +859,12 @@ export function VehiclesTable({
               type="search"
               name="q"
               enterKeyHint="search"
-              defaultValue={q}
+              value={searchTerm}
+              onChange={(event) => {
+                const value = event.target.value;
+                setSearchTerm(value);
+                if (!value && q) applyFilters({ q: "" });
+              }}
               placeholder="Marca, modelo ou placa"
               aria-label="Buscar marca, modelo ou placa"
               className={`${inputClass} min-w-0 flex-1`}
@@ -864,10 +872,23 @@ export function VehiclesTable({
             <button
               type="submit"
               disabled={isPending}
-              className={`${btn.outline} hidden shrink-0 px-4 sm:inline-flex`}
+              className={`${btn.outline} shrink-0 px-3 sm:px-4`}
             >
               {isPending ? "..." : "Buscar"}
             </button>
+            {q || searchTerm ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  setSearchTerm("");
+                  if (q) applyFilters({ q: "" });
+                }}
+                className={`${btn.ghost} shrink-0 px-2.5`}
+              >
+                Limpar
+              </button>
+            ) : null}
           </form>
           <button
             type="button"

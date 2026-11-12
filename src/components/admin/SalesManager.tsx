@@ -194,6 +194,8 @@ export function SalesManager({
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
   const [term, setTerm] = useState(query);
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [sellerFilter, setSellerFilter] = useState("");
   const [dirty, setDirty] = useState(false);
   const [rows, setRows] = useState(() => sales.map(hydrateSale));
   const [total, setTotal] = useState(salesTotal);
@@ -237,7 +239,19 @@ export function SalesManager({
 
   const selectedVehicle = pickedVehicle;
 
-  const filteredSales = rows;
+  const sellerOptions = Array.from(
+    new Set(rows.map((sale) => extractSaleSeller(sale))),
+  ).sort((a, b) => {
+    if (a === "Geral") return 1;
+    if (b === "Geral") return -1;
+    return a.localeCompare(b, "pt-BR");
+  });
+
+  const filteredSales = rows.filter((sale) => {
+    if (paymentFilter && sale.paymentMethod !== paymentFilter) return false;
+    if (sellerFilter && extractSaleSeller(sale) !== sellerFilter) return false;
+    return true;
+  });
 
   const hasMore = rows.length < total;
 
@@ -863,6 +877,34 @@ export function SalesManager({
                 </option>
               ))}
             </select>
+            <select
+              value={paymentFilter}
+              onChange={(event) => setPaymentFilter(event.target.value)}
+              className={`${inputClass} sm:w-48`}
+              aria-label="Filtrar por forma de pagamento"
+            >
+              <option value="">Todas as formas</option>
+              {PAYMENT_METHODS.map((method) => (
+                <option key={method} value={method}>
+                  {method}
+                </option>
+              ))}
+            </select>
+            {sellerOptions.length > 0 ? (
+              <select
+                value={sellerFilter}
+                onChange={(event) => setSellerFilter(event.target.value)}
+                className={`${inputClass} sm:w-44`}
+                aria-label="Filtrar por vendedor"
+              >
+                <option value="">Todos os vendedores</option>
+                {sellerOptions.map((seller) => (
+                  <option key={seller} value={seller}>
+                    {seller}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <form
               className="flex min-w-0 flex-1 flex-wrap gap-2 sm:flex-nowrap"
               onSubmit={(event) => {
@@ -880,7 +922,9 @@ export function SalesManager({
               {query ? <Link href={period === "all" ? "/admin/vendas" : `/admin/vendas?period=${period}`} className={`${btn.ghost} flex-1 sm:flex-none`}>Limpar busca</Link> : null}
             </form>
             <span className="text-xs text-muted">
-              {total} {query ? "venda(s) encontrada(s)" : "venda(s)"}
+              {paymentFilter || sellerFilter
+                ? `${filteredSales.length} de ${total} venda(s)`
+                : `${total} ${query ? "venda(s) encontrada(s)" : "venda(s)"}`}
               {period !== "all" && !query ? ` · ${formatCurrencyBRL(periodTotal)}` : ""}
             </span>
             <button
@@ -892,6 +936,7 @@ export function SalesManager({
                     `/api/admin/export?type=sales&period=${period}&q=${encodeURIComponent(query)}`,
                     `vendas-garagem-${localDateInput()}.csv`,
                   );
+                  toast.success("CSV exportado.");
                 } catch (error) {
                   toast.error(
                     error instanceof Error

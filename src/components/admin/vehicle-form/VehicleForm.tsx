@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { VehicleWizardStep } from "@/lib/admin-form-sections";
 import { VehicleDraftToolbar } from "@/components/admin/VehicleDraftToolbar";
@@ -38,11 +39,26 @@ export function VehicleForm(props: VehicleFormProps) {
     formAction,
   } = form;
   const Layout = mode === "edit" ? EditLayout : CreateWizard;
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (saving || draftSaving || photosUploading) return;
+        formRef.current?.requestSubmit();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [saving, draftSaving, photosUploading]);
+
   return (
     <>
       <VehicleFormSummary form={form} listingScore={listingScore} />
       <VehicleDraftToolbar {...draft} />
       <form
+        ref={formRef}
         id="vehicle-form"
         noValidate
         autoComplete="off"

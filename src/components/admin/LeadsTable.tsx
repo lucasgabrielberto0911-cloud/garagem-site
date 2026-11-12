@@ -90,6 +90,7 @@ export function LeadsTable({
   const [deleteTarget, setDeleteTarget] = useState<LeadVenda | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [term, setTerm] = useState(query);
+  const [onlyUrgent, setOnlyUrgent] = useState(false);
 
   const totalCount = total ?? leads.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -185,6 +186,12 @@ export function LeadsTable({
 
   const unansweredSummary = summarizeUnansweredLeads(leads);
   const lossSummary = summarizeLeadLosses(leads);
+  const visibleLeads = onlyUrgent
+    ? leads.filter((lead) => {
+        const urgency = leadResponseUrgency(lead);
+        return urgency?.level === "alerta" || urgency?.level === "atrasado";
+      })
+    : leads;
 
   return (
     <div className="space-y-4">
@@ -274,6 +281,12 @@ export function LeadsTable({
               })
             }
           />
+          <FilterChip
+            label={`Urgentes (${unansweredSummary.totalUrgent})`}
+            active={onlyUrgent}
+            disabled={isPending}
+            onClick={() => setOnlyUrgent((current) => !current)}
+          />
         </div>
 
         <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3 sm:flex-row sm:items-center">
@@ -287,16 +300,33 @@ export function LeadsTable({
             <input
               type="search"
               value={term}
-              onChange={(event) => setTerm(event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setTerm(value);
+                if (!value && query) goTo({ status, q: "", page: 1 });
+              }}
               placeholder="Nome, telefone, placa ou veículo"
               className={inputClass}
             />
-            <button type="submit" className={btn.outline}>
-              Buscar
+            <button type="submit" disabled={isPending} className={btn.outline}>
+              {isPending ? "Buscando…" : "Buscar"}
             </button>
+            {query || term ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  setTerm("");
+                  if (query) goTo({ status, q: "", page: 1 });
+                }}
+                className={btn.ghost}
+              >
+                Limpar
+              </button>
+            ) : null}
           </form>
           <span className="text-xs text-muted">
-            {leads.length} de {totalCount} lead(s)
+            {visibleLeads.length} de {totalCount} lead(s)
           </span>
           <button
             type="button"
@@ -340,29 +370,33 @@ export function LeadsTable({
           {Object.entries(ORIGIN_LABELS).map(([key, label]) => <option key={key} value={`whatsapp:${key}`}>Compra · {label}</option>)}
         </select>
       </label>
-      {leads.length === 0 ? (
+      {visibleLeads.length === 0 ? (
         <EmptyState
           icon={<IconInbox className="h-12 w-12" />}
           title={
-            query
-              ? "Nenhum lead para essa busca"
-              : origem === WANTED_LEAD_SOURCE
-                ? "Nenhum pedido de modelo ainda"
-                : status
-                  ? "Nenhum lead com esse status"
-                  : "Nenhum lead recebido ainda"
+            onlyUrgent
+              ? "Nenhum lead urgente nesta página"
+              : query
+                ? "Nenhum lead para essa busca"
+                : origem === WANTED_LEAD_SOURCE
+                  ? "Nenhum pedido de modelo ainda"
+                  : status
+                    ? "Nenhum lead com esse status"
+                    : "Nenhum lead recebido ainda"
           }
           description={
-            query
-              ? "Tente outro nome, telefone, placa, e-mail ou modelo."
-              : origem === WANTED_LEAD_SOURCE
-                ? "Quando alguém não achar o modelo no estoque ou na ficha e enviar o formulário, o pedido aparece aqui."
-                : "Os pedidos de avaliação da página Vender/Trocar e os de quem não encontrou o modelo aparecem aqui."
+            onlyUrgent
+              ? "Os leads que aguardam resposta há +30 min ou +2h aparecem aqui."
+              : query
+                ? "Tente outro nome, telefone, placa, e-mail ou modelo."
+                : origem === WANTED_LEAD_SOURCE
+                  ? "Quando alguém não achar o modelo no estoque ou na ficha e enviar o formulário, o pedido aparece aqui."
+                  : "Os pedidos de avaliação da página Vender/Trocar e os de quem não encontrou o modelo aparecem aqui."
           }
         />
       ) : (
         <ul className="space-y-3">
-          {leads.map((lead) => (
+          {visibleLeads.map((lead) => (
             <LeadCard
               key={lead.id}
               lead={lead}

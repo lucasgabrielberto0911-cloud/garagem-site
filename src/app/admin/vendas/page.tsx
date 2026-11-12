@@ -36,10 +36,12 @@ export default async function VendasPage({
   const query = normalizeSalesQuery(first(params.q));
   const period = parseSalesPeriod(periodParam);
 
-  const [list, totals] = await Promise.all([
+  const [list, totals, monthTotals] = await Promise.all([
     getAdminSalesPage({ page: 1, period, q: query, id: saleId }),
     getAdminSalesTotals(period),
+    period === "month" ? Promise.resolve(null) : getAdminSalesTotals("month"),
   ]);
+  const goalTotals = monthTotals ?? totals;
   const revenue = totals.revenue;
   const count = totals.count;
   const knownProfit = totals.profit;
@@ -95,8 +97,8 @@ export default async function VendasPage({
 
       <DashboardSalesGoal
         salesGoal={computeMonthlySalesGoal({
-          salesCount: count,
-          salesRevenue: revenue,
+          salesCount: goalTotals.count,
+          salesRevenue: goalTotals.revenue,
         })}
         leaderboard={computeSalesLeaderboard(list.sales)}
       />

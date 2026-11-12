@@ -492,7 +492,7 @@ export function VehiclePhotoManager({
         next.add(photoId);
         return next;
       });
-      toast.success("Região borracha. Salve o anúncio para publicar.", resetFrameNotice(editingPhoto.thumbnailUrl, data.thumbnailUrl));
+      toast.success("Região borrada. Salve o anúncio para publicar.", resetFrameNotice(editingPhoto.thumbnailUrl, data.thumbnailUrl));
     } catch (error) {
       toast.error(
         error instanceof Error
