@@ -53,7 +53,7 @@ export function VehicleConditions({
                 className="flex items-start gap-2.5 text-sm leading-snug"
               >
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
-                <span className="line-clamp-2">
+                <span>
                   <span className="font-display font-semibold text-cream">{item.label}</span>
                   <span className="text-muted">
                     {" · "}

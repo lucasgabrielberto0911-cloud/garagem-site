@@ -16,7 +16,7 @@ import {
 import { HoneypotWebsiteField } from "@/components/site/HoneypotWebsiteField";
 
 const inputClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand focus-visible:ring-2 focus-visible:ring-brand";
 
 function digitsToGrouped(value: string) {
   const digits = value.replace(/\D/g, "");
@@ -129,6 +129,10 @@ export function MissingModelForm({
     setErrors({});
     setFormError("");
     startTransition(async () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setFormError("Sem conexão no momento. Verifique sua internet e tente novamente.");
+        return;
+      }
       try {
         const result = await createWantedLead(data);
         if (result.ok) {
@@ -147,7 +151,10 @@ export function MissingModelForm({
         setFormError(result.message);
         focusField(Object.keys(fieldErrors)[0] ?? "");
       } catch {
-        const message = "Não foi possível enviar agora. Tente de novo.";
+        const offline = typeof navigator !== "undefined" && !navigator.onLine;
+        const message = offline
+          ? "Sem conexão no momento. Verifique sua internet e tente novamente."
+          : "Não foi possível enviar agora. Tente de novo.";
         setFormError(message);
       }
     });

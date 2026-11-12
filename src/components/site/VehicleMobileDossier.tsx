@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { VehicleFeatures } from "@/components/site/VehicleFeatures";
@@ -340,7 +341,16 @@ export function VehicleMobileBlocks({
             className="mt-4 w-full"
           />
         ) : null}
-        <div className="mt-2 flex flex-wrap items-center gap-x-5 text-sm">
+        <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+          {!sold ? (
+            <ChatOpenButton
+              source="ficha-mobile"
+              prompt={`Tenho dúvida sobre o ${fullLabel}`}
+              size="compact"
+              variant="ghost"
+              className="-ml-3 !text-sm"
+            />
+          ) : null}
           <ShareVehicle
             title={fullLabel}
             path={path}

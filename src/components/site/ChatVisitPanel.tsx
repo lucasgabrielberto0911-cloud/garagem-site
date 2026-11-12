@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { IconWhatsApp } from "@/components/site/icons";
 import {
   VISIT_TIME_OPTIONS,
@@ -13,7 +13,7 @@ import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import { trackEvent } from "@/lib/track-event";
 
 const FIELD =
-  "w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-base text-cream placeholder:text-cream/60 lg:text-[13px] focus:border-white/25 focus:outline-none";
+  "w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-base text-cream placeholder:text-cream/60 lg:text-[13px] focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
 /** Coleta carro, dúvidas e horário e abre o WhatsApp com a mensagem pronta. */
 export function ChatVisitPanel({
@@ -30,6 +30,8 @@ export function ChatVisitPanel({
     questions: "",
     time: "",
   });
+  const vehicleInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
   const complete = isChatVisitComplete(input);
   const href = complete ? chatVisitWhatsAppUrl(input) : undefined;
   const set = (key: keyof ChatVisitInput) => (value: string) =>
@@ -56,6 +58,7 @@ export function ChatVisitPanel({
       <label className="block text-xs text-cream/70">
         Carro de interesse <span className="text-brand-light" aria-hidden="true">*</span>
         <input
+          ref={vehicleInputRef}
           className={FIELD}
           value={input.vehicle}
           maxLength={120}
@@ -76,6 +79,7 @@ export function ChatVisitPanel({
       <label className="block text-xs text-cream/70">
         Horário desejado <span className="text-brand-light" aria-hidden="true">*</span>
         <input
+          ref={timeInputRef}
           className={FIELD}
           value={input.time}
           maxLength={80}
@@ -117,6 +121,8 @@ export function ChatVisitPanel({
         onClick={(event) => {
           if (!complete || !href) {
             event.preventDefault();
+            if (!input.vehicle.trim()) vehicleInputRef.current?.focus();
+            else if (!input.time.trim()) timeInputRef.current?.focus();
             return;
           }
           trackEvent("chat_visit_request", { has_questions: input.questions.trim() ? 1 : 0 });
@@ -132,7 +138,7 @@ export function ChatVisitPanel({
           onClose();
         }}
         className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 text-[13px] font-semibold text-asphalt ${
-          complete ? "" : "pointer-events-none opacity-50"
+          complete ? "" : "opacity-50"
         }`}
       >
         <IconWhatsApp className="h-4 w-4" />

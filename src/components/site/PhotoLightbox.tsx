@@ -49,6 +49,7 @@ export function PhotoLightbox({
   const [mounted, setMounted] = useState(false);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [gesturing, setGesturing] = useState(false);
 
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef({ x: 0, y: 0 });
@@ -176,6 +177,7 @@ export function PhotoLightbox({
   }, [mounted, scale, clampOffset]);
 
   function onTouchStart(event: React.TouchEvent) {
+    setGesturing(true);
     if (event.touches.length === 2) {
       const [a, b] = [event.touches[0], event.touches[1]];
       pinchStart.current = {
@@ -247,10 +249,12 @@ export function PhotoLightbox({
     }
     pointerStart.current = null;
     pinchStart.current = null;
+    setGesturing(false);
   }
 
   function onPointerDown(event: React.PointerEvent) {
     if (event.pointerType === "touch") return;
+    setGesturing(true);
     pointerStart.current = { x: event.clientX, y: event.clientY };
     offsetStart.current = offset;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -282,6 +286,20 @@ export function PhotoLightbox({
       go(dx < 0 ? 1 : -1);
     }
     pointerStart.current = null;
+    setGesturing(false);
+  }
+
+  function onWheel(event: React.WheelEvent) {
+    if (event.deltaY === 0) return;
+    const step = -event.deltaY * 0.0025;
+    const next = Math.max(1, Math.min(MAX_SCALE, Number((scale + step).toFixed(2))));
+    if (next === scale) return;
+    setScale(next);
+    if (next <= 1) {
+      setOffset({ x: 0, y: 0 });
+    } else {
+      setOffset((current) => clampOffset(current, next));
+    }
   }
 
   const photo = photos[safeIndex];
@@ -313,6 +331,19 @@ export function PhotoLightbox({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {scale > 1 ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  resetZoom();
+                }}
+                aria-label="Resetar zoom para 1x"
+                className="flex h-11 items-center justify-center border border-white/20 px-2.5 font-display text-xs font-semibold text-cream transition hover:border-brand touch-manipulation"
+              >
+                1x
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={(event) => {
@@ -349,13 +380,17 @@ export function PhotoLightbox({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onWheel={onWheel}
             onDoubleClick={toggleZoom}
           >
             <div
-              className="absolute inset-0 transition-transform duration-200 ease-out"
+              className={`absolute inset-0 ${
+                gesturing ? "transition-none" : "transition-transform duration-200 ease-out"
+              }`}
               style={{
                 transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-                cursor: scale > 1 ? "grab" : "zoom-in",
+                cursor: scale > 1 ? (gesturing ? "grabbing" : "grab") : "zoom-in",
               }}
             >
               <VehicleImage
@@ -370,6 +405,11 @@ export function PhotoLightbox({
               {photo ? <ZoomDetailImage photoId={photo.id} zoomed={scale > 1} alt={vehiclePhotoAlt(alt, safeIndex, total)} /> : null}
             </div>
           </div>
+          <p className="pointer-events-none absolute bottom-3 left-1/2 z-[2] hidden -translate-x-1/2 whitespace-nowrap bg-black/55 px-2.5 py-1 text-[11px] text-cream/70 backdrop-blur sm:block">
+            {scale > 1
+              ? "Arraste para mover · 0 ou 1x para resetar"
+              : "Duplo clique ou scroll para zoom"}
+          </p>
 
           {total > 1 ? (
             <>
