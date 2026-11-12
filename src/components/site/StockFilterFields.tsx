@@ -260,7 +260,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                       maxKm: "",
                     })
                   }
-                  className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream disabled:cursor-not-allowed disabled:opacity-40"
+                  className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted disabled:opacity-40"
                 >
                   Limpar
                 </button>

@@ -266,7 +266,7 @@ export function StockInfiniteList({
               data-stock-load-more=""
               className="min-h-[48px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand touch-manipulation"
             >
-              {`Ver mais veículos · ${vehicles.length} de ${total}`}
+              Ver mais veículos
             </button>
           )}
         </InfiniteSentinel>

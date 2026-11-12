@@ -486,15 +486,16 @@ export function StockFilters({ facets }: { facets: Facets }) {
               <button
                 type="button"
                 onClick={() => {
-                  if (searchTimer.current) window.clearTimeout(searchTimer.current);
-                  if (searchRef.current) {
-                    searchRef.current.value = "";
-                    searchRef.current.focus();
+                  clearTimeout(searchTimer.current);
+                  const input = searchRef.current;
+                  if (input) {
+                    input.value = "";
+                    input.focus();
                   }
                   updateRef.current({ q: "" }, { replace: true });
                 }}
                 aria-label="Limpar busca"
-                className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-lg leading-none text-muted hover:text-cream"
+                className="-mr-2 flex h-11 w-11 items-center justify-center text-lg text-muted hover:text-cream"
               >
                 ×
               </button>

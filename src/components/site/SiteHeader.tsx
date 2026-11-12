@@ -299,7 +299,7 @@ export function SiteHeader() {
                     trackCatalogWhatsAppClick(whatsapp.catalogParams);
                     closeMenu();
                   }}
-                  className="flex min-h-[52px] w-full items-center justify-center gap-2.5 bg-[#25D366] px-4 py-4 font-display text-base font-semibold text-asphalt shadow-[0_3px_12px_rgba(37,211,102,0.25)] transition hover:bg-[#1fbe5a] touch-manipulation"
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2.5 bg-[#25D366] px-4 py-4 font-display text-base font-semibold text-asphalt hover:bg-[#1fbe5a] touch-manipulation"
                 >
                   <IconWhatsApp className="h-5 w-5" />
                   Falar no WhatsApp
