@@ -73,7 +73,8 @@ export type PurchasePolicy = {
   fipeStaleAfterDays: number;
 };
 
-export const PURCHASE_POLICY_VERSION = "2026-11-provisorio-1";
+// provisorio-2: sem custo de laudo cautelar (a Garagem não faz laudo; o laudo do carro é só informação).
+export const PURCHASE_POLICY_VERSION = "2026-11-provisorio-2";
 
 export const DEFAULT_PURCHASE_POLICY: PurchasePolicy = {
   version: PURCHASE_POLICY_VERSION,
@@ -100,7 +101,6 @@ export const DEFAULT_PURCHASE_POLICY: PurchasePolicy = {
     { key: "ajustes", label: "Pequenos ajustes", status: "estimado", minCents: 5_000, baseCents: 12_000, maxCents: 25_000, source: "premissa", fromProfile: true },
     { key: "contingencia", label: "Contingência da preparação", status: "estimado", minCents: 10_000, baseCents: 20_000, maxCents: 40_000, source: "premissa", fromProfile: true, note: "Separada dos reparos conhecidos." },
     { key: "documentacao", label: "Documentação/transferência", status: "desconhecido", source: "premissa", fromProfile: true },
-    { key: "laudo", label: "Laudo cautelar", status: "desconhecido", source: "premissa", fromProfile: true },
     { key: "transporte", label: "Transporte", status: "desconhecido", fromProfile: true },
     { key: "pneus", label: "Pneus", status: "desconhecido", fromProfile: true },
     { key: "chave", label: "Chave reserva", status: "desconhecido", fromProfile: true },

@@ -9,7 +9,7 @@ import { simulatePurchase } from "./purchase-simulator";
 test("entrada curta: valida fronteiras, descarta totais e dispensa papelada", () => {
   const q = parseQuickPurchase({ ...quickFixture(), costs: [], score: 10, parameters: {} });
   const input = mapQuickPurchase(q, []), output = simulatePurchase(input);
-  assert.equal(input.costs.length, 12); assert.equal(input.resaleEvidence.verified, false);
+  assert.equal(input.costs.length, 11); assert.equal(input.resaleEvidence.verified, false);
   assert.equal(input.liquidity.verified, false); assert.ok(output.idealCents); assert.ok(output.scenarios.every(s => s.calculation));
   assert.equal(input.resaleCents.rapida, 6_790_000); assert.equal(input.resaleCents.normal, 7_000_001); assert.equal(input.resaleCents.demorada, 6_580_000);
   assert.equal("score" in q, false);
