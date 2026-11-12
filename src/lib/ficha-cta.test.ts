@@ -754,13 +754,13 @@ test("desktop rola junto: card do anúncio sem sticky, sem coluna com scroll pr�
   assert.match(page, /<VehicleMobileBar/);
 });
 
-test("preço da ficha em vermelho com reflexo e glow, desligados sem movimento", () => {
+test("preço da ficha em vermelho com glow suave e sem reflexo sobre o texto, desligado sem movimento", () => {
   const css = readSrc("app/globals.css");
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
   assert.match(dossier, /className="ficha-price"/);
   const at = css.indexOf(".ficha-price {");
   const block = css.slice(at, css.indexOf("/* O teclado usa", at));
-  assert.match(block, /animation: assistantSheen/);
+  assert.doesNotMatch(block, /animation: assistantSheen/);
   assert.match(block, /animation: assistantGlow/);
   assert.match(block, /prefers-reduced-motion: reduce[\s\S]*animation: none/);
   assert.doesNotMatch(block, /gold|#ffc72c|#ffd700/i);
