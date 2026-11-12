@@ -33,7 +33,7 @@ import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { SiteLeadHit } from "@/lib/funnel-events";
 
 const inputClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation placeholder:text-muted focus:border-brand";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation placeholder:text-muted focus:border-brand focus-visible:ring-2 focus-visible:ring-brand";
 
 export function SellForm({
   interestNote,
@@ -61,6 +61,11 @@ export function SellForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [outcome, setOutcome] = useState<null | "sent" | "queued">(null);
   const [sentPhotoCount, setSentPhotoCount] = useState(0);
+  const [sentVehicle, setSentVehicle] = useState<{
+    brand: string;
+    model: string;
+    year: string;
+  } | null>(null);
   const [phone, setPhone] = useState("");
   const [km, setKm] = useState("");
   const [plate, setPlate] = useState("");
@@ -140,8 +145,10 @@ export function SellForm({
     }
 
     startTransition(async () => {
+      const summary = { brand, model, year };
       const online = typeof navigator === "undefined" ? true : navigator.onLine;
       if (!online) {
+        setSentVehicle(summary);
         await queueOffline(data);
         return;
       }
@@ -158,6 +165,7 @@ export function SellForm({
           });
           notifySuccess(result.message);
           setSentPhotoCount(photoUrls.length);
+          setSentVehicle(summary);
           setOutcome("sent");
           requestKeyRef.current = createIntentId();
           setPhone("");
@@ -174,6 +182,7 @@ export function SellForm({
         }
       } catch (error) {
         if (isLikelyNetworkFailure(error, navigator.onLine)) {
+          setSentVehicle(summary);
           await queueOffline(data);
           return;
         }
@@ -189,8 +198,10 @@ export function SellForm({
         containerRef={receiptRef}
         mode={outcome}
         photoCount={sentPhotoCount}
+        vehicle={sentVehicle}
         onAnother={() => {
           setSentPhotoCount(0);
+          setSentVehicle(null);
           setPhone("");
           setKm("");
           setPlate("");
@@ -293,7 +304,7 @@ export function SellForm({
 
         <details open={Boolean(errors.plate)} className="border border-white/10">
           <summary className="min-h-11 cursor-pointer px-4 py-3 font-display text-sm text-cream">
-            Complementar com placa, km ou fotos (opcional)
+            Adicionar fotos, km ou placa (opcional · agiliza a avaliação)
           </summary>
           <FormBlock title="Detalhes para a avaliação">
             <Field label="Placa do veículo" error={errors.plate} htmlFor="plate" optional>
@@ -366,7 +377,11 @@ export function SellForm({
               aria-busy={isPending}
               className="min-h-[52px] w-full bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark disabled:opacity-70 touch-manipulation"
             >
-              {isPending ? "Enviando..." : "Solicitar avaliação"}
+              {isPending
+                ? "Enviando..."
+                : photoBusy
+                  ? "Enviando fotos… aguarde"
+                  : "Solicitar avaliação"}
             </button>
             <SiteLeadHit contentName="Vender/Trocar">
               <WhatsAppButton
@@ -394,13 +409,18 @@ function AfterSend({
   containerRef,
   mode,
   photoCount,
+  vehicle,
   onAnother,
 }: {
   containerRef: Ref<HTMLDivElement>;
   mode: "sent" | "queued";
   photoCount: number;
+  vehicle: { brand: string; model: string; year: string } | null;
   onAnother: () => void;
 }) {
+  const whatsAppMessage = vehicle
+    ? `Olá! Acabei de enviar os dados do meu ${vehicle.brand} ${vehicle.model} ${vehicle.year} pelo site para avaliação.`
+    : WHATSAPP_MESSAGES.sell;
   return (
     <div ref={containerRef} tabIndex={-1} aria-labelledby="sell-form-receipt-heading" className="scroll-mt-24 overflow-hidden border border-brand/40 bg-ink outline-none" aria-live="polite">
       <div className="h-1 bg-brand" aria-hidden="true" />
@@ -442,7 +462,7 @@ function AfterSend({
             size="lg"
             className="w-full"
             trackingLabel="vender"
-            message={WHATSAPP_MESSAGES.sell}
+            message={whatsAppMessage}
           >
             Chamar no WhatsApp
           </WhatsAppButton>

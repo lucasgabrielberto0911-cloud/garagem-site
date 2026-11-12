@@ -85,6 +85,8 @@ import {
   subscribeChatVehicleContext,
   type ChatVehicleContext,
 } from "@/lib/chat-vehicle-context";
+import { handleFocusTrap } from "@/lib/focus-trap";
+import { VehicleLeadHit } from "@/lib/funnel-events";
 
 
 const ASSISTANT_NAME = "Garagem";
@@ -211,6 +213,29 @@ function chatFunnelRef() {
   };
 }
 
+function ChatVehicleLeadWrapper({
+  vehicle,
+  children,
+}: {
+  vehicle: ChatVehicleContext | null;
+  children: ReactNode;
+}) {
+  if (!vehicle || vehicle.sold) return <>{children}</>;
+  return (
+    <VehicleLeadHit
+      contentId={vehicle.id}
+      contentName={vehicle.label}
+      slug={whatsappContentFromVehicle({ id: vehicle.id, path: vehicle.path })}
+      value={vehicle.price}
+      make={vehicle.brand}
+      model={vehicle.model}
+      year={vehicle.year}
+    >
+      {children}
+    </VehicleLeadHit>
+  );
+}
+
 function ChatWhatsAppButton({
   href,
   label,
@@ -222,27 +247,30 @@ function ChatWhatsAppButton({
   benefit: string;
   trackingLabel?: string;
 }) {
+  const vehicle = getChatVehicleContext();
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={() => trackWhatsAppClick(trackingLabel, chatFunnelRef())}
-      className="group flex min-h-14 w-full items-center gap-3 rounded-2xl bg-brand py-2.5 pl-2.5 pr-4 text-left text-white transition hover:bg-brand/90 active:bg-brand/80 touch-manipulation"
-    >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/10">
-        <IconWhatsApp className="h-5 w-5" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-display text-[14px] font-semibold leading-5">
-          {label}
+    <ChatVehicleLeadWrapper vehicle={vehicle}>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => trackWhatsAppClick(trackingLabel, chatFunnelRef())}
+        className="group flex min-h-14 w-full items-center gap-3 rounded-2xl bg-brand py-2.5 pl-2.5 pr-4 text-left text-white transition hover:bg-brand/90 active:bg-brand/80 touch-manipulation"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/10">
+          <IconWhatsApp className="h-5 w-5" />
         </span>
-        <span className="block font-body text-[12px] leading-4 text-white/85">
-          {benefit}
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-[14px] font-semibold leading-5">
+            {label}
+          </span>
+          <span className="block font-body text-[12px] leading-4 text-white/85">
+            {benefit}
+          </span>
         </span>
-      </span>
-      <IconArrowRight className="h-4 w-4 shrink-0 transition group-hover:translate-x-0.5" />
-    </a>
+        <IconArrowRight className="h-4 w-4 shrink-0 transition group-hover:translate-x-0.5" />
+      </a>
+    </ChatVehicleLeadWrapper>
   );
 }
 
@@ -563,6 +591,7 @@ export function SiteChat() {
   const [pending, setPending] = useState(false);
   const [autoSend, setAutoSend] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [failedMessage, setFailedMessage] = useState<string | null>(null);
   const [showLatest, setShowLatest] = useState(false);
   const [mobileDialog, setMobileDialog] = useState(false);
   const [visitOpen, setVisitOpen] = useState(false);
@@ -809,27 +838,8 @@ export function SiteChat() {
         window.matchMedia("(min-width: 1024px)").matches
       )
         return;
-      const panel = shellRef.current?.querySelector("[role='dialog']");
-      const controls = panel
-        ? Array.from(
-            panel.querySelectorAll<HTMLElement>(
-              "a[href], button:not([disabled]), textarea:not([disabled])",
-            ),
-          ).filter((node) => node.getClientRects().length > 0)
-        : [];
-      const first = controls[0];
-      const last = controls[controls.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey && (active === first || !panel?.contains(active))) {
-        event.preventDefault();
-        last?.focus();
-      } else if (
-        !event.shiftKey &&
-        (active === last || !panel?.contains(active))
-      ) {
-        event.preventDefault();
-        first?.focus();
-      }
+      const panel = shellRef.current?.querySelector<HTMLElement>("[role='dialog']");
+      if (panel) handleFocusTrap(event, panel);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -1030,6 +1040,7 @@ export function SiteChat() {
     followScrollRef.current = true;
     setShowLatest(false);
     setFailure(null);
+    setFailedMessage(null);
     try {
       const data = await requestChatReply(
         {
@@ -1078,6 +1089,7 @@ export function SiteChat() {
         error instanceof ChatRequestError
           ? displayChatText(error.message)
           : "Não consegui concluir a resposta. Sua mensagem ficou no campo para você tentar novamente.";
+      setFailedMessage(mensagem);
       setFailure(reply);
     } finally {
       window.clearTimeout(timer);
@@ -1096,8 +1108,19 @@ export function SiteChat() {
     active.controller.abort();
     sendingRef.current = false;
     setPending(false);
-    setMessages(active.history);
+    setMessages((current) => {
+      const last = current[current.length - 1];
+      if (
+        current.length > active.history.length &&
+        last?.role === "assistant" &&
+        last.content.trim().length > 0
+      ) {
+        return current;
+      }
+      return active.history;
+    });
     setDraft((current) => current || active.question);
+    setFailedMessage(active.question);
     setFailure(
       "Resposta interrompida. Sua mensagem ficou no campo. Se você já informou seu contato, confirme o atendimento com o consultor no WhatsApp.",
     );
@@ -1140,6 +1163,7 @@ export function SiteChat() {
     setMessages([OPENING]);
     setDraft("");
     setFailure(null);
+    setFailedMessage(null);
     followScrollRef.current = true;
     setShowLatest(false);
     setVisitOpen(false);
@@ -1158,7 +1182,6 @@ export function SiteChat() {
       {open ? (
         <section
           role="dialog"
-          aria-labelledby="site-chat-title"
           aria-label="Chat da Garagem"
           aria-modal={mobileDialog || undefined}
           className="site-chat-panel pointer-events-auto flex min-h-0 w-full flex-col overflow-hidden rounded-[20px] border border-white/[0.08] bg-asphalt shadow-[0_32px_80px_-16px_rgba(0,0,0,0.85),0_0_0_1px_rgba(0,0,0,0.5)]"
@@ -1186,16 +1209,18 @@ export function SiteChat() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-                <a
-                  href={headerWhatsAppHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full before:absolute before:-inset-0.5 before:content-[''] bg-[#25D366]/[0.12] text-[#25D366] ring-1 ring-inset ring-[#25D366]/25 transition hover:bg-[#25D366]/20 active:bg-[#25D366]/25 touch-manipulation"
-                  aria-label="Falar com um vendedor no WhatsApp"
-                >
-                  <IconWhatsApp className="h-5 w-5" />
-                </a>
+                <ChatVehicleLeadWrapper vehicle={vehicleContext}>
+                  <a
+                    href={headerWhatsAppHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
+                    className="relative flex h-10 w-10 items-center justify-center rounded-full before:absolute before:-inset-0.5 before:content-[''] bg-[#25D366]/[0.12] text-[#25D366] ring-1 ring-inset ring-[#25D366]/25 transition hover:bg-[#25D366]/20 active:bg-[#25D366]/25 touch-manipulation"
+                    aria-label="Falar com um vendedor no WhatsApp"
+                  >
+                    <IconWhatsApp className="h-5 w-5" />
+                  </a>
+                </ChatVehicleLeadWrapper>
                 {started ? <button type="button" onClick={resetConversation} disabled={pending} aria-label="Nova conversa" title="Nova conversa" className="relative flex h-10 w-10 items-center justify-center rounded-full text-cream/75 transition hover:bg-white/[0.08] before:absolute before:-inset-0.5 before:content-['']"><IconRefresh className="h-4 w-4" /></button> : null}
                 <button
                   type="button"
@@ -1392,9 +1417,11 @@ export function SiteChat() {
           }}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button> : null}
           </div>
           {visitOpen ? <ChatVisitPanel initialVehicle={vehicleContext && !vehicleContext.sold ? [vehicleContext.label, vehicleContext.year].filter(Boolean).join(" ") : lastChatCards?.[0]?.title} funnel={vehicleContext && !vehicleContext.sold ? chatFunnelRef() : undefined} onClose={() => setVisitOpen(false)} /> : null}
-          <div role="toolbar" aria-label="Ações rápidas" data-chat-quick-actions="" className={`${started ? "flex" : "hidden lg:flex"} shrink-0 gap-2 overflow-x-auto px-3 pb-1.5 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
+          <div role="toolbar" aria-label="Ações rápidas" data-chat-quick-actions="" className="flex shrink-0 gap-2 overflow-x-auto px-3 pb-1.5 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button type="button" aria-pressed={visitOpen} aria-expanded={visitOpen} aria-controls="chat-visit-panel" onClick={() => setVisitOpen(!visitOpen)} className={`${QUICK_ACTION_CLASS} ${visitOpen ? "border-brand/60 bg-brand/15 text-cream" : ""}`}>Marcar visita</button>
-            <a href={headerWhatsAppHref} target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClick("chat", chatFunnelRef())} className={QUICK_ACTION_CLASS}><IconWhatsApp className="h-4 w-4 text-[#25D366]" />Falar no WhatsApp</a>
+            <ChatVehicleLeadWrapper vehicle={vehicleContext}>
+              <a href={headerWhatsAppHref} target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClick("chat", chatFunnelRef())} className={QUICK_ACTION_CLASS}><IconWhatsApp className="h-4 w-4 text-[#25D366]" />Falar no WhatsApp</a>
+            </ChatVehicleLeadWrapper>
             <Link href="/estoque" prefetch={false} onClick={() => trackChatEvent("ChatStockExplore", { source: sourceRef.current, intent: lastIntentRef.current, message_count: messageCountRef.current })} className={QUICK_ACTION_CLASS}>Ver estoque<IconArrowRight className="h-4 w-4" /></Link>
             {vehicleContext && started ? activeSuggestions.slice(0, 2).map(suggestion => <button key={suggestion} type="button" disabled={pending} onClick={() => void send(resolveSuggestionPrompt(suggestion, vehicleContext), "suggestion")} className={QUICK_ACTION_CLASS}>{suggestion}</button>) : null}
           </div>
@@ -1405,6 +1432,16 @@ export function SiteChat() {
             >
               <p>{failure}</p>
               <div className="mt-1 flex flex-wrap gap-x-4">
+                {failedMessage ? (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    className="min-h-11 font-semibold text-brand-light underline underline-offset-4 disabled:opacity-60"
+                    onClick={() => void send(failedMessage)}
+                  >
+                    Tentar novamente
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="min-h-11 font-semibold underline underline-offset-4"
@@ -1412,16 +1449,18 @@ export function SiteChat() {
                 >
                   Rever mensagem
                 </button>
-                <a
-                  href={headerWhatsAppHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
-                  className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-[#25D366]"
-                >
-                  <IconWhatsApp className="h-4 w-4" />
-                  Falar no WhatsApp
-                </a>
+                <ChatVehicleLeadWrapper vehicle={vehicleContext}>
+                  <a
+                    href={headerWhatsAppHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
+                    className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-[#25D366]"
+                  >
+                    <IconWhatsApp className="h-4 w-4" />
+                    Falar no WhatsApp
+                  </a>
+                </ChatVehicleLeadWrapper>
               </div>
             </div>
           ) : null}
