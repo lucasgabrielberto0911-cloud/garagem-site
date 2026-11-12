@@ -129,10 +129,12 @@ export function VehicleMobileBar({
               onClick={(event) =>
                 openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
               }
-              className="ficha-whatsapp-cta pointer-events-auto flex h-14 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#25D366] px-2 font-display text-[13px] font-bold text-asphalt shadow-[0_6px_18px_rgba(0,0,0,0.4)] touch-manipulation transition active:scale-[0.98] active:bg-[#1FB858] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt min-[380px]:gap-2 min-[380px]:px-3 min-[380px]:text-[15px]"
+              className="ficha-whatsapp-cta pointer-events-auto flex h-14 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#25D366] px-3 font-display text-[15px] font-bold text-asphalt shadow-[0_6px_18px_rgba(0,0,0,0.4)] touch-manipulation transition active:scale-[0.98] active:bg-[#1FB858] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
             >
-              <IconWhatsApp className="h-[18px] w-[18px] shrink-0 min-[380px]:h-5 min-[380px]:w-5" />
-              <span>Chamar no WhatsApp</span>
+              <IconWhatsApp className="h-5 w-5 shrink-0" />
+              <span>
+                <span className="max-[379px]:hidden">Chamar no </span>WhatsApp
+              </span>
             </a>
           </VehicleLeadHit>
           </div>

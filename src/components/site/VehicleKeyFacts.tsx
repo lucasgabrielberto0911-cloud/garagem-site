@@ -51,10 +51,10 @@ export function VehicleKeyFacts({
         >
           <dt className="text-sm font-medium text-cream/75">{fact.label}</dt>
           <dd
-            className={`mt-0.5 font-display font-semibold leading-tight text-cream sm:text-[15px] ${
+            className={`mt-0.5 font-display text-sm font-semibold leading-tight text-cream sm:text-[15px] ${
               fact.label === "Ano"
-                ? "whitespace-nowrap text-[13px] min-[360px]:text-sm"
-                : "text-sm [overflow-wrap:break-word]"
+                ? "whitespace-nowrap"
+                : "[overflow-wrap:break-word]"
             }`}
           >
             {breakAfterSlash(fact.value)}
