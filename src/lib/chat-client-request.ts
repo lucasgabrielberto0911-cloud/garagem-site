@@ -89,3 +89,26 @@ export async function requestChatReply(
     reader.releaseLock();
   }
 }
+
+export const CHAT_OFFLINE_FAILURE =
+  "Você está sem conexão com a internet. Sua mensagem ficou no campo; assim que a conexão voltar, toque em Tentar novamente.";
+export const CHAT_TIMEOUT_FAILURE =
+  "A resposta demorou mais que o normal. Sua mensagem ficou no campo para você tentar novamente.";
+export const CHAT_NETWORK_FAILURE =
+  "Não consegui falar com o servidor agora. Sua mensagem ficou no campo; confira a conexão e toque em Tentar novamente.";
+export const CHAT_ONLINE_AGAIN =
+  "A conexão voltou. Toque em Tentar novamente para enviar sua mensagem.";
+
+/** Texto de falha para o chat: separa servidor, lentidão, queda de rede e erro desconhecido. */
+export function chatFailureMessage(
+  error: unknown,
+  online: boolean,
+  fallback: (message: string) => string = (message) => message,
+): string {
+  if (error instanceof ChatRequestError) return fallback(error.message);
+  if (!online) return CHAT_OFFLINE_FAILURE;
+  const name = (error as { name?: unknown } | null)?.name;
+  if (error === "timeout" || name === "TimeoutError") return CHAT_TIMEOUT_FAILURE;
+  if (error instanceof TypeError) return CHAT_NETWORK_FAILURE;
+  return "Não consegui concluir a resposta. Sua mensagem ficou no campo para você tentar novamente.";
+}
