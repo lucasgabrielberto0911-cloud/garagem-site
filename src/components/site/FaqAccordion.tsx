@@ -2,12 +2,12 @@ import { faqItemId, type FaqItem } from "@/lib/faq";
 
 export function FaqAccordion({ items }: { items: FaqItem[] }) {
   return (
-    <div className="mx-auto max-w-3xl divide-y divide-white/10 border border-white/10 bg-ink">
+    <div className="mx-auto max-w-3xl divide-y divide-white/15 border border-white/20 bg-ink">
       {items.map((item, index) => {
         const id = faqItemId(item.question, index);
         return (
           <details key={item.question} id={id} className="group scroll-mt-28 px-5 py-4 sm:px-6">
-            <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-4 py-1 font-display text-base font-semibold text-cream marker:hidden touch-manipulation">
+            <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-4 py-1 font-display text-base font-semibold text-cream marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation">
               <span>{item.question}</span>
               <span
                 className="mt-1 shrink-0 text-brand-light transition-transform duration-300 group-open:rotate-45"
@@ -25,7 +25,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
                 </svg>
               </span>
             </summary>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
+            <p className="mt-3 text-sm leading-relaxed text-cream/80">
               {item.answer}
             </p>
           </details>

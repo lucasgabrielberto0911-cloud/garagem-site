@@ -106,7 +106,7 @@ export default async function SeminovosCidadePage({
 
         <nav
           aria-label="Você está aqui"
-          className="mt-4 text-xs text-muted"
+          className="mt-4 text-xs text-cream/75"
         >
           <Link href="/" className="transition hover:text-cream">
             Início
@@ -125,7 +125,7 @@ export default async function SeminovosCidadePage({
               <h2 className="font-display text-xl font-semibold text-cream">
                 {stock.heading}
               </h2>
-              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
+              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-cream/80">
                 {stock.intro}
               </p>
             </div>
@@ -135,7 +135,7 @@ export default async function SeminovosCidadePage({
           </div>
           <div className="mt-6">
             {featured.length === 0 ? (
-              <p className="border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-center text-sm leading-relaxed text-muted">
+              <p className="border border-dashed border-white/25 bg-ink/40 px-5 py-8 text-center text-sm leading-relaxed text-cream/75">
                 {stock.empty}
               </p>
             ) : (
@@ -149,7 +149,7 @@ export default async function SeminovosCidadePage({
         </section>
 
         <section className="mt-12 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-5 text-sm leading-relaxed text-muted">
+          <div className="space-y-5 text-sm leading-relaxed text-cream/80">
             {city.paragraphs.map((text) => (
               <p key={text.slice(0, 40)}>{text}</p>
             ))}
@@ -160,11 +160,11 @@ export default async function SeminovosCidadePage({
             </ul>
           </div>
 
-          <aside className="border border-white/10 bg-ink p-5 sm:p-6">
+          <aside className="border border-white/20 bg-ink p-5 sm:p-6">
             <p className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
               Vídeo ou visita
             </p>
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-2 text-sm text-cream/80">
               A ficha tem a foto, o preço e o que o anúncio confirma. Se quiser
               um vídeo ou combinar uma visita em {city.name}, chama no WhatsApp
               da loja — {site.whatsappLabel}.
@@ -190,7 +190,7 @@ export default async function SeminovosCidadePage({
             <h2 className="font-display text-xl font-semibold text-cream">
               {local.heading}
             </h2>
-            <div className="mt-4 space-y-4 text-sm leading-relaxed text-muted">
+            <div className="mt-4 space-y-4 text-sm leading-relaxed text-cream/80">
               {local.paragraphs.map((text) => (
                 <p key={text.slice(0, 40)}>{text}</p>
               ))}
@@ -204,7 +204,7 @@ export default async function SeminovosCidadePage({
                 { href: "/guia/comparativos-estoque", label: "Comparativos do estoque" },
               ].map((item) => (
                 <li key={item.href}>
-                  <Link className="inline-flex min-h-11 items-center text-sm text-cream underline" href={item.href}>
+                  <Link className="inline-flex min-h-11 items-center text-sm text-cream underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" href={item.href}>
                     {item.label}
                   </Link>
                 </li>
@@ -220,14 +220,14 @@ export default async function SeminovosCidadePage({
             </h2>
             <ol className="mt-5 grid gap-3 sm:grid-cols-2">
               {city.steps.map((step, index) => (
-                <li key={step.title} className="border border-white/10 bg-ink p-5">
+                <li key={step.title} className="border border-white/20 bg-ink p-5">
                   <span className="font-display text-sm font-semibold text-brand-light">
                     {index + 1}
                   </span>
                   <p className="mt-1 font-display text-sm font-semibold text-cream">
                     {step.title}
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                  <p className="mt-2 text-sm leading-relaxed text-cream/80">
                     {step.text}
                   </p>
                 </li>
@@ -244,12 +244,13 @@ export default async function SeminovosCidadePage({
             {faqs.map((item) => (
               <details
                 key={item.question}
-                className="group border border-white/10 bg-ink open:border-brand/40"
+                className="group border border-white/20 bg-ink open:border-brand/40"
               >
-                <summary className="cursor-pointer list-none px-4 py-3.5 font-display text-sm font-semibold text-cream marker:content-none">
-                  {item.question}
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 font-display text-sm font-semibold text-cream marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+                  <span>{item.question}</span>
+                  <span aria-hidden="true" className="shrink-0 text-cream/75 transition-transform group-open:rotate-180">⌄</span>
                 </summary>
-                <p className="border-t border-white/10 px-4 py-3 text-sm leading-relaxed text-muted">
+                <p className="border-t border-white/15 px-4 py-3 text-sm leading-relaxed text-cream/80">
                   {item.answer}
                 </p>
               </details>
@@ -257,8 +258,8 @@ export default async function SeminovosCidadePage({
           </div>
         </section>
 
-        <nav aria-label="Outras cidades atendidas" className="mt-12 flex flex-wrap gap-x-5">{SERVICE_CITIES.filter(item => item.slug !== city.slug).map(item => <Link className="inline-flex min-h-11 items-center text-sm text-muted underline" key={item.slug} href={`/seminovos/${item.slug}`}>{item.name}</Link>)}</nav>
-        <nav aria-label="Modelos disponíveis" className="mt-6 flex flex-wrap gap-x-5">{stockLandingLinks(featured).filter(item => item.path.startsWith("/modelo/")).map(item => <Link className="inline-flex min-h-11 items-center text-sm text-muted underline" key={item.path} href={item.path}>{item.label}</Link>)}</nav>
+        <nav aria-label="Outras cidades atendidas" className="mt-12 flex flex-wrap gap-x-5">{SERVICE_CITIES.filter(item => item.slug !== city.slug).map(item => <Link className="inline-flex min-h-11 items-center text-sm text-cream/80 underline transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" key={item.slug} href={`/seminovos/${item.slug}`}>{item.name}</Link>)}</nav>
+        <nav aria-label="Modelos disponíveis" className="mt-6 flex flex-wrap gap-x-5">{stockLandingLinks(featured).filter(item => item.path.startsWith("/modelo/")).map(item => <Link className="inline-flex min-h-11 items-center text-sm text-cream/80 underline transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" key={item.path} href={item.path}>{item.label}</Link>)}</nav>
         <div className="mt-12 flex justify-center">
           <ButtonLink href={CITIES_DIRECTORY_PATH} variant="outline">
             Ver cidades
