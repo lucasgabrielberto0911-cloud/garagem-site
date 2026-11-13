@@ -35,3 +35,5 @@ PR **só com docs/markdown**: o CI pula e2e e migrations (`job changes` em `ci.y
 - `prisma db push` em URL de produção.
 - Remover `ignoreCommand` “para sempre buildar preview”.
 - Adicionar dependência pesada a rotas leves (`/api/health`, `/api/estoque`).
+- `buildPageMetadata(..., noIndex)` em `not-found.tsx` (o Next já manda `noindex`; ver `docs/ANTI-PATTERNS.md`).
+- Teste de Storage/galeria sem isolar `R2_*`: no cloud agent as variáveis reais desviam o mock e podem bater no bucket.

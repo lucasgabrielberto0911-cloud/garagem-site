@@ -40,6 +40,7 @@ Lista rápida para revisar **antes** de commitar. Cada item aponta o padrão cor
 | `curl`/`wget` de foto em `suagaragem.net` ou Supabase Storage | Fixture local + `page.route` no Playwright |
 | Script que lista/baixa bucket de produção | Banco e bucket de teste local |
 | Commitar foto original de anúncio | Só fixtures versionadas quando necessário |
+| Teste de galeria/Storage com `R2_*` do ambiente | Isolar (apagar) as quatro variáveis no teste, como em `gallery-preview.test.ts` |
 
 ## Banco, deploy e Git
 
@@ -59,6 +60,7 @@ Lista rápida para revisar **antes** de commitar. Cada item aponta o padrão cor
 | Canonical diferente do slug em `vehicle-slug.ts` | Canonical = URL canônica do veículo |
 | Offer com preço em JSON-LD vendido | Sem oferta monetária quando vendido |
 | Bloquear `/estoque` no `robots.txt` | Bloquear só `/admin` e `/api` |
+| `buildPageMetadata({ noIndex: true })` em `src/app/not-found.tsx` | Só `title` e `description`. O App Router já emite `noindex` no 404; o segundo meta quebra o e2e `seo-modelos-funil` |
 
 ## Onde achar o certo
 
