@@ -69,9 +69,34 @@ export function WhatsAppOrigin() {
     document.addEventListener("contextmenu", enrich, true);
     document.addEventListener("pointerdown", enrich, true);
     document.addEventListener("focusin", enrich, true);
+    const observer =
+      typeof MutationObserver !== "undefined" && document.body
+        ? new MutationObserver((mutations) => {
+            if (window.location.pathname.startsWith("/admin")) return;
+            const anchors: HTMLAnchorElement[] = [];
+            for (const mutation of mutations) {
+              for (const node of mutation.addedNodes) {
+                if (!(node instanceof Element)) continue;
+                if (node instanceof HTMLAnchorElement && node.href.includes("wa.me")) {
+                  anchors.push(node);
+                }
+                if (node.childElementCount > 0) {
+                  anchors.push(
+                    ...node.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me"]'),
+                  );
+                }
+              }
+            }
+            if (anchors.length > 0) {
+              enrichWhatsAppAnchors(anchors, readAndSyncOrigin());
+            }
+          })
+        : null;
+    observer?.observe(document.body, { childList: true, subtree: true });
     document.documentElement.dataset.whatsappOriginReady = "1";
     return () => {
       delete document.documentElement.dataset.whatsappOriginReady;
+      observer?.disconnect();
       window.removeEventListener(CONSENT_EVENT, syncAllLinks);
       window.removeEventListener("storage", syncAllLinks);
       document.removeEventListener("click", enrich, true);
