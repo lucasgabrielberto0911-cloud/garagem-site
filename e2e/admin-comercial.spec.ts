@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { scheduleAfterSale } from "../src/lib/after-sale";
 import { expireReservations } from "../src/lib/reservations";
+import { ensureNoUnsavedDialog } from "./admin-dialogs";
 
 const db = new PrismaClient();
 const vehicleId = "ce2eadminlote4vehicle";
@@ -537,7 +538,9 @@ test.describe("fluxo único de venda", () => {
     if (useNewCustomer) {
       await page.getByRole("combobox").click();
       await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+      await expect(page.getByRole("listbox")).toHaveCount(0);
       await expect(page.getByLabel("RG")).toHaveValue("MG-12.345.678");
+      await ensureNoUnsavedDialog(page);
       await page.getByLabel("Cadastrar cliente nesta venda").check();
       await expect(page.getByLabel("RG")).toHaveValue("");
       await page.getByLabel("Nome").fill("Novo comprador");
