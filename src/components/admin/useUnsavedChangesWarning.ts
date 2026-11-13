@@ -108,13 +108,37 @@ function popSentinel() {
   // Só desfaz se continuamos na mesma tela; se a rota mudou, a navegação já cuidou do histórico.
   const timer = window.setTimeout(() => {
     pendingPop = null;
-    if (dirtyCount === 0 && window.location.href === url && !leaving)
+    if (dirtyCount === 0 && window.location.href === url && !leaving) {
+      expectSelfPop();
       window.history.go(-1);
+    }
   }, 0);
   pendingPop = { url, timer };
 }
 
+// O go(-1) que nós mesmos disparamos em popSentinel gera um popstate assíncrono. Se o formulário
+// ficar sujo de novo antes dele chegar, o guarda já está ativo e leria esse eco como um Voltar do
+// usuário, abrindo o diálogo sozinho. Marcamos o eco para ignorá-lo (e recriar a entrada extra).
+let selfPops = 0;
+let selfPopTimer: ReturnType<typeof setTimeout> | undefined;
+
+function expectSelfPop() {
+  selfPops += 1;
+  clearTimeout(selfPopTimer);
+  // Sem guarda ativo ninguém consome o evento: não deixa a marca vazar para um Voltar de verdade.
+  selfPopTimer = setTimeout(() => {
+    selfPops = 0;
+  }, 1000);
+}
+
 function onPopState(event: PopStateEvent) {
+  if (selfPops > 0) {
+    selfPops -= 1;
+    if (selfPops === 0) clearTimeout(selfPopTimer);
+    // Voltamos à entrada original sem o usuário pedir: se o guarda voltou a valer, recria a entrada extra.
+    if (dirtyCount > 0) pushSentinel();
+    return;
+  }
   if (restoring) {
     // Eco do history.go(1) que desfaz o segundo Voltar.
     restoring = false;
