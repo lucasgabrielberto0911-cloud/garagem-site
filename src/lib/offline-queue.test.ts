@@ -3,9 +3,7 @@ import { test } from "node:test";
 import {
   createIntentId,
   isIntentExpired,
-  formatIntentTimeLeft,
   isLikelyNetworkFailure,
-  pendingIntentViews,
   type OfflineIntent,
   snapshotsForIds,
   writeFavoriteSnapshot,
@@ -13,6 +11,7 @@ import {
   FAVORITE_SNAPSHOT_KEY,
   type FavoriteSnapshot,
 } from "./offline-queue";
+import { formatIntentTimeLeft, pendingIntentViews } from "./offline-pending";
 
 test("falha de rede cobre offline e TypeError de fetch", () => {
   assert.equal(isLikelyNetworkFailure(undefined, false), true);
