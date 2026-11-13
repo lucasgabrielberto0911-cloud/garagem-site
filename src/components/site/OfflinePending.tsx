@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
 import { deleteIntent, listIntents, OFFLINE_QUEUE_CHANGED_EVENT } from "@/lib/offline-queue";
 import { pendingIntentViews, type PendingIntentView } from "@/lib/offline-pending";
 
 /** Lista os pedidos guardados sem internet, com opção de enviar agora ou descartar (além do prazo automático). */
-export default function OfflinePending({ onSend }: { onSend: () => Promise<void> }) {
+function OfflinePending({ onSend }: { onSend: () => Promise<void> }) {
   const [items, setItems] = useState<PendingIntentView[]>([]);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -105,4 +106,15 @@ export default function OfflinePending({ onSend }: { onSend: () => Promise<void>
       </button>
     </section>
   );
+}
+
+let mounted = false;
+
+/** Monta o painel uma única vez, fora da árvore do layout, para este chunk só existir quando há pedido guardado. */
+export function mountOfflinePending(onSend: () => Promise<void>) {
+  if (mounted || typeof document === "undefined") return;
+  mounted = true;
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  createRoot(host).render(<OfflinePending onSend={onSend} />);
 }

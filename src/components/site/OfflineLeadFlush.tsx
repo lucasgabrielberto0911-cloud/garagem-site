@@ -1,7 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { notify, notifySuccess } from "@/lib/notify";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { trackPwaEvent } from "@/lib/meta-pixel";
@@ -16,9 +15,6 @@ import {
   type OfflineIntent,
   type SellIntent,
 } from "@/lib/offline-queue";
-
-// Painel carregado só quando há pedido guardado: não pesa no JS inicial das telas públicas.
-const OfflinePending = dynamic(() => import("@/components/site/OfflinePending"), { ssr: false });
 
 let activeFlushPromise: Promise<void> | null = null;
 
@@ -191,12 +187,16 @@ function safeFlush() {
 }
 
 export function OfflineLeadFlush() {
-  const [hasPending, setHasPending] = useState(false);
   useEffect(() => {
+    // O painel é um chunk à parte: só baixa quando existe pedido guardado.
     const check = () =>
       void listIntents()
-        .then((items) => setHasPending(items.some((item) => item.type !== "favorite")))
-        .catch(() => setHasPending(false));
+        .then((items) =>
+          items.some((item) => item.type !== "favorite")
+            ? import("@/components/site/OfflinePending").then((m) => m.mountOfflinePending(flushQueue))
+            : undefined,
+        )
+        .catch(() => {});
     check();
     window.addEventListener(OFFLINE_QUEUE_CHANGED_EVENT, check);
     return () => window.removeEventListener(OFFLINE_QUEUE_CHANGED_EVENT, check);
@@ -227,5 +227,5 @@ export function OfflineLeadFlush() {
     };
   }, []);
 
-  return hasPending ? <OfflinePending onSend={flushQueue} /> : null;
+  return null;
 }
