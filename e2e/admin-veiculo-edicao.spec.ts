@@ -5,6 +5,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import samples from "./public-samples.json";
 import { conferirRodapeDoAnuncio } from "./admin-form-footer";
+import { ensureNoUnsavedDialog } from "./admin-dialogs";
 
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
 const localDatabase =
@@ -207,8 +208,11 @@ test.describe("edição M5: etapas com acesso direto, salvar sempre visível e a
     await expect(saveButton).toBeVisible();
 
     // Menu "⋯" expõe Ver no site, Kit de divulgação, Iniciar venda e Excluir.
+    await ensureNoUnsavedDialog(page);
     await moreButton.click();
-    const sheet = page.getByRole("dialog");
+    const sheet = page.getByRole("dialog", {
+      name: new RegExp(fixture.modelName),
+    });
     await expect(sheet).toBeVisible();
 
     const viewOnSiteLink = sheet.getByRole("link", { name: /Ver no site/i });
@@ -232,11 +236,10 @@ test.describe("edição M5: etapas com acesso direto, salvar sempre visível e a
     await expect(promoDialog).toBeHidden();
 
     // Iniciar venda leva ao fluxo de venda após confirmação.
+    await ensureNoUnsavedDialog(page);
     await moreButton.click();
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: /Iniciar venda/i })
-      .click();
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole("button", { name: /Iniciar venda/i }).click();
     const soldDialog = page.getByRole("dialog", { name: "Iniciar venda" });
     await expect(soldDialog).toBeVisible();
     await soldDialog
@@ -249,11 +252,10 @@ test.describe("edição M5: etapas com acesso direto, salvar sempre visível e a
     // Volta à edição e testa Excluir definitivamente.
     await page.goto(`/admin/veiculos/${fixture.vehicleId}`);
     await expect(title).toContainText("Etapa 1 de 4");
+    await ensureNoUnsavedDialog(page);
     await moreButton.click();
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: /Excluir definitivamente/i })
-      .click();
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole("button", { name: /Excluir definitivamente/i }).click();
     const deleteDialog = page.getByRole("dialog", {
       name: "Excluir definitivamente",
     });

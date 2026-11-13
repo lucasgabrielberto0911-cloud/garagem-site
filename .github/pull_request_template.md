@@ -10,6 +10,7 @@
 
 ## Validação
 
+- [ ] `bash scripts/agentes-conflitos.sh` (ou `npm run agentes:conflitos`) sem sobreposição com PRs abertos
 - [ ] `npm test`
 - [ ] `npm run lint`
 - [ ] `npm run build`

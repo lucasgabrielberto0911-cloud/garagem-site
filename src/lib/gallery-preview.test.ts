@@ -13,6 +13,19 @@ import { deleteStorageFiles } from "./supabase";
 
 const id = "1710000000000-aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 const path = readyGalleryPath(id);
+const R2_KEYS = ["R2_ACCOUNT_ID", "R2_BUCKET", "R2_PUBLIC_URL", "R2_API_TOKEN"] as const;
+
+/** Sem isto, R2_* do ambiente (cloud agent / .env) desvia o mock local e pode bater no bucket real. */
+function withoutR2<T>(fn: () => Promise<T>): Promise<T> {
+  const previous = Object.fromEntries(R2_KEYS.map((key) => [key, process.env[key]]));
+  for (const key of R2_KEYS) delete process.env[key];
+  return fn().finally(() => {
+    for (const key of R2_KEYS) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+}
 
 test("galeria pronta preserva master privado e não trata derivados como originais", () => {
   assert.equal(galleryPreviewObjectPath(path), `${id}-g800-preview.webp`);
@@ -54,7 +67,7 @@ test("preview legado é identificado, mas não consulta nem recupera Storage pub
   }
 });
 
-test("Storage SDK prepara antes de publicar, tolera falhas e remove derivados; fallback assinado também prepara", async () => {
+test("Storage SDK prepara antes de publicar, tolera falhas e remove derivados; fallback assinado também prepara", async () => withoutR2(async () => {
   const original = await sharp({ create: { width: 1280, height: 960, channels: 3, background: "#124" } }).webp().toBuffer();
   const objects = new Map<string, Buffer>();
   const removed: string[] = [];
@@ -99,4 +112,4 @@ test("Storage SDK prepara antes de publicar, tolera falhas e remove derivados; f
     if (before.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = before.key;
     await new Promise<void>(resolve => server.close(() => resolve()));
   }
-});
+}));
