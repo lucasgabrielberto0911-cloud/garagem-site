@@ -97,26 +97,27 @@ export function VehicleCard({
             eager={eager}
             className="object-cover"
           />
-          <div className="listing-card-shade" aria-hidden="true" />
-          <div className="listing-card-badges">
-            {badge ? <span className={badge.className}>{badge.label}</span> : null}
-            {!badge && isNewListing(vehicle.createdAt) ? (
-              <span className="bg-cream text-asphalt">
-                <span className="sm:hidden">Novo</span>
-                <span className="hidden sm:inline">Novo nesta semana</span>
-              </span>
-            ) : null}
-            {!badge && vehicle.priceDrop ? (
-              <span className="bg-brand text-cream">
-                Baixou {formatCurrencyBRL(vehicle.priceDrop)}
-              </span>
-            ) : null}
-            {!cover ? <span className="bg-white/15 text-cream">Sem foto</span> : null}
-            {showDestaque ? <span className="bg-brand text-cream">Destaque</span> : null}
-          </div>
         </div>
         <div className="listing-card-name" data-vehicle-body="">
-          <p className="listing-card-brand">{formatBrandName(vehicle.brand)}</p>
+          <div className="listing-card-tags">
+            <p className="listing-card-brand">{formatBrandName(vehicle.brand)}</p>
+            <div className="listing-card-badges">
+              {badge ? <span className={badge.className}>{badge.label}</span> : null}
+              {!badge && isNewListing(vehicle.createdAt) ? (
+                <span className="bg-cream text-asphalt">
+                  <span className="sm:hidden">Novo</span>
+                  <span className="hidden sm:inline">Novo nesta semana</span>
+                </span>
+              ) : null}
+              {!badge && vehicle.priceDrop ? (
+                <span className="bg-brand text-cream">
+                  Baixou {formatCurrencyBRL(vehicle.priceDrop)}
+                </span>
+              ) : null}
+              {!cover ? <span className="bg-white/15 text-cream">Sem foto</span> : null}
+              {showDestaque ? <span className="bg-brand text-cream">Destaque</span> : null}
+            </div>
+          </div>
           <h2 className="listing-card-title font-display">{formatModelName(vehicle.model)}</h2>
         </div>
         <div className="listing-card-version">
