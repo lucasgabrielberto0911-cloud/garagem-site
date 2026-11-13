@@ -182,7 +182,7 @@ export function VehicleGallery({
   if (total === 0) {
     return (
       <div className="gallery-root">
-        <div className="gallery-frame relative aspect-[4/3] overflow-hidden border border-white/10 bg-ink">
+        <div className="gallery-frame relative aspect-[4/3] overflow-hidden border border-white/20 bg-ink">
           <VehicleImage
             src={null}
             alt={alt}
@@ -197,7 +197,7 @@ export function VehicleGallery({
 
   return (
     <div ref={rootRef} className="gallery-root">
-      <div className="gallery-frame relative aspect-[4/3] overflow-hidden border border-white/10 bg-ink">
+      <div className="gallery-frame relative aspect-[4/3] overflow-hidden border border-white/20 bg-ink">
         <ul
           ref={scrollerRef}
           className="gallery-strip absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
@@ -216,7 +216,7 @@ export function VehicleGallery({
                     setZoomOpen(true);
                   }}
                   aria-label={`Ampliar foto ${index + 1} de ${total}`}
-                  className="absolute inset-0 z-[1] cursor-zoom-in [-webkit-touch-callout:none]"
+                  className="absolute inset-0 z-[1] cursor-zoom-in [-webkit-touch-callout:none] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cream"
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
@@ -267,7 +267,7 @@ export function VehicleGallery({
         <button
           type="button"
           onClick={() => setZoomOpen(true)}
-          className="absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex min-h-11 items-center gap-2 border border-white/25 bg-asphalt/85 px-3 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-brand active:border-brand"
+          className="absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex min-h-11 items-center gap-2 border border-white/40 bg-asphalt/90 px-3 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-brand active:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
         >
           <ExpandIcon />
           {total > 1 ? `Ver as ${total} fotos` : "Ampliar foto"}
@@ -280,7 +280,7 @@ export function VehicleGallery({
               onClick={() => goTo(active - 1)}
               aria-label="Foto anterior"
               disabled={active === 0}
-              className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-30"
+              className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/40 bg-asphalt/90 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
             >
               <Arrow direction="left" />
             </button>
@@ -289,13 +289,13 @@ export function VehicleGallery({
               onClick={() => goTo(active + 1)}
               aria-label="Próxima foto"
               disabled={active === total - 1}
-              className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-30"
+              className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/40 bg-asphalt/90 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
             >
               <Arrow direction="right" />
             </button>
 
             <span
-              className="pointer-events-none absolute bottom-2 right-2 z-[2] bg-asphalt/80 px-2 py-1 text-sm font-medium text-cream lg:bottom-auto lg:top-2"
+              className="pointer-events-none absolute bottom-2 right-2 z-[2] border border-white/30 bg-asphalt/90 px-2 py-1 text-sm font-medium text-cream lg:bottom-auto lg:top-2"
               aria-live="polite"
             >
               {active + 1}/{total}
@@ -323,10 +323,10 @@ export function VehicleGallery({
                     onClick={() => goTo(index)}
                     aria-label={`Ver foto ${index + 1} de ${total}`}
                     aria-selected={index === active}
-                    className={`relative h-16 w-24 shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation ${
+                    className={`relative h-16 w-24 shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream ${
                       index === active
                         ? "border-brand"
-                        : "border-white/15 opacity-70 hover:opacity-100 active:opacity-100"
+                        : "border-white/30 opacity-80 hover:opacity-100 active:opacity-100"
                     }`}
                   >
                     <VehicleImage
