@@ -30,6 +30,7 @@ import {
   hasSupabaseServiceRole,
 } from "../src/lib/supabase";
 import { uploadR2Photo } from "../src/lib/r2-photos";
+import { assertSafeDatabaseUrl } from "../src/lib/safe-database-url";
 import { vehiclePath } from "../src/lib/vehicle-slug";
 
 const prisma = new PrismaClient();
@@ -379,10 +380,7 @@ async function fixHb20EvolutionPrice(dryRun: boolean) {
 async function main() {
   const dryRun = hasFlag("dry-run");
   const photosOnly = hasFlag("photos-only");
-
-  if (!process.env.DATABASE_URL?.trim()) {
-    throw new Error("Falta DATABASE_URL.");
-  }
+  assertSafeDatabaseUrl();
 
   if (!photosOnly) {
     await fixHb20EvolutionPrice(dryRun);
