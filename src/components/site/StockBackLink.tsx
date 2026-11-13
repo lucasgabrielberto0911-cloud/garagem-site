@@ -42,7 +42,7 @@ export function StockBackLink({
         prefetch={false}
         scroll={href ? false : undefined}
         aria-label={href ? "Voltar aos resultados" : "Voltar ao estoque"}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/25 bg-asphalt/85 px-3.5 font-display text-xs font-semibold text-cream shadow-md backdrop-blur-sm transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/25 bg-asphalt/85 px-3.5 font-display text-sm font-semibold text-cream shadow-md backdrop-blur-sm transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         <span aria-hidden="true">←</span>
         <span>{href ? "Voltar" : "Estoque"}</span>
@@ -55,7 +55,7 @@ export function StockBackLink({
       href={target}
       prefetch={false}
       scroll={href ? false : undefined}
-      className="mb-2 inline-flex items-center py-1 text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
+      className="mb-2 inline-flex items-center py-1 text-sm font-medium uppercase tracking-wider text-muted transition hover:text-cream"
     >
       <span className="mr-2 text-brand-light" aria-hidden="true">
         ←
