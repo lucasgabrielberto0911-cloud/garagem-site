@@ -242,7 +242,7 @@ export function StockInfiniteList({
         >
           {loading ? (
             <div aria-live="polite">
-              <p className="mb-3 flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-muted">
+              <p className="mb-3 flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-cream/80">
                 <span
                   className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-r-transparent"
                   aria-hidden="true"
@@ -255,7 +255,7 @@ export function StockInfiniteList({
             <button
               type="button"
               onClick={() => void loadMore()}
-              className="min-h-[48px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand touch-manipulation"
+              className="min-h-[48px] border border-white/20 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
             >
               Tentar de novo
             </button>
@@ -264,14 +264,14 @@ export function StockInfiniteList({
               type="button"
               onClick={() => void loadMore()}
               data-stock-load-more=""
-              className="min-h-[48px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand touch-manipulation"
+              className="min-h-[48px] border border-white/20 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
             >
               Ver mais veículos
             </button>
           )}
         </InfiniteSentinel>
       ) : vehicles.length > 0 ? (
-        <p className="mt-6 text-center text-xs uppercase tracking-wider text-muted">
+        <p className="mt-6 text-center text-xs uppercase tracking-wider text-cream/80">
           {total === 1
             ? "1 veículo neste filtro"
             : `Você viu os ${vehicles.length} veículos`}
