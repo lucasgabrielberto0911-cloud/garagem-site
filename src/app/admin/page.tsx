@@ -54,7 +54,7 @@ export default async function AdminDashboardPage() {
     <Suspense
       fallback={
         <div className="space-y-4" role="status">
-          <p className="text-sm text-muted">Carregando visão geral…</p>
+          <p className="text-sm text-cream/80">Carregando visão geral…</p>
           <div className="skeleton h-40" />
           <div className="skeleton h-64" />
         </div>
@@ -218,7 +218,7 @@ async function DashboardContent() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-muted">
+        <p className="text-xs text-cream/80">
           Atualizado em{" "}
           {adminDate(new Date(data.updatedAt), {
             dateStyle: "short",
@@ -255,17 +255,17 @@ async function DashboardContent() {
               {leadsCard}
               {availableCard}
             </div>
-            <details className="group border border-white/10 bg-ink/50">
-              <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm text-cream touch-manipulation [&::-webkit-details-marker]:hidden">
+            <details className="group border border-white/20 bg-ink/50">
+              <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm text-cream touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
                 <span className="font-display text-xs font-semibold uppercase tracking-wider">
                   Mais números
                 </span>
-                <span className="flex items-center gap-2 text-xs text-muted">
+                <span className="flex items-center gap-2 text-xs text-cream/80">
                   Estoque, vendas, ticket
                   <IconChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
                 </span>
               </summary>
-              <div className={`${adminStatGrid} border-t border-white/10 p-3`}>
+              <div className={`${adminStatGrid} border-t border-white/15 p-3`}>
                 {secondaryCards}
               </div>
             </details>
@@ -287,7 +287,7 @@ async function DashboardContent() {
       ) : null}
       <Card collapsed title="Vendas nos últimos seis meses">
         {data.failures.includes("monthlySales") ? (
-          <p role="status" className="text-sm text-muted">
+          <p role="status" className="text-sm text-cream/80">
             Evolução indisponível. Tente atualizar.
           </p>
         ) : (
@@ -330,19 +330,19 @@ async function DashboardContent() {
           }
         >
           {data.pendingCounts ? (
-            <p className="mb-3 text-xs leading-relaxed text-muted">
+            <p className="mb-3 text-xs leading-relaxed text-cream/80">
               {data.pendingCounts.withoutPhotos} sem foto ·{" "}
               {data.pendingCounts.stale} parados há mais de {STALE_DAYS} dias ·{" "}
               {data.pendingCounts.missingSales} vendidos sem registro financeiro
             </p>
           ) : null}
           {data.failures.length > 0 && alertList.length === 0 ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-cream/80">
               Não foi possível conferir todas as pendências. Atualize os dados
               para tentar novamente.
             </p>
           ) : alertList.length === 0 ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-cream/80">
               Nenhuma pendência: estoque com fotos, destaques definidos e dados
               da loja preenchidos.
             </p>
@@ -355,7 +355,7 @@ async function DashboardContent() {
               </ul>
               {alertRest.length > 0 ? (
                 <details className="group mt-2.5">
-                  <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-center gap-2 border border-dashed border-white/15 text-xs uppercase tracking-wider text-muted touch-manipulation hover:text-cream [&::-webkit-details-marker]:hidden">
+                  <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-center gap-2 border border-dashed border-white/25 text-xs uppercase tracking-wider text-cream/80 touch-manipulation hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
                     <span className="group-open:hidden">
                       Ver mais {alertRest.length}
                     </span>
@@ -381,13 +381,13 @@ async function DashboardContent() {
             <div className="flex gap-3">
               <Link
                 href="/admin/agenda"
-                className="inline-flex min-h-[44px] items-center text-xs text-brand hover:underline"
+                className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 Agenda
               </Link>
               <Link
                 href="/admin/leads"
-                className="inline-flex min-h-[44px] items-center text-xs text-brand hover:underline"
+                className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 Ver todos
               </Link>
@@ -396,12 +396,12 @@ async function DashboardContent() {
         >
           {data.failures.includes("lead.groupBy") ||
           data.failures.includes("recentLeads") ? (
-            <p role="status" className="text-sm text-muted">
+            <p role="status" className="text-sm text-cream/80">
               Não foi possível consultar os contatos. Tente atualizar ou abra
               Ver todos.
             </p>
           ) : leads.total === 0 ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-cream/80">
               Nenhum lead ainda. Os pedidos de avaliação da página Vender/Trocar
               e os de quem não encontrou o modelo aparecem aqui.
             </p>
@@ -415,10 +415,10 @@ async function DashboardContent() {
                   <li key={status} className="shrink-0">
                     <Link
                       href={`/admin/leads?status=${status}`}
-                      className={`flex min-h-[44px] items-center gap-2 border px-3 text-xs transition touch-manipulation hover:border-brand/50 ${
+                      className={`flex min-h-[44px] items-center gap-2 border px-3 text-xs transition touch-manipulation hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                         status === "novo" && leads.byStatus[status] > 0
                           ? "border-brand/50 text-cream"
-                          : "border-white/10 text-muted"
+                          : "border-white/20 text-cream/80 hover:text-cream"
                       }`}
                     >
                       <span className="uppercase tracking-wider">
@@ -432,7 +432,7 @@ async function DashboardContent() {
                 ))}
               </ul>
               {leads.recent.length > 0 ? (
-                <ul className="mt-3 divide-y divide-white/10 border-t border-white/10">
+                <ul className="mt-3 divide-y divide-white/15 border-t border-white/15">
                   {leads.recent.map((lead, index) => (
                     <li
                       key={lead.id}
@@ -440,13 +440,13 @@ async function DashboardContent() {
                     >
                       <Link
                         href={`/admin/leads?lead=${encodeURIComponent(lead.id)}`}
-                        className="flex min-h-[56px] items-center justify-between gap-3 py-3 touch-manipulation last:pb-0"
+                        className="flex min-h-[56px] items-center justify-between gap-3 py-3 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand last:pb-0"
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-cream">
                             {leadDisplayName(lead)}
                           </p>
-                          <p className="truncate text-xs text-muted">
+                          <p className="truncate text-xs text-cream/80">
                             {leadHasPhone(lead) ? `${formatPhoneBR(lead.phone)} · ` : ""}{lead.vehicleInfo}
                           </p>
                         </div>
@@ -473,14 +473,14 @@ async function DashboardContent() {
         action={
           <Link
             href="/admin/veiculos"
-            className="inline-flex min-h-[44px] items-center text-xs text-brand hover:underline"
+            className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             Gerenciar
           </Link>
         }
       >
         {data.failures.includes("recentVehicles") ? (
-          <p role="status" className="text-sm text-muted">
+          <p role="status" className="text-sm text-cream/80">
             Não foi possível consultar os veículos recentes. Abra Gerenciar ou
             tente atualizar.
           </p>
@@ -496,12 +496,12 @@ async function DashboardContent() {
             }
           />
         ) : (
-          <ul className="divide-y divide-white/10 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
+          <ul className="divide-y divide-white/15 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
             {data.recentVehicles.map((vehicle) => (
               <li key={vehicle.id} className="flex items-center gap-1 py-1">
                 <Link
                   href={`/admin/veiculos/${vehicle.id}`}
-                  className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-2 touch-manipulation"
+                  className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-2 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <div className="relative h-12 w-16 shrink-0 overflow-hidden bg-asphalt">
                     <VehicleImage
@@ -516,7 +516,7 @@ async function DashboardContent() {
                     <p className="truncate text-sm font-medium text-cream">
                       {vehicle.brand} {vehicle.model}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-xs text-cream/80">
                       {vehicle.yearModel} · {formatCurrencyBRL(vehicle.price)}
                     </p>
                   </div>
@@ -525,7 +525,7 @@ async function DashboardContent() {
                   href={vehiclePath(vehicle)}
                   target="_blank"
                   aria-label="Ver no site"
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted transition touch-manipulation hover:text-cream"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-cream/80 transition touch-manipulation hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <IconExternal className="h-4 w-4" />
                 </Link>
@@ -544,13 +544,13 @@ function AlertRow({ alert }: { alert: DashboardAlert }) {
       ? "text-brand"
       : alert.tone === "warning"
         ? "text-brand-orange"
-        : "text-muted";
+        : "text-cream/80";
 
   return (
     <li>
       <Link
         href={alert.href}
-        className="flex min-h-[48px] items-center gap-3 border border-white/10 px-3 py-2.5 transition touch-manipulation hover:border-brand/50 sm:items-start"
+        className="flex min-h-[48px] items-center gap-3 border border-white/20 px-3 py-2.5 transition touch-manipulation hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:items-start"
       >
         <span className={`mt-0.5 shrink-0 ${color}`}>
           {ALERT_ICON[alert.icon]}
@@ -559,7 +559,7 @@ function AlertRow({ alert }: { alert: DashboardAlert }) {
           <span className="block text-sm font-medium text-cream">
             {alert.title}
           </span>
-          <span className="mt-0.5 hidden text-xs leading-relaxed text-muted sm:block">
+          <span className="mt-0.5 hidden text-xs leading-relaxed text-cream/80 sm:block">
             {alert.description}
           </span>
         </span>
