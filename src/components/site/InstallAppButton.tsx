@@ -78,7 +78,7 @@ export function InstallAppHeaderButton() {
       type="button"
       onClick={() => void installFromControl()}
       aria-label="Instalar app"
-      className="inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 border border-white/15 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand touch-manipulation sm:w-auto sm:px-3 lg:hidden"
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 border border-white/20 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream sm:w-auto sm:px-3 lg:hidden"
     >
       <IconDownload className="h-4 w-4" />
       <span className="hidden sm:inline">Instalar app</span>
@@ -94,20 +94,20 @@ export function InstallAppMenuItem({ onClose }: { onClose: () => void }) {
 
   if (kind === "ios") {
     return (
-      <div className="mt-4 border-t border-white/10 pt-4">
+      <div className="mt-4 border-t border-white/20 pt-4">
         <button
           type="button"
           onClick={() => {
             if (!help) trackPwaEvent("PwaIosTipShown", { kind: "menu" });
             setHelp(true);
           }}
-          className="flex min-h-[52px] w-full items-center justify-center gap-2 border border-white/15 px-4 font-display text-base font-semibold text-cream touch-manipulation"
+          className="flex min-h-[52px] w-full items-center justify-center gap-2 border border-white/20 px-4 font-display text-base font-semibold text-cream touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
         >
           <IconDownload className="h-5 w-5" />
           Adicionar à Tela de Início
         </button>
         {help ? (
-          <p className="mt-3 text-center text-sm leading-relaxed text-muted">
+          <p className="mt-3 text-center text-sm leading-relaxed text-cream/80">
             No Safari, toque em Compartilhar e depois em Adicionar à Tela de
             Início. O atalho abre o estoque como um app.
           </p>
@@ -117,13 +117,13 @@ export function InstallAppMenuItem({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="mt-4 border-t border-white/10 pt-4">
+    <div className="mt-4 border-t border-white/20 pt-4">
       <button
         type="button"
         onClick={() => {
           void installFromControl().then(() => onClose());
         }}
-        className="flex min-h-[52px] w-full items-center justify-center gap-2 border border-white/15 px-4 font-display text-base font-semibold text-cream touch-manipulation"
+        className="flex min-h-[52px] w-full items-center justify-center gap-2 border border-white/20 px-4 font-display text-base font-semibold text-cream touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
       >
         <IconDownload className="h-5 w-5" />
         Instalar app

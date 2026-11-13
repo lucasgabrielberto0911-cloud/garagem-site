@@ -281,7 +281,7 @@ function ChatWhatsAppButton({
   );
 }
 
-const QUICK_ACTION_CLASS = "inline-flex h-10 lg:h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3.5 font-display text-[13px] font-semibold leading-none text-cream/90 transition hover:border-white/25 hover:bg-white/[0.08] active:bg-white/[0.12] touch-manipulation";
+const QUICK_ACTION_CLASS = "inline-flex h-10 lg:h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.04] px-3.5 font-display text-[13px] font-semibold leading-none text-cream/90 transition hover:border-white/25 hover:bg-white/[0.08] active:bg-white/[0.12] touch-manipulation";
 
 function ChatVehicleMini({
   vehicle,
@@ -327,7 +327,7 @@ function ChatVehicleMini({
       });
 
   return (
-    <article data-chat-vehicle={vehicle.id} className="group relative flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2 transition hover:border-white/20 hover:bg-white/[0.07]">
+    <article data-chat-vehicle={vehicle.id} className="group relative flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.04] p-2 transition hover:border-white/20 hover:bg-white/[0.07]">
       <Link href={vehicle.href} prefetch={false} onClick={() => onVehicleClick?.(vehicle)} aria-label={`${label} — ${chatVehiclePrice(vehicle)}. Abrir ficha`} className="absolute inset-0 rounded-xl touch-manipulation" />
       <span className="pointer-events-none relative aspect-[4/3] w-[72px] shrink-0 overflow-hidden rounded-lg bg-asphalt max-[359px]:w-16">
         {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
@@ -339,7 +339,7 @@ function ChatVehicleMini({
       </span>
       <div className="pointer-events-none min-w-0 flex-1">
         <h3 className="truncate font-display text-[14px] font-semibold leading-5 text-cream">{vehicle.title}</h3>
-        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[12px] leading-4 text-cream/75 tabular-nums">
+        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[12px] leading-4 text-cream/80 tabular-nums">
           <span>{vehicle.year} · {vehicle.km.toLocaleString("pt-BR")} km ·</span>{" "}
           <span className="whitespace-nowrap font-display text-[13px] font-bold text-brand-light">{chatVehiclePrice(vehicle)}</span>
         </p>
@@ -362,7 +362,7 @@ function ChatResearchDetails({ research }: {
   ].map(source => [source.href, source])).values()];
   if (!sources.length && !research.suggestionsHtml) return null;
   return (
-    <details className="text-[12px] text-cream/60"
+    <details className="text-[12px] text-cream/80"
       onToggle={event => setOpen((event.currentTarget as HTMLDetailsElement).open)}>
       <summary className="cursor-pointer py-2 focus-visible:outline focus-visible:outline-2">
         Fontes dos dados do modelo
@@ -498,10 +498,10 @@ function ChatText({
           href={stockHref}
           prefetch={false}
           onClick={onStockExplore}
-          className="group flex min-h-11 items-center justify-between gap-2 rounded-xl border border-white/[0.08] px-4 text-[13px] font-semibold text-cream transition hover:border-white/[0.16] hover:bg-white/[0.03] touch-manipulation"
+          className="group flex min-h-11 items-center justify-between gap-2 rounded-xl border border-white/20 px-4 text-[13px] font-semibold text-cream transition hover:border-white/20 hover:bg-white/[0.03] touch-manipulation"
         >
           {chatStockExploreLabel(stockHref)}
-          <IconArrowRight className="h-4 w-4 shrink-0 text-cream/60 transition group-hover:translate-x-0.5 group-hover:text-cream" />
+          <IconArrowRight className="h-4 w-4 shrink-0 text-cream/80 transition group-hover:translate-x-0.5 group-hover:text-cream" />
         </Link>
       ) : null}
       {cta ? (
@@ -519,7 +519,7 @@ function ChatText({
               key={item}
               type="button"
               onClick={() => onFollowup(item)}
-              className="min-h-11 rounded-full border border-white/[0.12] px-4 text-[13px] font-medium text-cream/90 transition hover:border-white/25 hover:bg-white/[0.04] hover:text-cream active:bg-white/[0.06] touch-manipulation"
+              className="min-h-11 rounded-full border border-white/20 px-4 text-[13px] font-medium text-cream/90 transition hover:border-white/25 hover:bg-white/[0.04] hover:text-cream active:bg-white/[0.06] touch-manipulation"
             >
               {item}
             </button>
@@ -1193,7 +1193,7 @@ export function SiteChat() {
   return (
     <div
       ref={shellRef}
-      className={`site-chat pointer-events-none fixed z-[60] flex flex-col items-end${
+      className={`site-chat pointer-events-none fixed z-[60] flex flex-col items-end [&_a:focus-visible]:outline-none [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-cream [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-cream [&_summary:focus-visible]:ring-2 [&_summary:focus-visible]:ring-cream${
         open ? " is-open" : ""
       }`}
     >
@@ -1202,10 +1202,10 @@ export function SiteChat() {
           role="dialog"
           aria-labelledby="site-chat-title"
           aria-modal={mobileDialog || undefined}
-          className="site-chat-panel pointer-events-auto flex min-h-0 w-full flex-col overflow-hidden rounded-[20px] border border-white/[0.08] bg-asphalt shadow-[0_32px_80px_-16px_rgba(0,0,0,0.85),0_0_0_1px_rgba(0,0,0,0.5)]"
+          className="site-chat-panel pointer-events-auto flex min-h-0 w-full flex-col overflow-hidden rounded-[20px] border border-white/20 bg-asphalt shadow-[0_32px_80px_-16px_rgba(0,0,0,0.85),0_0_0_1px_rgba(0,0,0,0.5)]"
           aria-busy={pending}
         >
-          <header role="presentation" className="relative shrink-0 border-b border-white/[0.07] bg-asphalt">
+          <header role="presentation" className="relative shrink-0 border-b border-white/20 bg-asphalt">
             <div
               className="absolute inset-x-0 top-0 h-0.5 bg-brand-gradient"
               aria-hidden="true"
@@ -1220,7 +1220,7 @@ export function SiteChat() {
                   {ASSISTANT_NAME}
                 </p>
                 <p
-                  className="mt-0.5 truncate text-xs leading-4 text-muted"
+                  className="mt-0.5 truncate text-xs leading-4 text-cream/80"
                   title="Assistente virtual"
                 >
                   Assistente virtual
@@ -1239,11 +1239,11 @@ export function SiteChat() {
                     <IconWhatsApp className="h-5 w-5" />
                   </a>
                 </ChatVehicleLeadWrapper>
-                {started ? <button type="button" onClick={resetConversation} disabled={pending} aria-label="Nova conversa" title="Nova conversa" className="relative flex h-10 w-10 items-center justify-center rounded-full text-cream/75 transition hover:bg-white/[0.08] before:absolute before:-inset-0.5 before:content-['']"><IconRefresh className="h-4 w-4" /></button> : null}
+                {started ? <button type="button" onClick={resetConversation} disabled={pending} aria-label="Nova conversa" title="Nova conversa" className="relative flex h-10 w-10 items-center justify-center rounded-full text-cream/80 transition hover:bg-white/[0.08] before:absolute before:-inset-0.5 before:content-['']"><IconRefresh className="h-4 w-4" /></button> : null}
                 <button
                   type="button"
                   onClick={closeChat}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full before:absolute before:-inset-0.5 before:content-[''] text-cream/75 transition hover:bg-white/[0.08] hover:text-cream active:bg-white/[0.12] touch-manipulation"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full before:absolute before:-inset-0.5 before:content-[''] text-cream/80 transition hover:bg-white/[0.08] hover:text-cream active:bg-white/[0.12] touch-manipulation"
                   aria-label="Fechar chat"
                 >
                   <IconClose className="h-5 w-5" />
@@ -1252,7 +1252,7 @@ export function SiteChat() {
             </div>
 
             {vehicleContext ? (
-              <div className="flex items-center gap-3 border-t border-white/[0.06] py-2 pl-4 pr-2.5">
+              <div className="flex items-center gap-3 border-t border-white/20 py-2 pl-4 pr-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate text-[13px] font-medium leading-5 text-cream">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${vehicleContext.sold ? "bg-cream/70" : "bg-brand"}`} aria-hidden="true" />
@@ -1274,8 +1274,8 @@ export function SiteChat() {
                   }
                   className={`relative inline-flex h-8 shrink-0 items-center rounded-full px-3 text-[12px] before:absolute before:-inset-y-1.5 before:content-[''] font-semibold transition disabled:opacity-50 touch-manipulation ${
                     vehicleContext.sold
-                      ? "bg-white/10 text-cream/70 ring-1 ring-inset ring-white/15 hover:bg-white/15"
-                      : "bg-white/[0.07] text-cream ring-1 ring-inset ring-white/10 hover:bg-white/[0.12]"
+                      ? "bg-white/10 text-cream/80 ring-1 ring-inset ring-white/25 hover:bg-white/15"
+                      : "bg-white/[0.07] text-cream ring-1 ring-inset ring-white/25 hover:bg-white/[0.12]"
                   }`}
                 >
                   {vehicleContext.sold
@@ -1323,18 +1323,18 @@ export function SiteChat() {
                 <AssistantRow key={`assistant-${index}`} latest={latest} enter={index >= enterFromRef.current}>
                   {index === 0 && message.content === OPENING.content ? (
                     started ? (
-                      <p className="text-[13px] leading-[1.5] text-cream/60">
+                      <p className="text-[13px] leading-[1.5] text-cream/80">
                         {OPENING.content}
                       </p>
                     ) : (
-                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3">
+                      <div className="rounded-2xl border border-white/20 bg-white/[0.04] p-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[#ff7378]">
                           Ajuda para escolher
                         </p>
                         <h2 className="mt-1.5 font-display text-[18px] font-semibold leading-[1.2] tracking-[-0.025em] text-cream">
                           Vamos encontrar o seu próximo veículo.
                         </h2>
-                        <p className="mt-2 text-[13px] leading-[1.5] text-cream/75">
+                        <p className="mt-2 text-[13px] leading-[1.5] text-cream/80">
                           {OPENING.content}
                         </p>
                       </div>
@@ -1397,7 +1397,7 @@ export function SiteChat() {
             ) : null}
             {showSuggestions ? (
               <div className="!mt-4">
-                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-cream/80">
                   Por onde você quer começar?
                 </p>
                 <ul className="grid grid-cols-2 gap-2">
@@ -1412,7 +1412,7 @@ export function SiteChat() {
                             "suggestion",
                           )
                         }
-                        className="group flex h-full min-h-[64px] w-full flex-col items-start justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left text-[13px] leading-snug text-cream/90 transition hover:border-white/20 hover:bg-white/[0.05] hover:text-cream active:bg-white/[0.06] touch-manipulation"
+                        className="group flex h-full min-h-[64px] w-full flex-col items-start justify-between gap-2 rounded-xl border border-white/20 bg-white/[0.04] p-3 text-left text-[13px] leading-snug text-cream/90 transition hover:border-white/20 hover:bg-white/[0.05] hover:text-cream active:bg-white/[0.06] touch-manipulation"
                       >
                         <span className="text-cream/50" aria-hidden="true">
                           <SuggestionIcon text={suggestion} index={index} />
@@ -1430,7 +1430,7 @@ export function SiteChat() {
           <p role="status" aria-live="polite" className="sr-only">
             {chatLiveAnnouncement(messages, pending)}
           </p>
-          {showLatest ? <button type="button" data-chat-scroll-latest="" aria-label="Ver última resposta" title="Ver última resposta" className="absolute bottom-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-asphalt/90 text-cream shadow-lg backdrop-blur transition hover:border-brand hover:bg-brand active:scale-95 touch-manipulation animate-[fadeIn_.15s_ease_both] motion-reduce:animate-none" onClick={() => {
+          {showLatest ? <button type="button" data-chat-scroll-latest="" aria-label="Ver última resposta" title="Ver última resposta" className="absolute bottom-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-asphalt/90 text-cream shadow-lg backdrop-blur transition hover:border-brand hover:bg-brand active:scale-95 touch-manipulation animate-[fadeIn_.15s_ease_both] motion-reduce:animate-none" onClick={() => {
             followScrollRef.current = true; userScrolledUpRef.current = false; setShowLatest(false); scrollToLatest(true); listRef.current?.focus({ preventScroll: true });
           }}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button> : null}
           </div>
@@ -1446,7 +1446,7 @@ export function SiteChat() {
           {failure ? (
             <div
               role="alert"
-              className="mx-3 mb-2 max-h-40 shrink-0 overflow-y-auto rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-3 text-[12px] leading-5 text-cream/85"
+              className="mx-3 mb-2 max-h-40 shrink-0 overflow-y-auto rounded-2xl border border-white/20 bg-white/[0.05] px-4 py-3 text-[12px] leading-5 text-cream/85"
             >
               <p>{failure}</p>
               <div className="mt-1 flex flex-wrap gap-x-4">
@@ -1484,7 +1484,7 @@ export function SiteChat() {
           ) : null}
           <form
             data-chat-composer=""
-            className="shrink-0 border-t border-white/[0.07] bg-asphalt px-3 pb-1 pt-2"
+            className="shrink-0 border-t border-white/20 bg-asphalt px-3 pb-1 pt-2"
             onSubmit={(event) => {
               event.preventDefault();
               void send(draft);
@@ -1493,7 +1493,7 @@ export function SiteChat() {
             <label htmlFor="site-chat-input" className="sr-only">
               Mensagem
             </label>
-            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-white/[0.05] p-1.5 pl-4 transition focus-within:border-brand/50 focus-within:shadow-[0_0_0_3px_rgba(232,24,28,0.15)]">
+            <div className="flex items-end gap-2 rounded-2xl border border-white/20 bg-white/[0.05] p-1.5 pl-4 transition focus-within:border-brand/50 focus-within:shadow-[0_0_0_3px_rgba(232,24,28,0.15)]">
               <textarea
                 ref={inputRef}
                 id="site-chat-input"
@@ -1528,7 +1528,7 @@ export function SiteChat() {
                 maxLength={800}
                 rows={1}
                 autoComplete="off"
-                className="min-h-11 max-h-28 min-w-0 flex-1 resize-none bg-transparent py-[11px] text-base leading-[22px] text-cream outline-none placeholder:text-muted disabled:opacity-60"
+                className="min-h-11 max-h-28 min-w-0 flex-1 resize-none bg-transparent py-[11px] text-base leading-[22px] text-cream outline-none placeholder:text-cream/65 disabled:opacity-60"
               />
               {pending ? (
               <button
@@ -1553,7 +1553,7 @@ export function SiteChat() {
               </button>
               )}
             </div>
-            <div data-chat-footer="" className="flex h-7 items-center justify-between gap-2 px-1 text-xs text-muted">
+            <div data-chat-footer="" className="flex h-7 items-center justify-between gap-2 px-1 text-xs text-cream/80">
               <p>Respostas automáticas · confirme no WhatsApp</p>
             </div>
           </form>
