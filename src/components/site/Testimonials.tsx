@@ -84,7 +84,7 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
         return (
           <li
             key={item.id}
-            className="flex flex-col border border-white/20 bg-ink p-4 text-left sm:p-5"
+            className="flex min-w-0 flex-col border border-white/20 bg-ink p-4 text-left sm:p-5"
           >
             <IconQuote className="h-6 w-6 text-brand-light/60" />
             <StarRow rating={item.rating} />
