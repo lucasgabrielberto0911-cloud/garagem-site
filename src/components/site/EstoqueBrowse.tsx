@@ -90,7 +90,7 @@ function NextVehicleLink({ href }: { href: string }) {
     <div className="stock-next-vehicle">
       <Link
         href={href}
-        className="inline-flex min-h-[52px] max-w-full items-center justify-center border border-white/20 bg-ink px-5 py-3 text-center font-display text-sm font-semibold leading-snug text-cream transition hover:border-brand hover:bg-white/5"
+        className="inline-flex min-h-[52px] max-w-full items-center justify-center border border-white/20 bg-ink px-5 py-3 text-center font-display text-sm font-semibold leading-snug text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         {WANTED_VEHICLE_BUTTON_LABEL}
       </Link>
@@ -111,7 +111,7 @@ export function EstoqueBrowseFallback({
       <p
         role="status"
         aria-atomic="true"
-        className="stock-count mb-2 mt-3 text-left text-sm font-medium text-cream lg:mb-0 lg:mt-0 lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-muted"
+        className="stock-count mb-2 mt-3 text-left text-sm font-medium text-cream lg:mb-0 lg:mt-0 lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-cream/75"
       >
         {vehicles.length > 0
           ? `${total} ${total === 1 ? "veículo no estoque" : "veículos no estoque"}`
@@ -260,7 +260,7 @@ export function EstoqueBrowse({
         <div className="mt-4 border border-brand-orange/40 bg-brand-orange/10 px-4 py-3" role="alert">
           <p className="text-sm text-cream">Não conseguimos atualizar sua busca agora. Seus filtros foram mantidos.</p>
           <button type="button" onClick={() => setAttempt(current => current + 1)}
-            className="mt-3 min-h-11 border border-white/25 px-4 text-sm font-semibold text-cream transition hover:border-brand">
+            className="mt-3 min-h-11 border border-white/25 px-4 text-sm font-semibold text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
             Tentar novamente
           </button>
         </div>
@@ -270,7 +270,7 @@ export function EstoqueBrowse({
       <p
         role="status"
         aria-atomic="true"
-        className="stock-count text-left text-sm font-medium text-cream lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-muted"
+        className="stock-count text-left text-sm font-medium text-cream lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-cream/75"
       >
         {loading
           ? "Atualizando o estoque…"
@@ -290,7 +290,7 @@ export function EstoqueBrowse({
       </div>
 
       {previousResults ? (
-        <p className="mb-3 text-xs leading-relaxed text-muted" data-stock-previous-results="">
+        <p className="mb-3 text-xs leading-relaxed text-cream/80" data-stock-previous-results="">
           {loading ? "Você está vendo os anúncios já carregados enquanto a busca atualiza." : "Os anúncios abaixo são da última lista carregada. Tente novamente para aplicar sua busca."}
         </p>
       ) : null}
@@ -307,7 +307,7 @@ export function EstoqueBrowse({
             returnTo={buildReturnTo(shownResult.params)}
             paused={search === null || loading || Boolean(error)}
             empty={
-              <div data-stock-empty="" className="mx-auto max-w-2xl rounded-xl border border-white/15 bg-ink px-4 py-6 text-center sm:px-6 sm:py-10">
+              <div data-stock-empty="" className="mx-auto max-w-2xl rounded-xl border border-white/20 bg-ink px-4 py-6 text-center sm:px-6 sm:py-10">
                 <p className="font-display text-lg font-semibold text-cream [overflow-wrap:anywhere]">
                   {error
                     ? "Não foi possível carregar o estoque"
@@ -315,7 +315,7 @@ export function EstoqueBrowse({
                       ? shown.suggestions?.length && params.q ? `Não encontramos “${params.q}”.` : "Nenhum veículo com esses filtros"
                       : "Estoque sendo montado"}
                 </p>
-                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-cream/80">
                   {error
                     ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
                     : filtered
@@ -323,17 +323,17 @@ export function EstoqueBrowse({
                       : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                 </p>
                 {!loading && !error && shown.suggestions?.length ? (
-                  <div className="mt-5 border-y border-white/10 py-4" data-stock-search-suggestions="">
+                  <div className="mt-5 border-y border-white/20 py-4" data-stock-search-suggestions="">
                     <p className="text-sm font-semibold text-cream">Você quis dizer?</p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted">Os outros filtros continuam iguais.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-cream/75">Os outros filtros continuam iguais.</p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
                       {shown.suggestions.map(suggestion => (
                         <Link key={suggestion.query}
                           href={buildReturnTo({ ...params, q: suggestion.query })}
                           prefetch={false}
-                          className="flex min-h-12 items-center justify-between gap-3 rounded-md border border-brand/40 bg-brand/10 px-4 py-3 text-left text-sm text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                          className="flex min-h-12 items-center justify-between gap-3 rounded-md border border-brand/40 bg-brand/10 px-4 py-3 text-left text-sm text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
                           <span className="min-w-0 whitespace-normal [overflow-wrap:normal]">{suggestion.query}</span>
-                          <span className="shrink-0 text-xs text-muted">{suggestion.count} {suggestion.count === 1 ? "veículo" : "veículos"}</span>
+                          <span className="shrink-0 text-xs text-cream/75">{suggestion.count} {suggestion.count === 1 ? "veículo" : "veículos"}</span>
                         </Link>
                       ))}
                     </div>
@@ -344,14 +344,14 @@ export function EstoqueBrowse({
                     {params.q ? (
                       <Link
                         href={buildReturnTo({ ...params, q: undefined })}
-                        className="inline-flex min-h-12 w-full items-center justify-center rounded-md border border-brand/50 bg-brand/10 px-4 py-3 text-sm font-semibold text-cream hover:border-brand sm:w-auto"
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-md border border-brand/50 bg-brand/10 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
                       >
                         Retirar só o texto da busca
                       </Link>
                     ) : null}
                     <Link
                       href="/estoque"
-                      className="inline-flex min-h-12 w-full items-center justify-center rounded-md border border-white/25 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:w-auto"
+                      className="inline-flex min-h-12 w-full items-center justify-center rounded-md border border-white/25 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
                     >
                       Ver todos os veículos
                     </Link>
@@ -386,7 +386,7 @@ export function EstoqueBrowse({
                     />
                   ) : null}
                   </div>
-                  <p className="max-w-md text-[11px] leading-relaxed text-muted">
+                  <p className="max-w-md text-xs leading-relaxed text-cream/80">
                     {filtered
                       ? "Abre o WhatsApp com o que você filtrou, para avisar quando chegar."
                       : "Abre o WhatsApp para você dizer o que procura."}

@@ -44,7 +44,7 @@ export const BUDGET_CHIPS = [
  * em ponteiro grosso e em iOS/iPadOS (`-webkit-touch-callout`).
  */
 export const selectClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream transition touch-manipulation focus:border-brand lg:text-sm";
+  "w-full min-h-[48px] border border-white/20 bg-asphalt px-3.5 py-3 text-base text-cream transition touch-manipulation focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand lg:text-sm";
 
 export const MIN_PRICE_OPTIONS = [
   { value: "", label: "Preço mínimo" },
@@ -108,10 +108,10 @@ export function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap border px-3 text-xs font-medium leading-none transition touch-manipulation ${
+      className={`inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap border px-3 text-xs font-medium leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation ${
         active
           ? "border-brand bg-brand/10 text-cream"
-          : "border-white/10 text-muted active:bg-white/5"
+          : "border-white/20 text-cream/80 hover:border-white/35 hover:text-cream active:bg-white/5"
       }`}
     >
       {children}
@@ -152,10 +152,10 @@ export function AccessoryChips({
               key={item}
               type="button"
               onClick={() => onToggle(item)}
-              className={`min-h-[44px] border px-3 text-left text-xs transition touch-manipulation ${
+              className={`min-h-[44px] border px-3 text-left text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation ${
                 active
                   ? "border-brand bg-brand/10 text-cream"
-                  : "border-white/10 text-muted hover:border-white/25 hover:text-cream active:border-white/25 active:text-cream"
+                  : "border-white/20 text-cream/80 hover:border-white/35 hover:text-cream active:border-white/35 active:text-cream"
               }`}
               aria-pressed={active}
             >
@@ -170,7 +170,7 @@ export function AccessoryChips({
           onClick={() => setExpanded((open) => !open)}
           aria-expanded={expanded}
           aria-controls={listId}
-          className="mt-2 min-h-[44px] text-xs font-semibold uppercase tracking-wide text-brand-light"
+          className="mt-2 min-h-[44px] px-1 text-xs font-semibold uppercase tracking-wide text-brand-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           {expanded ? "Ver menos" : `Ver mais (${options.length - 8})`}
         </button>
