@@ -11,6 +11,7 @@ import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import {
   hasMobileFichaSpecs,
+  sheetSpecs,
   VehicleMobileBlocks,
   VehicleMobileSummary,
 } from "@/components/site/VehicleMobileDossier";
@@ -24,9 +25,9 @@ import { VehicleLeadHit, VehicleViewContent } from "@/lib/funnel-events";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleSeals } from "@/components/site/VehicleSeals";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
-import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
@@ -253,6 +254,7 @@ export default async function VehicleDetailPage({
     warranty: vehicle.warranty,
     inspection: vehicle.inspection,
   });
+  const sheet = sheetSpecs(specs);
 
   // Cor, ano e KM: quadradinhos do topo (desktop e celular).
   const keyFacts = vehicleKeyFacts(specs);
@@ -401,11 +403,14 @@ export default async function VehicleDetailPage({
               data-ficha-section="especificacoes"
               className="ficha-jump-target hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
             >
-              <h2 className="font-display text-base font-semibold text-cream">
-                Ficha técnica
-              </h2>
+              {/* Só o que o card ao lado não mostra (motor, portas...). Sem dado novo, fica só o "Anunciado hoje". */}
+              {sheet.length > 0 ? (
+                <h2 className="font-display text-base font-semibold text-cream">
+                  Ficha técnica
+                </h2>
+              ) : null}
               {vehicle.createdAt || updatedLabel ? (
-                <p className="mt-1 text-sm text-muted">
+                <p className={`text-sm text-muted${sheet.length > 0 ? " mt-1" : ""}`}>
                   <ListedAgo
                     listedAt={
                       vehicle.createdAt
@@ -416,30 +421,25 @@ export default async function VehicleDetailPage({
                   />
                 </p>
               ) : null}
-              <dl
-                data-ficha-spec-grid=""
-                className="mt-3 grid grid-cols-3 gap-2 text-sm [&>:last-child:nth-child(3n+1)]:col-span-3 [&>:last-child:nth-child(3n+2)]:col-span-2"
-              >
-                {/* Ficha técnica completa: ano, km, câmbio, cor... (cor/ano/KM também no topo). */}
-                {specs.map((spec) => (
-                  <div
-                    key={spec.label}
-                    className="min-w-0 border border-white/20 bg-ink px-3 py-2.5"
-                  >
-                    <dt className="text-sm text-cream/75">{spec.label}</dt>
-                    {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
-                    <dd
-                      className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:break-word] ${
-                        spec.empty
-                          ? "font-medium text-muted"
-                          : "font-semibold text-cream"
-                      }`}
+              {sheet.length > 0 ? (
+                <dl
+                  data-ficha-spec-grid=""
+                  className="mt-3 grid grid-cols-3 gap-2 text-sm [&>:last-child:nth-child(3n+1)]:col-span-3 [&>:last-child:nth-child(3n+2)]:col-span-2"
+                >
+                  {sheet.map((spec) => (
+                    <div
+                      key={spec.label}
+                      className="min-w-0 border border-white/20 bg-ink px-3 py-2.5"
                     >
-                      {spec.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+                      <dt className="text-sm text-cream/75">{spec.label}</dt>
+                      {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
+                      <dd className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:break-word]">
+                        {spec.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
             </section>
 
             {hasDetails ? (
@@ -549,7 +549,7 @@ export default async function VehicleDetailPage({
               {!sold ? (
                 <VehicleInspectionBadge inspection={vehicle.inspection} />
               ) : null}
-              <VehicleSeals seals={seals} optionalsHref="#opcionais-desktop" />
+              <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} />
 
               {sold ? (
                 <div className="space-y-2">
@@ -630,23 +630,15 @@ export default async function VehicleDetailPage({
               )}
 
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+                {/* No computador o botão flutuante do chat some na ficha: este é o acesso. O link de avaliar o usado saiu: "Tenho um usado para trocar" já cobre. */}
                 {!sold ? (
-                  <>
-                    <ChatOpenButton
-                      source="ficha"
-                      prompt={`Tenho dúvida sobre o ${title}`}
-                      size="compact"
-                      variant="ghost"
-                      className="-ml-3 !text-sm"
-                    />
-                    <Link
-                      href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
-                      prefetch={false}
-                      className="inline-flex min-h-[44px] items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
-                    >
-                      Avaliar meu usado
-                    </Link>
-                  </>
+                  <ChatOpenButton
+                    source="ficha"
+                    prompt={`Tenho dúvida sobre o ${title}`}
+                    size="compact"
+                    variant="ghost"
+                    className="-ml-3 !text-sm"
+                  />
                 ) : null}
                 <ShareVehicle
                   title={fullLabel}

@@ -40,7 +40,7 @@ const TOP_LABELS = new Set(["Tipo", "Ano", "km", "Câmbio", "Combustível", "Cor
  * Ficha técnica do celular: só o que ainda não apareceu acima (motor, portas, final de placa...).
  * Sem repetir o topo e sem linha "Não informada".
  */
-function sheetSpecs(specs: VehicleSpecRow[]) {
+export function sheetSpecs(specs: VehicleSpecRow[]) {
   const motorAtTop = !specs.some((row) => row.label === "Câmbio" && !row.empty);
   return specs.filter(
     (row) =>
