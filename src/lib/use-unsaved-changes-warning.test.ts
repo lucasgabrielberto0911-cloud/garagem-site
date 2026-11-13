@@ -133,3 +133,55 @@ test("reativar o guarda antes do recuo agendado não abre o diálogo nem recua a
     delete g.document;
   }
 });
+
+test("eco do recuo do próprio guarda não é lido como Voltar do usuário", async () => {
+  const { activateUnsavedGuard, deactivateUnsavedGuard } = await import(
+    "@/components/admin/useUnsavedChangesWarning"
+  );
+  // Estado do módulo deixado pelos testes anteriores: `leaving` (500 ms) e a marca de eco (1 s).
+  await new Promise((r) => setTimeout(r, 1100));
+  const listeners: Record<string, Array<(e: unknown) => void>> = {};
+  const goCalls: number[] = [];
+  let pushes = 0;
+  const g = globalThis as Record<string, unknown>;
+  g.window = {
+    location: { href: "http://x/admin/vendas/nova" },
+    history: {
+      state: null,
+      pushState: () => void pushes++,
+      go: (n: number) => void goCalls.push(n),
+    },
+    addEventListener: (t: string, fn: (e: unknown) => void) =>
+      void (listeners[t] ??= []).push(fn),
+    removeEventListener: () => {},
+    setTimeout,
+  };
+  g.document = { addEventListener: () => {}, removeEventListener: () => {} };
+  let asked = 0;
+  setUnsavedChangesConfirmer(async () => (asked++, false));
+  try {
+    activateUnsavedGuard(); // sujo
+    deactivateUnsavedGuard(); // autosave terminou
+    await new Promise((r) => setTimeout(r, 10)); // o guarda dispara go(-1) sozinho
+    assert.deepEqual(goCalls, [-1]);
+    activateUnsavedGuard(); // nova digitação ANTES do popstate do go(-1) chegar
+    const before = pushes;
+    const pop = listeners.popstate.at(-1)!;
+    let stopped = false;
+    pop({ stopImmediatePropagation: () => void (stopped = true) }); // eco do go(-1)
+    assert.equal(asked, 0, "o eco não abre diálogo");
+    assert.equal(stopped, false, "o eco segue para o roteador como antes");
+    assert.equal(pushes, before + 1, "recria a entrada extra, pois o guarda voltou a valer");
+
+    // Um Voltar de verdade logo depois continua pedindo confirmação.
+    pop({ stopImmediatePropagation() {} });
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(asked, 1);
+  } finally {
+    deactivateUnsavedGuard();
+    await new Promise((r) => setTimeout(r, 10)); // deixa o recuo agendado rodar com o window falso ainda de pé
+    setUnsavedChangesConfirmer(null);
+    delete g.window;
+    delete g.document;
+  }
+});
