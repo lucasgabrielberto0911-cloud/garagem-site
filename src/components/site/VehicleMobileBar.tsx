@@ -87,7 +87,7 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 box-border bg-gradient-to-t from-asphalt/90 via-asphalt/60 to-transparent pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] lg:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 box-border bg-gradient-to-t from-asphalt via-asphalt/95 to-transparent pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] lg:hidden"
     >
       <div className="mx-auto max-w-6xl">
         {sold ? (
@@ -102,7 +102,7 @@ export function VehicleMobileBar({
           <div className="flex items-center gap-2">
           <p
             data-mobile-bar-price=""
-            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/15 bg-asphalt/95 px-2.5 font-display text-base font-bold tracking-tight text-brand-light min-[380px]:px-3 min-[380px]:text-lg"
+            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/15 bg-asphalt px-2.5 font-display text-base font-bold tracking-tight text-brand-light min-[380px]:px-3 min-[380px]:text-lg"
           >
             {formatCurrencyBRL(price)}
           </p>
