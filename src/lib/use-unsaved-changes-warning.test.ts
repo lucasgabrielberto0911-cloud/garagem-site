@@ -89,3 +89,47 @@ test("Voltar de novo com o modal aberto não sai sem confirmar", async () => {
     delete g.document;
   }
 });
+
+test("reativar o guarda antes do recuo agendado não abre o diálogo nem recua a entrada nova", async () => {
+  const { activateUnsavedGuard, deactivateUnsavedGuard } = await import(
+    "@/components/admin/useUnsavedChangesWarning"
+  );
+  // O teste anterior deixa `leaving` ligado por 500 ms (estado do módulo).
+  await new Promise((r) => setTimeout(r, 600));
+  const listeners: Record<string, Array<(e: unknown) => void>> = {};
+  const goCalls: number[] = [];
+  let pushes = 0;
+  const g = globalThis as Record<string, unknown>;
+  g.window = {
+    location: { href: "http://x/admin/vendas/nova" },
+    history: {
+      state: null,
+      pushState: () => void pushes++,
+      go: (n: number) => void goCalls.push(n),
+    },
+    addEventListener: (t: string, fn: (e: unknown) => void) =>
+      void (listeners[t] ??= []).push(fn),
+    removeEventListener: () => {},
+    setTimeout,
+  };
+  g.document = { addEventListener: () => {}, removeEventListener: () => {} };
+  let asked = 0;
+  setUnsavedChangesConfirmer(async () => (asked++, false));
+  try {
+    activateUnsavedGuard(); // rascunho sujo
+    deactivateUnsavedGuard(); // autosave terminou: agenda o recuo
+    activateUnsavedGuard(); // nova digitação antes do timer
+    await new Promise((r) => setTimeout(r, 10));
+    assert.deepEqual(goCalls, [], "o recuo agendado foi cancelado");
+    assert.equal(pushes, 1, "reaproveita a entrada extra, sem empilhar outra");
+    assert.equal(asked, 0, "nenhum diálogo abre sozinho");
+
+    deactivateUnsavedGuard(); // saída limpa: agora sim recua uma vez
+    await new Promise((r) => setTimeout(r, 10));
+    assert.deepEqual(goCalls, [-1]);
+  } finally {
+    setUnsavedChangesConfirmer(null);
+    delete g.window;
+    delete g.document;
+  }
+});
