@@ -4,7 +4,7 @@ Este arquivo vale para **todos** os agentes: Codex (GPT), Claude Code e Cursor (
 O `CLAUDE.md` importa este arquivo. As regras do Cursor em `.cursor/rules/` só reforçam o que está aqui.
 Escreva código, comentários de PR e textos do site em **português do Brasil**.
 
-Índice de documentação: [`docs/README.md`](docs/README.md). Mapa de arquitetura: [`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md).
+Comece em [`docs/PRIMEIROS-PASSOS-IA.md`](docs/PRIMEIROS-PASSOS-IA.md). Índice: [`docs/README.md`](docs/README.md). Mapa: [`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md).
 
 ## Projeto
 - Site da loja de seminovos **Garagem** (Linhares/ES): https://www.suagaragem.net

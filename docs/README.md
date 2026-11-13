@@ -6,6 +6,7 @@
 
 | Ordem | Arquivo |
 | --- | --- |
+| 0 | [`PRIMEIROS-PASSOS-IA.md`](PRIMEIROS-PASSOS-IA.md) — loop de 2 min (conflitos, branch, o que nunca fazer) |
 | 1 | [`AGENTS.md`](../AGENTS.md) |
 | 2 | [`GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](GUIA-PARA-IAS-E-DESENVOLVEDORES.md) |
 | 3 | [`ANTI-PATTERNS.md`](ANTI-PATTERNS.md) antes do push |
@@ -14,7 +15,8 @@
 ## Referência
 
 - [`GLOSSARIO.md`](GLOSSARIO.md) · [`ONDE-ESTA.md`](ONDE-ESTA.md) · [`TESTES.md`](TESTES.md) · [`E2E-PARA-IAS.md`](E2E-PARA-IAS.md)
-- [`prompts/`](prompts/) · [`decisions/`](decisions/) · [`runbooks/`](runbooks/) · [`CHANGELOG-AGENTES.md`](CHANGELOG-AGENTES.md)
+- [`prompts/`](prompts/) (inclui Antigravity) · [`decisions/`](decisions/) · [`runbooks/`](runbooks/) · [`CHANGELOG-AGENTES.md`](CHANGELOG-AGENTES.md)
+- Ambiente cloud/local: [`runbooks/ambiente-agente.md`](runbooks/ambiente-agente.md)
 
 ## Por área (`areas/`)
 

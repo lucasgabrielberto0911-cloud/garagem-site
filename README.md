@@ -9,8 +9,9 @@ Produção: <https://www.suagaragem.net>.
 
 Se você usa **várias IAs** (Cursor, Claude, Codex, ChatGPT, etc.) no mesmo repositório:
 
-1. **[`AGENTS.md`](AGENTS.md)** — regras obrigatórias (cache, marca, produção, PRs, fotos).
-2. **[`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md)** — mapa do repositório e checklist.
+1. **[`docs/PRIMEIROS-PASSOS-IA.md`](docs/PRIMEIROS-PASSOS-IA.md)** — o que fazer nos primeiros dois minutos.
+2. **[`AGENTS.md`](AGENTS.md)** — regras obrigatórias (cache, marca, produção, PRs, fotos).
+3. **[`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md)** — mapa do repositório e checklist.
 
 Índice completo: [`docs/README.md`](docs/README.md). Contribuição: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
