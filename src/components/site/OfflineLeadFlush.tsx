@@ -8,6 +8,7 @@ import {
   claimIntent,
   deleteIntent,
   listIntents,
+  OFFLINE_QUEUE_CHANGED_EVENT,
   partitionIntents,
   releaseIntentClaim,
   runSingleFlush,
@@ -186,6 +187,21 @@ function safeFlush() {
 }
 
 export function OfflineLeadFlush() {
+  useEffect(() => {
+    // O painel é um chunk à parte: só baixa quando existe pedido guardado.
+    const check = () =>
+      void listIntents()
+        .then((items) =>
+          items.some((item) => item.type !== "favorite")
+            ? import("@/components/site/OfflinePending").then((m) => m.mountOfflinePending(flushQueue))
+            : undefined,
+        )
+        .catch(() => {});
+    check();
+    window.addEventListener(OFFLINE_QUEUE_CHANGED_EVENT, check);
+    return () => window.removeEventListener(OFFLINE_QUEUE_CHANGED_EVENT, check);
+  }, []);
+
   useEffect(() => {
     function onOnline() {
       void safeFlush();

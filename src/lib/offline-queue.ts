@@ -41,6 +41,13 @@ export const OFFLINE_INTENT_TTL_MS: Record<OfflineIntent["type"], number> = {
 
 export const OFFLINE_CLAIM_LEASE_MS = 60_000;
 
+/** Avisa a tela (mesma aba) que a fila mudou, para a lista de pendências se atualizar. */
+export const OFFLINE_QUEUE_CHANGED_EVENT = "garagem:offline-queue-changed";
+
+function notifyQueueChanged() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(OFFLINE_QUEUE_CHANGED_EVENT));
+}
+
 export function isIntentExpired(
   intent: Pick<OfflineIntent, "type" | "createdAt">,
   now = Date.now(),
@@ -158,6 +165,7 @@ export async function enqueueIntent(intent: OfflineIntentDraft) {
     tx.onerror = () => reject(tx.error ?? new Error("IDB put"));
   });
   db.close();
+  notifyQueueChanged();
   return row;
 }
 
@@ -243,6 +251,7 @@ export async function deleteIntent(id: string) {
     tx.onerror = () => reject(tx.error ?? new Error("IDB delete"));
   });
   db.close();
+  notifyQueueChanged();
 }
 
 export type FavoriteSnapshot = {
