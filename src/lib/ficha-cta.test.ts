@@ -660,17 +660,21 @@ test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna prin
   assert.doesNotMatch(aside, /specs\.map/);
   assert.doesNotMatch(aside, /data-ficha-section="especificacoes"/);
   assert.match(main, /data-ficha-section="especificacoes"/);
-  // Ficha técnica completa na coluna principal (inclui ano, km, câmbio e cor).
-  assert.match(main, /\{specs\.map\(\(spec\)/);
+  // Ficha técnica na coluna principal: só o que o card ao lado não mostra (sheetSpecs).
+  assert.match(main, /const sheet = sheetSpecs\(specs\)/);
+  assert.match(main, /\{sheet\.map\(\(spec\)/);
+  assert.doesNotMatch(main, /\{specs\.map\(\(spec\)/);
   assert.doesNotMatch(main, /<details/);
   const specsAt = main.indexOf('data-ficha-section="especificacoes"');
   const aboutAt = main.indexOf("Sobre o veículo");
   const itemsAt = main.indexOf("Itens e acessórios");
   assert.ok(specsAt > 0 && specsAt < aboutAt && aboutAt < itemsAt);
 
-  // Opcionais: lista na coluna principal; o selo "N opcionais" do card é a âncora (sem linha extra).
+  // Opcionais: lista na coluna principal, com a contagem no próprio título; o card não repete o selo.
   assert.match(main, /id="opcionais-desktop"/);
-  assert.match(aside, /optionalsHref="#opcionais-desktop"/);
+  assert.doesNotMatch(aside, /optionalsHref/);
+  assert.match(aside, /seal\.id !== "opcionais"/);
+  assert.doesNotMatch(aside, /Avaliar meu usado/);
   assert.doesNotMatch(aside, /Ver os \$\{accessories\.length\} opcionais/);
   assert.doesNotMatch(page.slice(page.indexOf("<VehicleMobileBlocks")), /opcionais-desktop/);
 
