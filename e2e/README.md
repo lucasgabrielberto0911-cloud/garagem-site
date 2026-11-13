@@ -2,7 +2,7 @@
 
 O CI verifica a versão de produção do Next, com PostgreSQL local, em 320, 390, 430 e 1440 px. Cobre busca com erro de digitação, card/ficha/retorno, favoritos/comparação de três veículos/WhatsApp, cookies novos e já aceitos, 404, redirecionamento e ficha vendida sem preço. Erros de JS e de hidratação falham os testes. A cidade dos veículos fica ausente da API e da comparação; a terceira coluna e seu contato continuam acessíveis no celular.
 
-As amostras de Civic, Duster e HR-V são um retrato público de 08/10/2026; o registro vendido é uma **simulação local**. As fotos são substituídas por um arquivo local para o CI não depender do Storage. Estes testes não medem velocidade/qualidade de fotos: isso exige a conferência visual e de rede no preview.
+As amostras de Civic, Duster e HR-V são um retrato público de 08/10/2026; o registro vendido é uma **simulação local**. As fotos passam por `stubPageFotos` (`e2e/stub-fotos.ts`) e a fixture `public/branding/placeholder-car.png`, para o CI não baixar Storage. Estes testes não medem velocidade/qualidade de fotos: isso exige a conferência visual e de rede no preview.
 
 Para executar, use um banco exclusivo `ci` ou `garagem_e2e` em localhost, sem notificações/webhooks, e `E2E_TEST=1`. Depois de `npm ci`, `prisma generate` e `prisma db push`, execute `npm run e2e:seed`, `npm run build`, `npx playwright install chromium` e `npm run test:e2e`. A configuração inicia o servidor local automaticamente. Nenhuma credencial de produção é necessária.
 
