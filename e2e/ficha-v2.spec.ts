@@ -45,10 +45,16 @@ test("celular: garantia e vistoria na primeira tela, acima da barra com preço",
   await expect(botao).toBeVisible();
   expect(await botao.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
 
-  // Ficha técnica antes dos opcionais.
+  // Ficha técnica só traz o que o topo não mostra (motor, portas...): sem dado novo, o bloco some.
+  // Quando existe, vem antes dos opcionais.
   const titulos = await page.locator("[data-ficha-page] h2:visible").allTextContents();
-  expect(titulos.indexOf("Ficha técnica")).toBeGreaterThanOrEqual(0);
-  expect(titulos.indexOf("Ficha técnica")).toBeLessThan(titulos.indexOf("Itens e acessórios"));
+  expect(titulos).toContain("Itens e acessórios");
+  const ficha = titulos.indexOf("Ficha técnica");
+  if (ficha >= 0) expect(ficha).toBeLessThan(titulos.indexOf("Itens e acessórios"));
+  // Nada repetido: ano, km, câmbio, combustível e cor aparecem uma vez só no topo.
+  const topo = page.locator(".ficha-mobile-sheet");
+  await expect(topo.locator("[data-key-fact]").first()).toBeVisible();
+  await expect(page.locator("[data-ficha-page] .ficha-spec-grid >> text=/^(Ano|km|Câmbio|Combustível|Cor)$/")).toHaveCount(0);
 });
 
 test("computador: aviso de cookies fora da galeria e segundo WhatsApp na coluna direita", async ({ page }) => {

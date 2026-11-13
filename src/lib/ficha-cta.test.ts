@@ -263,12 +263,14 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     fichaBody.indexOf("Portas") < fichaBody.indexOf("Cidade"),
     "Cidade precisa vir depois de Portas na grade",
   );
-  // Ficha técnica completa: ano, km, câmbio e cor ficam aqui (cor/ano/KM também no topo).
-  assert.match(fichaBody, />Ano</);
-  assert.match(fichaBody, />km</);
-  assert.match(fichaBody, />Câmbio</);
-  assert.match(fichaBody, />Combustível</);
-  assert.match(fichaBody, />Cor</);
+  // Sem repetir o topo: ano, km, câmbio, combustível, cor e tipo já aparecem acima.
+  assert.doesNotMatch(fichaBody, />Ano</);
+  assert.doesNotMatch(fichaBody, />km</);
+  assert.doesNotMatch(fichaBody, />Câmbio</);
+  assert.doesNotMatch(fichaBody, />Combustível</);
+  assert.doesNotMatch(fichaBody, />Cor</);
+  assert.doesNotMatch(fichaBody, />Tipo</);
+  assert.match(fichaBody, />Motor</);
 
   // Nada de parcela nem simulador.
   const steps = section("Próximos passos");
@@ -840,4 +842,62 @@ test("foco provisório da seção sai no blur (clique num opcional não sobe a p
   assert.equal(attrs.get("tabindex"), "-1");
   onBlur?.();
   assert.equal(attrs.has("tabindex"), false);
+});
+
+test("ficha do celular sem repetição: ano no título, sem chip de opcionais, ficha técnica só com o novo e sem links duplicados", () => {
+  const specs: VehicleSpecRow[] = [
+    { label: "Tipo", value: "Carro" },
+    { label: "Ano", value: "2016" },
+    { label: "km", value: "103.000" },
+    { label: "Câmbio", value: "Automático" },
+    { label: "Combustível", value: "Flex" },
+    { label: "Cor", value: "Prata" },
+  ];
+  const summary = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, {
+      title: "Honda HR-V",
+      yearLabel: "2016",
+      price: 84900,
+      sold: false,
+      facts: vehicleKeyFacts(specs),
+      color: vehicleColorFact(specs),
+      seals: [{ id: "opcionais", label: "19 opcionais" }] as never,
+    }),
+  );
+  assert.deepEqual(
+    [...summary.matchAll(/<dt[^>]*>([^<]+)<\/dt>/g)].map((match) => match[1]),
+    ["KM", "Câmbio", "Combustível", "Cor"],
+    "o ano já está ao lado do título e a cor entra na grade",
+  );
+  assert.match(summary, /data-key-fact="Cor"/);
+  assert.doesNotMatch(summary, /col-span-full/, "a cor não ocupa uma linha larga sozinha");
+  assert.doesNotMatch(summary, /19 opcionais/);
+
+  const blocks = (rows: VehicleSpecRow[]) =>
+    renderToStaticMarkup(
+      createElement(
+        FavoritesProvider,
+        null,
+        createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+          hours: site.hours,
+          fullLabel: "Honda HR-V",
+          path: "/estoque/hrv",
+          sold: false,
+          price: 84900,
+          yearModel: 2016,
+          make: "Honda",
+          model: "HR-V",
+          vehicleId: "v1",
+          accessories: [],
+          specs: rows,
+          conditions: DEFAULT_VEHICLE_CONDITIONS,
+        }),
+      ),
+    );
+  const onlyRepeated = blocks([...specs, { label: "Portas", value: "Não informada", empty: true }]);
+  assert.doesNotMatch(onlyRepeated, />Ficha técnica</, "sem nada novo, o bloco some");
+  assert.doesNotMatch(onlyRepeated, /Não informada/);
+  assert.doesNotMatch(onlyRepeated, /Avaliar meu usado|Ajuda para escolher/);
+  assert.match(onlyRepeated, />Atendimento</);
+  assert.match(blocks([...specs, { label: "Portas", value: "4" }]), />Ficha técnica</);
 });
