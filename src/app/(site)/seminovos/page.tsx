@@ -55,7 +55,7 @@ export default async function SeminovosHubPage() {
           description="Encontre seu próximo carro ou moto na Garagem. Explore os destaques, confira fotos e detalhes de cada anúncio e converse com a equipe sobre compra ou troca."
         />
 
-        <nav aria-label="Você está aqui" className="mt-4 text-xs text-muted">
+        <nav aria-label="Você está aqui" className="mt-4 text-xs text-cream/75">
           <Link href="/" className="transition hover:text-cream">
             Início
           </Link>
@@ -67,12 +67,12 @@ export default async function SeminovosHubPage() {
           <h2 className="font-display text-xl font-semibold text-cream">
             Escolha seu próximo seminovo
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-cream/80">
             Consulte ano, quilometragem, câmbio e preço nas fichas dos veículos
             disponíveis. Para comparar todas as opções, acesse o estoque completo.
             Se pretende trocar, fale com a equipe sobre a avaliação do seu veículo.
           </p>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-cream/80">
             Para saber como funciona o atendimento na sua região, veja as{" "}
             <Link href={CITIES_DIRECTORY_PATH} className="text-cream underline underline-offset-4 transition hover:text-brand">
               cidades atendidas pela Garagem
@@ -87,7 +87,7 @@ export default async function SeminovosHubPage() {
               <h2 className="font-display text-xl font-semibold text-cream">
                 Em destaque agora
               </h2>
-              <p className="mt-1.5 text-sm text-muted">
+              <p className="mt-1.5 text-sm text-cream/75">
                 Veículos disponíveis em destaque. Abra um anúncio para conhecer
                 os detalhes e falar com a equipe pelo WhatsApp.
               </p>
@@ -98,7 +98,7 @@ export default async function SeminovosHubPage() {
           </div>
           <div className="mt-6">
             {featured.length === 0 ? (
-              <p className="border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-center text-sm text-muted">
+              <p className="border border-dashed border-white/25 bg-ink/40 px-5 py-8 text-center text-sm text-cream/75">
                 Estoque sendo montado. Chame no WhatsApp e diga o que você
                 procura.
               </p>
