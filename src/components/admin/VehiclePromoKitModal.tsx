@@ -226,7 +226,7 @@ export function VehiclePromoKitModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl border border-white/10 bg-ink shadow-2xl"
+        className="w-full max-w-xl border border-white/20 bg-ink shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-1 bg-brand-gradient" aria-hidden="true" />
@@ -239,28 +239,28 @@ export function VehiclePromoKitModal({
               >
                 Kit de Divulgação
               </h2>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="mt-0.5 text-xs text-cream/80">
                 {vehicle.brand} {vehicle.model} {vehicle.version ?? ""}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-muted hover:text-cream touch-manipulation"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-cream/80 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
               aria-label="Fechar"
             >
               ✕
             </button>
           </div>
 
-          <nav className="mt-4 flex border-b border-white/10 text-xs font-semibold uppercase tracking-wider">
+          <nav className="mt-4 flex border-b border-white/15 text-xs font-semibold uppercase tracking-wider">
             <button
               type="button"
               onClick={() => setTab("whatsapp")}
-              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition ${
+              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                 tab === "whatsapp"
                   ? "border-brand text-cream"
-                  : "border-transparent text-muted hover:text-cream"
+                  : "border-transparent text-cream/80 hover:text-cream"
               }`}
             >
               WhatsApp
@@ -268,10 +268,10 @@ export function VehiclePromoKitModal({
             <button
               type="button"
               onClick={() => setTab("instagram")}
-              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition ${
+              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                 tab === "instagram"
                   ? "border-brand text-cream"
-                  : "border-transparent text-muted hover:text-cream"
+                  : "border-transparent text-cream/80 hover:text-cream"
               }`}
             >
               Instagram
@@ -279,10 +279,10 @@ export function VehiclePromoKitModal({
             <button
               type="button"
               onClick={() => setTab("card")}
-              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition ${
+              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                 tab === "card"
                   ? "border-brand text-cream"
-                  : "border-transparent text-muted hover:text-cream"
+                  : "border-transparent text-cream/80 hover:text-cream"
               }`}
             >
               Card Status (PNG)
@@ -292,19 +292,19 @@ export function VehiclePromoKitModal({
           <div className="mt-4">
             {tab === "whatsapp" && (
               <div className="space-y-3">
-                <p className="text-xs text-muted">
+                <p className="text-xs text-cream/80">
                   Texto formatado com emojis e link para disparo ou status:
                 </p>
                 <textarea
                   readOnly
                   value={whatsappText}
                   rows={8}
-                  className="w-full resize-none border border-white/10 bg-asphalt p-3 font-body text-xs text-cream outline-none focus:border-brand"
+                  className="w-full resize-none border border-white/20 bg-asphalt p-3 font-body text-xs text-cream outline-none focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/60"
                 />
                 <button
                   type="button"
                   onClick={() => copyToClipboard(whatsappText, "Texto WhatsApp")}
-                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-cream transition hover:bg-brand/90"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
                 >
                   <IconCopy className="h-4 w-4" />
                   {copied === "Texto WhatsApp" ? "Copiado!" : "Copiar texto do WhatsApp"}
@@ -314,21 +314,21 @@ export function VehiclePromoKitModal({
 
             {tab === "instagram" && (
               <div className="space-y-3">
-                <p className="text-xs text-muted">
+                <p className="text-xs text-cream/80">
                   Legenda pronta para feed ou reels, com ficha e hashtags:
                 </p>
                 <textarea
                   readOnly
                   value={instagramText}
                   rows={8}
-                  className="w-full resize-none border border-white/10 bg-asphalt p-3 font-body text-xs text-cream outline-none focus:border-brand"
+                  className="w-full resize-none border border-white/20 bg-asphalt p-3 font-body text-xs text-cream outline-none focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/60"
                 />
                 <button
                   type="button"
                   onClick={() =>
                     copyToClipboard(instagramText, "Legenda Instagram")
                   }
-                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-cream transition hover:bg-brand/90"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
                 >
                   <IconCopy className="h-4 w-4" />
                   {copied === "Legenda Instagram"
@@ -340,17 +340,17 @@ export function VehiclePromoKitModal({
 
             {tab === "card" && (
               <div className="space-y-3">
-                <p className="text-xs text-muted">
+                <p className="text-xs text-cream/80">
                   Card vertical de alta resolução (1080×1920) ideal para
                   Instagram Stories e WhatsApp Status:
                 </p>
-                <div className="flex justify-center border border-white/10 bg-asphalt p-4">
-                  <div className="relative aspect-[9/16] w-48 overflow-hidden rounded border border-white/20 bg-ink p-3 text-center shadow">
+                <div className="flex justify-center border border-white/20 bg-asphalt p-4">
+                  <div className="relative aspect-[9/16] w-48 overflow-hidden rounded border border-white/25 bg-ink p-3 text-center shadow">
                     <div className="h-0.5 bg-brand-gradient" />
-                    <p className="mt-1 font-display text-[9px] font-bold tracking-widest text-cream">
+                    <p className="mt-1 font-display text-xs font-bold tracking-widest text-cream">
                       GARAGEM
                     </p>
-                    <div className="mt-2 aspect-square w-full rounded bg-white/5 object-cover flex items-center justify-center text-[10px] text-muted">
+                    <div className="mt-2 aspect-square w-full rounded bg-white/5 object-cover flex items-center justify-center text-xs text-cream/80">
                       {vehicle.photos?.[0]?.url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -365,10 +365,10 @@ export function VehiclePromoKitModal({
                     <p className="mt-2 truncate font-display text-xs font-bold text-cream">
                       {vehicle.brand} {vehicle.model}
                     </p>
-                    <p className="text-[10px] text-muted">
+                    <p className="text-xs text-cream/80">
                       {vehicle.year} · {formatNumberBR(vehicle.km)} km
                     </p>
-                    <div className="mt-2 rounded bg-brand py-1 text-center font-display text-[10px] font-bold text-cream">
+                    <div className="mt-2 rounded bg-brand py-1 text-center font-display text-xs font-bold text-white">
                       {!isSold ? formatCurrencyBRL(vehicle.price) : "VENDIDO"}
                     </div>
                   </div>
@@ -380,7 +380,7 @@ export function VehiclePromoKitModal({
                   type="button"
                   onClick={downloadStoryCard}
                   disabled={downloading}
-                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-cream transition hover:bg-brand/90 disabled:opacity-60"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream disabled:opacity-60"
                 >
                   {downloading ? "Gerando imagem..." : "Baixar card para Status/Stories (PNG)"}
                 </button>

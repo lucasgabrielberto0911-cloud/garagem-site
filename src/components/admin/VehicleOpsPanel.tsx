@@ -97,17 +97,17 @@ function Toggle({
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`flex min-h-[72px] items-start gap-3 border px-3 py-3 text-left transition ${
+      className={`flex min-h-[72px] items-start gap-3 border px-3 py-3 text-left transition outline-none focus-visible:ring-2 focus-visible:ring-brand ${
         checked
           ? "border-brand bg-brand/10"
-          : "border-white/10 bg-ink hover:border-white/25"
+          : "border-white/20 bg-ink hover:border-white/30"
       }`}
     >
       <span
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border ${
           checked
             ? "border-brand bg-brand text-white"
-            : "border-white/20 text-transparent"
+            : "border-white/30 text-transparent"
         }`}
       >
         <IconCheck className="h-3 w-3" />
@@ -116,7 +116,7 @@ function Toggle({
         <span className="block font-display text-xs font-semibold uppercase tracking-wide text-cream">
           {label}
         </span>
-        <span className="mt-0.5 block text-xs text-muted">{hint}</span>
+        <span className="mt-0.5 block text-xs text-cream/80">{hint}</span>
       </span>
     </button>
   );
@@ -373,7 +373,7 @@ export function VehicleOpsPanel({
       <Card
         title="Checklist interno"
         action={
-          <span className="text-xs text-muted" aria-live="polite">
+          <span className="text-xs text-cream/80" aria-live="polite">
             {opsPending ? "Salvando…" : opsNote}
           </span>
         }
@@ -406,7 +406,7 @@ export function VehicleOpsPanel({
             <p className="text-sm leading-relaxed text-cream">
               {CONSIGNED_NO_COSTS_NOTE}
             </p>
-            <p className="text-xs leading-relaxed text-muted">
+            <p className="text-xs leading-relaxed text-cream/80">
               {sold ? "Vendido por" : "Anunciado por"}{" "}
               <span className="text-cream">
                 {formatCurrencyBRL(referencePrice)}
@@ -416,7 +416,7 @@ export function VehicleOpsPanel({
               }
             </p>
             {costs.length > 0 ? (
-              <p className="text-xs leading-relaxed text-muted">
+              <p className="text-xs leading-relaxed text-cream/80">
                 {costs.length === 1
                   ? "1 custo lançado antes continua guardado, fora das contas."
                   : `${costs.length} custos lançados antes continuam guardados, fora das contas.`}
@@ -510,7 +510,7 @@ export function VehicleOpsPanel({
                   const file = event.dataTransfer.files?.[0];
                   if (file) void onReceiptChange(file);
                 }}
-                className="mb-5 border border-white/10 bg-asphalt/40 p-4"
+                className="mb-5 border border-white/20 bg-asphalt/40 p-4"
               >
                 <fieldset
                   disabled={itemPending}
@@ -605,12 +605,12 @@ export function VehicleOpsPanel({
             ) : null}
 
             {costs.length === 0 ? (
-              <p className="text-sm text-muted">
+              <p className="text-sm text-cream/80">
                 Nenhum custo extra. A compra fica no campo acima; aqui entram
                 despachante, estética, laudo etc.
               </p>
             ) : (
-              <ul className="divide-y divide-white/10">
+              <ul className="divide-y divide-white/15">
                 {costs.map((cost) => (
                   <li
                     key={cost.id}
@@ -620,7 +620,7 @@ export function VehicleOpsPanel({
                       <p className="text-sm text-cream">
                         {costListTitle(cost.kind, cost.description)}
                       </p>
-                      <p className="text-xs text-muted">
+                      <p className="text-xs text-cream/80">
                         {formatDate(cost.incurredAt)}
                         {cost.receiptUrl ? " · com comprovante" : ""}
                       </p>
@@ -694,7 +694,7 @@ export function VehicleOpsPanel({
               const file = event.dataTransfer.files?.[0];
               if (file) void onDocFileChange(file);
             }}
-            className="mb-5 border border-white/10 bg-asphalt/40 p-4"
+            className="mb-5 border border-white/20 bg-asphalt/40 p-4"
           >
             <fieldset
               disabled={itemPending}
@@ -775,12 +775,12 @@ export function VehicleOpsPanel({
         ) : null}
 
         {documents.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-cream/80">
             Nenhum arquivo ainda. CRLV, recibo, laudo e afins ficam só no
             painel.
           </p>
         ) : (
-          <ul className="divide-y divide-white/10">
+          <ul className="divide-y divide-white/15">
             {documents.map((doc) => (
               <li
                 key={doc.id}
@@ -791,7 +791,7 @@ export function VehicleOpsPanel({
                     {docListTitle(doc.kind, doc.title)}
                   </p>
                   {doc.notes || !isOtherKind(doc.kind) ? (
-                    <p className="text-xs text-muted">
+                    <p className="text-xs text-cream/80">
                       {isOtherKind(doc.kind)
                         ? doc.notes
                         : [docKindLabel(doc.kind), doc.notes]
@@ -834,12 +834,12 @@ export function VehicleOpsPanel({
 
       <details
         id="acervo"
-        className="scroll-mt-4 border border-white/10 bg-ink/50"
+        className="scroll-mt-4 border border-white/20 bg-ink/50"
       >
-        <summary className="min-h-12 cursor-pointer p-4 font-display text-base font-semibold">
+        <summary className="min-h-12 cursor-pointer p-4 font-display text-base font-semibold outline-none focus-visible:ring-2 focus-visible:ring-brand">
           Fotos em alta · {photos.length}
         </summary>
-        <div className="border-t border-white/10 p-4">
+        <div className="border-t border-white/15 p-4">
           <VehiclePhotoArchive vehicleId={vehicle.id} photos={photos} />
         </div>
       </details>
@@ -900,8 +900,8 @@ function MiniStat({
         ? "text-red-400"
         : "text-cream";
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 border border-white/10 px-3 py-2.5 min-[440px]:block">
-      <p className="text-xs uppercase tracking-wider text-muted">{label}</p>
+    <div className="flex min-w-0 items-center justify-between gap-3 border border-white/20 px-3 py-2.5 min-[440px]:block">
+      <p className="text-xs uppercase tracking-wider text-cream/80">{label}</p>
       <p
         title={value}
         className={`break-words font-display text-sm font-semibold tabular-nums min-[440px]:mt-1 ${color}`}

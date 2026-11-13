@@ -8,17 +8,17 @@ import { IconChevronDown } from "@/components/admin/icons";
  */
 
 export const inputClass =
-  "min-h-[44px] w-full border border-white/10 bg-ink px-3 py-2.5 text-base text-cream outline-none transition placeholder:text-muted touch-manipulation focus:border-brand";
+  "min-h-[44px] w-full border border-white/20 bg-ink px-3 py-2.5 text-base text-cream outline-none transition placeholder:text-cream/65 touch-manipulation focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/60";
 
 export const btn = {
   primary:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-white transition touch-manipulation hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-white transition touch-manipulation hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream disabled:cursor-not-allowed disabled:opacity-60",
   outline:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-cream transition touch-manipulation hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/20 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60",
   ghost:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2 text-xs text-muted transition touch-manipulation hover:text-cream disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2 text-xs text-cream/80 transition touch-manipulation hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60",
   danger:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/60 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-red-400 transition touch-manipulation hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/60 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-red-400 transition touch-manipulation hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60",
 } as const;
 
 /** Grade de métricas: 2 colunas no celular, 4 no desktop. */
@@ -26,11 +26,11 @@ export const adminStatGrid = "grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4";
 
 /** Toque de 44px para ícones no celular. */
 export const iconTap =
-  "inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted transition touch-manipulation hover:text-cream";
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center text-cream/80 transition touch-manipulation hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
 /** Célula de ação (ícone + rótulo) nos cards do painel. */
 export const mobileActionCell =
-  "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-xs font-semibold uppercase tracking-wide text-muted transition touch-manipulation hover:text-cream";
+  "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-xs font-semibold uppercase tracking-wide text-cream/80 transition touch-manipulation hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
 /** Igual ao celular, mas vira botão horizontal no desktop. */
 export const listActionCell = `${mobileActionCell} lg:min-h-[44px] lg:w-auto lg:flex-row lg:gap-1.5 lg:px-3.5`;
@@ -71,7 +71,7 @@ export function AdminPageHeader({
           {title}
         </h1>
         {subtitle ? (
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+          <p className="mt-1.5 text-sm leading-relaxed text-cream/80">
             {subtitle}
           </p>
         ) : null}
@@ -100,18 +100,18 @@ export function Card({
 }) {
   if (collapsed && title)
     return (
-      <details id={id} className={`border border-white/10 bg-ink/50 ${className}`}>
-        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-base font-semibold text-cream [&::-webkit-details-marker]:hidden">
+      <details id={id} className={`border border-white/15 bg-ink/50 ${className}`}>
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-base font-semibold text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
           {title}
           <IconChevronDown className="h-4 w-4 shrink-0" />
         </summary>
-        <div className="border-t border-white/10 p-4 sm:p-5">{children}</div>
+        <div className="border-t border-white/15 p-4 sm:p-5">{children}</div>
       </details>
     );
   return (
-    <section className={`border border-white/10 bg-ink/50 ${className}`}>
+    <section className={`border border-white/15 bg-ink/50 ${className}`}>
       {title ? (
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-3.5">
+        <div className="flex items-center justify-between gap-3 border-b border-white/15 px-4 py-3 sm:px-5 sm:py-3.5">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
             {title}
           </h2>
@@ -137,7 +137,7 @@ export function StatCard({
   href?: string;
 }) {
   const tones = {
-    default: { border: "border-white/10", value: "text-cream" },
+    default: { border: "border-white/15", value: "text-cream" },
     brand: { border: "border-brand/50", value: "text-red-400" },
     warning: { border: "border-brand-orange/50", value: "text-brand-orange" },
     success: { border: "border-emerald-400/40", value: "text-emerald-300" },
@@ -146,7 +146,7 @@ export function StatCard({
 
   const content = (
     <>
-      <p className="text-xs font-medium text-muted">{label}</p>
+      <p className="text-xs font-medium text-cream/80">{label}</p>
       <p
         title={String(value)}
         className={`mt-2 font-display font-bold leading-[1.15] tracking-tight tabular-nums break-words ${tokens.value} [font-size:clamp(0.92rem,10.5cqi,1.65rem)]`}
@@ -154,7 +154,7 @@ export function StatCard({
         {value}
       </p>
       {hint ? (
-        <p className="mt-1 text-xs leading-relaxed text-muted" title={hint}>
+        <p className="mt-1 text-xs leading-relaxed text-cream/80" title={hint}>
           {hint}
         </p>
       ) : null}
@@ -165,7 +165,7 @@ export function StatCard({
     return (
       <Link
         href={href}
-        className={`block min-w-0 overflow-hidden [container-type:inline-size] border bg-ink/50 px-3 py-3 transition hover:bg-white/[0.04] sm:px-5 sm:py-4 ${tokens.border}`}
+        className={`block min-w-0 overflow-hidden [container-type:inline-size] border bg-ink/50 px-3 py-3 transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:px-5 sm:py-4 ${tokens.border}`}
       >
         {content}
       </Link>
@@ -182,7 +182,7 @@ export function StatCard({
 }
 
 const BADGE_TONES = {
-  neutral: "bg-white/10 text-muted",
+  neutral: "bg-white/15 text-cream/85",
   brand: "bg-brand/20 text-cream ring-1 ring-inset ring-brand/50",
   warning: "bg-brand-orange/15 text-brand-orange",
   success: "bg-emerald-400/15 text-emerald-300",
@@ -221,13 +221,13 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center border border-dashed border-white/15 px-6 py-14 text-center">
-      {icon ? <div className="text-white/20">{icon}</div> : null}
+    <div className="flex flex-col items-center justify-center border border-dashed border-white/20 px-6 py-14 text-center">
+      {icon ? <div className="text-cream/40">{icon}</div> : null}
       <h2 className="mt-4 font-display text-lg font-semibold text-cream">
         {title}
       </h2>
       {description ? (
-        <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-cream/80">
           {description}
         </p>
       ) : null}

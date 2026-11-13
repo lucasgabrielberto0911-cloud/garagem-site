@@ -76,12 +76,12 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const MARK_SOLD_BTN =
-  "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-brand-orange/50 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition touch-manipulation hover:border-brand-orange hover:bg-brand-orange/15";
+  "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-brand-orange/60 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition touch-manipulation outline-none hover:border-brand-orange hover:bg-brand-orange/15 focus-visible:ring-2 focus-visible:ring-brand";
 const MARK_SOLD_SIMPLE_BTN =
-  "inline-flex h-11 shrink-0 items-center justify-center border border-white/15 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand-orange hover:text-brand-orange disabled:opacity-50";
+  "inline-flex h-11 shrink-0 items-center justify-center border border-white/20 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation outline-none hover:border-brand-orange hover:text-brand-orange focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50";
 
 const FILTER_PILL =
-  "inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation";
+  "inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
 const SORT_SELECT_OPTIONS = [
   { value: "recent:desc", label: "Recentes" },
@@ -746,7 +746,7 @@ export function VehiclesTable({
         />
         <span>Selecionar todos</span>
       </label>
-      <p className="shrink-0 text-xs text-muted">
+      <p className="shrink-0 text-xs text-cream/80">
         {selected.length > 0
           ? `${selected.length} selecionado(s)`
           : `${items.length} de ${total}`}
@@ -768,17 +768,17 @@ export function VehiclesTable({
       <div
         role="tablist"
         aria-label="Separar estoque e vendidos"
-        className="grid grid-cols-3 border-b border-white/10 lg:flex lg:flex-wrap"
+        className="grid grid-cols-3 border-b border-white/20 lg:flex lg:flex-wrap"
       >
         <button
           type="button"
           role="tab"
           aria-selected={tab === "estoque"}
           onClick={() => applyFilters({ tab: "estoque", status: null, pending: "" })}
-          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
+          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand lg:justify-start lg:px-4 ${
             tab === "estoque"
               ? "border-b-2 border-brand text-cream"
-              : "border-b-2 border-transparent text-muted hover:text-cream"
+              : "border-b-2 border-transparent text-cream/80 hover:text-cream"
           }`}
         >
           Em estoque
@@ -786,7 +786,7 @@ export function VehiclesTable({
             className={`px-1.5 py-0.5 text-xs ${
               tab === "estoque"
                 ? "bg-brand/25 text-cream"
-                : "bg-white/10 text-muted"
+                : "bg-white/15 text-cream/85"
             }`}
           >
             {estoqueCount}
@@ -797,10 +797,10 @@ export function VehiclesTable({
           role="tab"
           aria-selected={tab === "destaques"}
           onClick={() => applyFilters({ tab: "destaques", status: null })}
-          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
+          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand lg:justify-start lg:px-4 ${
             tab === "destaques"
               ? "border-b-2 border-brand text-cream"
-              : "border-b-2 border-transparent text-muted hover:text-cream"
+              : "border-b-2 border-transparent text-cream/80 hover:text-cream"
           }`}
         >
           Destaques
@@ -808,7 +808,7 @@ export function VehiclesTable({
             className={`px-1.5 py-0.5 text-xs ${
               tab === "destaques"
                 ? "bg-brand/25 text-cream"
-                : "bg-white/10 text-muted"
+                : "bg-white/15 text-cream/85"
             }`}
           >
             {featuredCount}/{MAX_HOME_FEATURED}
@@ -819,10 +819,10 @@ export function VehiclesTable({
           role="tab"
           aria-selected={tab === "vendidos"}
           onClick={() => applyFilters({ tab: "vendidos", status: null })}
-          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
+          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand lg:justify-start lg:px-4 ${
             tab === "vendidos"
               ? "border-b-2 border-brand text-cream"
-              : "border-b-2 border-transparent text-muted hover:text-cream"
+              : "border-b-2 border-transparent text-cream/80 hover:text-cream"
           }`}
         >
           Vendidos
@@ -830,7 +830,7 @@ export function VehiclesTable({
             className={`px-1.5 py-0.5 text-xs ${
               tab === "vendidos"
                 ? "bg-brand/25 text-cream"
-                : "bg-white/10 text-muted"
+                : "bg-white/15 text-cream/85"
             }`}
           >
             {vendidosCount}
@@ -839,7 +839,7 @@ export function VehiclesTable({
       </div>
 
       {stockNote ? (
-        <p className="text-xs leading-relaxed text-muted">{stockNote}</p>
+        <p className="text-xs leading-relaxed text-cream/80">{stockNote}</p>
       ) : null}
 
       <div className="space-y-2">
@@ -915,7 +915,7 @@ export function VehiclesTable({
                 setSelecting(true);
               }
             }}
-            className="min-h-11 shrink-0 px-2 text-xs font-semibold uppercase tracking-wide text-muted transition touch-manipulation hover:text-cream"
+            className="min-h-11 shrink-0 px-2 text-xs font-semibold uppercase tracking-wide text-cream/80 transition touch-manipulation outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-brand"
           >
             {selectMode ? "Concluir" : "Selecionar"}
           </button>
@@ -924,12 +924,12 @@ export function VehiclesTable({
         {filtersOpen ? (
           <div
             id="vehicles-filters"
-            className="space-y-3 border border-white/10 bg-ink/50 p-3"
+            className="space-y-3 border border-white/20 bg-ink/50 p-3"
           >
             {tab === "estoque" ? (
               <>
                 <div>
-                  <p className="mb-1.5 text-xs text-muted">Status</p>
+                  <p className="mb-1.5 text-xs text-cream/80">Status</p>
                   <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por status">
                     {(
                       [
@@ -956,11 +956,11 @@ export function VehiclesTable({
                           className={`${FILTER_PILL} ${
                             active
                               ? "bg-brand/25 text-cream"
-                              : "text-muted hover:bg-white/5 hover:text-cream"
+                              : "text-cream/80 hover:bg-white/5 hover:text-cream"
                           }`}
                         >
                           {option.label}
-                          <span className="ml-1.5 text-xs tabular-nums opacity-70">
+                          <span className="ml-1.5 text-xs tabular-nums opacity-80">
                             {option.count}
                           </span>
                         </button>
@@ -969,7 +969,7 @@ export function VehiclesTable({
                   </div>
                 </div>
                 <div>
-                  <p className="mb-1.5 text-xs text-muted">Precisa de atenção</p>
+                  <p className="mb-1.5 text-xs text-cream/80">Precisa de atenção</p>
                   <div className="flex flex-wrap gap-2" role="group" aria-label="Pendências do estoque">
                     {(
                       [
@@ -993,7 +993,7 @@ export function VehiclesTable({
                         className={`${FILTER_PILL} ${
                           pending === option.value
                             ? "bg-brand/25 text-cream"
-                            : "text-muted hover:bg-white/5 hover:text-cream"
+                            : "text-cream/80 hover:bg-white/5 hover:text-cream"
                         } disabled:opacity-60`}
                       >
                         {option.label}
@@ -1004,7 +1004,7 @@ export function VehiclesTable({
               </>
             ) : null}
             <div className="flex items-center gap-2">
-              <label className="text-xs text-muted" htmlFor="vehicles-sort">
+              <label className="text-xs text-cream/80" htmlFor="vehicles-sort">
                 Ordenar
               </label>
               <select
@@ -1017,7 +1017,7 @@ export function VehiclesTable({
                   ];
                   changeSort({ key, dir });
                 }}
-                className="h-11 min-w-0 flex-1 border border-white/10 bg-transparent px-2 text-sm text-cream outline-none focus:border-brand sm:max-w-[14rem]"
+                className="h-11 min-w-0 flex-1 border border-white/20 bg-ink px-2 text-sm text-cream outline-none focus:border-brand focus-visible:ring-2 focus-visible:ring-brand sm:max-w-[14rem]"
               >
                 {SORT_SELECT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -1055,7 +1055,7 @@ export function VehiclesTable({
             <button
               type="button"
               onClick={() => applyFilters({ q: "", status: null, pending: "" })}
-              className="min-h-8 px-1.5 text-xs text-muted underline-offset-4 hover:text-cream hover:underline"
+              className="min-h-11 px-2 text-xs text-cream/80 underline-offset-4 outline-none hover:text-cream hover:underline focus-visible:ring-2 focus-visible:ring-brand"
             >
               Limpar
             </button>
@@ -1063,12 +1063,12 @@ export function VehiclesTable({
         ) : null}
 
         {selectMode ? (
-          <div className="flex items-center gap-3 border-b border-white/10 pb-2">
+          <div className="flex items-center gap-3 border-b border-white/20 pb-2">
             {selectAll}
           </div>
         ) : null}
         {pending && tab === "estoque" ? (
-          <p role="status" className="text-xs leading-relaxed text-muted">
+          <p role="status" className="text-xs leading-relaxed text-cream/80">
             {total} veículo(s){" "}
             {pending === "sem-fotos"
               ? "sem fotos"
@@ -1081,11 +1081,11 @@ export function VehiclesTable({
       </div>
 
       {tab === "destaques" ? (
-        <div className="border border-white/10 bg-ink/40 px-4 py-3 text-sm">
+        <div className="border border-white/20 bg-ink/40 px-4 py-3 text-sm">
           <p className="font-display text-xs font-semibold uppercase tracking-wider text-cream">
             Home · {featuredCount}/{MAX_HOME_FEATURED} destaques
           </p>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
+          <p className="mt-1 text-sm leading-relaxed text-cream/80">
             Só o que está marcado aparece na vitrine. Ordem: cadastro mais
             recente primeiro. Teto de {MAX_HOME_FEATURED} para não bagunçar a
             home.{" "}
@@ -1093,7 +1093,7 @@ export function VehiclesTable({
               prefetch={false}
               href="/"
               target="_blank"
-              className="font-medium text-red-400 underline-offset-4 hover:underline"
+              className="font-medium text-red-400 underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand"
             >
               Ver a home
             </Link>
@@ -1123,7 +1123,7 @@ export function VehiclesTable({
             {undoBanner.ids.length === 1
               ? "1 veículo marcado como vendido."
               : `${undoBanner.ids.length} veículos marcados como vendidos.`}
-            <span className="text-muted"> Pode desfazer se foi engano.</span>
+            <span className="text-cream/80"> Pode desfazer se foi engano.</span>
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -1136,7 +1136,7 @@ export function VehiclesTable({
             <button
               type="button"
               onClick={() => setUndoBanner(null)}
-              className="min-h-11 px-3 text-xs uppercase tracking-wider text-muted hover:text-cream"
+              className="min-h-11 px-3 text-xs uppercase tracking-wider text-cream/80 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-brand"
             >
               Fechar
             </button>
@@ -1148,7 +1148,7 @@ export function VehiclesTable({
         <div className="sticky top-[env(safe-area-inset-top,0px)] z-20 flex flex-col gap-3 border border-brand/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0">
           <p className="text-sm text-cream">
             {selected.length} selecionado(s)
-            <span className="text-muted">
+            <span className="text-cream/80">
               {" "}
               · máx. {ADMIN_BULK_MAX} · Esc cancela
             </span>
@@ -1187,7 +1187,7 @@ export function VehiclesTable({
             <button
               type="button"
               onClick={() => setSelected([])}
-              className="min-h-11 px-3 text-xs uppercase tracking-wider text-muted hover:text-cream"
+              className="min-h-11 px-3 text-xs uppercase tracking-wider text-cream/80 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-brand"
             >
               Limpar
             </button>
@@ -1250,7 +1250,7 @@ export function VehiclesTable({
               ))}
             </ul>
           </div>
-          <div className="flex flex-col items-center gap-2 text-sm text-muted">
+          <div className="flex flex-col items-center gap-2 text-sm text-cream/80">
             <span>
               Mostrando {items.length} de {total} veículo(s)
             </span>
@@ -1271,7 +1271,7 @@ export function VehiclesTable({
                   <button
                     type="button"
                     onClick={() => void fetchPage(page + 1, sort, false)}
-                    className="min-h-[44px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand"
+                    className="min-h-[44px] border border-white/20 px-4 text-xs uppercase tracking-wider text-cream transition outline-none hover:border-brand focus-visible:ring-2 focus-visible:ring-brand"
                   >
                     Carregar mais
                   </button>
@@ -1294,9 +1294,9 @@ export function VehiclesTable({
             ["Esc", "Cancelar a seleção"],
           ].map(([key, label]) => (
             <div key={key} className="flex items-center justify-between gap-3">
-              <dt className="text-muted">{label}</dt>
+              <dt className="text-cream/80">{label}</dt>
               <dd>
-                <kbd className="border border-white/20 px-2 py-0.5 text-xs">{key}</kbd>
+                <kbd className="border border-white/25 px-2 py-0.5 text-xs">{key}</kbd>
               </dd>
             </div>
           ))}
@@ -1470,13 +1470,13 @@ export function VehiclesTable({
 
 function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/10 py-0.5 pl-2.5 pr-1 text-xs text-cream">
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/15 py-0.5 pl-2.5 pr-1 text-xs text-cream">
       <span className="truncate">{label}</span>
       <button
         type="button"
         onClick={onClear}
         aria-label={`Remover filtro ${label}`}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-cream"
+        className="-my-1 -mr-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-cream/80 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-brand"
       >
         ×
       </button>
@@ -1511,7 +1511,7 @@ function VehicleAdminCard({
   const showSold = adminCardShowsSoldAction(vehicle.status);
 
   return (
-    <li className="overflow-hidden border border-white/10 bg-ink/50">
+    <li className="overflow-hidden border border-white/20 bg-ink/50">
       <div className="flex gap-3 p-3 lg:gap-4">
         {selectable ? <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
           <span className="sr-only">Selecionar {title}</span>
@@ -1540,7 +1540,7 @@ function VehicleAdminCard({
                 Destaque
               </span>
             ) : null}
-            <span className="absolute bottom-1 right-1 bg-black/55 px-1.5 py-0.5 text-xs tabular-nums text-cream/70">
+            <span className="absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 text-xs tabular-nums text-cream/90">
               {vehicle.photoCount > 0
                 ? `${vehicle.photoCount} foto${vehicle.photoCount === 1 ? "" : "s"}`
                 : "Sem foto"}
@@ -1553,7 +1553,7 @@ function VehicleAdminCard({
                 {title}
               </span>
               <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                <span className="inline-flex items-center gap-1.5 text-xs text-cream/80">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[vehicle.status] ?? "bg-white/35"}`}
                     aria-hidden="true"
@@ -1562,14 +1562,14 @@ function VehicleAdminCard({
                 </span>
                 {vehicle.consigned ? <ConsignedChip /> : null}
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-muted">
+              <span className="mt-1 block text-xs leading-relaxed text-cream/80">
                 {meta}
               </span>
               {missing ? <span className="mt-1 block text-xs text-brand-orange">{missing}</span> : null}
             </span>
             <span className="shrink-0 sm:text-right">
               {missingPrice ? (
-                <span className="text-sm font-medium text-muted">
+                <span className="text-sm font-medium text-cream/80">
                   Sem preço
                 </span>
               ) : (
@@ -1591,11 +1591,11 @@ function VehicleAdminCard({
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 border-t border-white/10 px-1.5 py-1">
+      <div className="flex flex-wrap items-center gap-1 border-t border-white/15 px-1.5 py-1">
         <Link
           prefetch={false}
           href={`/admin/veiculos/${vehicle.id}`}
-          className="inline-flex h-11 items-center gap-1.5 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-white/5"
+          className="inline-flex h-11 items-center gap-1.5 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand"
         >
           <IconPencil className="h-4 w-4" />
           Editar
@@ -1628,7 +1628,7 @@ function VehicleAdminCard({
           disabled={busy}
           aria-label={`Mais ações: ${title}`}
           aria-haspopup="dialog"
-          className="ml-auto inline-flex h-11 w-11 items-center justify-center text-muted transition touch-manipulation hover:bg-white/5 hover:text-cream disabled:opacity-50"
+          className="ml-auto inline-flex h-11 w-11 items-center justify-center text-cream/80 transition touch-manipulation outline-none hover:bg-white/5 hover:text-cream focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
         >
           <IconMore className="h-5 w-5" />
         </button>
