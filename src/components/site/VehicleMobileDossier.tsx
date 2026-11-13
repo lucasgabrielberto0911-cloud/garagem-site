@@ -238,6 +238,10 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-2 pb-6 lg:hidden">
+      {extraSpecs.length === 0 && listedLine ? (
+        // Sem ficha técnica, o "Anunciado hoje · Atualizado em..." continua como linha solta.
+        <p className="border-b border-white/10 pb-4 text-sm tracking-wide text-muted">{listedLine}</p>
+      ) : null}
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha técnica" section="especificacoes">
           {listedLine ? (

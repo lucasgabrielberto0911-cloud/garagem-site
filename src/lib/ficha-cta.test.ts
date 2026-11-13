@@ -897,6 +897,30 @@ test("ficha do celular sem repetição: ano no título, sem chip de opcionais, f
   const onlyRepeated = blocks([...specs, { label: "Portas", value: "Não informada", empty: true }]);
   assert.doesNotMatch(onlyRepeated, />Ficha técnica</, "sem nada novo, o bloco some");
   assert.doesNotMatch(onlyRepeated, /Não informada/);
+  // O "Anunciado hoje" não se perde junto com o bloco.
+  const withListed = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        hours: site.hours,
+        fullLabel: "Honda HR-V",
+        path: "/estoque/hrv",
+        sold: false,
+        price: 84900,
+        yearModel: 2016,
+        make: "Honda",
+        model: "HR-V",
+        vehicleId: "v1",
+        accessories: [],
+        specs,
+        conditions: DEFAULT_VEHICLE_CONDITIONS,
+        listedLine: "Anunciado hoje",
+      }),
+    ),
+  );
+  assert.match(withListed, /Anunciado hoje/);
+  assert.doesNotMatch(withListed, />Ficha técnica</);
   assert.doesNotMatch(onlyRepeated, /Avaliar meu usado|Ajuda para escolher/);
   assert.match(onlyRepeated, />Atendimento</);
   assert.match(blocks([...specs, { label: "Portas", value: "4" }]), />Ficha técnica</);
