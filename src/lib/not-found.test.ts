@@ -30,7 +30,7 @@ test("NotFoundContent tem visual do site com Sora nos títulos e Inter no texto"
   assert.match(content, /bg-brand-gradient/);
 
   // Texto curto explicativo
-  assert.match(content, /text-sm leading-relaxed text-muted/);
+  assert.match(content, /text-sm leading-relaxed text-cream\/80/);
   assert.match(content, /O link que você tentou acessar não existe, foi alterado ou o veículo já foi vendido/);
   assert.match(content, /Veja as opções disponíveis no nosso estoque ou fale com a nossa equipe/);
 

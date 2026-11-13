@@ -11,7 +11,7 @@ export function NotFoundContent() {
         Página não encontrada
       </h1>
       <div className="mx-auto mt-5 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
-      <p className="mx-auto mt-5 max-w-md font-body text-sm leading-relaxed text-muted">
+      <p className="mx-auto mt-5 max-w-md font-body text-sm leading-relaxed text-cream/80">
         O link que você tentou acessar não existe, foi alterado ou o veículo já foi vendido.
         Veja as opções disponíveis no nosso estoque ou fale com a nossa equipe.
       </p>
@@ -26,7 +26,7 @@ export function NotFoundContent() {
       <div className="mt-8">
         <Link
           href="/"
-          className="inline-flex min-h-11 items-center font-display text-sm font-semibold text-muted transition hover:text-cream underline-offset-4 hover:underline touch-manipulation"
+          className="inline-flex min-h-11 items-center px-2 font-display text-sm font-semibold text-cream/80 transition hover:text-cream underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
         >
           ← Voltar para o Início
         </Link>

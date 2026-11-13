@@ -36,8 +36,11 @@ export default function CidadesPage() {
           description="Encontre sua cidade e conheça o atendimento da Garagem na sua região. Nossa equipe atende pelo site e WhatsApp, todos os dias, das 8h às 23h."
         />
 
-        <nav aria-label="Você está aqui" className="mt-4 text-center text-xs text-muted">
-          <Link href="/" className="transition hover:text-cream">
+        <nav aria-label="Você está aqui" className="mt-4 text-center text-xs text-cream/75">
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center px-1 transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
             Início
           </Link>
           <span className="mx-2">/</span>
@@ -48,14 +51,17 @@ export default function CidadesPage() {
           <h2 className="font-display text-xl font-semibold text-cream">
             Atendimento na sua região
           </h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
+          <p className="mt-2 text-sm leading-relaxed text-cream/80">
             Escolha um município abaixo para consultar as informações de
             atendimento local. Pelo WhatsApp, você pode combinar os próximos
             passos da visita, negociação e entrega com a equipe.
           </p>
-          <p className="mt-3 text-sm leading-relaxed text-muted">
+          <p className="mt-3 text-sm leading-relaxed text-cream/80">
             Já quer escolher um veículo? Conheça nossos{" "}
-            <Link href="/seminovos" className="text-cream underline underline-offset-4 transition hover:text-brand">
+            <Link
+              href="/seminovos"
+              className="text-cream underline underline-offset-4 transition hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
               seminovos no Espírito Santo
             </Link>
             . O estoque é compartilhado entre as cidades atendidas.

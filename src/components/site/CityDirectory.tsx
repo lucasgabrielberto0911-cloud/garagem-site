@@ -6,7 +6,7 @@ import { SERVICE_CITIES } from "@/lib/service-cities";
  * é enxuta e o texto quebra em vez de ser cortado.
  */
 const CITY_BUTTON_CLASS =
-  "flex h-full min-h-16 w-full flex-col items-center justify-center gap-0.5 whitespace-normal break-normal border border-white/15 bg-ink px-4 py-3 text-center font-display text-sm font-semibold leading-snug text-cream text-balance transition hover:border-brand hover:bg-brand/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream sm:text-base";
+  "flex h-full min-h-16 w-full flex-col items-center justify-center gap-0.5 whitespace-normal break-normal border border-white/20 bg-ink px-4 py-3 text-center font-display text-sm font-semibold leading-snug text-cream text-balance transition hover:border-brand hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-base";
 
 export function CityDirectory() {
   return (
@@ -20,7 +20,7 @@ export function CityDirectory() {
               aria-label={`Seminovos em ${city.name}`}
             >
               <span>Seminovos em {city.name}</span>
-              <span className="text-xs font-normal text-muted">
+              <span className="text-xs font-normal text-cream/75">
                 Atendimento online pelo WhatsApp
               </span>
             </Link>

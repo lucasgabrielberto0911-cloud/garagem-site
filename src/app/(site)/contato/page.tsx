@@ -56,11 +56,11 @@ export default async function ContatoPage() {
 
           <section
             aria-labelledby="contato-whatsapp"
-            className="mt-4 overflow-hidden border border-white/10 bg-ink sm:mt-8"
+            className="mt-4 overflow-hidden border border-white/20 bg-ink sm:mt-8"
           >
             <div className="h-1 bg-brand" aria-hidden="true" />
             <div className="p-3.5 sm:p-6">
-              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light">
+              <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand-light">
                 Canal da loja
               </p>
               <h2
@@ -69,40 +69,40 @@ export default async function ContatoPage() {
               >
                 WhatsApp — resposta mais rápida
               </h2>
-              <p className="mt-1.5 max-w-xl text-sm leading-snug text-muted sm:text-base sm:leading-relaxed">
+              <p className="mt-1.5 max-w-xl text-sm leading-snug text-cream/80 sm:text-base sm:leading-relaxed">
                 Para vídeo, financiamento e condições, troca ou fechamento, o canal é o WhatsApp.
               </p>
 
               {phone ? (
                 <a
                   href={telUrl()}
-                  className="mt-3 flex min-h-[56px] items-center justify-between gap-3 border border-white/10 bg-asphalt px-3.5 py-2.5 touch-manipulation transition hover:border-brand"
+                  className="mt-3 flex min-h-[56px] items-center justify-between gap-3 border border-white/20 bg-asphalt px-3.5 py-2.5 touch-manipulation transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <span className="min-w-0">
-                    <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
                       Telefone
                     </span>
                     <span className="mt-1 block font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand-light sm:text-3xl">
                       {phone.label}
                     </span>
                   </span>
-                  <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80">
+                  <span className="shrink-0 font-display text-xs font-semibold uppercase tracking-wide text-cream/90">
                     Ligar
                   </span>
                 </a>
               ) : null}
 
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <div className="border border-white/10 bg-asphalt px-3.5 py-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                <div className="border border-white/20 bg-asphalt px-3.5 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
                     Horário
                   </p>
                   <p className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream">
                     {publicSite.hours}
                   </p>
                 </div>
-                <div className="border border-white/10 bg-asphalt px-3.5 py-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                <div className="border border-white/20 bg-asphalt px-3.5 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
                     {physical ? "Endereço" : "Atendimento"}
                   </p>
                   <p className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream">
@@ -127,7 +127,7 @@ export default async function ContatoPage() {
       </div>
 
       <Container className="mt-6 pb-8 lg:mt-0 lg:pb-12">
-        <h2 className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+        <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream/80">
           Outros canais
         </h2>
         <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
@@ -137,7 +137,7 @@ export default async function ContatoPage() {
           >
             <p className="font-display font-semibold">{publicSite.address}</p>
             {physical ? null : (
-              <p className="mt-2 text-sm font-normal leading-relaxed text-muted">
+              <p className="mt-2 text-sm font-normal leading-relaxed text-cream/80">
                 Não temos showroom físico. Você escolhe no site, tira dúvidas e
                 pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
                 ou retirada. Atendimento online todos os dias, das 8h às 23h, em{" "}
@@ -159,7 +159,7 @@ export default async function ContatoPage() {
             <p className="break-all font-display font-semibold">
               {publicSite.email}
             </p>
-            <p className="mt-1 text-xs font-normal leading-relaxed text-muted">
+            <p className="mt-1 text-xs font-normal leading-relaxed text-cream/75">
               {emailCopy.hint}
             </p>
           </Channel>
@@ -170,7 +170,7 @@ export default async function ContatoPage() {
               <dl className="space-y-1.5">
                 {hourRows.map((row) => (
                   <div key={row.label} className="flex justify-between gap-4">
-                    <dt className="font-normal text-muted">{row.label}</dt>
+                    <dt className="font-normal text-cream/75">{row.label}</dt>
                     <dd className="font-display font-semibold">{row.value}</dd>
                   </div>
                 ))}
@@ -179,7 +179,7 @@ export default async function ContatoPage() {
           </Channel>
         </div>
 
-        <p className="mt-6 text-xs leading-relaxed text-muted">
+        <p className="mt-6 text-xs leading-relaxed text-cream/75">
           {publicSite.legalName} — CNPJ {publicSite.cnpj}
         </p>
       </Container>
@@ -200,12 +200,14 @@ function Channel({
   className?: string;
   children: ReactNode;
 }) {
-  const classNames = `block min-h-[52px] border border-white/10 bg-ink px-3 py-3 text-left text-sm leading-snug text-cream touch-manipulation ${
-    href ? "transition hover:border-brand" : ""
+  const classNames = `block min-h-[52px] border border-white/20 bg-ink px-3 py-3 text-left text-sm leading-snug text-cream touch-manipulation ${
+    href
+      ? "transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      : ""
   } ${className}`;
   const body = (
     <>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cream/75">
         {label}
       </p>
       <div className="mt-1">{children}</div>

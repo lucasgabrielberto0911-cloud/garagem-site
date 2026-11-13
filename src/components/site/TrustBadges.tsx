@@ -14,7 +14,7 @@ const BADGES = [
 
 export function TrustBadges({ compact = false }: { compact?: boolean }) {
   return (
-    <ul className="mx-auto grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 lg:grid-cols-4">
+    <ul className="mx-auto grid grid-cols-2 gap-px overflow-hidden border border-white/20 bg-white/20 lg:grid-cols-4">
       {BADGES.map(({ Icon, label }) => (
         <li
           key={label}
@@ -30,8 +30,8 @@ export function TrustBadges({ compact = false }: { compact?: boolean }) {
           <span
             className={`font-display font-semibold uppercase text-cream ${
               compact
-                ? "text-[10px] leading-tight tracking-wide sm:text-xs"
-                : "text-[11px] tracking-wider sm:text-sm"
+                ? "text-xs leading-tight tracking-wide"
+                : "text-xs tracking-wider sm:text-sm"
             }`}
           >
             {label}

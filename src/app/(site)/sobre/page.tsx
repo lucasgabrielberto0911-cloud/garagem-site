@@ -91,7 +91,7 @@ export default async function SobrePage() {
           description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region}.`}
         />
 
-        <p className="mx-auto mt-6 max-w-3xl border border-white/10 bg-ink px-4 py-3 text-center text-sm leading-relaxed text-muted">
+        <p className="mx-auto mt-6 max-w-3xl border border-white/20 bg-ink px-4 py-3 text-center text-sm leading-relaxed text-cream/80">
           <span className="font-semibold text-cream">Elias Netto</span>, dono e sócio-administrador
           {" · "}
           {publicSite.legalName}
@@ -101,7 +101,7 @@ export default async function SobrePage() {
 
         <FounderSection photoUrl={siteContent.founderPhotoUrl} />
 
-        <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
+        <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/20 sm:mt-12 sm:aspect-[16/9]">
           {/* eslint-disable-next-line @next/next/no-img-element -- estático, sem cota /_next/image */}
           <img
             src="/branding/hero-bg.webp"
@@ -119,14 +119,14 @@ export default async function SobrePage() {
             <p className="font-display text-base font-semibold text-cream sm:text-xl">
               Procedência. Clareza. Resultado.
             </p>
-            <p className="mx-auto mt-1.5 max-w-lg text-xs text-cream/75 sm:mt-2 sm:text-sm">
+            <p className="mx-auto mt-1.5 max-w-lg text-xs text-cream/85 sm:mt-2 sm:text-sm">
               Compra, venda, troca e financiamento com o rigor de quem trata
               cada negócio com seriedade — do primeiro contato à entrega.
             </p>
           </div>
         </div>
 
-        <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
+        <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/20 bg-white/20 sm:grid-cols-4">
           {highlightStats.map((stat) => (
             <li
               key={stat.label}
@@ -135,7 +135,7 @@ export default async function SobrePage() {
               <p className="font-display text-2xl font-bold text-brand-light sm:text-3xl">
                 {stat.value}
               </p>
-              <p className="mt-2 text-[11px] uppercase tracking-wider text-muted">
+              <p className="mt-2 text-xs uppercase tracking-wider text-cream/75">
                 {stat.label}
               </p>
             </li>
@@ -151,7 +151,7 @@ export default async function SobrePage() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="inline-flex min-h-[40px] shrink-0 items-center border border-white/10 px-3 font-display text-xs font-semibold uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream lg:w-full"
+                className="inline-flex min-h-11 shrink-0 items-center border border-white/20 px-3 font-display text-xs font-semibold uppercase tracking-wider text-cream/80 transition hover:border-brand hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:w-full"
               >
                 {item.label}
               </a>
@@ -168,7 +168,7 @@ export default async function SobrePage() {
                   className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
                   aria-hidden="true"
                 />
-                <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
+                <div className="mt-5 space-y-4 text-sm leading-relaxed text-cream/80">
                   <p>
                     A {publicSite.name} nasceu da paixão por veículos e da vontade de
                     fazer diferente: vender seminovo com informação clara, respeito
@@ -200,7 +200,7 @@ export default async function SobrePage() {
                   className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
                   aria-hidden="true"
                 />
-                <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
+                <div className="mt-5 space-y-4 text-sm leading-relaxed text-cream/80">
                   <p>
                     <strong className="font-display font-semibold text-cream">
                       Missão.
@@ -236,7 +236,7 @@ export default async function SobrePage() {
                 className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
                 aria-hidden="true"
               />
-              <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-muted lg:mx-0 lg:text-left">
+              <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-cream/80 lg:mx-0 lg:text-left">
                 Qualidade e atendimento não são slogan: são o jeito como fechamos
                 cada negócio. Você merece clareza, agilidade e um time que resolve.
               </p>
@@ -244,7 +244,7 @@ export default async function SobrePage() {
                 {DIFERENCIAIS.map(({ Icon, title, text }) => (
                   <li
                     key={title}
-                    className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center lg:items-start lg:text-left"
+                    className="flex flex-col items-center border border-white/20 bg-ink p-6 text-center lg:items-start lg:text-left"
                   >
                     <span className="inline-flex h-11 w-11 items-center justify-center bg-brand/10">
                       <Icon className="h-5 w-5 text-brand-light" />
@@ -252,7 +252,7 @@ export default async function SobrePage() {
                     <h3 className="mt-5 font-display text-base font-semibold text-cream">
                       {title}
                     </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-muted">{text}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-cream/80">{text}</p>
                   </li>
                 ))}
               </ul>
@@ -294,7 +294,7 @@ export default async function SobrePage() {
                     <h3 className="mt-2 font-display text-base font-semibold text-cream">
                       {item.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted">
+                    <p className="mt-2 text-sm leading-relaxed text-cream/80">
                       {item.text}
                     </p>
                   </li>
@@ -308,32 +308,32 @@ export default async function SobrePage() {
 
             <div
               id="dados"
-              className="mt-12 scroll-mt-28 border border-white/10 bg-ink p-6 text-center lg:text-left"
+              className="mt-12 scroll-mt-28 border border-white/20 bg-ink p-6 text-center lg:text-left"
             >
               <h2 className="font-display text-base font-semibold text-cream">
                 Dados da empresa
               </h2>
               <dl className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wider text-muted">
+                  <dt className="text-xs uppercase tracking-wider text-cream/75">
                     Razão social
                   </dt>
                   <dd className="mt-1 text-sm text-cream">{publicSite.legalName}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wider text-muted">
+                  <dt className="text-xs uppercase tracking-wider text-cream/75">
                     CNPJ
                   </dt>
                   <dd className="mt-1 text-sm text-cream">{publicSite.cnpj}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wider text-muted">
+                  <dt className="text-xs uppercase tracking-wider text-cream/75">
                     Atendimento
                   </dt>
                   <dd className="mt-1 text-sm text-cream">{publicSite.address}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wider text-muted">
+                  <dt className="text-xs uppercase tracking-wider text-cream/75">
                     Instagram
                   </dt>
                   <dd className="mt-1 text-sm">
@@ -341,7 +341,7 @@ export default async function SobrePage() {
                       href={publicSite.instagramUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-brand-light underline-offset-4 transition hover:underline"
+                      className="inline-flex min-h-11 items-center text-brand-light underline-offset-4 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     >
                       {publicSite.instagram}
                     </a>
