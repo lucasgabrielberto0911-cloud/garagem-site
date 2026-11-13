@@ -45,6 +45,8 @@ npx tsx --test src/lib/public-stock-revalidate.test.ts
 | Admin IA | `admin-ia.spec.ts` (mock NVIDIA no CI) |
 | Links / 404 | `links.spec.ts`, `pagina-404.spec.ts` |
 
+Fotos no navegador: `stubPageFotos(page)` em `e2e/stub-fotos.ts`. Spec nova não deve baixar Storage.
+
 Rodar um spec:
 
 ```bash

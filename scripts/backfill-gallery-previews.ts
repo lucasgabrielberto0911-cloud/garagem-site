@@ -3,6 +3,7 @@ import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { backfillLegacyGallery, legacyGalleryPlan, type LegacyGalleryReceipt } from "../src/lib/legacy-gallery-preview";
+import { assertSafeDatabaseUrl } from "../src/lib/safe-database-url";
 import { getSupabaseAdmin, VEHICLE_PHOTOS_BUCKET } from "../src/lib/supabase";
 
 const args = process.argv.slice(2);
@@ -14,6 +15,7 @@ if (args.some(arg => !/^--(?:apply|dry-run)$|^--(?:limit|after|report|rollback)=
 if (apply && args.includes("--dry-run")) throw new Error("Escolha --apply ou --dry-run.");
 
 async function main() {
+  assertSafeDatabaseUrl();
   const prisma = new PrismaClient();
   try {
     const rollback = option("rollback");

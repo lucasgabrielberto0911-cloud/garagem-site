@@ -14,7 +14,9 @@ import { customerSearchWhere } from "../src/lib/admin-customer-search";
 import { sessionFingerprint } from "../src/lib/admin-session-fingerprint";
 import { withAdminStorageLock } from "../src/lib/admin-storage-lock";
 import { lockCustomerIdentity } from "../src/lib/admin-customer-lock";
+import { assertSafeDatabaseUrl } from "../src/lib/safe-database-url";
 
+assertSafeDatabaseUrl();
 const url = new URL(process.env.DATABASE_URL || "postgresql://invalid/invalid");
 if (
   !["127.0.0.1", "localhost"].includes(url.hostname) ||

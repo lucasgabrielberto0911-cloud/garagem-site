@@ -9,6 +9,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { storeCardThumbnail } from "../src/lib/photo-thumbnails";
+import { assertSafeDatabaseUrl } from "../src/lib/safe-database-url";
 
 const prisma = new PrismaClient();
 
@@ -23,6 +24,7 @@ function hasFlag(name: string) {
 }
 
 async function main() {
+  assertSafeDatabaseUrl();
   const dryRun = hasFlag("dry-run");
   const limit = Math.max(1, Number(arg("limit") || 80) || 80);
 

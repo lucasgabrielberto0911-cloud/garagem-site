@@ -1,6 +1,6 @@
 import { test as base, expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
 import samples from "./public-samples.json";
+import { stubPageFotos } from "./stub-fotos";
 import { vehiclePath } from "../src/lib/vehicle-slug";
 
 const civic = samples[0];
@@ -11,8 +11,7 @@ const test = base.extend<{ browserErrors: string[] }>({
     page.on("pageerror", error => errors.push(error.message));
     page.on("console", msg => { if (msg.type() === "error" && /hydration|React error|did not match/i.test(msg.text())) errors.push(msg.text()); });
     // Fotos são fixtures offline; navegação, API, SSR e consultas usam o app/banco reais.
-    const image = readFileSync("public/branding/placeholder-car.png");
-    await page.route("**/fotos/**", route => route.fulfill({ contentType: "image/png", body: image }));
+    await stubPageFotos(page);
     await use(errors);
     expect(errors, "Erros de JS/hidratação no percurso").toEqual([]);
   }, { auto: true }],

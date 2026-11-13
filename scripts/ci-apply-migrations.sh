@@ -6,6 +6,18 @@ set -euo pipefail
 export PGOPTIONS="-c client_min_messages=warning"
 cd "$(dirname "$0")/.."
 : "${DATABASE_URL:?defina DATABASE_URL}"
+assert_safe_database_url() {
+  if [ "${ALLOW_REMOTE_DB:-}" = "1" ]; then
+    return 0
+  fi
+  case "${DATABASE_URL}" in
+    *supabase.co*|*supabase.com*)
+      echo "Segurança: recusado DATABASE_URL de produção (Supabase). Use Postgres local ou ALLOW_REMOTE_DB=1." >&2
+      exit 1
+      ;;
+  esac
+}
+assert_safe_database_url
 url=${DATABASE_URL%%\?*}
 psql "$url" -v ON_ERROR_STOP=1 -q <<'SQL'
 DO $$ BEGIN

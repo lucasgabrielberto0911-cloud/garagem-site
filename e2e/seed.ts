@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import samples from "./public-samples.json";
+import { assertSafeDatabaseUrl } from "../src/lib/safe-database-url";
 import { SEED_TESTIMONIALS } from "../src/lib/testimonials-seed";
 
+assertSafeDatabaseUrl();
 // Fixtures ficam exclusivamente no Postgres local/efêmero do CI.
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
 if (process.env.E2E_TEST !== "1" || !["127.0.0.1", "localhost", "[::1]"].includes(database.hostname) || !["/ci", "/garagem_e2e"].includes(database.pathname)) {

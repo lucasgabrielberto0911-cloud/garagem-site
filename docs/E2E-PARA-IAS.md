@@ -31,7 +31,7 @@ Banco: **localhost**, nome `ci` ou `garagem_e2e` — nunca produção.
 
 ## Fotos no E2E
 
-Interceptar `**/fotos/**` com `public/branding/placeholder-car.png` (ver `e2e/sold-photo-paint.spec.ts`). Servidor Node também usa fixture com `E2E_TEST=1`.
+Use `stubPageFotos(page)` de `e2e/stub-fotos.ts` (fixture `public/branding/placeholder-car.png`). Cobre `/fotos`, `/api/fotos`, `/api/catalog-jpg`, Storage do Supabase e Blob. Não copie `page.route("**/fotos/**")` em spec nova. Servidor Node também usa fixture com `E2E_TEST=1`.
 
 ## Viewports
 
