@@ -61,19 +61,21 @@ test("desktop: ficha técnica e opcionais na coluna principal, card só com o es
   const aside = page.locator("[data-ficha-page] aside");
   await expect(aside).toBeVisible();
 
-  // A grade de specs fica fora do card, sempre aberta abaixo das fotos, com a ficha completa.
+  // A ficha técnica fica fora do card, abaixo das fotos, e só traz o que o card não mostra (motor, portas...).
+  // O carro de teste não tem dado extra: sem grade, sobra só o "Anunciado hoje" com a âncora #especificacoes.
   await expect(aside.locator("[data-ficha-spec-grid]")).toHaveCount(0);
-  const specs = page.locator("[data-ficha-spec-grid]");
-  await expect(specs).toBeVisible();
-  const [fotos, grade, painel] = await Promise.all([
+  await expect(page.locator("[data-ficha-spec-grid]")).toHaveCount(0);
+  const secao = page.locator('section[data-ficha-section="especificacoes"]');
+  await expect(secao).toContainText(/Anunciado/);
+  const [fotos, linha, painel] = await Promise.all([
     page.locator("#fotos").boundingBox(),
-    specs.boundingBox(),
+    secao.boundingBox(),
     aside.boundingBox(),
   ]);
-  expect(grade!.y).toBeGreaterThan(fotos!.y + fotos!.height - 1);
-  expect(grade!.x + grade!.width).toBeLessThanOrEqual(painel!.x);
-  await expect(page.locator("details", { has: specs })).toHaveCount(0);
-  await expect(specs.locator("dt")).toContainText(["Ano", "km", "Câmbio", "Combustível", "Cor"]);
+  expect(linha!.y).toBeGreaterThan(fotos!.y + fotos!.height - 1);
+  expect(linha!.x + linha!.width).toBeLessThanOrEqual(painel!.x);
+  // Nada repetido: ano, km, câmbio, combustível e cor ficam só no card; a seção da ficha não os lista.
+  await expect(secao.locator("dt")).toHaveCount(0);
 
   // Topo do card: preço em vermelho, quadradinhos e a cor em linha própria.
   const preco = aside.locator("[data-ficha-price]");
@@ -100,11 +102,9 @@ test("desktop: ficha técnica e opcionais na coluna principal, card só com o es
   await expect(aside).not.toContainText(/parcela|simul/i);
   await expect(aside.getByRole("button", { name: "Copiar link do anúncio" })).toHaveCount(0);
 
-  // O selo "19 opcionais" do card leva à lista na coluna principal.
-  const atalho = aside.getByRole("link", { name: "19 opcionais", exact: true });
-  await expect(atalho).toBeVisible();
-  await atalho.click();
-  await expect(page.locator("#opcionais-desktop")).toBeInViewport();
+  // A contagem fica no título da lista; o card não repete o selo "19 opcionais".
+  await expect(aside.getByRole("link", { name: "19 opcionais", exact: true })).toHaveCount(0);
+  await expect(page.locator("#opcionais-desktop")).toContainText("19 opcionais");
 
   // Clicar num opcional não rola a página para cima.
   const chip = page.locator("#opcionais-desktop [data-accessory-chip]").last();
