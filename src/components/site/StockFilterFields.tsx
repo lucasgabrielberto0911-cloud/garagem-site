@@ -116,7 +116,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                 </select>
               </MobileField>
               <div>
-                <p id={priceLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                <p id={priceLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-cream/80">
                   Faixa de preço
                 </p>
                 <div role="group" aria-labelledby={priceLabelId} className="flex flex-wrap gap-2">
@@ -170,12 +170,12 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                 </select>
               </MobileField>
               <details
-                className="border border-white/10 bg-asphalt/30 px-3.5 py-1"
+                className="border border-white/20 bg-asphalt/30 px-3.5 py-1"
                 open={Boolean(draft.fuel || draft.color || draft.accessory || draft.laudo)}
               >
-                <summary className="flex min-h-[48px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream [&::-webkit-details-marker]:hidden">
+                <summary className="flex min-h-[48px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
                   Mais opções
-                  <span className="ml-auto text-[10px] font-medium normal-case tracking-wide text-muted">
+                  <span className="ml-auto text-xs font-medium normal-case tracking-wide text-cream/75">
                     cor, combustível e acessórios
                   </span>
                 </summary>
@@ -206,7 +206,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   ) : null}
                   {(facets.accessories ?? []).length > 0 ? (
                     <div>
-                      <p id={accessoryLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                      <p id={accessoryLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-cream/80">
                         Acessórios
                       </p>
                       <AccessoryChips
@@ -222,7 +222,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                       />
                     </div>
                   ) : null}
-                  <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 text-sm text-cream">
+                  <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/20 bg-asphalt px-3.5 text-sm text-cream">
                     <input
                       type="checkbox"
                       checked={Boolean(draft.laudo)}
@@ -236,8 +236,8 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                 </div>
               </details>
             </div>
-            <div className="shrink-0 border-t border-white/10 bg-ink px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:px-5">
-              {rangeError ? <p role="alert" className="mb-2 text-sm text-brand-light">{rangeError}</p> : draftFilterCount > 0 ? <p role="status" className="mb-2 text-xs text-muted">{draftFilterCount} {draftFilterCount === 1 ? "filtro selecionado" : "filtros selecionados"}</p> : null}
+            <div className="shrink-0 border-t border-white/20 bg-ink px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:px-5">
+              {rangeError ? <p role="alert" className="mb-2 text-sm text-brand-light">{rangeError}</p> : draftFilterCount > 0 ? <p role="status" className="mb-2 text-xs text-cream/80">{draftFilterCount} {draftFilterCount === 1 ? "filtro selecionado" : "filtros selecionados"}</p> : null}
               <div className="grid grid-cols-[auto_1fr] gap-3">
                 <button
                   type="button"
@@ -260,7 +260,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                       maxKm: "",
                     })
                   }
-                  className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted disabled:opacity-40"
+                  className="min-h-[52px] border border-white/25 px-5 font-display text-xs font-semibold uppercase tracking-wide text-cream/85 transition hover:border-brand hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40"
                 >
                   Limpar
                 </button>
@@ -271,7 +271,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                     onApply();
                   }}
                   disabled={Boolean(rangeError)}
-                  className="min-h-[52px] bg-brand px-3 font-display text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50"
+                  className="min-h-[52px] bg-brand px-3 font-display text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:opacity-50"
                 >
                   {typeof resultCount === "number" ? `Ver ${resultCount} ${resultCount === 1 ? "veículo" : "veículos"}` : "Ver veículos"}
                 </button>
@@ -285,7 +285,7 @@ function MobileField({ label, children }: { label: string; children: ReactNode }
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted">
+      <label htmlFor={id} className="mb-2 block text-xs font-medium uppercase tracking-wider text-cream/80">
         {label}
       </label>
       {isValidElement<{ id?: string }>(children) ? cloneElement(children, { id }) : children}
