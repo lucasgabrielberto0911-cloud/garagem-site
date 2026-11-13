@@ -115,7 +115,7 @@ export function SiteHeader() {
   return (
     <>
       {/* Asfalto sólido. Com 98% a foto da ficha vazava no zoom, sem o desfoque. */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt pt-safe pl-safe pr-safe">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/15 bg-asphalt pt-safe pl-safe pr-safe">
         <div
           data-site-container=""
           className="mx-auto flex h-[72px] w-full max-w-[90rem] items-center gap-3 px-4 sm:gap-5 sm:px-6 lg:h-[76px] lg:gap-8 lg:px-8 xl:gap-10"
@@ -123,7 +123,7 @@ export function SiteHeader() {
           <Link
             href="/"
             prefetch={false}
-            className="site-header-brand flex shrink-0 items-center focus-visible:outline-offset-4"
+            className="site-header-brand flex shrink-0 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-offset-4"
             aria-label={`${site.name} — página inicial`}
           >
             <SiteWordmark
@@ -148,8 +148,8 @@ export function SiteHeader() {
                   href={link.href}
                   prefetch={false}
                   aria-current={active ? "page" : undefined}
-                  className={`group relative shrink-0 whitespace-nowrap px-2.5 py-2.5 font-display text-[13px] font-semibold tracking-wide transition xl:px-3.5 xl:text-[14px] ${
-                    active ? "text-cream" : "text-cream/70 hover:text-cream"
+                  className={`group relative shrink-0 whitespace-nowrap px-2.5 py-2.5 font-display text-[13px] font-semibold tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand xl:px-3.5 xl:text-[14px] ${
+                    active ? "text-cream" : "text-cream/80 hover:text-cream"
                   }`}
                 >
                   {link.label}
@@ -169,7 +169,7 @@ export function SiteHeader() {
           <div className="ml-auto flex shrink-0 items-center justify-end gap-2 sm:gap-2.5 lg:ml-0 xl:gap-3">
             <a
               href={telUrl()}
-              className="hidden items-center gap-2 whitespace-nowrap text-sm text-cream/70 transition hover:text-cream xl:flex"
+              className="hidden items-center gap-2 whitespace-nowrap px-1.5 py-2 text-sm text-cream/80 transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand xl:flex"
             >
               <IconPhone className="h-4 w-4" />
               <span className="font-medium">{site.phoneLabel}</span>
@@ -187,7 +187,7 @@ export function SiteHeader() {
                 trackWhatsAppClick("header", whatsappRef);
                 trackCatalogWhatsAppClick(whatsapp.catalogParams);
               }}
-              className="hidden h-11 shrink-0 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark sm:inline-flex xl:px-4 xl:text-sm"
+              className="hidden h-11 shrink-0 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt sm:inline-flex xl:px-4 xl:text-sm"
             >
               <IconWhatsApp className="h-4 w-4" />
               WhatsApp
@@ -199,7 +199,7 @@ export function SiteHeader() {
               aria-expanded={open}
               aria-controls="menu-mobile"
               aria-label={open ? "Fechar menu" : "Abrir menu"}
-              className="inline-flex h-11 w-11 items-center justify-center border border-white/15 text-cream transition hover:border-brand touch-manipulation lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center border border-white/20 text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation lg:hidden"
             >
               {open ? (
                 <IconClose className="h-5 w-5" />
@@ -233,13 +233,13 @@ export function SiteHeader() {
             onClick={closeMenu}
             aria-hidden="true"
           />
-          <div className="relative mt-[calc(4.5rem+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+          <div className="relative mt-[calc(4.5rem+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/15 bg-asphalt animate-slide-up pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
             <nav className="px-5 py-4" aria-label="Menu mobile">
               <button
                 ref={closeButtonRef}
                 type="button"
                 onClick={closeMenu}
-                className="mb-3 flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-white/15 px-4 py-3 font-display text-base font-semibold text-cream transition active:bg-white/5 touch-manipulation"
+                className="mb-3 flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-white/25 px-4 py-3 font-display text-base font-semibold text-cream transition hover:border-brand active:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
               >
                 <IconClose className="h-5 w-5" />
                 {onVehiclePage ? "Fechar e voltar ao anúncio" : "Fechar"}
@@ -258,7 +258,7 @@ export function SiteHeader() {
                         replace
                         onClick={closeMenuForNavigation}
                         aria-current={active ? "page" : undefined}
-                        className={`flex min-h-[52px] items-center justify-center px-4 py-4 font-display text-base font-semibold transition touch-manipulation ${
+                        className={`flex min-h-[52px] items-center justify-center px-4 py-4 font-display text-base font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation ${
                           active
                             ? "bg-brand/10 text-cream"
                             : "text-cream active:bg-white/5"
@@ -271,7 +271,7 @@ export function SiteHeader() {
                 })}
               </ul>
 
-              <ul className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-white/10 px-4 pt-4">
+              <ul className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2 border-t border-white/15 px-4 pt-4">
                 {SECONDARY_LINKS.map((link) => (
                   <li key={link.href}>
                     <Link
@@ -279,7 +279,7 @@ export function SiteHeader() {
                       prefetch={false}
                       replace
                       onClick={closeMenuForNavigation}
-                      className="inline-flex min-h-[36px] items-center text-sm text-muted transition active:text-cream"
+                      className="inline-flex min-h-11 items-center px-2 text-sm text-cream/85 transition hover:text-cream active:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
                     >
                       {link.label}
                     </Link>
@@ -289,7 +289,7 @@ export function SiteHeader() {
 
               <InstallAppMenuItem onClose={closeMenu} />
 
-              <div className="mt-4 space-y-3 border-t border-white/10 pt-5">
+              <div className="mt-4 space-y-3 border-t border-white/15 pt-5">
                 <a
                   href={whatsappHref}
                   target="_blank"
@@ -299,7 +299,7 @@ export function SiteHeader() {
                     trackCatalogWhatsAppClick(whatsapp.catalogParams);
                     closeMenu();
                   }}
-                  className="flex min-h-[52px] w-full items-center justify-center gap-2.5 bg-[#25D366] px-4 py-4 font-display text-base font-semibold text-asphalt hover:bg-[#1fbe5a] touch-manipulation"
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2.5 bg-[#25D366] px-4 py-4 font-display text-base font-semibold text-asphalt transition hover:bg-[#1fbe5a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt touch-manipulation"
                 >
                   <IconWhatsApp className="h-5 w-5" />
                   Falar no WhatsApp
@@ -309,7 +309,7 @@ export function SiteHeader() {
                     key={phone.digits}
                     href={telUrl(index)}
                     onClick={closeMenu}
-                    className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand-light touch-manipulation"
+                    className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/60 px-4 py-4 font-display text-base font-semibold text-brand-light transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
                   >
                     <IconPhone className="h-5 w-5" />
                     <span>{phone.label}</span>

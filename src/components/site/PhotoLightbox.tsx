@@ -320,13 +320,13 @@ export function PhotoLightbox({
         onClick={onClose}
       />
 
-      <div className="relative z-[1] flex h-[100dvh] w-full max-w-7xl flex-col overflow-hidden bg-black pt-safe shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/10 sm:pt-0">
-        <header className="relative z-[2] flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/70 px-3 py-2.5 backdrop-blur sm:px-4">
+      <div className="relative z-[1] flex h-[100dvh] w-full max-w-7xl flex-col overflow-hidden bg-black pt-safe shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/20 sm:pt-0">
+        <header className="relative z-[2] flex shrink-0 items-center justify-between gap-3 border-b border-white/20 bg-black/70 px-3 py-2.5 backdrop-blur sm:px-4">
           <div className="min-w-0">
             <p id={titleId} className="truncate text-sm font-medium text-cream">
               {alt}
             </p>
-            <p className="text-[11px] uppercase tracking-wider text-cream/60">
+            <p className="text-xs uppercase tracking-wider text-cream/80">
               {safeIndex + 1} / {total}
             </p>
           </div>
@@ -339,7 +339,7 @@ export function PhotoLightbox({
                   resetZoom();
                 }}
                 aria-label="Resetar zoom para 1x"
-                className="flex h-11 items-center justify-center border border-white/20 px-2.5 font-display text-xs font-semibold text-cream transition hover:border-brand touch-manipulation"
+                className="flex h-11 items-center justify-center border border-white/25 px-2.5 font-display text-xs font-semibold text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
               >
                 1x
               </button>
@@ -351,7 +351,7 @@ export function PhotoLightbox({
                 toggleZoom();
               }}
               aria-label={scale > 1 ? "Reduzir zoom" : "Ampliar foto"}
-              className="flex h-11 w-11 items-center justify-center border border-white/20 text-cream transition hover:border-brand touch-manipulation"
+              className="flex h-11 w-11 items-center justify-center border border-white/25 text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
             >
               <ZoomIcon zoomed={scale > 1} />
             </button>
@@ -363,7 +363,7 @@ export function PhotoLightbox({
                 onClose();
               }}
               aria-label="Fechar galeria"
-              className="flex h-11 w-11 items-center justify-center border border-white/20 text-cream transition hover:border-brand touch-manipulation"
+              className="flex h-11 w-11 items-center justify-center border border-white/25 text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
             >
               <IconClose className="h-5 w-5" />
             </button>
@@ -405,7 +405,7 @@ export function PhotoLightbox({
               {photo ? <ZoomDetailImage photoId={photo.id} zoomed={scale > 1} alt={vehiclePhotoAlt(alt, safeIndex, total)} /> : null}
             </div>
           </div>
-          <p className="pointer-events-none absolute bottom-3 left-1/2 z-[2] hidden -translate-x-1/2 whitespace-nowrap bg-black/55 px-2.5 py-1 text-[11px] text-cream/70 backdrop-blur sm:block">
+          <p className="pointer-events-none absolute bottom-3 left-1/2 z-[2] hidden -translate-x-1/2 whitespace-nowrap bg-black/75 px-2.5 py-1 text-xs text-cream/85 backdrop-blur sm:block">
             {scale > 1
               ? "Arraste para mover · 0 ou 1x para resetar"
               : "Duplo clique ou scroll para zoom"}
@@ -421,7 +421,7 @@ export function PhotoLightbox({
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
                 aria-label="Foto anterior"
-                className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/55 text-cream backdrop-blur transition hover:border-brand active:border-brand touch-manipulation sm:left-[max(1rem,env(safe-area-inset-left,0px))] sm:h-14 sm:w-14"
+                className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/65 text-cream backdrop-blur transition hover:border-brand active:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation sm:left-[max(1rem,env(safe-area-inset-left,0px))] sm:h-14 sm:w-14"
               >
                 <Chevron direction="left" />
               </button>
@@ -433,7 +433,7 @@ export function PhotoLightbox({
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
                 aria-label="Próxima foto"
-                className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/55 text-cream backdrop-blur transition hover:border-brand active:border-brand touch-manipulation sm:right-[max(1rem,env(safe-area-inset-right,0px))] sm:h-14 sm:w-14"
+                className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/65 text-cream backdrop-blur transition hover:border-brand active:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation sm:right-[max(1rem,env(safe-area-inset-right,0px))] sm:h-14 sm:w-14"
               >
                 <Chevron direction="right" />
               </button>
@@ -442,7 +442,7 @@ export function PhotoLightbox({
         </div>
 
         {total > 1 ? (
-          <div className="relative z-[2] shrink-0 border-t border-white/10 bg-black/80 px-3 py-3 backdrop-blur sm:px-4 pb-safe">
+          <div className="relative z-[2] shrink-0 border-t border-white/20 bg-black/80 px-3 py-3 backdrop-blur sm:px-4 pb-safe">
             <div
               ref={thumbStripRef}
               className="flex gap-2 overflow-x-auto overscroll-x-contain scrollbar-hide [-webkit-overflow-scrolling:touch]"
@@ -460,10 +460,10 @@ export function PhotoLightbox({
                     onPointerDown={(event) => event.stopPropagation()}
                     aria-label={`Ver foto ${itemIndex + 1}`}
                     aria-current={itemIndex === safeIndex}
-                    className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition sm:h-16 sm:w-24 ${
+                    className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:h-16 sm:w-24 ${
                       itemIndex === safeIndex
                         ? "border-brand opacity-100"
-                        : "border-white/15 opacity-55 hover:opacity-100 active:opacity-100"
+                        : "border-white/25 opacity-65 hover:opacity-100 active:opacity-100"
                     }`}
                   >
                     <VehicleImage
