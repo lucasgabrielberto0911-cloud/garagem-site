@@ -41,6 +41,51 @@ export const OFFLINE_INTENT_TTL_MS: Record<OfflineIntent["type"], number> = {
 
 export const OFFLINE_CLAIM_LEASE_MS = 60_000;
 
+/** Avisa a tela (mesma aba) que a fila mudou, para a lista de pendências se atualizar. */
+export const OFFLINE_QUEUE_CHANGED_EVENT = "garagem:offline-queue-changed";
+
+function notifyQueueChanged() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(OFFLINE_QUEUE_CHANGED_EVENT));
+}
+
+export type PendingIntentView = {
+  id: string;
+  type: "whatsapp" | "sell";
+  title: string;
+  /** Quanto falta para o pedido expirar e ser descartado sem enviar. */
+  timeLeft: string;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function formatIntentTimeLeft(ms: number): string {
+  if (ms < DAY_MS) return "menos de 1 dia";
+  const days = Math.floor(ms / DAY_MS);
+  return days === 1 ? "1 dia" : `${days} dias`;
+}
+
+/** Pedidos que o visitante pode revisar. Favoritos são enviados em silêncio e não aparecem. Sem dados pessoais. */
+export function pendingIntentViews(
+  intents: readonly OfflineIntent[],
+  now = Date.now(),
+): PendingIntentView[] {
+  const views: PendingIntentView[] = [];
+  for (const item of intents) {
+    if (item.type !== "whatsapp" && item.type !== "sell") continue;
+    if (isIntentExpired(item, now)) continue;
+    views.push({
+      id: item.id,
+      type: item.type,
+      title:
+        item.type === "sell"
+          ? "Pedido de avaliação do seu carro"
+          : item.label?.trim() || "Recado de interesse para o WhatsApp",
+      timeLeft: formatIntentTimeLeft(item.createdAt + OFFLINE_INTENT_TTL_MS[item.type] - now),
+    });
+  }
+  return views;
+}
+
 export function isIntentExpired(
   intent: Pick<OfflineIntent, "type" | "createdAt">,
   now = Date.now(),
@@ -158,6 +203,7 @@ export async function enqueueIntent(intent: OfflineIntentDraft) {
     tx.onerror = () => reject(tx.error ?? new Error("IDB put"));
   });
   db.close();
+  notifyQueueChanged();
   return row;
 }
 
@@ -243,6 +289,7 @@ export async function deleteIntent(id: string) {
     tx.onerror = () => reject(tx.error ?? new Error("IDB delete"));
   });
   db.close();
+  notifyQueueChanged();
 }
 
 export type FavoriteSnapshot = {
