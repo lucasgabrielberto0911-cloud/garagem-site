@@ -20,7 +20,7 @@ type Job = {
   url?: string;
   error?: string;
 };
-const buttonClass = "min-h-11 rounded-lg border border-white/20 px-3 text-xs font-semibold text-cream transition hover:border-brand disabled:opacity-50";
+const buttonClass = "min-h-11 rounded-lg border border-white/25 px-3 text-xs font-semibold text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50";
 
 function createPreviewUrl(file: File): string | undefined {
   if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return undefined;
@@ -125,15 +125,15 @@ export function SellPhotoUpload({ disabled, onBusyChange, onUrlsChange }: { disa
   const atMaxPhotos = jobs.length >= MAX_SELL_PHOTOS;
   return <div data-sell-photo-upload="">
     <label htmlFor="photos" className="block">
-      <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Fotos do seu veículo <span className="normal-case font-normal">(opcional · até {MAX_SELL_PHOTOS} fotos)</span></span>
-      <span id="photos-hint" className="mb-3 block text-xs leading-relaxed text-muted">Ajudam na avaliação. Fotos de celular servem e ficam só no pedido, sem ir para o site.</span>
-      <span className={`flex min-h-[52px] items-center justify-center rounded-lg border border-dashed border-white/20 px-4 text-center font-display text-xs font-semibold uppercase tracking-wide text-cream ${busy || disabled || atMaxPhotos ? "opacity-60" : "hover:border-brand"}`}>{busy ? "Enviando suas fotos…" : atMaxPhotos ? `Limite de ${MAX_SELL_PHOTOS} fotos atingido` : "Escolher fotos"}</span>
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.1em] text-cream/85">Fotos do seu veículo <span className="normal-case font-normal text-cream/75">(opcional · até {MAX_SELL_PHOTOS} fotos)</span></span>
+      <span id="photos-hint" className="mb-3 block text-xs leading-relaxed text-cream/75">Ajudam na avaliação. Fotos de celular servem e ficam só no pedido, sem ir para o site.</span>
+      <span className={`flex min-h-[52px] items-center justify-center rounded-lg border border-dashed border-white/25 bg-asphalt/50 px-4 text-center font-display text-sm font-semibold uppercase tracking-wide text-cream ${busy || disabled || atMaxPhotos ? "opacity-60" : "cursor-pointer hover:border-brand"}`}>{busy ? "Enviando suas fotos…" : atMaxPhotos ? `Limite de ${MAX_SELL_PHOTOS} fotos atingido` : "Escolher fotos"}</span>
     </label>
     <input id="photos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple disabled={disabled || busy || atMaxPhotos} aria-describedby="photos-hint" className="sr-only"
       onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; select(files); }} />
     {limitNotice ? <p role="alert" className="mt-2 text-xs leading-relaxed text-brand-light">{limitNotice}</p> : null}
     <ul className="mt-3 space-y-3">
-      {jobs.map((job, index) => <li key={job.id} className="rounded-lg border border-white/15 bg-asphalt p-3" data-photo-phase={job.phase}>
+      {jobs.map((job, index) => <li key={job.id} className="rounded-lg border border-white/20 bg-asphalt p-3" data-photo-phase={job.phase}>
         <div className="flex items-start gap-3">
           {job.previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -147,7 +147,7 @@ export function SellPhotoUpload({ disabled, onBusyChange, onUrlsChange }: { disa
           ) : null}
           <div className="min-w-0 flex-1">
             <p className="break-words text-sm font-semibold leading-relaxed text-cream">Foto {index + 1} · {job.file.name}</p>
-            <p role="status" className="mt-1 text-xs leading-relaxed text-muted">{job.phase === "waiting" ? "Aguardando envio" : job.phase === "preparing" ? "Preparando a foto…" : job.phase === "uploading" ? `Enviando · ${job.percent}%` : job.phase === "saving" ? "Confirmando o envio…" : job.phase === "done" ? "Foto adicionada ao pedido" : job.error}</p>
+            <p role="status" className="mt-1 text-xs leading-relaxed text-cream/75">{job.phase === "waiting" ? "Aguardando envio" : job.phase === "preparing" ? "Preparando a foto…" : job.phase === "uploading" ? `Enviando · ${job.percent}%` : job.phase === "saving" ? "Confirmando o envio…" : job.phase === "done" ? "Foto adicionada ao pedido" : job.error}</p>
           </div>
         </div>
         {job.phase === "uploading" || job.phase === "saving" ? <progress max={100} value={job.percent} aria-label={`Progresso do envio da foto ${index + 1}`} className="mt-2 h-2 w-full accent-brand" /> : null}
@@ -158,7 +158,7 @@ export function SellPhotoUpload({ disabled, onBusyChange, onUrlsChange }: { disa
       </li>)}
     </ul>
     {busy ? <button type="button" onClick={() => controller.current?.abort()} className={buttonClass + " mt-3"}>Cancelar envio das fotos</button> : null}
-    {jobs.some(job => job.phase === "failed") ? <p className="mt-3 text-xs leading-relaxed text-muted">As fotos já adicionadas continuam no pedido. Tente de novo ou remova a foto que falhou. Só as fotos adicionadas seguem no pedido.</p> : null}
+    {jobs.some(job => job.phase === "failed") ? <p className="mt-3 text-xs leading-relaxed text-cream/75">As fotos já adicionadas continuam no pedido. Tente de novo ou remova a foto que falhou. Só as fotos adicionadas seguem no pedido.</p> : null}
     {jobs.flatMap(job => job.url ? [<input key={job.id} type="hidden" name="photoUrls" value={job.url} />] : [])}
   </div>;
 }
