@@ -96,14 +96,22 @@ function pushSentinel() {
   sentinelUrl = window.location.href;
 }
 
+// Recuo agendado da entrada extra. Se o formulário voltar a ficar sujo antes de ele rodar,
+// o recuo é cancelado e a mesma entrada é reaproveitada; senão o go(-1) consumiria a
+// entrada nova e seria lido como um Voltar do usuário, abrindo o diálogo sozinho.
+let pendingPop: { url: string; timer: number } | null = null;
+
 function popSentinel() {
   if (!sentinelUrl) return;
   const url = sentinelUrl;
   sentinelUrl = null;
   // Só desfaz se continuamos na mesma tela; se a rota mudou, a navegação já cuidou do histórico.
-  window.setTimeout(() => {
-    if (window.location.href === url && !leaving) window.history.go(-1);
+  const timer = window.setTimeout(() => {
+    pendingPop = null;
+    if (dirtyCount === 0 && window.location.href === url && !leaving)
+      window.history.go(-1);
   }, 0);
+  pendingPop = { url, timer };
 }
 
 function onPopState(event: PopStateEvent) {
@@ -197,6 +205,16 @@ export function activateUnsavedGuard() {
   window.addEventListener("beforeunload", onBeforeUnload);
   document.addEventListener("click", onClick, true);
   window.addEventListener("popstate", onPopState, true);
+  if (pendingPop && window.location.href === pendingPop.url) {
+    clearTimeout(pendingPop.timer);
+    sentinelUrl = pendingPop.url;
+    pendingPop = null;
+    return;
+  }
+  if (pendingPop) {
+    clearTimeout(pendingPop.timer);
+    pendingPop = null;
+  }
   pushSentinel();
 }
 

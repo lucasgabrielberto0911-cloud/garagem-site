@@ -73,5 +73,10 @@ export function useSaleDraft(key: string, value: ReturnType<typeof saleDraftFiel
     if (!response.ok) { closed.current = false; throw new Error("Não foi possível descartar o rascunho. Tente novamente."); }
     setPending(false);
   }
-  return { ready, status, clear, retry: () => persist(latest.current) };
+  /** Venda já registrada: encerra o autosave e solta o aviso de saída, mesmo que o rascunho antigo não tenha sido apagado. */
+  function release() {
+    closed.current = true;
+    setPending(false);
+  }
+  return { ready, status, clear, release, retry: () => persist(latest.current) };
 }
