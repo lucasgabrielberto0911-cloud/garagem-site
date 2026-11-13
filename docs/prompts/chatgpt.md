@@ -1,7 +1,7 @@
 ```text
 Estou no repositório garagem-site (Next.js 16, loja Garagem).
 
-Leia AGENTS.md e docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md no repositório antes de sugerir mudanças.
+Leia docs/PRIMEIROS-PASSOS-IA.md, AGENTS.md e docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md no repositório antes de sugerir mudanças.
 
 Minha tarefa: [DESCREVA]
 

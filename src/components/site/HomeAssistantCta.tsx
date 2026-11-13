@@ -55,8 +55,8 @@ export function HomeAssistantAsk() {
   }
 
   return (
-    <div className="w-full sm:border sm:border-white/10 sm:bg-asphalt/70 sm:p-3 lg:px-2 lg:py-3">
-      <label htmlFor="home-assistant-input" className="mb-1.5 hidden text-[13px] lg:mb-2.5 font-medium leading-tight text-muted sm:block cursor-pointer">Pergunte qualquer coisa sobre nossos carros</label>
+    <div className="w-full sm:border sm:border-white/20 sm:bg-asphalt/70 sm:p-3 lg:px-2 lg:py-3">
+      <label htmlFor="home-assistant-input" className="mb-1.5 hidden text-[13px] lg:mb-2.5 font-medium leading-tight text-cream/80 sm:block cursor-pointer">Pergunte qualquer coisa sobre nossos carros</label>
       <form onSubmit={submit} className="hidden items-center gap-2 sm:flex">
         <input
           id="home-assistant-input"
@@ -67,9 +67,9 @@ export function HomeAssistantAsk() {
           enterKeyHint="send"
           autoComplete="off"
           placeholder="Ex.: tem SUV automático?"
-          className="h-10 min-w-0 flex-1 lg:h-11 border border-white/15 bg-ink px-3 text-[16px] text-cream placeholder:text-muted focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm"
+          className="h-10 min-w-0 flex-1 lg:h-11 border border-white/25 bg-ink px-3 text-[16px] text-cream placeholder:text-cream/60 focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm"
         />
-        <button type="submit" aria-label="Enviar pergunta ao assistente" className="flex h-10 w-10 lg:h-11 lg:w-11 shrink-0 items-center justify-center bg-brand text-cream transition hover:bg-brand-dark touch-manipulation">
+        <button type="submit" aria-label="Enviar pergunta ao assistente" className="flex h-10 w-10 lg:h-11 lg:w-11 shrink-0 items-center justify-center bg-brand text-cream transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream touch-manipulation">
           <IconSend className="h-4 w-4" />
         </button>
       </form>
@@ -83,7 +83,7 @@ export function HomeAssistantAsk() {
             key={suggestion}
             type="button"
             onClick={() => openAssistant("home-hero-sugestao", suggestion)}
-            className="inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-full border border-white/15 bg-asphalt/60 px-3.5 text-[12px] lg:px-3 lg:text-[11.5px] leading-none text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation"
+            className="inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-full border border-white/25 bg-ink px-3.5 text-[13px] font-medium lg:px-3 lg:text-xs leading-none text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
           >
             {suggestion}
           </button>

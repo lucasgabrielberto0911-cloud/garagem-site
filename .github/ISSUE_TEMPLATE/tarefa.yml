@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Antes de abrir: AGENTS.md, docs/README.md, guia da área em docs/areas/. Confira PRs abertos na mesma área.
+        Antes de abrir: docs/PRIMEIROS-PASSOS-IA.md, AGENTS.md, docs/README.md, guia da área em docs/areas/. Confira PRs abertos (`gh pr list` e `scripts/agentes-conflitos.sh`).
   - type: dropdown
     id: area
     attributes:
@@ -30,6 +30,7 @@ body:
         - humano
         - agente:cursor
         - agente:claude
+        - agente:antigravity
         - agente:codex
         - grok-bot
     validations:

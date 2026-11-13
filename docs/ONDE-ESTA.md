@@ -15,6 +15,8 @@ Use `rg -n "termo" caminho` (ou o buscador do editor). Tabela de atalhos para ta
 | Leads / pedido | `src/app/admin/leads/`, `(site)/pedido/`, `src/lib/leads.ts` |
 | Home | `src/app/(catalog)/page.tsx` |
 | CI / Vercel | `.github/workflows/ci.yml`, `vercel.json`, `scripts/vercel-ignore.sh` |
+| Conflito entre agentes | `scripts/agentes-conflitos.sh`, `.agentes/em-andamento.md` |
+| Loop para IAs | `docs/PRIMEIROS-PASSOS-IA.md`, `docs/runbooks/ambiente-agente.md` |
 | URLs de fotos públicas | `src/lib/public-photo-url.ts`, `src/app/fotos/` |
 | Upload / R2 | `src/lib/r2-photos.ts`, `src/app/api/upload/` |
 | SEO metadata / JSON-LD | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts` |

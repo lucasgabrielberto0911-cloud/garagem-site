@@ -179,7 +179,7 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
     })));
     setBusy(false);
     if (!response.ok) { setError(response.message); return; }
-    try { await recovery.clear(); } catch { /* A venda já foi registrada; uma recuperação antiga será conferida pelo servidor. */ }
+    try { await recovery.clear(); } catch { /* A venda já foi registrada; uma recuperação antiga será conferida pelo servidor. */ recovery.release(); }
     setResult({ saleId: response.saleId!, contractId: response.contractId!, receiptId: response.receiptId, proposalId: response.proposalId });
     router.refresh();
   }

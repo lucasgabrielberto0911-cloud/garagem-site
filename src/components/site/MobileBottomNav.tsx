@@ -47,7 +47,7 @@ export function MobileBottomNav() {
     <nav
       data-mobile-bottom-nav=""
       aria-label="Navegação rápida"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt shadow-[0_-8px_30px_rgba(0,0,0,0.35)] pl-safe pr-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/20 bg-asphalt shadow-[0_-8px_30px_rgba(0,0,0,0.35)] pl-safe pr-safe lg:hidden"
     >
       <ul className="mx-auto flex max-w-lg items-stretch pb-safe">
         {ITEMS.slice(0, 2).map((item) => (
@@ -63,7 +63,7 @@ export function MobileBottomNav() {
             rel="noopener noreferrer"
             aria-label="Abrir WhatsApp da Garagem"
             onClick={() => trackWhatsAppClick("nav-mobile")}
-            className="-mt-3 flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 touch-manipulation"
+            className="-mt-3 flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cream"
           >
             <span className="whatsapp-pulse flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-asphalt shadow-lg shadow-green-500/30">
               <IconWhatsApp className="h-7 w-7" />
@@ -99,8 +99,8 @@ function NavItem({
         href={href}
         prefetch={false}
         aria-current={active ? "page" : undefined}
-        className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition touch-manipulation ${
-          active ? "text-cream" : "text-muted active:text-cream"
+        className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand touch-manipulation ${
+          active ? "text-cream" : "text-cream/75 active:text-cream"
         }`}
       >
         <Icon className="h-5 w-5" />

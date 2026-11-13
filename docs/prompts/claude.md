@@ -1,9 +1,9 @@
 ```text
 Claude Code — projeto garagem-site.
 
-Siga AGENTS.md (importado em CLAUDE.md). Documentação: docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md.
+Siga AGENTS.md (importado em CLAUDE.md). Comece em docs/PRIMEIROS-PASSOS-IA.md. Mapa: docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md.
 
-Branch claude/<tema>. Draft PR em português. Grok Bot faz merge.
+Branch claude/<tema>. Draft PR em português. Grok Bot faz merge. Conflitos: bash scripts/agentes-conflitos.sh. Quadro: .agentes/em-andamento.md.
 
 Tarefa: [DESCREVA]
 Área: [AREA] — guia em docs/areas/

@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { requestChatReply } from "./chat-client-request";
+import {
+  CHAT_NETWORK_FAILURE,
+  CHAT_OFFLINE_FAILURE,
+  CHAT_TIMEOUT_FAILURE,
+  ChatRequestError,
+  chatFailureMessage,
+  requestChatReply,
+} from "./chat-client-request";
 import { encodeSse } from "./chat-stream";
 const response = (body: string, status = 200, type = "text/event-stream") =>
   (async () =>
@@ -123,4 +130,17 @@ test("done conclui a resposta mesmo se a conexão não fechar, e libera o leitor
   const result = await requestChatReply({}, signal(), () => {}, fetcher);
   assert.equal(result.reply, "Resposta completa");
   assert.equal(cancelled, true);
+});
+
+test("falha do chat: servidor, offline, lentidão e rede têm mensagens próprias", () => {
+  assert.equal(chatFailureMessage(new ChatRequestError("Erro do servidor"), true), "Erro do servidor");
+  assert.equal(chatFailureMessage(new TypeError("Failed to fetch"), false), CHAT_OFFLINE_FAILURE);
+  assert.equal(chatFailureMessage("timeout", true), CHAT_TIMEOUT_FAILURE);
+  assert.equal(chatFailureMessage(new DOMException("x", "TimeoutError"), true), CHAT_TIMEOUT_FAILURE);
+  assert.equal(chatFailureMessage(new TypeError("Failed to fetch"), true), CHAT_NETWORK_FAILURE);
+  assert.match(chatFailureMessage(new Error("?"), true), /Não consegui concluir/);
+  assert.equal(
+    chatFailureMessage(new ChatRequestError("x"), true, (m) => m.toUpperCase()),
+    "X",
+  );
 });

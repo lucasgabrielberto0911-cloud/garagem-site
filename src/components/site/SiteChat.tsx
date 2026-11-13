@@ -52,7 +52,14 @@ import {
   chatMobileKeyboardCovered,
 } from "@/lib/chat-mobile-viewport";
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
-import { requestChatReply, ChatRequestError } from "@/lib/chat-client-request";
+import {
+  CHAT_NETWORK_FAILURE,
+  CHAT_OFFLINE_FAILURE,
+  CHAT_ONLINE_AGAIN,
+  CHAT_TIMEOUT_FAILURE,
+  chatFailureMessage,
+  requestChatReply,
+} from "@/lib/chat-client-request";
 import { readChatResearch } from "@/lib/chat-research-data";
 import {
   chatHeaderWhatsAppMessage,
@@ -652,6 +659,20 @@ export function SiteChat() {
     }
   }, [pageKey]);
 
+  // Quando a conexão volta, troca o aviso de rede por um convite a tentar de novo.
+  useEffect(() => {
+    const onOnline = () =>
+      setFailure((current) =>
+        current === CHAT_OFFLINE_FAILURE ||
+        current === CHAT_NETWORK_FAILURE ||
+        current === CHAT_TIMEOUT_FAILURE
+          ? CHAT_ONLINE_AGAIN
+          : current,
+      );
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, []);
+
   useEffect(() => {
     if (!restoredRef.current) return;
     if (pageKeyRef.current !== pageKey) return;
@@ -1085,10 +1106,7 @@ export function SiteChat() {
       if (requestRef.current !== active) return;
       setMessages(nextHistory);
       setDraft((current) => current || mensagem);
-      const reply =
-        error instanceof ChatRequestError
-          ? displayChatText(error.message)
-          : "Não consegui concluir a resposta. Sua mensagem ficou no campo para você tentar novamente.";
+      const reply = chatFailureMessage(error, navigator.onLine, displayChatText);
       setFailedMessage(mensagem);
       setFailure(reply);
     } finally {
