@@ -59,7 +59,7 @@ export async function SiteFooter() {
             <p className="mt-4 max-w-sm font-display text-base font-semibold leading-snug text-cream">
               Seminovos com procedência em {site.region}
             </p>
-            <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-cream/75">
               Loja 100% digital · atendimento online das 8h às 23h. Sem ponto
               físico: combinamos visita, entrega ou retirada pelo WhatsApp.
             </p>
@@ -67,7 +67,7 @@ export async function SiteFooter() {
               href={site.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex min-h-[40px] items-center gap-2 text-sm text-muted transition hover:text-cream"
+              className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm text-cream/80 transition hover:text-cream"
             >
               <IconInstagram className="h-4 w-4" />
               {site.instagram}
@@ -77,7 +77,7 @@ export async function SiteFooter() {
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-flex min-h-[40px] items-center gap-2 text-sm text-muted transition hover:text-cream"
+                className="mt-1 inline-flex min-h-11 items-center gap-2 text-sm text-cream/80 transition hover:text-cream"
               >
                 <IconMapPin className="h-4 w-4" />
                 Google Maps
@@ -202,7 +202,7 @@ export async function SiteFooter() {
             <ul className="mt-3 grid grid-cols-2 gap-2 text-left">
               {MOBILE_FOOTER_LINKS.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} prefetch={false} className="flex min-h-11 items-center border border-white/10 px-3 text-sm text-muted transition hover:text-cream">
+                  <Link href={link.href} prefetch={false} className="flex min-h-11 items-center border border-white/20 bg-asphalt/50 px-3 text-sm text-cream/85 transition hover:border-white/35 hover:text-cream">
                     {link.label}
                   </Link>
                 </li>
@@ -213,7 +213,7 @@ export async function SiteFooter() {
             <a
               key={phone.digits}
               href={telUrl(index)}
-              className="flex min-h-[48px] items-center justify-center gap-2 border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
+              className="flex min-h-[48px] items-center justify-center gap-2 border border-white/20 bg-asphalt/60 text-sm text-cream transition hover:border-white/35 touch-manipulation"
             >
               <IconPhone className="h-4 w-4 text-brand-light" />
               {phone.label}
@@ -221,7 +221,7 @@ export async function SiteFooter() {
           ))}
           <a
             href={`mailto:${site.email}`}
-            className="flex min-h-[48px] items-center justify-center gap-2 border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
+            className="flex min-h-[48px] items-center justify-center gap-2 border border-white/20 bg-asphalt/60 text-sm text-cream transition hover:border-white/35 touch-manipulation"
           >
             <IconMail className="h-4 w-4 text-brand-light" />
             {site.email}
@@ -229,11 +229,11 @@ export async function SiteFooter() {
           <Link
             href={CITIES_DIRECTORY_PATH}
             prefetch={false}
-            className="flex min-h-[48px] items-center justify-center border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
+            className="flex min-h-[48px] items-center justify-center border border-white/20 bg-asphalt/60 text-sm text-cream transition hover:border-white/35 touch-manipulation"
           >
             Ver cidades
           </Link>
-          <p className="pt-1 text-xs text-muted">{site.hours}</p>
+          <p className="pt-1 text-xs text-cream/75">{site.hours}</p>
         </div>
 
         <div className="mt-10 h-px w-full bg-white/10" aria-hidden="true" />

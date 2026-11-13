@@ -5,7 +5,7 @@ export async function StatsBar() {
   const { available, sales } = await getSiteStats();
 
   return (
-    <dl className="grid grid-cols-2 divide-x divide-white/10 border border-white/10 bg-ink">
+    <dl className="grid grid-cols-2 divide-x divide-white/15 border border-white/20 bg-ink">
       <Stat
         value={available}
         label="Veículos disponíveis agora"
@@ -37,12 +37,12 @@ function Stat({
       >
         <span aria-hidden="true">
           {formatNumberBR(value)}{" "}
-          <span className="align-middle font-body text-xs font-medium tracking-wide text-muted sm:text-[0.8125rem]">
+          <span className="align-middle font-body text-[13px] font-medium tracking-wide text-cream/75 sm:text-sm">
             {suffix}
           </span>
         </span>
       </dd>
-      <dt className="mt-1 text-xs uppercase tracking-wider text-muted sm:mt-1.5">
+      <dt className="mt-1 text-xs uppercase tracking-wider text-cream/75 sm:mt-1.5 sm:text-[13px]">
         {label}
       </dt>
     </div>
