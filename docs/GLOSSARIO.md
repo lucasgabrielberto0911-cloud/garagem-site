@@ -26,5 +26,7 @@ Termos usados no repositório, no painel e nas conversas com IAs. Em dúvida, o 
 | **Região atendida / cidades** | Páginas e textos de área comercial (ex. `/cidades`). **Não** confundir com cidade do veículo (só admin). |
 | **Jev / nota do anúncio** | IA opcional no admin (`JEV_API_KEY`); não trava salvamento se ausente. |
 | **Grok Bot** | Coordenador humano/bot que revisa CI/preview e faz merge; agentes não mergeiam na `main`. |
+| **Antigravity** | Agente Gemini local; branch `agy/<tema>`; regra 10 do `AGENTS.md`. |
+| **agentes-conflitos.sh** | Script que lista PRs abertos que tocam o mesmo caminho (`npm run agentes:conflitos`). Saída 2 = sobreposição. |
 
 Ver também: [`ANTI-PATTERNS.md`](ANTI-PATTERNS.md), [`GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](GUIA-PARA-IAS-E-DESENVOLVEDORES.md).

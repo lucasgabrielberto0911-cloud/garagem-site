@@ -4,9 +4,10 @@ Obrigado por contribuir. Este repositório é mantido por humanos e **vários ag
 
 ## Leitura obrigatória
 
-1. [`AGENTS.md`](AGENTS.md) — regras, produção, cache, marca, PRs.
-2. [`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md) — mapa do código.
-3. [`docs/README.md`](docs/README.md) — índice de toda a documentação.
+1. [`docs/PRIMEIROS-PASSOS-IA.md`](docs/PRIMEIROS-PASSOS-IA.md) — loop curto para IAs.
+2. [`AGENTS.md`](AGENTS.md) — regras, produção, cache, marca, PRs.
+3. [`docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md`](docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md) — mapa do código.
+4. [`docs/README.md`](docs/README.md) — índice de toda a documentação.
 
 ## Fluxo de código
 
@@ -29,10 +30,11 @@ E2E (quando mexer em UI): ver [`docs/E2E-PARA-IAS.md`](docs/E2E-PARA-IAS.md) e [
 | --- | --- | --- |
 | Cursor | `cursor/<tema>` | **Não** — Draft PR |
 | Claude | `claude/<tema>` | **Não** — Draft PR |
+| Antigravity | `agy/<tema>` | **Não** — Draft PR |
 | Codex | `codex/<tema>` | Só arquivos em `docs/pesquisas/` |
 | Humanos | convenção acima ou feature branch | Revisão + CI |
 
-Antes de começar: `gh pr list` — não duplicar área com PR aberto.
+Antes de começar: `gh pr list` e `bash scripts/agentes-conflitos.sh` — não duplicar área com PR aberto.
 
 Preview Vercel: label `preview` ou `[preview]` **no commit final** (ver `AGENTS.md`).
 

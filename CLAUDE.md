@@ -2,6 +2,8 @@ Você é o agente CLAUDE.
 
 @AGENTS.md
 
+Loop curto: `docs/PRIMEIROS-PASSOS-IA.md`. Conflitos: `bash scripts/agentes-conflitos.sh`.
+
 # Claude Code
 - Siga todas as regras do AGENTS.md acima.
 - Trabalhe em branch `claude/<tema>` e abra **Draft PR**. Nunca faça merge: o Grok Bot (coordenador) revisa CI/preview e mergeia.

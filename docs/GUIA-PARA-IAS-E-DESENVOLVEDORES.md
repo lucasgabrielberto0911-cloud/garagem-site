@@ -2,7 +2,7 @@
 
 Este documento é o **mapa do repositório**: como o sistema funciona, onde cada coisa mora, o que pode ser alterado com segurança e quais regras nunca podem quebrar.
 
-Use-o quando trabalhar com **Cursor, Claude Code, Codex, ChatGPT, Copilot** ou qualquer outra IA. As regras obrigatórias de agente continuam em **[`AGENTS.md`](../AGENTS.md)** (fonte da verdade). O [`CLAUDE.md`](../CLAUDE.md) e [`.cursor/rules/`](../.cursor/rules/) só reforçam o `AGENTS.md`.
+Use-o quando trabalhar com **Cursor, Claude Code, Codex, ChatGPT, Copilot, Antigravity** ou qualquer outra IA. As regras obrigatórias de agente continuam em **[`AGENTS.md`](../AGENTS.md)** (fonte da verdade). Comece pelo [`PRIMEIROS-PASSOS-IA.md`](PRIMEIROS-PASSOS-IA.md). O [`CLAUDE.md`](../CLAUDE.md), [`GEMINI.md`](../GEMINI.md) e [`.cursor/rules/`](../.cursor/rules/) só reforçam o `AGENTS.md`.
 
 ---
 
@@ -13,7 +13,7 @@ Cole no início da conversa com qualquer IA:
 ```text
 Projeto: garagem-site (loja Garagem, Linhares/ES).
 Leia e siga AGENTS.md na raiz.
-Leia docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md para arquitetura e limites.
+Leia docs/PRIMEIROS-PASSOS-IA.md e docs/GUIA-PARA-IAS-E-DESENVOLVEDORES.md.
 Não altere produção (banco, Vercel env, download de fotos em suagaragem.net).
 Responda e comente em português do Brasil.
 ```
@@ -37,6 +37,7 @@ O site não é um vitrine estática: há **estoque com cache**, **ficha com SEO/
 
 | Documento | Quando ler |
 | --- | --- |
+| **[`PRIMEIROS-PASSOS-IA.md`](PRIMEIROS-PASSOS-IA.md)** | Loop de 2 min (conflitos, branch, proibições) |
 | **[`AGENTS.md`](../AGENTS.md)** | Sempre, antes de codar ou abrir PR |
 | **Este guia** | Arquitetura, pastas, padrões, o que mexer / não mexer |
 | **[`GLOSSARIO.md`](GLOSSARIO.md)** | Termos de negócio e técnicos do repo |
