@@ -33,18 +33,18 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
   ];
   return (
     <div className="mt-6 min-w-0">
-      <p className="mb-2 text-sm leading-relaxed text-cream/75">Você já pode comparar seus favoritos lado a lado.</p>
+      <p className="mb-2 text-sm leading-relaxed text-cream/80">Você já pode comparar seus favoritos lado a lado.</p>
     <details open={open} onToggle={event => {
       if (!ready) return;
       const next = event.currentTarget.open; setOpen(next);
       writeComparisonSession({ chosen: chosen === null ? null : ids, open: next });
     }} className="group rounded-xl border border-white/20 bg-ink">
-      <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-4 py-3 font-display text-sm font-semibold text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
-        <span>Comparar favoritos <span className="ml-1 text-xs font-normal text-cream/75">Até 3</span></span>
-        <span className="text-xs font-normal text-cream/75">{ids.length} selecionados <span aria-hidden="true" className="ml-2 inline-block transition-transform group-open:rotate-180">⌄</span></span>
+      <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-4 py-3 font-display text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream">
+        <span>Comparar favoritos <span className="ml-1 text-xs font-normal text-cream/80">Até 3</span></span>
+        <span className="text-xs font-normal text-cream/80">{ids.length} selecionados <span aria-hidden="true" className="ml-2 inline-block transition-transform group-open:rotate-180">⌄</span></span>
       </summary>
-      <div className="border-t border-white/15 p-3 sm:p-4">
-        <p className="text-sm leading-relaxed text-cream/75">Escolha dois ou três veículos. Deslize a tabela para ver todas as colunas; os rótulos ficam fixos.</p>
+      <div className="border-t border-white/20 p-3 sm:p-4">
+        <p className="text-sm leading-relaxed text-cream/80">Escolha dois ou três veículos. Deslize a tabela para ver todas as colunas; os rótulos ficam fixos.</p>
         <fieldset className="mt-3 flex flex-wrap gap-2">
           <legend className="sr-only">Veículos para comparar, no máximo três</legend>
           {vehicles.map(vehicle => {
@@ -55,8 +55,8 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
             </label>;
           })}
         </fieldset>
-        <p role="status" className="mt-3 text-xs leading-relaxed text-cream/75">{ids.length < 2 ? "Selecione mais um veículo para comparar." : ids.length === 3 ? "Para trocar uma opção, desmarque um veículo. Deslize a comparação para ver os três." : "Dois selecionados. Você pode adicionar mais um ou trocar as opções."}</p>
-        {selected.length >= 2 ? <p className="mt-2 text-xs leading-relaxed text-cream/75">Diferenças em relação ao {formatVehicleLabel(selected[0].brand, selected[0].model)} da primeira coluna. Os campos diferentes têm um fundo mais claro.</p> : null}
+        <p role="status" className="mt-3 text-xs leading-relaxed text-cream/80">{ids.length < 2 ? "Selecione mais um veículo para comparar." : ids.length === 3 ? "Para trocar uma opção, desmarque um veículo. Deslize a comparação para ver os três." : "Dois selecionados. Você pode adicionar mais um ou trocar as opções."}</p>
+        {selected.length >= 2 ? <p className="mt-2 text-xs leading-relaxed text-cream/80">Diferenças em relação ao {formatVehicleLabel(selected[0].brand, selected[0].model)} da primeira coluna. Os campos diferentes têm um fundo mais claro.</p> : null}
         {selected.length >= 2 ? <ComparisonTable selected={selected} rows={rows} /> : null}
       </div>
     </details>
@@ -82,23 +82,23 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
   }
   return <>
     <div className="mt-3 lg:hidden">
-      <p className="text-xs leading-relaxed text-cream/75">Toque para ver a coluna de cada veículo. Você também pode deslizar a tabela.</p>
+      <p className="text-xs leading-relaxed text-cream/80">Toque para ver a coluna de cada veículo. Você também pode deslizar a tabela.</p>
       <div className={"mt-2 grid gap-2 " + (selected.length === 3 ? "grid-cols-3" : "grid-cols-2")} role="group" aria-label="Ver colunas da comparação">
         {selected.map((vehicle, index) => <button key={vehicle.id} type="button"
           aria-controls={tableId} aria-label={`Mostrar ${formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)}${vehicle.version ? " · " + vehicle.version : ""} na comparação`}
           onClick={() => showColumn(index)}
-          className="min-h-11 min-w-0 rounded-md border border-white/25 bg-asphalt/60 px-2 py-2 text-xs leading-relaxed text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+          className="min-h-11 min-w-0 rounded-md border border-white/25 bg-asphalt/60 px-2 py-2 text-xs leading-relaxed text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream">
           {formatVehicleLabel(vehicle.brand, vehicle.model)}
         </button>)}
       </div>
     </div>
-      <div ref={tableRef} id={tableId} role="region" className="mt-3 max-w-full overflow-x-auto overscroll-x-contain rounded-lg border border-white/10 [container-type:inline-size] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
+      <div ref={tableRef} id={tableId} role="region" className="mt-3 max-w-full overflow-x-auto overscroll-x-contain rounded-lg border border-white/20 [container-type:inline-size] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
           <table className="w-full table-fixed border-collapse text-left" style={{ minWidth: `calc(7rem + ${selected.length} * min(12rem, 100cqw - 7rem))` }}>
             <caption className="sr-only">Comparação por preço, versão, ano, quilometragem e câmbio</caption>
             <thead className="bg-ink">
               <tr className="align-top">
                 <th scope="col" className="sticky left-0 z-30 w-28 bg-ink px-2 py-3 text-xs font-medium text-cream">Veículo</th>
-                {selected.map(vehicle => <th key={vehicle.id} scope="col" className="break-words border-l border-white/10 p-2 font-normal">
+                {selected.map(vehicle => <th key={vehicle.id} scope="col" className="break-words border-l border-white/20 p-2 font-normal">
                   <Link href={vehiclePath(vehicle)} className="block rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
                     <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-asphalt"><VehicleImage src={coverSrc(vehicle.photos)} alt={formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)} fill sizes="180px" className="object-cover" /></div>
                     <span className="mt-2 block text-xs font-semibold leading-relaxed text-cream sm:text-sm">{formatVehicleLabel(vehicle.brand, vehicle.model)}</span>
@@ -107,21 +107,21 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
               </tr>
             </thead>
             <tbody>
-              {rows.map(row => <tr key={row.label} className="border-t border-white/10 align-top">
+              {rows.map(row => <tr key={row.label} className="border-t border-white/20 align-top">
                 <th scope="row" className="sticky left-0 z-10 bg-ink px-2 py-3 text-xs font-medium text-cream">{row.label}</th>
                 {selected.map((vehicle, index) => {
                   const informed = row.value(vehicle) !== "Não informado" && row.value(selected[0]) !== "Não informado";
                   const note = index > 0 && informed && row.metric ? comparisonDifference(row.metric, vehicle[row.metric], selected[0][row.metric]) : null;
                   const differs = index > 0 && informed && (row.metric ? Boolean(note) : differentComparisonText(row.value(vehicle), row.value(selected[0])));
-                  return <td key={vehicle.id} data-comparison-difference={differs ? "" : undefined} className={"break-words border-l border-white/10 px-2 py-3 leading-relaxed " + (differs ? "bg-white/[0.045] " : "") + (row.label === "Preço" ? "font-display text-sm font-semibold text-brand-light sm:text-lg" : "text-xs text-cream sm:text-sm")}>
+                  return <td key={vehicle.id} data-comparison-difference={differs ? "" : undefined} className={"break-words border-l border-white/20 px-2 py-3 leading-relaxed " + (differs ? "bg-white/[0.045] " : "") + (row.label === "Preço" ? "font-display text-sm font-semibold text-brand-light sm:text-lg" : "text-xs text-cream sm:text-sm")}>
                     {row.value(vehicle)}
-                    {note ? <span className="mt-1 block font-body text-xs font-normal leading-relaxed text-muted">{note}</span> : null}
+                    {note ? <span className="mt-1 block font-body text-xs font-normal leading-relaxed text-cream/80">{note}</span> : null}
                   </td>;
                 })}
               </tr>)}
-              <tr className="border-t border-white/10 align-top">
+              <tr className="border-t border-white/20 align-top">
                 <th scope="row" className="sticky left-0 z-10 bg-ink px-2 py-3 text-xs font-medium text-cream">Contato</th>
-                {selected.map(vehicle => <td key={vehicle.id} className="border-l border-white/10 p-2">
+                {selected.map(vehicle => <td key={vehicle.id} className="border-l border-white/20 p-2">
                   <WhatsAppButton message={formatVehicleWhatsAppMessage({
                     ...vehicle,
                     path: vehiclePath(vehicle),

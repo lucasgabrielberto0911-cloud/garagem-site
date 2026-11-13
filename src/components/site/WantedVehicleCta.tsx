@@ -51,13 +51,13 @@ export function WantedVehicleCta({
 
   return (
     <div className="mx-auto max-w-3xl border border-brand/40 bg-ink p-5 text-center sm:p-7">
-      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-light">
+      <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">
         Lista de espera
       </p>
       <h2 className="mt-2 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
         {title}
       </h2>
-      <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted">
+      <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-cream/80">
         {description}
       </p>
 
@@ -70,7 +70,7 @@ export function WantedVehicleCta({
             onChange={(event) => setWanted(event.target.value)}
             placeholder="Ex.: Corolla automático 2020"
             autoComplete="off"
-            className="w-full min-h-[48px] border border-white/10 bg-asphalt px-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand focus-visible:ring-2 focus-visible:ring-brand"
+            className="w-full min-h-[48px] border border-white/20 bg-asphalt px-3 text-base text-cream outline-none transition placeholder:text-cream/80 focus:border-brand focus-visible:ring-2 focus-visible:ring-brand"
           />
         </label>
         <label className="block sm:col-span-1 sm:w-44">
@@ -78,7 +78,7 @@ export function WantedVehicleCta({
           <select
             value={budget}
             onChange={(event) => setBudget(event.target.value)}
-            className="w-full min-h-[48px] border border-white/10 bg-asphalt px-3 text-base text-cream outline-none transition focus:border-brand focus-visible:ring-2 focus-visible:ring-brand"
+            className="w-full min-h-[48px] border border-white/20 bg-asphalt px-3 text-base text-cream outline-none transition focus:border-brand focus-visible:ring-2 focus-visible:ring-brand"
           >
             <option value="">Faixa (opcional)</option>
             {WANTED_BUDGET_OPTIONS.map((option) => (
