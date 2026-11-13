@@ -64,6 +64,20 @@ test("celular: textos do card e da barra de baixo com pelo menos 12 px", async (
   for (const size of sizes) expect(size).toBeGreaterThanOrEqual(12);
 });
 
+test("celular: selos do card ficam no alto da foto, um só, sem cobrir o carro", async ({ page }) => {
+  test.skip(page.viewportSize()!.width >= 640, "selos no alto só no celular");
+  await page.goto("/estoque");
+  const photo = page.locator(".listing-card-photo").first();
+  const badges = photo.locator(".listing-card-badges > span:visible");
+  expect(await badges.count()).toBeLessThanOrEqual(1);
+  const photoBox = (await photo.boundingBox())!;
+  const badgeBox = await badges.first().boundingBox();
+  if (badgeBox) {
+    expect(badgeBox.y + badgeBox.height).toBeLessThan(photoBox.y + photoBox.height * 0.4);
+    expect(badgeBox.width).toBeLessThan(photoBox.width * 0.55);
+  }
+});
+
 test("home no celular: WhatsApp, Ver estoque e números da loja logo no topo, sem assistente", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 640, "layout só do celular");
   await page.goto("/");

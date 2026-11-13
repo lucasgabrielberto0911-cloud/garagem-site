@@ -545,6 +545,25 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+/* Celular: os selos não podem cobrir o carro. Vão para o canto de cima (só fundo), em uma linha e
+   um por vez, longe do coração de salvar. O texto continua em 12 px. */
+@media (max-width: 639px) {
+  .listing-card-badges {
+    top: 0.5rem;
+    bottom: auto;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    max-width: calc(100% - 3.5rem);
+  }
+  .listing-card-badges span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .listing-card-badges span:nth-child(n + 2) { display: none; }
+}
 .listing-card-name { padding: 0.75rem 0.625rem 0.25rem; }
 .listing-card-brand {
   margin: 0 0 0.2rem;
