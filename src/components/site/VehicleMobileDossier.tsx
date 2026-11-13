@@ -1,6 +1,4 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { VehicleFeatures } from "@/components/site/VehicleFeatures";
@@ -35,14 +33,41 @@ import type { VehicleSeal } from "@/lib/vehicle-seals";
 /** Garantia e vistoria já aparecem na faixa de confiança. */
 const TRUST_LABELS = new Set(["Garantia", STORE_INSPECTION_LABEL]);
 
-/** Ficha técnica completa (ano, km, cor, câmbio, placa...), menos o que a faixa de confiança mostra. */
+/** Já estão no topo da ficha (quadradinhos, cor ao lado do preço) ou não dizem nada ("Tipo: Carro"). */
+const TOP_LABELS = new Set(["Tipo", "Ano", "km", "Câmbio", "Combustível", "Cor"]);
+
+/**
+ * Ficha técnica do celular: só o que ainda não apareceu acima (motor, portas, final de placa...).
+ * Sem repetir o topo e sem linha "Não informada".
+ */
 function sheetSpecs(specs: VehicleSpecRow[]) {
-  return specs.filter((row) => !TRUST_LABELS.has(row.label));
+  const motorAtTop = !specs.some((row) => row.label === "Câmbio" && !row.empty);
+  return specs.filter(
+    (row) =>
+      !TRUST_LABELS.has(row.label) &&
+      !TOP_LABELS.has(row.label) &&
+      !(row.label === "Motor" && motorAtTop) &&
+      !row.empty,
+  );
 }
 
 /** A âncora Especificações cai na ficha técnica quando ela existe. */
 export function hasMobileFichaSpecs(specs: VehicleSpecRow[]) {
   return sheetSpecs(specs).length > 0;
+}
+
+/**
+ * O ano já está ao lado do título: sai dos quadradinhos. Se sobram 3 e há cor, a cor entra na grade
+ * (2×2) em vez de ficar numa linha larga sozinha.
+ */
+function topFacts(
+  facts: readonly VehicleKeyFact[],
+  color: string | null | undefined,
+  yearLabel: string | undefined,
+) {
+  const shown = yearLabel ? facts.filter((fact) => fact.label !== "Ano") : [...facts];
+  if (color && shown.length === 3) return { facts: [...shown, { label: "Cor", value: color }], color: null };
+  return { facts: shown, color };
 }
 
 export function VehicleMobileSummary({
@@ -102,12 +127,12 @@ export function VehicleMobileSummary({
         id={specAnchor ? "especificacoes" : undefined}
         data-ficha-section={specAnchor ? "especificacoes" : undefined}
       >
-        <VehicleKeyFacts facts={facts} color={color} />
+        <VehicleKeyFacts {...topFacts(facts, color, yearLabel)} />
       </div>
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
       ) : null}
-      {!sold ? <VehicleSeals seals={seals} className="mt-2.5" optionalsHref="#opcionais" /> : null}
+      {!sold ? <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} className="mt-2.5" /> : null}
     </div>
   );
 }
@@ -213,6 +238,10 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-2 pb-6 lg:hidden">
+      {extraSpecs.length === 0 && listedLine ? (
+        // Sem ficha técnica, o "Anunciado hoje · Atualizado em..." continua como linha solta.
+        <p className="border-b border-white/10 pb-4 text-sm tracking-wide text-muted">{listedLine}</p>
+      ) : null}
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha técnica" section="especificacoes">
           {listedLine ? (
@@ -351,30 +380,12 @@ export function VehicleMobileBlocks({
           />
         ) : null}
         <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-          {!sold ? (
-            <ChatOpenButton
-              source="ficha-mobile"
-              prompt={`Tenho dúvida sobre o ${fullLabel}`}
-              size="compact"
-              variant="ghost"
-              className="-ml-3 !text-sm"
-            />
-          ) : null}
           <ShareVehicle
             title={fullLabel}
             path={path}
             vehicleId={vehicleId}
             variant="compact"
           />
-          {!sold ? (
-            <Link
-              href={`/vender?interesse=${vehicleId}&label=${encodeURIComponent(fullLabel)}`}
-              prefetch={false}
-              className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-cream hover:underline"
-            >
-              Avaliar meu usado
-            </Link>
-          ) : null}
         </div>
       </DossierBlock>
     </div>
