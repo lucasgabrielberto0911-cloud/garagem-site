@@ -50,7 +50,7 @@ export function VehicleVerifiedList({
         ))}
       </ul>
       {showVideoHint ? (
-        <p className="text-sm text-muted">
+        <p className="text-sm text-cream/80">
           Quer ver algum detalhe específico? Peça um vídeo pelo WhatsApp.
         </p>
       ) : null}
@@ -73,7 +73,7 @@ export function VehicleVerifiedSection({
   return (
     <section
       aria-labelledby="ficha-verificado-titulo"
-      className="hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
+      className="hidden border-t border-white/20 pt-5 lg:mt-6 lg:block"
     >
       <h2
         id="ficha-verificado-titulo"
@@ -82,7 +82,7 @@ export function VehicleVerifiedSection({
         <IconShieldCheck className="h-4 w-4 text-brand-light" />
         {heading}
       </h2>
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-cream/80">
         Informações da loja sobre este exemplar.
       </p>
       <div className="mt-3">

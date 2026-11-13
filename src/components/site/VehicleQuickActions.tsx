@@ -119,7 +119,7 @@ export function VehicleQuickActions({
             className={
               variant === "secondary"
                 ? "inline-flex min-h-14 w-full items-center justify-start gap-2.5 rounded-lg border border-white/20 bg-white/[0.04] px-3 py-2 text-left font-display text-sm font-medium leading-snug text-cream transition touch-manipulation hover:border-[#25D366]/60 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                : "inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-ink px-2.5 py-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:min-h-[44px]"
+                : "inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-ink px-2.5 py-2 text-center font-display text-sm font-semibold uppercase tracking-[0.1em] text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:min-h-[44px]"
             }
           >
             <IconWhatsApp className={`shrink-0 text-[#25D366] ${variant === "secondary" ? "h-5 w-5 max-[359px]:hidden" : "h-3.5 w-3.5"}`} />

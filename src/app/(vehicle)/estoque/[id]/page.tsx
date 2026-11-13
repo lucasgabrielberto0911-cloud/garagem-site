@@ -320,7 +320,7 @@ export default async function VehicleDetailPage({
             <p className="font-display text-sm font-semibold text-cream sm:text-base">
               Este veículo já foi vendido
             </p>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-cream/80">
               A página permanece no ar para quem chegou por um link antigo. Veja{" "}
               <Link
                 href="#mesma-faixa"
@@ -347,7 +347,7 @@ export default async function VehicleDetailPage({
           </Suspense>
           <nav
             aria-label="Você está aqui"
-            className="text-sm text-muted sm:text-center"
+            className="text-sm text-cream/80 sm:text-center"
           >
             {breadcrumbs.map((item, index) => (
               <span key={item.path}>
@@ -401,7 +401,7 @@ export default async function VehicleDetailPage({
 
             <section
               data-ficha-section="especificacoes"
-              className="ficha-jump-target hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
+              className="ficha-jump-target hidden border-t border-white/20 pt-5 lg:mt-6 lg:block"
             >
               {/* Só o que o card ao lado não mostra (motor, portas...). Sem dado novo, fica só o "Anunciado hoje". */}
               {sheet.length > 0 ? (
@@ -410,7 +410,7 @@ export default async function VehicleDetailPage({
                 </h2>
               ) : null}
               {vehicle.createdAt || updatedLabel ? (
-                <p className={`text-sm text-muted${sheet.length > 0 ? " mt-1" : ""}`}>
+                <p className={`text-sm text-cream/80${sheet.length > 0 ? " mt-1" : ""}`}>
                   <ListedAgo
                     listedAt={
                       vehicle.createdAt
@@ -465,7 +465,7 @@ export default async function VehicleDetailPage({
                   <div
                     id="opcionais-desktop"
                     data-ficha-opcionais=""
-                    className={`ficha-jump-target ${hasAboutText ? "mt-8 border-t border-white/10 pt-6" : ""}`}
+                    className={`ficha-jump-target ${hasAboutText ? "mt-8 border-t border-white/20 pt-6" : ""}`}
                   >
                     <h2 className="flex flex-wrap items-baseline gap-x-3 font-display text-xl font-bold tracking-tight text-cream">
                       Itens e acessórios
@@ -491,7 +491,7 @@ export default async function VehicleDetailPage({
 
           <aside className="ficha-aside order-2 hidden lg:block">
             {/* Sem sticky: o card rola junto com a página (um scroll só). */}
-            <div className="space-y-4 border border-white/10 bg-ink p-5 xl:p-6">
+            <div className="space-y-4 border border-white/20 bg-ink p-5 xl:p-6">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-sm font-semibold uppercase tracking-wider text-brand-light">
                   {vehicleCategoryLabel(vehicle.category)}
@@ -529,7 +529,7 @@ export default async function VehicleDetailPage({
                   ) : null}
                 </div>
                 {vehicle.version?.trim() ? (
-                  <p className="mt-1 text-[15px] leading-snug text-muted">{collapseWhitespace(vehicle.version ?? "")}</p>
+                  <p className="mt-1 text-[15px] leading-snug text-cream/80">{collapseWhitespace(vehicle.version ?? "")}</p>
                 ) : null}
               </div>
 
@@ -538,7 +538,7 @@ export default async function VehicleDetailPage({
                 className="font-display text-[2.25rem] font-bold leading-none tracking-tight text-brand-light"
               >
                 {sold ? (
-                  <span className="text-base text-muted">Já vendido</span>
+                  <span className="text-base text-cream/80">Já vendido</span>
                 ) : (
                   <span className="ficha-price">{formatCurrencyBRL(vehicle.price)}</span>
                 )}
@@ -599,13 +599,13 @@ export default async function VehicleDetailPage({
                         Falar no WhatsApp
                       </WhatsAppButton>
                     </VehicleLeadHit>
-                    <p className="mt-2 text-center text-sm leading-relaxed text-muted">
+                    <p className="mt-2 text-center text-sm leading-relaxed text-cream/80">
                       Abre o WhatsApp com este anúncio — modelo, ano e preço.
                     </p>
                   </div>
 
                   {/* Financiamento, troca, vídeo e visita: à vista, em estilo discreto para não competir com o botão principal. */}
-                  <div data-ficha-more-actions="" className="border-t border-white/10 pt-3">
+                  <div data-ficha-more-actions="" className="border-t border-white/20 pt-3">
                     <VehicleQuickActions
                       contentId={vehicle.id}
                       contentSlug={canonicalSlug}
@@ -648,7 +648,7 @@ export default async function VehicleDetailPage({
                 />
               </div>
 
-              <p className="text-sm leading-relaxed text-muted">
+              <p className="text-sm leading-relaxed text-cream/80">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
                   : `Valores sujeitos a alteração. Financiamento e cartão com análise de crédito; condições pelo WhatsApp ${site.whatsappLabel}.`}
@@ -662,11 +662,11 @@ export default async function VehicleDetailPage({
                   conditions={conditions}
                 />
                 {/* Fecha a coluna: o botão do card já saiu da tela quando a pessoa chega aqui. */}
-                <div data-ficha-second-cta="" className="mt-6 border-t border-white/10 pt-5">
+                <div data-ficha-second-cta="" className="mt-6 border-t border-white/20 pt-5">
                   <p className="font-display text-base font-semibold text-cream">
                     Ficou com alguma dúvida?
                   </p>
-                  <p className="mt-1 text-sm leading-snug text-muted">
+                  <p className="mt-1 text-sm leading-snug text-cream/80">
                     A loja responde sobre este anúncio pelo WhatsApp.
                   </p>
                   <VehicleLeadHit
@@ -743,7 +743,7 @@ export default async function VehicleDetailPage({
         <Suspense
           fallback={
             <div id="mesma-faixa" className="mt-10 min-h-64" aria-busy="true">
-              <p className="text-muted">Buscando veículos parecidos...</p>
+              <p className="text-cream/80">Buscando veículos parecidos...</p>
             </div>
           }
         >

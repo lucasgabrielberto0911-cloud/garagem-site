@@ -111,11 +111,11 @@ export function VehicleMobileSummary({
         ) : null}
       </div>
       {version ? (
-        <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-muted">{version}</p>
+        <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-cream/80">{version}</p>
       ) : null}
       <p className="mt-1.5 font-display text-[1.75rem] font-bold leading-none tracking-tight text-brand-light">
         {sold ? (
-          <span className="text-base text-muted">Já vendido</span>
+          <span className="text-base text-cream/80">Já vendido</span>
         ) : (
           <span className="ficha-price">{formatCurrencyBRL(price)}</span>
         )}
@@ -151,7 +151,7 @@ function DossierBlock({
 }) {
   return (
     <section
-      className={`border-b border-white/10 py-5${section ? " ficha-jump-target" : ""}`}
+      className={`border-b border-white/20 py-5${section ? " ficha-jump-target" : ""}`}
       id={id ?? section}
       data-ficha-section={section}
     >
@@ -240,12 +240,12 @@ export function VehicleMobileBlocks({
     <div className="mt-2 pb-6 lg:hidden">
       {extraSpecs.length === 0 && listedLine ? (
         // Sem ficha técnica, o "Anunciado hoje · Atualizado em..." continua como linha solta.
-        <p className="border-b border-white/10 pb-4 text-sm tracking-wide text-muted">{listedLine}</p>
+        <p className="border-b border-white/20 pb-4 text-sm tracking-wide text-cream/80">{listedLine}</p>
       ) : null}
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha técnica" section="especificacoes">
           {listedLine ? (
-            <p className="mb-3 text-sm tracking-wide text-muted">{listedLine}</p>
+            <p className="mb-3 text-sm tracking-wide text-cream/80">{listedLine}</p>
           ) : null}
           <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
             {extraSpecs.map((spec) => (
@@ -253,7 +253,7 @@ export function VehicleMobileBlocks({
                 <dt className="text-sm font-medium text-cream/75">{spec.label}</dt>
                 <dd
                   className={`mt-1 font-display text-sm leading-snug [overflow-wrap:break-word] ${
-                    spec.empty ? "font-medium text-muted" : "font-semibold text-cream"
+                    spec.empty ? "font-medium text-cream/80" : "font-semibold text-cream"
                   }`}
                 >
                   {spec.value}
@@ -317,12 +317,12 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {!sold ? (
-        <details className="group border-b border-white/10" data-vistoria-garantia="">
+        <details className="group border-b border-white/20" data-vistoria-garantia="">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
             <span>Saiba mais sobre vistoria e garantia</span>
             <span
               aria-hidden="true"
-              className="text-muted transition-transform duration-200 group-open:rotate-180"
+              className="text-cream/80 transition-transform duration-200 group-open:rotate-180"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
