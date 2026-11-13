@@ -67,16 +67,16 @@ const LOOK: Record<SiteLinkKind, string> = {
     "bg-brand text-cream shadow-lg hover:bg-brand-dark active:bg-brand-dark",
   whatsapp:
     "bg-[#25D366] text-asphalt shadow-[0_6px_18px_rgba(0,0,0,0.4)] hover:bg-[#1FB858] active:bg-[#1FB858]",
-  facebook: "border border-white/10 bg-white/[0.04] text-cream hover:border-white/25 hover:bg-white/[0.07]",
-  olx: "border border-white/10 bg-white/[0.04] text-cream hover:border-white/25 hover:bg-white/[0.07]",
-  instagram: "border border-white/10 bg-white/[0.04] text-cream hover:border-white/25 hover:bg-white/[0.07]",
-  generic: "border border-white/10 bg-white/[0.04] text-cream hover:border-white/25 hover:bg-white/[0.07]",
+  facebook: "border border-white/20 bg-white/[0.04] text-cream hover:border-white/35 hover:bg-white/[0.08]",
+  olx: "border border-white/20 bg-white/[0.04] text-cream hover:border-white/35 hover:bg-white/[0.08]",
+  instagram: "border border-white/20 bg-white/[0.04] text-cream hover:border-white/35 hover:bg-white/[0.08]",
+  generic: "border border-white/20 bg-white/[0.04] text-cream hover:border-white/35 hover:bg-white/[0.08]",
 };
 
 export function LinksHub({ links }: { links: readonly SiteLink[] }) {
   if (links.length === 0) {
     return (
-      <p className="rounded-xl border border-white/10 px-4 py-6 text-center text-sm text-muted">
+      <p className="rounded-xl border border-white/20 px-4 py-6 text-center text-sm text-cream/80">
         Nenhum link disponível por enquanto.
       </p>
     );
@@ -101,7 +101,7 @@ export function LinksHub({ links }: { links: readonly SiteLink[] }) {
               <Icon className="h-6 w-6 shrink-0" />
               <span className="min-w-0 flex-1 break-words">{link.label}</span>
               <IconArrowRight
-                className={`h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 ${highlighted ? "opacity-80" : "text-muted"}`}
+                className={`h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 ${highlighted ? "opacity-90" : "text-cream/75"}`}
               />
             </a>
           </li>

@@ -172,9 +172,12 @@ export default function PrivacidadePage() {
           <p className="font-display text-base font-semibold text-cream">
             Dúvidas sobre seus dados?
           </p>
-          <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted">
+          <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-cream/80">
             Fale direto com a gente. Também vale conferir as{" "}
-            <Link href="/faq" className="text-brand-light underline-offset-4 hover:underline">
+            <Link
+              href="/faq"
+              className="text-brand-light underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
               dúvidas frequentes
             </Link>
             .
@@ -200,9 +203,9 @@ function Block({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border border-white/10 bg-ink p-6">
+    <section className="border border-white/20 bg-ink p-6">
       <h2 className="font-display text-lg font-semibold text-cream">{title}</h2>
-      <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted">
+      <div className="mt-3 space-y-3 text-sm leading-relaxed text-cream/80">
         {children}
       </div>
     </section>

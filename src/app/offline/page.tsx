@@ -16,7 +16,7 @@ export default function OfflinePage() {
       <h1 className="mt-6 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
         Você está sem conexão
       </h1>
-      <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
+      <p className="mt-3 max-w-md text-sm leading-relaxed text-cream/80">
         A página inicial e a lista do estoque continuam disponíveis. A ficha de
         cada veículo precisa de internet. Pedidos de interesse, o formulário de
         venda e os favoritos ficam guardados neste aparelho e são enviados
@@ -25,20 +25,20 @@ export default function OfflinePage() {
       <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <Link
           href="/estoque"
-          className="inline-flex min-h-[48px] items-center justify-center bg-brand px-6 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark"
+          className="inline-flex min-h-[48px] items-center justify-center bg-brand px-6 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
         >
           Ver estoque
         </Link>
         <Link
           href="/favoritos"
-          className="inline-flex min-h-[48px] items-center justify-center border border-white/20 px-6 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+          className="inline-flex min-h-[48px] items-center justify-center border border-white/25 px-6 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           Meus favoritos
         </Link>
       </div>
       <Link
         href="/"
-        className="mt-4 inline-flex min-h-[44px] items-center text-sm text-muted underline-offset-4 hover:text-cream hover:underline"
+        className="mt-4 inline-flex min-h-[44px] items-center px-2 text-sm text-cream/80 underline-offset-4 hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         Tentar a página inicial
       </Link>

@@ -12,7 +12,7 @@ export function FounderSection({
     <section
       id="por-tras"
       aria-labelledby="titulo-por-tras"
-      className="mx-auto mt-10 max-w-5xl scroll-mt-28 overflow-hidden border border-white/10 bg-black sm:mt-12"
+      className="mx-auto mt-10 max-w-5xl scroll-mt-28 overflow-hidden border border-white/20 bg-black sm:mt-12"
     >
       <div
         className={
@@ -42,7 +42,7 @@ export function FounderSection({
               : "mx-auto max-w-3xl px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14"
           }
         >
-          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-light">
+          <p className="font-display text-xs font-semibold uppercase tracking-[0.22em] text-brand-light">
             Quem está por trás da Garagem?
           </p>
           <h2
@@ -51,7 +51,7 @@ export function FounderSection({
           >
             Elias Clovis Gonçalves dos Santos Neto
           </h2>
-          <p className="mt-2 text-sm font-medium text-cream/80">
+          <p className="mt-2 text-sm font-medium text-cream/85">
             Dono e sócio-administrador
           </p>
           <div
@@ -59,7 +59,7 @@ export function FounderSection({
             aria-hidden="true"
           />
 
-          <div className="mt-6 space-y-4 text-sm leading-relaxed text-muted sm:text-[15px]">
+          <div className="mt-6 space-y-4 text-sm leading-relaxed text-cream/80 sm:text-[15px]">
             <p>
               Natural de Feira de Santana, na Bahia, Elias construiu a vida no
               mercado de veículos. Há mais de 20 anos ele compra, avalia e vende
