@@ -44,14 +44,14 @@ export default async function PedidoPage({
       <div className="wanted-vehicle-sheet">
         <Link
           href={copy.pagePath}
-          className="inline-flex min-h-11 items-center text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
+          className="inline-flex min-h-11 items-center text-sm font-medium uppercase tracking-wider text-cream/80 transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <span className="mr-2 text-brand-light" aria-hidden="true">
             ←
           </span>
           Voltar ao estoque
         </Link>
-        <p className="mt-4 text-sm text-muted">
+        <p className="mt-4 text-sm leading-relaxed text-cream/80">
           Confira o modelo e informe seu contato abaixo. O pedido só fica salvo após o envio e a confirmação nesta página.
         </p>
         <div className="mt-6">

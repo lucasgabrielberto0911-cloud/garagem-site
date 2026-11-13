@@ -33,30 +33,30 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
   ];
   return (
     <div className="mt-6 min-w-0">
-      <p className="mb-2 text-sm leading-relaxed text-muted">Você já pode comparar seus favoritos lado a lado.</p>
+      <p className="mb-2 text-sm leading-relaxed text-cream/75">Você já pode comparar seus favoritos lado a lado.</p>
     <details open={open} onToggle={event => {
       if (!ready) return;
       const next = event.currentTarget.open; setOpen(next);
       writeComparisonSession({ chosen: chosen === null ? null : ids, open: next });
-    }} className="group rounded-xl border border-white/15 bg-ink">
+    }} className="group rounded-xl border border-white/20 bg-ink">
       <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-4 py-3 font-display text-sm font-semibold text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
-        <span>Comparar favoritos <span className="ml-1 text-xs font-normal text-muted">Até 3</span></span>
-        <span className="text-xs font-normal text-muted">{ids.length} selecionados <span aria-hidden="true" className="ml-2 inline-block transition-transform group-open:rotate-180">⌄</span></span>
+        <span>Comparar favoritos <span className="ml-1 text-xs font-normal text-cream/75">Até 3</span></span>
+        <span className="text-xs font-normal text-cream/75">{ids.length} selecionados <span aria-hidden="true" className="ml-2 inline-block transition-transform group-open:rotate-180">⌄</span></span>
       </summary>
-      <div className="border-t border-white/10 p-3 sm:p-4">
-        <p className="text-sm leading-relaxed text-muted">Escolha dois ou três veículos. Deslize a tabela para ver todas as colunas; os rótulos ficam fixos.</p>
+      <div className="border-t border-white/15 p-3 sm:p-4">
+        <p className="text-sm leading-relaxed text-cream/75">Escolha dois ou três veículos. Deslize a tabela para ver todas as colunas; os rótulos ficam fixos.</p>
         <fieldset className="mt-3 flex flex-wrap gap-2">
           <legend className="sr-only">Veículos para comparar, no máximo três</legend>
           {vehicles.map(vehicle => {
             const checked = ids.includes(vehicle.id);
-            return <label key={vehicle.id} className={"flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs leading-relaxed " + (checked ? "border-brand/60 bg-brand/10 text-cream" : "border-white/15 text-muted")}>
+            return <label key={vehicle.id} className={"flex min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs leading-relaxed " + (checked ? "border-brand/60 bg-brand/10 text-cream" : "border-white/25 text-cream/80")}>
               <input type="checkbox" checked={checked} disabled={!checked && ids.length >= 3} onChange={() => { const next = toggleComparison(ids, vehicle.id); setChosen(next); writeComparisonSession({ chosen: next, open }); }} className="h-4 w-4 shrink-0 accent-brand" />
               <span className="min-w-0 break-words">{formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)}{vehicle.version ? " · " + vehicle.version : ""}</span>
             </label>;
           })}
         </fieldset>
-        <p role="status" className="mt-3 text-xs leading-relaxed text-muted">{ids.length < 2 ? "Selecione mais um veículo para comparar." : ids.length === 3 ? "Para trocar uma opção, desmarque um veículo. Deslize a comparação para ver os três." : "Dois selecionados. Você pode adicionar mais um ou trocar as opções."}</p>
-        {selected.length >= 2 ? <p className="mt-2 text-xs leading-relaxed text-muted">Diferenças em relação ao {formatVehicleLabel(selected[0].brand, selected[0].model)} da primeira coluna. Os campos diferentes têm um fundo mais claro.</p> : null}
+        <p role="status" className="mt-3 text-xs leading-relaxed text-cream/75">{ids.length < 2 ? "Selecione mais um veículo para comparar." : ids.length === 3 ? "Para trocar uma opção, desmarque um veículo. Deslize a comparação para ver os três." : "Dois selecionados. Você pode adicionar mais um ou trocar as opções."}</p>
+        {selected.length >= 2 ? <p className="mt-2 text-xs leading-relaxed text-cream/75">Diferenças em relação ao {formatVehicleLabel(selected[0].brand, selected[0].model)} da primeira coluna. Os campos diferentes têm um fundo mais claro.</p> : null}
         {selected.length >= 2 ? <ComparisonTable selected={selected} rows={rows} /> : null}
       </div>
     </details>
@@ -82,12 +82,12 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
   }
   return <>
     <div className="mt-3 lg:hidden">
-      <p className="text-xs leading-relaxed text-muted">Toque para ver a coluna de cada veículo. Você também pode deslizar a tabela.</p>
+      <p className="text-xs leading-relaxed text-cream/75">Toque para ver a coluna de cada veículo. Você também pode deslizar a tabela.</p>
       <div className={"mt-2 grid gap-2 " + (selected.length === 3 ? "grid-cols-3" : "grid-cols-2")} role="group" aria-label="Ver colunas da comparação">
         {selected.map((vehicle, index) => <button key={vehicle.id} type="button"
           aria-controls={tableId} aria-label={`Mostrar ${formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)}${vehicle.version ? " · " + vehicle.version : ""} na comparação`}
           onClick={() => showColumn(index)}
-          className="min-h-11 min-w-0 rounded-md border border-white/20 px-2 py-2 text-xs leading-relaxed text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+          className="min-h-11 min-w-0 rounded-md border border-white/25 bg-asphalt/60 px-2 py-2 text-xs leading-relaxed text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
           {formatVehicleLabel(vehicle.brand, vehicle.model)}
         </button>)}
       </div>

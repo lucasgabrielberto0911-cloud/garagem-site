@@ -113,7 +113,7 @@ export function FavoritesList() {
   if (!ready || (key && (!current || current.status === "loading"))) {
     return (
       <div aria-busy="true">
-        <p role="status" className="mb-6 text-sm text-muted">
+        <p role="status" className="mb-6 text-sm text-cream/75">
           Carregando os veículos que você salvou…
         </p>
         <VehicleCardSkeletonGrid count={ids.length || 4} />
@@ -123,11 +123,11 @@ export function FavoritesList() {
 
   if (failed) {
     return (
-      <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
+      <div className="mx-auto max-w-2xl border border-dashed border-white/25 bg-ink/40 px-6 py-16 text-center">
         <p className="font-display text-lg font-semibold text-cream">
           Não conseguimos carregar seus favoritos
         </p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-cream/75">
           Seus favoritos continuam salvos neste aparelho. Tente carregar de
           novo ou chame a gente no WhatsApp para procurar outras opções.
         </p>
@@ -154,11 +154,11 @@ export function FavoritesList() {
   if (vehicles.length === 0) {
     return (
       <><UnavailableFavorites ids={unavailable} remove={remove} />
-      <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
+      <div className="mx-auto max-w-2xl border border-dashed border-white/25 bg-ink/40 px-6 py-16 text-center">
         <p className="font-display text-lg font-semibold text-cream">
           {key ? "Seus veículos salvos não estão disponíveis agora" : "Você ainda não salvou nenhum veículo"}
         </p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-cream/75">
           {key
             ? "Eles não aparecem no estoque atual. Seus favoritos continuam guardados neste aparelho. Veja outras opções ou peça ajuda para encontrar um parecido."
             : "No estoque, toque no coração. O veículo fica guardado neste aparelho, sem cadastro."}
@@ -183,7 +183,7 @@ export function FavoritesList() {
             className="w-full sm:w-auto"
           />
         </div>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-cream/75">
           O estoque abre a lista. O WhatsApp abre para você dizer o que procura.
         </p>
       </div></>
@@ -214,7 +214,7 @@ export function FavoritesList() {
         </div>
       ) : null}
       <div className="flex flex-col items-center gap-2">
-        <p className="text-xs uppercase tracking-wider text-muted">
+        <p className="text-xs uppercase tracking-wider text-cream/75">
           {vehicles.length} {vehicles.length === 1 ? "veículo salvo" : "veículos salvos"}
           {missing > 0
             ? cached
@@ -232,7 +232,7 @@ export function FavoritesList() {
               action: { label: "Desfazer", onClick: () => restore(previous) },
             });
           }}
-          className="min-h-[40px] text-xs uppercase tracking-wider text-muted underline-offset-4 transition hover:text-cream hover:underline"
+          className="min-h-11 px-3 text-xs uppercase tracking-wider text-cream/80 underline-offset-4 transition hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           Limpar favoritos
         </button>

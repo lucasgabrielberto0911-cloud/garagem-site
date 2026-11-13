@@ -16,7 +16,7 @@ import {
 import { HoneypotWebsiteField } from "@/components/site/HoneypotWebsiteField";
 
 const inputClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand focus-visible:ring-2 focus-visible:ring-brand";
+  "w-full min-h-[48px] border border-white/25 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-cream/60 focus:border-brand focus-visible:ring-2 focus-visible:ring-brand";
 
 function digitsToGrouped(value: string) {
   const digits = value.replace(/\D/g, "");
@@ -197,12 +197,12 @@ export function MissingModelForm({
   return (
     <section
       data-missing-model-form=""
-      className="border border-white/10 bg-ink p-4 sm:p-5"
+      className="border border-white/20 bg-ink p-4 sm:p-5"
     >
       <TitleTag className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
         {title}
       </TitleTag>
-      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-cream/75">
         {description}
       </p>
 
@@ -224,7 +224,7 @@ export function MissingModelForm({
             <div>
               <label
                 htmlFor={ids.phone}
-                className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
+                className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-cream/85"
               >
                 Telefone com DDD
                 <span className="ml-1 text-brand-light" aria-hidden="true">
@@ -250,7 +250,7 @@ export function MissingModelForm({
             <div>
               <label
                 htmlFor={ids.name}
-                className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
+                className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-cream/85"
               >
                 Nome
                 <span className="ml-1 text-brand-light" aria-hidden="true">
@@ -273,7 +273,7 @@ export function MissingModelForm({
             <div>
               <label
                 htmlFor={ids.model}
-                className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
+                className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-cream/85"
               >
                 Veículo que procura
                 <span className="ml-1 text-brand-light" aria-hidden="true">
@@ -295,8 +295,8 @@ export function MissingModelForm({
             </div>
 
             <div>
-              <label htmlFor={ids.priceMax} className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
-                Valor máximo <span className="normal-case">(opcional)</span>
+              <label htmlFor={ids.priceMax} className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-cream/85">
+                Valor máximo <span className="normal-case font-normal text-cream/75">(opcional)</span>
               </label>
               <input
                 id={ids.priceMax}
@@ -312,13 +312,13 @@ export function MissingModelForm({
               <FieldError id={`${ids.priceMax}-erro`} message={errors.priceMax} />
             </div>
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-muted">
+          <p className="mt-3 text-xs leading-relaxed text-cream/75">
             A Garagem usa seu nome e telefone só para atender este pedido de compra.{" "}
             <Link href="/privacidade" prefetch={false} className="text-cream underline decoration-white/30 underline-offset-2 hover:text-brand-light">
               Política de privacidade
             </Link>
           </p>
-          <label htmlFor={ids.consent} className="mt-3 flex items-start gap-3 text-sm leading-snug text-cream">
+          <label htmlFor={ids.consent} className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 py-1 text-sm leading-snug text-cream">
             <input
               id={ids.consent}
               name="consent"
@@ -326,7 +326,7 @@ export function MissingModelForm({
               value="sim"
               aria-invalid={Boolean(errors.consent) || undefined}
               aria-describedby={errors.consent ? `${ids.consent}-erro` : undefined}
-              className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
+              className="mt-0.5 h-5 w-5 shrink-0 accent-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             />
             <span>
               Autorizo a Garagem a entrar em contato pelo telefone informado quando chegar um veículo compatível.
@@ -344,17 +344,17 @@ export function MissingModelForm({
             type="submit"
             disabled={!ready || isPending}
             aria-busy={isPending}
-            className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center bg-brand px-7 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand/90 disabled:opacity-70 sm:w-auto"
+            className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center bg-brand px-7 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-70 sm:w-auto"
           >
             {isPending ? "Enviando…" : "Enviar pedido"}
           </button>
         </fieldset>
         {rememberDraft && (draft.saved || draft.restored || draft.failed) ? (
-          <div data-wanted-draft="" className="mt-4 flex flex-wrap items-center justify-between gap-2 border border-white/10 bg-asphalt px-3 py-2 text-xs text-muted">
+          <div data-wanted-draft="" className="mt-4 flex flex-wrap items-center justify-between gap-2 border border-white/20 bg-asphalt px-3 py-2 text-xs text-cream/80">
             <p role="status">{draft.failed ? "Não foi possível guardar o rascunho nesta aba. Você pode continuar preenchendo e enviar." : draft.restored ? "Seu preenchimento foi recuperado." : "Rascunho guardado nesta aba."}</p>
             <button type="button" disabled={isPending} onClick={() => {
               draft.discard(); setErrors({}); setFormError(""); focusField("phone");
-            }} className="min-h-11 shrink-0 text-cream underline underline-offset-4">Apagar preenchimento</button>
+            }} className="min-h-11 shrink-0 px-2 text-cream underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Apagar preenchimento</button>
           </div>
         ) : null}
       </form>
