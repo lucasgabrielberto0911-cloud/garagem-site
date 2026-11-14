@@ -195,6 +195,16 @@ test("primeira origem consentida acompanha a navegação e some ao revogar", asy
   const card = page.locator("article.listing-card").filter({ has: page.getByRole("heading", { name: "Civic", exact: true }) });
   await card.locator("[data-stock-card]").click();
   await expect(page).toHaveURL(new RegExp(civic.id));
+  await expect(page.locator("html")).toHaveAttribute("data-whatsapp-origin-ready", "1");
+  const fichaWaLink = () =>
+    page.evaluate(() => {
+      const anchor = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me"]')).find(
+        (a) => a.href.includes("utm_source=site") && (new URL(a.href).searchParams.get("text") ?? "").includes("Civic"),
+      );
+      if (!anchor) throw new Error("CTA da ficha não encontrado");
+      return new URL(anchor.href).searchParams.get("text");
+    });
+  await expect.poll(fichaWaLink).toMatch(/Civic[^\n]*Vim pelo Instagram\./);
   const enrich = () => page.evaluate(() => {
     // O CTA do cabeçalho usa a mensagem geral; o da ficha cita o carro.
     const anchor = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me"]')).find(a => a.href.includes("utm_source=site") && (new URL(a.href).searchParams.get("text") ?? "").includes("Civic"));
@@ -208,6 +218,7 @@ test("primeira origem consentida acompanha a navegação e some ao revogar", asy
     localStorage.setItem("garagem_consent", "essential");
     window.dispatchEvent(new CustomEvent("garagem:consent", { detail: "essential" }));
   });
+  await expect.poll(fichaWaLink).not.toContain("Vim pelo Instagram");
   expect(await enrich()).not.toContain("Vim pelo Instagram");
   expect(await page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBeNull();
 });
