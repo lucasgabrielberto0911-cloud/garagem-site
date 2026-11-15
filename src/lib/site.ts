@@ -455,6 +455,9 @@ export const DESKTOP_NAV_LINKS = NAV_LINKS.filter((link) => link.href !== "/");
 export const SECONDARY_LINKS = [
   { href: "/modelos", label: "Marcas e modelos" },
   { href: "/guias", label: "Guias de compra" },
+  { href: "/como-funciona", label: "Como funciona" },
+  { href: "/financiamento", label: "Financiamento" },
+  { href: "/vendidos", label: "Vendidos e entregas" },
   { href: "/favoritos", label: "Favoritos" },
   { href: "/links", label: "Links" },
   { href: "/privacidade", label: "Política de privacidade" },
@@ -464,5 +467,5 @@ export const SERVICES = [
   { label: "Compra", href: "/estoque" },
   { label: "Venda", href: "/vender" },
   { label: "Troca", href: "/vender" },
-  { label: "Financiamento", href: "/faq#financiamento" },
+  { label: "Financiamento", href: "/financiamento" },
 ] as const;

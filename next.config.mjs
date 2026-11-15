@@ -147,6 +147,12 @@ const nextConfig = {
         destination: "https://www.suagaragem.net/:path*",
         permanent: true,
       },
+      ...["vendidos", "vender", "links"].map((sub) => ({
+        source: "/:path*",
+        has: [{ type: "host", value: `${sub}.suagaragem.net` }],
+        destination: `https://www.suagaragem.net/${sub}`,
+        permanent: true,
+      })),
       ...retiredListings.flatMap((source) => [
         { source, destination: "/estoque", statusCode: 301 },
         { source: `${source}/`, destination: "/estoque", statusCode: 301 },
