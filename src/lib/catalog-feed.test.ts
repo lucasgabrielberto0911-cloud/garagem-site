@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isVehicleCuid, vehicleSlug } from "./vehicle-slug";
+import { queryCatalogVehicles, type CatalogWhere } from "./catalog-feed-query";
 import { PHOTO_BLOB_ORIGIN, PHOTO_STORAGE_ORIGIN } from "./public-photo-url";
 import {
   CATALOG_DEALER_ID,
@@ -11,7 +12,6 @@ import {
   catalogVehicleRow,
   csvEscape,
   formatCatalogPrice,
-  includeConsignedInFeed,
   mapCatalogBodyStyle,
   mapCatalogFuel,
   mapCatalogTransmission,
@@ -195,12 +195,75 @@ test("pixel preserva CEP de Vitória e Aracruz", () => {
   }
 });
 
-test("consignado entra no feed salvo parâmetro explícito", () => {
-  assert.equal(includeConsignedInFeed(null), true);
-  assert.equal(includeConsignedInFeed(""), true);
-  assert.equal(includeConsignedInFeed("1"), true);
-  assert.equal(includeConsignedInFeed("0"), false);
-  assert.equal(includeConsignedInFeed("false"), false);
+test("consignado nunca entra: a query sempre filtra consigned=false, sem parâmetro que reative", async () => {
+  // `?consigned=0|1|false|true` e parâmetro ausente não chegam à query (ela não lê parâmetros).
+  const seen: CatalogWhere[] = [];
+  await queryCatalogVehicles(async (where) => {
+    seen.push(where);
+    return [];
+  });
+  assert.deepEqual(seen, [{ status: "disponivel", historical: false, consigned: false }]);
+});
+
+test("coluna ausente no banco tira só aquele filtro e o consignado continua fora quando a coluna existe", async () => {
+  const missing = (column: string) => Object.assign(new Error("P2022"), { code: "P2022", meta: { column } });
+  const seen: Array<{ where: CatalogWhere; legacy: boolean }> = [];
+  const rows = await queryCatalogVehicles(async (where, legacy) => {
+    seen.push({ where, legacy });
+    if (!legacy) throw missing("Vehicle.locationCity");
+    if ("historical" in where) throw missing("Vehicle.historical");
+    return ["ok"];
+  });
+  assert.deepEqual(rows, ["ok"]);
+  assert.deepEqual(seen.map((s) => s.legacy), [false, true, true]);
+  // consigned=false permanece em todas as tentativas
+  assert.ok(seen.every((s) => s.where.consigned === false));
+
+  // Sem a coluna `consigned` não há consignado: o feed não pode ficar vazio por isso.
+  const noConsigned = await queryCatalogVehicles(async (where) => {
+    if ("consigned" in where) throw missing("Vehicle.consigned");
+    return ["ok"];
+  });
+  assert.deepEqual(noConsigned, ["ok"]);
+
+  // Erro que não é coluna ausente sobe (o feed responde vazio e sem cache).
+  await assert.rejects(queryCatalogVehicles(async () => { throw new Error("boom"); }), /boom/);
+});
+
+test("próprios disponíveis com foto válida entram, inclusive moto; sem imagem aproveitável fica de fora", () => {
+  const origin = "https://www.suagaragem.net";
+  const moto: CatalogFeedVehicle = {
+    ...sample,
+    id: "cmt0ewzpg0001lc0493fl02h8",
+    category: "moto",
+    brand: "Honda",
+    model: "CG 160 Start",
+    version: "160 Start",
+    yearModel: 2023,
+    fuel: "Gasolina",
+    transmission: "Manual",
+  };
+  const semFoto: CatalogFeedVehicle = { ...sample, id: "cmt0ewzpg0002lc0493fl02h9", photos: [] };
+  // Foto só no Storage do Supabase não é servida (egress): sem imagem aproveitável, não entra.
+  const soSupabase: CatalogFeedVehicle = {
+    ...sample,
+    id: "cmt0ewzpg0003lc0493fl02ha",
+    photos: [{ id: "photocccccccccccccccccc", url: `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/x/c.jpg` }],
+  };
+  const csv = buildCatalogCsv([sample, moto, semFoto, soSupabase], origin);
+  const ids = csv.trim().split("\n").slice(1).map((line) => line.split(",")[0]);
+  assert.deepEqual(ids, [sample.id, moto.id]);
+});
+
+test("feed não tem coluna de placa, chassi, RENAVAM, CPF nem telefone de cliente", () => {
+  const forbidden = /plate|placa|chassis|chassi|renavam|cpf|customer|client|cliente|owner/i;
+  assert.deepEqual(META_CSV_COLUMNS.filter((c) => forbidden.test(c)), []);
+  const row = catalogVehicleRow(
+    { ...sample, plate: "ABC1D23", chassis: "9BWZZZ377VT004251", renavam: "12345678901", cpf: "12345678901" } as CatalogFeedVehicle,
+    "https://www.suagaragem.net",
+  );
+  const text = JSON.stringify(row);
+  for (const secret of ["ABC1D23", "9BWZZZ377VT004251", "12345678901"]) assert.ok(!text.includes(secret));
 });
 
 test("dealer_id do feed é SUAGARAGEM", () => {

@@ -323,12 +323,6 @@ export function mapPixelBodyStyle(
   return mapCatalogBodyStyle(category, model, version).toLowerCase();
 }
 
-/** Consignados entram por padrão. `?consigned=0` tira. */
-export function includeConsignedInFeed(value: string | null | undefined) {
-  if (value == null || value.trim() === "") return true;
-  return !/^(0|false|no|nao|não|exclude)$/i.test(value.trim());
-}
-
 export function catalogFeedImageUrl(
   origin: string,
   vehicleId: string,
