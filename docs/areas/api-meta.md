@@ -21,7 +21,7 @@
 ## Alteração segura
 
 - Mudar colunas do CSV: conferir Commerce Manager e testes `catalog-feed*.test.ts`.
-- Consignados: query param `?consigned=0` documentado em `ops.md`.
+- Consignados: nunca entram no feed e não há query param que reative (`catalog-feed-query.ts`).
 - Não alterar Pixel ID em código sem alinhar dataset no Commerce Manager.
 
 ## Testes

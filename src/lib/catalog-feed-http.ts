@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import {
-  buildCatalogCsv,
-  includeConsignedInFeed,
-  type CatalogFeedVehicle,
-} from "@/lib/catalog-feed";
+import { buildCatalogCsv, type CatalogFeedVehicle } from "@/lib/catalog-feed";
+import { queryCatalogVehicles, type CatalogWhere } from "@/lib/catalog-feed-query";
 import { prisma } from "@/lib/prisma";
-import { isMissingColumnError } from "@/lib/prisma-errors";
 import { site } from "@/lib/site";
 
 /**
@@ -55,12 +51,6 @@ const CATALOG_SELECT_LEGACY = {
   photos: PHOTO_SELECT,
 } as const;
 
-type CatalogWhere = {
-  status: "disponivel";
-  historical?: false;
-  consigned?: false;
-};
-
 async function findCatalog(where: CatalogWhere, legacy: boolean) {
   return prisma.vehicle.findMany({
     where,
@@ -68,65 +58,6 @@ async function findCatalog(where: CatalogWhere, legacy: boolean) {
     take: 400,
     select: legacy ? CATALOG_SELECT_LEGACY : CATALOG_SELECT,
   });
-}
-
-async function loadCatalogVehicles(includeConsigned: boolean) {
-  const where: CatalogWhere = {
-    status: "disponivel",
-    historical: false,
-    consigned: false,
-  };
-
-  try {
-    return await findCatalog(where, false);
-  } catch (error) {
-    if (isMissingColumnError(error, "locationCity")) {
-      try {
-        return await findCatalog(where, true);
-      } catch (inner) {
-        if (!isMissingColumnError(inner, "consigned") || includeConsigned) throw inner;
-        const { consigned: _drop, ...rest } = where;
-        return findCatalog(rest, true);
-      }
-    }
-    if (isMissingColumnError(error, "consigned") && !includeConsigned) {
-      const { consigned: _drop, ...rest } = where;
-      return loadWithoutConsigned(rest);
-    }
-    if (!isMissingColumnError(error, "historical")) throw error;
-    const { historical: _drop, ...rest } = where;
-    return loadWithoutHistorical(rest);
-  }
-}
-
-async function loadWithoutHistorical(where: CatalogWhere) {
-  try {
-    return await findCatalog(where, false);
-  } catch (error) {
-    if (isMissingColumnError(error, "locationCity")) {
-      return findCatalog(where, true);
-    }
-    if (isMissingColumnError(error, "consigned") && where.consigned === false) {
-      const { consigned: _drop, ...rest } = where;
-      return findCatalog(rest, false);
-    }
-    throw error;
-  }
-}
-
-async function loadWithoutConsigned(where: CatalogWhere) {
-  try {
-    return await findCatalog(where, false);
-  } catch (error) {
-    if (!isMissingColumnError(error, "historical")) throw error;
-    const { historical: _drop, ...rest } = where;
-    try {
-      return await findCatalog(rest, false);
-    } catch (inner) {
-      if (!isMissingColumnError(inner, "locationCity")) throw inner;
-      return findCatalog(rest, true);
-    }
-  }
 }
 
 function csvResponse(csv: string, cache: boolean) {
@@ -140,12 +71,10 @@ function csvResponse(csv: string, cache: boolean) {
   });
 }
 
-export async function catalogCsvResponse(request: Request) {
-  const includeConsigned = includeConsignedInFeed(
-    new URL(request.url).searchParams.get("consigned"),
-  );
+/** Consignado nunca entra: a query não lê parâmetro algum (`?consigned=` é ignorado). */
+export async function catalogCsvResponse() {
   try {
-    const vehicles = (await loadCatalogVehicles(includeConsigned)) as CatalogFeedVehicle[];
+    const vehicles = (await queryCatalogVehicles(findCatalog)) as CatalogFeedVehicle[];
     return csvResponse(buildCatalogCsv(vehicles, site.url), true);
   } catch (error) {
     console.error("[meta catalog csv]", error);

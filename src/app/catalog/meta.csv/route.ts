@@ -2,6 +2,6 @@ import { catalogCsvResponse } from "@/lib/catalog-feed-http";
 
 export const dynamic = "force-dynamic";
 
-export function GET(request: Request) {
-  return catalogCsvResponse(request);
+export function GET() {
+  return catalogCsvResponse();
 }

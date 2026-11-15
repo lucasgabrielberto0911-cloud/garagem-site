@@ -18,7 +18,7 @@ Feed ao vivo, só `status=disponivel`, gerado na hora e cacheado na CDN (`s-maxa
 
 - URL para o Commerce Manager (feed agendado, de hora em hora): `https://www.suagaragem.net/api/meta/catalog.csv`
 - Alias: `https://www.suagaragem.net/catalog/meta.csv`
-- Tirar consignados: `?consigned=0` (o padrão inclui)
+- Consignado nunca entra no feed (sem parâmetro que reative; `?consigned=` é ignorado)
 - `vehicle_id` = id do Vehicle = `content_ids` do Pixel (`content_type=vehicle`)
 - Fotos WebP saem como JPEG em `/api/catalog-jpg/...` (a Meta pede JPEG ou PNG)
 - Pixel do site (produção): **`2242212449873818`** (`NEXT_PUBLIC_META_PIXEL_ID`). É este ID que precisa ser ligado ao catálogo no Commerce Manager (o aviso "origem do evento do parceiro está ausente" é o catálogo sem esse pixel). Dataset citado no `.env.example`: `1722250562674449`.
