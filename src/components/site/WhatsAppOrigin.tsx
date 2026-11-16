@@ -4,8 +4,10 @@ import { usePathname } from "next/navigation";
 import { recordSiteFunnel } from "@/lib/site-funnel-client";
 import { useEffect } from "react";
 import { CONSENT_EVENT, hasMarketingConsent } from "@/lib/consent";
-import { applyWhatsAppOrigin, classifyLeadOrigin, isLeadOrigin, type LeadOrigin } from "@/lib/lead-origin";
+import { classifyLeadOrigin, isLeadOrigin, type LeadOrigin } from "@/lib/lead-origin";
+import { enrichWhatsAppAnchor, enrichWhatsAppAnchors } from "@/lib/whatsapp-origin-dom";
 const KEY = "garagem_primeira_origem";
+const EVENTS = ["click", "auxclick", "contextmenu", "pointerdown", "focusin"] as const;
 /** Captura no layout raiz, que permanece entre home/estoque/ficha. Enriquece links sem dados pessoais. */
 export function WhatsAppOrigin() {
   const pathname = usePathname();
@@ -25,39 +27,40 @@ export function WhatsAppOrigin() {
   useEffect(() => {
     if (window.location.pathname.startsWith("/admin")) return;
     const landing = classifyLeadOrigin(window.location.search, document.referrer, window.location.origin);
-    let origin: LeadOrigin | null = null;
-    function sync() {
+    function readOrigin(): LeadOrigin | null {
       if (!hasMarketingConsent()) {
-        origin = null;
         try { sessionStorage.removeItem(KEY); } catch { /* armazenamento indisponível */ }
-        return;
+        return null;
       }
       try {
         const stored = sessionStorage.getItem(KEY);
-        origin = isLeadOrigin(stored) ? stored : landing;
+        const origin = isLeadOrigin(stored) ? stored : landing;
         sessionStorage.setItem(KEY, origin);
-      } catch { origin = landing; }
+        return origin;
+      } catch { return landing; }
+    }
+    function sync() {
+      if (window.location.pathname.startsWith("/admin")) return;
+      enrichWhatsAppAnchors(document.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me"]'), readOrigin());
+    }
+    function enrich(event: Event) {
+      if (window.location.pathname.startsWith("/admin")) return;
+      const target = event.target instanceof Element ? event.target.closest("a") : null;
+      if (target instanceof HTMLAnchorElement) enrichWhatsAppAnchor(target, readOrigin());
     }
     sync();
     window.addEventListener(CONSENT_EVENT, sync);
     window.addEventListener("storage", sync);
-    function enrich(event: Event) {
-      if (window.location.pathname.startsWith("/admin")) return;
-      const target = event.target instanceof Element ? event.target.closest("a") : null;
-      // Compartilhamentos bare e contatos do admin ficam fora. Ponto comum também para futuros CTAs.
-      if (!(target instanceof HTMLAnchorElement) || !/[?&]utm_source=site(?:&|$)/.test(target.href)) return;
-      sync();
-      target.href = applyWhatsAppOrigin(target.href, origin);
-    }
-    document.addEventListener("click", enrich, true);
-    document.addEventListener("auxclick", enrich, true);
-    document.addEventListener("contextmenu", enrich, true);
+    for (const ev of EVENTS) document.addEventListener(ev, enrich, true);
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+    document.documentElement.dataset.whatsappOriginReady = "1";
     return () => {
+      delete document.documentElement.dataset.whatsappOriginReady;
+      observer.disconnect();
       window.removeEventListener(CONSENT_EVENT, sync);
       window.removeEventListener("storage", sync);
-      document.removeEventListener("click", enrich, true);
-      document.removeEventListener("auxclick", enrich, true);
-      document.removeEventListener("contextmenu", enrich, true);
+      for (const ev of EVENTS) document.removeEventListener(ev, enrich, true);
     };
   }, []);
   return null;
