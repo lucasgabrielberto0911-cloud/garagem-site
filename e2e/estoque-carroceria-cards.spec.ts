@@ -31,7 +31,7 @@ test("chips de carroceria filtram o estoque e somem com a carroceria ao trocar p
   await expect(page).not.toHaveURL(/body=/);
 });
 
-test("card do estoque: WhatsApp largo com 44 px e coração com rótulo Salvar", async ({ page }) => {
+test("card do estoque: WhatsApp largo com 44 px e coração discreto sem texto", async ({ page }) => {
   await page.goto("/estoque");
   const card = page.locator("article.listing-card").first();
   const whatsapp = card.locator(".listing-card-interest a");
@@ -41,10 +41,12 @@ test("card do estoque: WhatsApp largo com 44 px e coração com rótulo Salvar",
   expect(waBox.width).toBeGreaterThanOrEqual(cardBox.width - 2);
   expect(await whatsapp.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(14);
   const save = card.getByRole("button", { name: /^Salvar/ });
-  await expect(save).toHaveText("Salvar");
-  expect((await save.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  await expect(save).toHaveText("");
+  const saveBox = (await save.boundingBox())!;
+  expect(saveBox.height).toBeGreaterThanOrEqual(40);
+  expect(saveBox.width).toBeGreaterThanOrEqual(40);
   await save.click();
-  await expect(card.getByRole("button", { name: /^Remover/ })).toHaveText("Salvo");
+  await expect(card.getByRole("button", { name: /^Remover/ })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("celular: textos do card e da barra de baixo com pelo menos 12 px", async ({ page }) => {
@@ -64,18 +66,15 @@ test("celular: textos do card e da barra de baixo com pelo menos 12 px", async (
   for (const size of sizes) expect(size).toBeGreaterThanOrEqual(12);
 });
 
-test("celular: selos do card ficam no alto da foto, um só, sem cobrir o carro", async ({ page }) => {
-  test.skip(page.viewportSize()!.width >= 640, "selos no alto só no celular");
+test("selos do card ficam na área de texto, um só, sem cobrir a foto", async ({ page }) => {
   await page.goto("/estoque");
   const photo = page.locator(".listing-card-photo").first();
-  const badges = photo.locator(".listing-card-badges > span:visible");
-  expect(await badges.count()).toBeLessThanOrEqual(1);
+  await expect(photo.locator(".listing-card-badges")).toHaveCount(0);
+  const card = page.locator("article.listing-card").first();
+  expect(await card.locator(".listing-card-badges > span:visible").count()).toBeLessThanOrEqual(1);
   const photoBox = (await photo.boundingBox())!;
-  const badgeBox = await badges.first().boundingBox();
-  if (badgeBox) {
-    expect(badgeBox.y + badgeBox.height).toBeLessThan(photoBox.y + photoBox.height * 0.4);
-    expect(badgeBox.width).toBeLessThan(photoBox.width * 0.55);
-  }
+  const badgeBox = await card.locator(".listing-card-badges > span:visible").first().boundingBox();
+  if (badgeBox) expect(badgeBox.y).toBeGreaterThanOrEqual(photoBox.y + photoBox.height - 1);
 });
 
 test("home no celular: WhatsApp, Ver estoque e números da loja logo no topo, sem assistente", async ({ page }) => {

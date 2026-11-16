@@ -36,7 +36,7 @@ export function FavoriteButton({
   size?: "sm" | "md";
   /** `ghost`: ícone pequeno, alvo de 44px, sem caixa — para o card do estoque. */
   appearance?: "chip" | "ghost";
-  /** Card do estoque: só o coração no celular; coração + "Salvar"/"Salvo" a partir de `sm`. */
+  /** Card do estoque: só o coração num círculo pequeno, em qualquer tela (o nome fica no aria-label). */
   showLabel?: boolean;
   className?: string;
 }) {
@@ -126,32 +126,29 @@ export function FavoriteButton({
   const ghost = appearance === "ghost";
 
   if (showLabel) {
-    // Celular: só o coração num círculo de 28px; o botão (40px, transparente) vira a área de toque.
-    // A partir de `sm`: pílula com texto, como antes.
+    // Card: só o coração num círculo pequeno (28px) em qualquer tela; o botão (40px, transparente)
+    // é a área de toque. Sem texto, para não cobrir a foto.
     return (
       <button
         type="button"
         onClick={onClick}
         aria-pressed={active}
         aria-label={active ? `Remover ${label} dos favoritos` : `Salvar ${label} nos favoritos`}
-        className={`relative z-20 inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 font-display text-[12px] font-semibold uppercase tracking-wide transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand sm:h-auto sm:min-h-[44px] sm:w-auto sm:rounded-full sm:border sm:px-3 sm:backdrop-blur ${
-          active
-            ? "text-cream sm:border-brand sm:bg-brand/90"
-            : "text-cream sm:border-white/25 sm:bg-asphalt/80 sm:hover:border-brand sm:hover:text-brand-light"
-        } ${className}`}
+        className={`relative z-20 inline-flex h-10 w-10 shrink-0 items-center justify-center text-cream transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${className}`}
       >
         <span
           aria-hidden="true"
-          className={`flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur sm:h-auto sm:w-auto sm:border-0 sm:bg-transparent sm:backdrop-blur-none ${
-            active ? "border-brand bg-brand/90" : "border-white/25 bg-asphalt/70"
+          className={`flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur transition-colors ${
+            active
+              ? "border-brand bg-brand/90"
+              : "border-white/25 bg-asphalt/70"
           }`}
         >
           <Heart
             filled={active}
-            className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${pulse ? "animate-fade-in-scale" : ""}`}
+            className={`h-3.5 w-3.5 ${pulse ? "animate-fade-in-scale" : ""}`}
           />
         </span>
-        <span className="hidden sm:inline">{active ? "Salvo" : "Salvar"}</span>
       </button>
     );
   }
