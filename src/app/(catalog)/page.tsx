@@ -103,11 +103,11 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="pt-3.5 pb-3 sm:py-6 lg:py-7">
-          {/* Computador: grade de 2 colunas; a da direita ocupa as 2 linhas (texto + números),
-              com topo no logo e base na base dos cards de números. Celular/tablet: sem mudança. */}
-          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_30rem] xl:gap-x-10">
-          <div className="flex flex-col gap-2.5 sm:gap-4 lg:contents">
+        <Container className="pt-4 pb-4 sm:py-7 lg:py-8">
+          {/* Computador: grade de 2 colunas; a da direita alinha ações (WhatsApp principal,
+              Ver estoque secundário) + assistente leve e integrado ao hero. */}
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-center lg:gap-x-10 xl:grid-cols-[minmax(0,1fr)_28rem] xl:gap-x-12">
+          <div className="flex flex-col gap-3.5 sm:gap-5 lg:contents">
             <div className="hero-text min-w-0 max-w-2xl lg:col-start-1 lg:row-start-1">
               <div className="hero-brand">
                 <SiteWordmark size="hero" />
@@ -121,35 +121,41 @@ export default async function HomePage() {
               </ul>
             </div>
 
-            {/* Grade única: celular = [WhatsApp] / [Ver estoque] (o assistente fica só do
-                tablet em diante); tablet = empilhado; computador = [WhatsApp | Ver estoque] /
-                Assistente / caixinha, alinhada ao topo do logo e com a altura do hero de antes. */}
-            <div className="hero-cta grid w-full shrink-0 grid-cols-2 gap-2 sm:max-w-xs sm:grid-cols-1 sm:gap-2.5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[1fr_1fr_1fr_auto] lg:gap-2 xl:grid-rows-[1fr_1fr_auto] xl:gap-3">
-              <WhatsAppButton
-                size="lg"
-                className="col-span-2 w-full sm:col-span-1 lg:col-span-2 lg:!px-3 xl:col-span-1 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap"
-                trackingLabel="home-hero"
-                message={WHATSAPP_MESSAGES.help}
-              >
-                Falar no WhatsApp
-              </WhatsAppButton>
-              <ButtonLink href="/estoque" size="lg" className="col-span-2 w-full !px-3 sm:col-span-1 sm:!px-7 lg:col-span-2 lg:!px-3 xl:col-span-1 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap">
-                Ver estoque
-              </ButtonLink>
-              <div className="hidden sm:block lg:col-span-2">
-                <HomeAssistantButton />
+            {/* Celular: WhatsApp principal + Ver estoque secundário discreto (assistente
+                segue no cabeçalho); tablet/computador: ambos lado a lado + assistente leve. */}
+            <div className="hero-cta flex w-full shrink-0 flex-col gap-3 sm:max-w-md sm:gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none lg:self-center">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5">
+                <WhatsAppButton
+                  size="md"
+                  className="w-full rounded-lg !min-h-[44px] sm:!min-h-[46px] !px-4 !py-2.5 !text-[13px] sm:!text-sm shadow-md shadow-brand/20 whitespace-nowrap"
+                  trackingLabel="home-hero"
+                  message={WHATSAPP_MESSAGES.help}
+                >
+                  Falar no WhatsApp
+                </WhatsAppButton>
+                <ButtonLink
+                  href="/estoque"
+                  size="md"
+                  variant="outline"
+                  className="w-full rounded-lg !min-h-[44px] sm:!min-h-[46px] !px-4 !py-2.5 !text-[13px] sm:!text-sm !border-white/20 !bg-white/[0.04] hover:!border-white/40 hover:!bg-white/[0.08] whitespace-nowrap"
+                >
+                  Ver estoque
+                </ButtonLink>
               </div>
-              <div className="hidden sm:block lg:col-span-2">
+              <div className="hidden sm:flex sm:flex-col sm:gap-2.5 sm:pt-1">
+                <div className="flex items-center">
+                  <HomeAssistantButton />
+                </div>
                 <HomeAssistantAsk />
               </div>
               {/* O telefone já está no header e no WhatsApp; fica só no tablet, como antes. */}
-              <p className="hidden text-center text-sm font-medium leading-none text-cream sm:block lg:hidden">
+              <p className="hidden text-center text-sm font-medium leading-none text-cream/80 sm:block lg:hidden">
                 {site.whatsappLabel}
               </p>
             </div>
           </div>
 
-          <div className="hero-stats mx-auto mt-4 w-full max-w-2xl sm:mt-8 lg:col-start-1 lg:row-start-2 lg:mx-0 lg:self-end">
+          <div className="hero-stats mx-auto mt-4 w-full max-w-2xl sm:mt-7 lg:col-start-1 lg:row-start-2 lg:mx-0 lg:mt-6 lg:self-end">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>

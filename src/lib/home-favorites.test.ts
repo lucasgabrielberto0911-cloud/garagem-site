@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { HomeAssistantAsk } from "@/components/site/HomeAssistantCta";
+import { HomeAssistantAsk, HomeAssistantButton } from "@/components/site/HomeAssistantCta";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -18,10 +18,10 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   const hero = page.slice(page.indexOf("hero-red-black"), page.indexOf('id="destaques"'));
   assert.match(hero, /trackingLabel="home-hero"/);
   assert.match(hero, /Falar no WhatsApp/);
-  assert.match(hero, /<ButtonLink href="\/estoque" size="lg"/);
-  assert.match(hero, /hero-cta grid w-full shrink-0 grid-cols-2/);
+  assert.match(hero, /<ButtonLink[\s\S]{0,120}href="\/estoque"[\s\S]{0,120}variant="outline"/);
+  assert.match(hero, /hero-cta flex w-full shrink-0 flex-col/);
   // Celular: só WhatsApp e "Ver estoque"; o assistente aparece do tablet em diante.
-  assert.match(hero, /hidden sm:block lg:col-span-2">\s*<HomeAssistantButton/);
+  assert.match(hero, /hidden sm:flex[\s\S]{0,120}<HomeAssistantButton \/>/);
   assert.match(hero, /<HomeAssistantButton \/>/);
   assert.match(hero, /<HomeAssistantAsk \/>/);
   assert.doesNotMatch(hero, /hero-brand hidden/);
@@ -39,7 +39,7 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.match(page.slice(chat, chat + 220), /variant="outline"/);
   assert.match(page.slice(chat, chat + 220), /source="home-final"/);
   // Números da loja logo abaixo das ações, também no celular.
-  assert.match(hero, /hero-stats mx-auto mt-4 w-full max-w-2xl sm:mt-8/);
+  assert.match(hero, /hero-stats mx-auto mt-4 w-full max-w-2xl sm:mt-7/);
   assert.doesNotMatch(hero, /hero-stats[^"]*\bhidden\b/);
   assert.doesNotMatch(readSrc("components/site/HeroSearch.tsx"), /pb-16/);
   const afterStock = page.slice(page.indexOf("Ver todos os veículos"));
@@ -102,10 +102,16 @@ test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
   assert.doesNotMatch(comparison, /vehicleLocationLabel|Cidade/);
 });
 
-test("HomeAssistantAsk tem label único sem duplicidade e touch targets acessíveis", () => {
+test("HomeAssistantAsk tem label único sem duplicidade, placeholder acessível e sem botões extras", () => {
   const html = renderToStaticMarkup(createElement(HomeAssistantAsk));
   assert.match(html, /<label\b[^>]*for="home-assistant-input"/);
   assert.equal((html.match(/for="home-assistant-input"/g) || []).length, 1);
-  assert.match(html, /aria-label="Sugestões de perguntas"/);
+  assert.match(html, /aria-hidden="true"[^>]*data-assistant-placeholder/);
+  assert.match(html, /Qual o mais econômico\?/);
+  assert.doesNotMatch(html, /aria-label="Sugestões de perguntas"/);
   assert.match(html, /min-h-\[44px\]/);
+
+  const buttonHtml = renderToStaticMarkup(createElement(HomeAssistantButton));
+  assert.match(buttonHtml, /aria-label="Pergunte ao assistente"/);
+  assert.doesNotMatch(buttonHtml, /bg-brand-gradient/);
 });

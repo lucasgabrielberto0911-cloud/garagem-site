@@ -206,23 +206,43 @@ test("home desktop: assistente visível com animação respeitando prefers-reduc
 
   const launcher = page.locator(".site-chat-launcher");
   await expect(launcher).toBeVisible();
-  const heroAssistant = page.locator(".assistant-cta");
+  const heroAssistant = page.getByRole("button", { name: "Pergunte ao assistente" });
   await expect(heroAssistant).toBeVisible();
+  const heroPlaceholder = page.locator("[data-assistant-placeholder]");
+  await expect(heroPlaceholder).toBeVisible();
+  await expect(heroPlaceholder).toHaveAttribute("data-motion", "animated");
 
   const animNormal = await page.evaluate(() => ({
     launcherAfter: getComputedStyle(document.querySelector(".site-chat-launcher")!, "::after").animationName,
-    heroAfter: getComputedStyle(document.querySelector(".assistant-cta")!, "::after").animationName,
+    caretAnim: getComputedStyle(document.querySelector(".assistant-placeholder-caret")!).animationName,
   }));
   expect(animNormal.launcherAfter).not.toBe("none");
-  expect(animNormal.heroAfter).not.toBe("none");
+  expect(animNormal.caretAnim).not.toBe("none");
+
+  await expect(page.locator('label[for="home-assistant-input"]')).toHaveText(
+    "Pergunte qualquer coisa sobre nossos carros",
+  );
+  await expect(heroPlaceholder).toHaveText("Carros até R$ 60 mil", { timeout: 5000 });
+
+  const assistantInput = page.locator("#home-assistant-input");
+  await assistantInput.focus();
+  await expect(heroPlaceholder).toHaveAttribute("data-motion", "static");
+  await assistantInput.fill("Civic");
+  await expect(heroPlaceholder).toHaveCount(0);
+  await assistantInput.fill("");
+  await assistantInput.blur();
+  await expect(heroPlaceholder).toBeVisible();
+  await expect(heroPlaceholder).toHaveAttribute("data-motion", "animated");
 
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(heroPlaceholder).toHaveAttribute("data-motion", "static");
+  await expect(heroPlaceholder).toHaveText("Qual o mais econômico?");
   const animReduced = await page.evaluate(() => ({
     launcherAfter: getComputedStyle(document.querySelector(".site-chat-launcher")!, "::after").animationName,
-    heroAfter: getComputedStyle(document.querySelector(".assistant-cta")!, "::after").animationName,
+    caretCount: document.querySelectorAll(".assistant-placeholder-caret").length,
   }));
   expect(animReduced.launcherAfter).toBe("none");
-  expect(animReduced.heroAfter).toBe("none");
+  expect(animReduced.caretCount).toBe(0);
 });
 
 test("estoque: 6 atalhos na ordem certa, Carroceria nos selects, painel 1280x800 <= 790 e gaveta sem duplicar preço", async ({
