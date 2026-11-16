@@ -2,11 +2,25 @@
 
 import { cloneElement, isValidElement, useId, type Dispatch, type SetStateAction, type ReactNode } from "react";
 import type { Facets, FilterValues } from "./StockFilters";
-import { CATEGORY_FILTER_OPTIONS, BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
+import { MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
 import { modelAfterBrandChange, modelFilterOptions, sanitizeFiltersForCategory } from "@/lib/stock-query";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { transmissionFilterOptions, transmissionFilterParam } from "@/lib/vehicle-display";
 import { stockRangeError } from "@/lib/stock-range-validation";
+
+const CATEGORY_FILTER_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "carro", label: "Carros" },
+  { value: "moto", label: "Motos" },
+] as const;
+
+const BUDGET_CHIPS = [
+  { label: "Até R$ 30 mil", minPrice: "", maxPrice: "30000" },
+  { label: "Até R$ 50 mil", minPrice: "", maxPrice: "50000" },
+  { label: "R$ 50 mil a R$ 80 mil", minPrice: "50000", maxPrice: "80000" },
+  { label: "R$ 80 mil a R$ 120 mil", minPrice: "80000", maxPrice: "120000" },
+  { label: "Acima de R$ 120 mil", minPrice: "120000", maxPrice: "" },
+] as const;
 
 export type StockFilterFieldsProps = {
   facets: Facets; draft: FilterValues; setDraft: Dispatch<SetStateAction<FilterValues>>; onApply: () => void; resultCount?: number | null;

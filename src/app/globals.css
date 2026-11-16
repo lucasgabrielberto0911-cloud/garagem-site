@@ -77,6 +77,14 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  html,
+  body {
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -130,9 +138,9 @@ body {
     padding-bottom: calc(var(--ficha-sticky-bar) + 0.75rem);
   }
 
-  /* Compensa header fixo + notch (altura alinhada ao SiteHeader). */
+  /* Compensa header fixo + notch + borda de 2px (altura alinhada ao SiteHeader). */
   .pt-site-header {
-    padding-top: calc(4.5rem + env(safe-area-inset-top, 0px));
+    padding-top: calc(4.5rem + 2px + env(safe-area-inset-top, 0px));
   }
 
   @media (min-width: 1024px) {
@@ -212,6 +220,14 @@ body {
       var(--site-bottom-nav) + var(--help-bubble-gap) + var(--help-bubble-h) +
         var(--help-bubble-clear) + env(safe-area-inset-bottom, 0px)
     );
+  }
+
+  /* No celular, o botão flutuante do chat fica oculto (a ajuda está no header); basta compensar a bottom nav. */
+  @media (max-width: 1023px) {
+    body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav,
+    body:has(.site-consent):not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])) .pb-site-nav {
+      padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   @media (min-width: 1024px) {
@@ -732,6 +748,38 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   display: none;
 }
 
+/* Pulso suave e contraste do botão flutuante do assistente (SiteChat). */
+.site-chat-launcher {
+  position: relative;
+  isolation: isolate;
+}
+
+.site-chat-launcher::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid rgba(232, 24, 28, 0.5);
+  box-shadow: 0 0 18px 2px rgba(232, 24, 28, 0.35);
+  opacity: 0;
+  transform: scale(0.96);
+  animation: siteChatLauncherPulse 3.8s ease-in-out 1.4s infinite both;
+}
+
+@keyframes siteChatLauncherPulse {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  45% {
+    opacity: 0.72;
+    transform: scale(1.04);
+  }
+}
+
 @media (max-width: 1023px) {
   /* Painel de ponta a ponta: encosta no rodapé e não deixa a página aparecer atrás. */
   .site-chat.is-open {
@@ -745,6 +793,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     width: auto;
     height: auto;
     max-width: none;
+    max-height: 100dvh;
     overflow: hidden;
     align-items: stretch;
   }
@@ -769,6 +818,12 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     min-height: 0;
     flex: 1 1 auto;
     animation: fadeIn 0.2s ease both;
+  }
+
+  body:not([data-chat-keyboard]) .site-chat.is-open .site-chat-panel {
+    max-height: calc(
+      100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
   }
 
   .site-chat-panel textarea,
@@ -2070,7 +2125,7 @@ html[data-consent="essential"] .site-consent {
   z-index: 0;
   pointer-events: none;
   box-shadow: 0 0 22px 2px rgba(232, 24, 28, 0.45);
-  opacity: 0.25;
+  opacity: 0.32;
   /* Começa depois do 1º paint do hero. */
   animation: assistantGlow 4.6s ease-in-out 2s infinite both;
 }
@@ -2123,12 +2178,11 @@ html[data-consent="essential"] .site-consent {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .site-chat-launcher::after,
   .assistant-cta::after,
   .assistant-cta-glow::before {
-    animation: none;
-  }
-  .assistant-cta::after {
-    opacity: 0;
+    animation: none !important;
+    opacity: 0 !important;
   }
 }
 

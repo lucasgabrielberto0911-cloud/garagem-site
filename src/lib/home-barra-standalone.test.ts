@@ -41,13 +41,13 @@ test("PWA standalone, hero mobile e botões do assistente respeitam safe-area, d
   const layout = readSrc("app/layout.tsx");
   assert.match(layout, /viewportFit:\s*"cover"/);
 
-  const polishCss = readSrc("app/(site)/site-polish.css");
-  assert.match(polishCss, /@media \(display-mode: standalone\)/);
-  assert.match(polishCss, /100dvh/);
-  assert.match(polishCss, /safe-area-inset-top/);
-  assert.match(polishCss, /safe-area-inset-bottom/);
-  assert.match(polishCss, /prefers-reduced-motion:\s*reduce/);
-  assert.match(polishCss, /\.site-chat-launcher::after/);
+  const globalsCss = readSrc("app/globals.css");
+  assert.match(globalsCss, /@media \(display-mode: standalone\)/);
+  assert.match(globalsCss, /100dvh/);
+  assert.match(globalsCss, /safe-area-inset-top/);
+  assert.match(globalsCss, /safe-area-inset-bottom/);
+  assert.match(globalsCss, /prefers-reduced-motion:\s*reduce/);
+  assert.match(globalsCss, /\.site-chat-launcher::after/);
 
   const headerSrc = readSrc("components/site/SiteHeader.tsx");
   assert.match(headerSrc, /pl-safe pr-safe/);

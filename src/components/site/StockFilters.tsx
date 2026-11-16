@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
-import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
+import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import {
@@ -23,7 +23,11 @@ import {
 } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
-import { ShareStockSearch } from "./ShareStockSearch";
+const LazyShareStockSearch = lazy(() =>
+  import("./ShareStockSearch").then((module) => ({
+    default: module.ShareStockSearch,
+  })),
+);
 
 export type Facets = {
   categories?: string[];
@@ -62,7 +66,11 @@ type ActiveFilter = {
 };
 
 function ShareSearchButton({ className = "" }: { className?: string }) {
-  return <ShareStockSearch className={className} icon={<IconShare className="h-4 w-4" />} />;
+  return (
+    <Suspense fallback={null}>
+      <LazyShareStockSearch className={className} />
+    </Suspense>
+  );
 }
 
 /** Só a leitura da URL aguarda hidratação; o campo de busca permanece no HTML. */

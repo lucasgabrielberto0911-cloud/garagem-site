@@ -13,7 +13,6 @@ import { FavoritesProvider } from "@/lib/favorites";
 import { localBusinessJsonLd } from "@/lib/seo";
 import { getGoogleReviews } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
-import "./site-polish.css";
 
 async function SiteJsonLd() {
   const [publicSite, google] = await Promise.all([

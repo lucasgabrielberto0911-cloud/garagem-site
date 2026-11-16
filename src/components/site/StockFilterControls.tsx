@@ -24,20 +24,6 @@ export function toggleAccessoryValue(current: string, name: string) {
   );
 }
 
-export const CATEGORY_FILTER_OPTIONS = [
-  { value: "", label: "Todos" },
-  { value: "carro", label: "Carros" },
-  { value: "moto", label: "Motos" },
-] as const;
-
-export const BUDGET_CHIPS = [
-  { label: "Até R$ 30 mil", minPrice: "", maxPrice: "30000" },
-  { label: "Até R$ 50 mil", minPrice: "", maxPrice: "50000" },
-  { label: "R$ 50 mil a R$ 80 mil", minPrice: "50000", maxPrice: "80000" },
-  { label: "R$ 80 mil a R$ 120 mil", minPrice: "80000", maxPrice: "120000" },
-  { label: "Acima de R$ 120 mil", minPrice: "120000", maxPrice: "" },
-] as const;
-
 /**
  * 16px no celular/iPad: abaixo disso o Safari dá zoom ao focar o campo.
  * No Mac (pointer fino) `lg:text-sm` mantém 14px; globals.css força 16px
