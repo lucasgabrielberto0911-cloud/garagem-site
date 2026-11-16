@@ -291,7 +291,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                   />
                 </Field>
 
-                <Field label="Foto (opcional)">
+                <Field label="Foto da entrega / cliente (opcional)" hint="Fotos publicadas aparecem também em /vendidos.">
                   <label className="flex cursor-pointer items-center justify-center border border-white/10 bg-ink px-3 py-2.5 text-xs text-cream transition hover:border-brand/50">
                     {uploading
                       ? "Enviando..."

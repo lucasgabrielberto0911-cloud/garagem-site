@@ -84,6 +84,7 @@ export async function saveTestimonial(
   revalidatePath("/admin/depoimentos");
   expireAdminData();
   revalidatePath("/");
+  revalidatePath("/vendidos");
   return {
     ok: true,
     message: id ? "Depoimento atualizado." : "Depoimento publicado.",
@@ -98,6 +99,7 @@ export async function setTestimonialPublished(id: string, published: boolean) {
   revalidatePath("/admin/depoimentos");
   expireAdminData();
   revalidatePath("/");
+  revalidatePath("/vendidos");
   return {
     ok: true,
     message: published
@@ -116,5 +118,6 @@ export async function deleteTestimonial(
   revalidatePath("/admin/depoimentos");
   expireAdminData();
   revalidatePath("/");
+  revalidatePath("/vendidos");
   return { ok: true, message: "Depoimento excluído." };
 }

@@ -31,6 +31,7 @@ function revalidateSharedPublicStock(
   revalidatePath("/api/estoque");
   revalidatePath("/");
   revalidatePath("/estoque");
+  revalidatePath("/vendidos");
   revalidatePath("/sitemap.xml");
 }
 
