@@ -104,14 +104,18 @@ export function VehicleCard({
             <div className="listing-card-badges">
               {badge ? <span className={badge.className}>{badge.label}</span> : null}
               {!badge && isNewListing(vehicle.createdAt) ? (
-                <span className="listing-card-badge--new">
-                  <span className="sm:hidden">Novo</span>
-                  <span className="hidden sm:inline">Novo nesta semana</span>
+                <span className="listing-card-badge--new" title="Novo nesta semana">
+                  Novo<span className="sr-only"> nesta semana</span>
                 </span>
               ) : null}
               {!badge && vehicle.priceDrop ? (
-                <span className="listing-card-badge--drop">
-                  Baixou {formatCurrencyBRL(vehicle.priceDrop)}
+                <span
+                  className="listing-card-badge--drop"
+                  title={`Baixou ${formatCurrencyBRL(vehicle.priceDrop)}`}
+                >
+                  Baixou
+                  <span className="sr-only"> {formatCurrencyBRL(vehicle.priceDrop)}</span>
+                  <span aria-hidden="true" className="hidden sm:max-lg:inline xl:inline"> {formatCurrencyBRL(vehicle.priceDrop)}</span>
                 </span>
               ) : null}
               {!cover ? <span className="listing-card-badge--muted">Sem foto</span> : null}

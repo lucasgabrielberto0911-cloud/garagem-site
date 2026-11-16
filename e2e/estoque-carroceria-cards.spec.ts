@@ -77,6 +77,33 @@ test("selos do card ficam na área de texto, um só, sem cobrir a foto", async (
   if (badgeBox) expect(badgeBox.y).toBeGreaterThanOrEqual(photoBox.y + photoBox.height - 1);
 });
 
+test("selos sem reticências e cards da mesma linha com a mesma largura e foto 4:3", async ({ page }) => {
+  await page.goto("/estoque");
+  await expect(page.locator("article.listing-card").first()).toBeVisible();
+  const clipped = await page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>(".listing-card-badges > span"))
+    .filter(el => el.offsetParent !== null && el.scrollWidth > el.clientWidth + 1)
+    .map(el => el.textContent));
+  expect(clipped).toEqual([]);
+  const boxes = await page.evaluate(() => {
+    const rows = new Map<number, { w: number; h: number }[]>();
+    document.querySelectorAll(".listing-card-item").forEach(item => {
+      const card = item.getBoundingClientRect();
+      const photo = item.querySelector(".listing-card-photo")?.getBoundingClientRect();
+      if (!photo) return;
+      const key = Math.round(card.top);
+      rows.set(key, [...(rows.get(key) ?? []), { w: card.width, h: photo.height }]);
+    });
+    return Array.from(rows.values()).filter(row => row.length > 1);
+  });
+  expect(boxes.length).toBeGreaterThan(0);
+  for (const row of boxes) {
+    for (const b of row) {
+      expect(Math.abs(b.w - row[0].w)).toBeLessThanOrEqual(1);
+      expect(Math.abs(b.h - row[0].h)).toBeLessThanOrEqual(1);
+    }
+  }
+});
+
 test("home no celular: WhatsApp, Ver estoque e números da loja logo no topo, sem assistente", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 640, "layout só do celular");
   await page.goto("/");

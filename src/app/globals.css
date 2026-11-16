@@ -527,6 +527,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 }
 .listing-card-brand-row .listing-card-brand {
   margin: 0;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -534,15 +535,14 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 }
 .listing-card-badges {
   display: flex;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  max-width: 62%;
 }
+/* Itens do subgrid com min-width:0: o selo nowrap não pode alargar a coluna 1fr (cards da linha iguais). */
+.listing-card .listing-card-main > * { min-width: 0; }
 .listing-card-badges > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0.1rem 0.4rem;
+  padding: 0.1rem 0;
   border-radius: 999px;
   font-family: var(--font-display), system-ui, sans-serif;
   font-size: 0.75rem;
@@ -556,7 +556,10 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 .listing-card-badge--drop { color: #ff6b6e; }
 .listing-card-badge--drop { background: rgba(232, 24, 28, 0.15); }
 .listing-card-badge--muted { background: rgba(255, 255, 255, 0.08); color: #c1c1c8; }
-.listing-card-name { padding: 0.75rem 0.625rem 0.25rem; }
+/* Só selos com fundo levam padding lateral; texto solto fica alinhado à margem do card. */
+.listing-card-badges > .listing-card-badge--drop,
+.listing-card-badges > .listing-card-badge--muted { padding-inline: 0.4rem; }
+.listing-card-name { padding: 0.75rem 0.625rem 0.25rem; min-width: 0; }
 .listing-card-brand {
   margin: 0 0 0.2rem;
   color: #c1c1c8;
