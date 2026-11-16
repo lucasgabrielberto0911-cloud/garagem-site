@@ -1,3 +1,11 @@
+/*
+ * `@config` explícito é obrigatório aqui. O plugin do Tailwind 3 guarda o
+ * caminho do último `@config` que processou; se o build passar primeiro pelo
+ * admin.css (que usa tailwind.admin.config.ts), este arquivo herdaria o
+ * `content` do painel e o site perderia a grade da ficha, o aside e o botão
+ * do WhatsApp. Teste: src/lib/tailwind-config-isolation.test.ts.
+ */
+@config "../../tailwind.config.ts";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
