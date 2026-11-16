@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { SECONDARY_LINKS, SERVICES } from "./site";
+import { soldFichaNavLinks } from "./sold-ficha-nav";
 
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 
@@ -46,4 +47,25 @@ test("páginas de apoio usam ISR de 1 h, metadata e breadcrumb", () => {
     assert.ok(src.includes("breadcrumbJsonLd"));
     assert.ok(!src.includes('"use client"'));
   }
+});
+
+test("ficha vendida: links de marca, categoria e /vendidos, sem preço", () => {
+  const car = soldFichaNavLinks({ brand: "Honda", category: "carro" });
+  assert.deepEqual(car.map((l) => l.href), ["/estoque?brand=Honda", "/estoque", "/vendidos"]);
+  assert.equal(car[2].label, "Ver entregas e histórico da loja");
+  const moto = soldFichaNavLinks({ brand: "Yamaha Motor", category: "moto" });
+  assert.deepEqual(moto.map((l) => l.href), [
+    "/estoque?brand=Yamaha+Motor&category=moto",
+    "/estoque?category=moto",
+    "/vendidos",
+  ]);
+  for (const l of [...car, ...moto]) assert.ok(!/preco|price|R\$|\d{2}\.\d{3}/i.test(l.href + l.label));
+});
+
+test("financiamento tem atalhos de intenção e como-funciona liga as páginas de apoio", () => {
+  const fin = read("src/app/(site)/financiamento/page.tsx");
+  for (const t of ["WHATSAPP_MESSAGES.finance", "WHATSAPP_MESSAGES.sell", 'href="/vender"', "Simular financiamento no WhatsApp", "Quero avaliar meu usado na troca"])
+    assert.ok(fin.includes(t), t);
+  const how = read("src/app/(site)/como-funciona/page.tsx");
+  for (const h of ["/estoque", "/financiamento", "/vendidos", "/guias"]) assert.ok(how.includes(`href: "${h}"`), h);
 });

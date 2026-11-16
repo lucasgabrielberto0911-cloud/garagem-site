@@ -24,6 +24,8 @@ test("/como-funciona: etapas, canonical, breadcrumb e sem overflow", async ({ pa
     expect.arrayContaining([expect.stringContaining("BreadcrumbList")]),
   );
   await expect(page.locator('main a[href*="wa.me"]').first()).toBeVisible();
+  const next = page.getByRole("navigation", { name: "Próximos passos" });
+  for (const href of ["/estoque", "/financiamento", "/vendidos", "/guias"]) await expect(next.locator(`a[href="${href}"]`)).toBeVisible();
   await semOverflow(page);
 });
 
@@ -34,7 +36,11 @@ test("/financiamento: 60x, 18x, WhatsApp e link para /vender", async ({ page }) 
   await expect(main).toContainText("até 60x");
   await expect(main).toContainText("até 18x");
   await expect(main).toContainText("análise de crédito");
-  await expect(main.getByRole("link", { name: "Vender ou trocar" })).toHaveAttribute("href", "/vender");
+  await expect(main.getByRole("link", { name: "Preencher dados do meu usado" })).toHaveAttribute("href", "/vender");
+  const fin = main.getByRole("link", { name: "Simular financiamento no WhatsApp" });
+  const troca = main.getByRole("link", { name: "Quero avaliar meu usado na troca" });
+  expect(new URL((await fin.getAttribute("href"))!).searchParams.get("text")).toMatch(/financ/i);
+  expect(new URL((await troca.getAttribute("href"))!).searchParams.get("text")).toMatch(/avaliar meu veículo/);
   await expect(main.locator('a[href*="wa.me"]').first()).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.suagaragem.net/financiamento");
   await semOverflow(page);

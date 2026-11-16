@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
-import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
+import { ButtonLink, Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 
@@ -58,24 +58,38 @@ export default function FinanciamentoPage() {
             </li>
           ))}
         </ul>
-        <div className="mt-10 flex flex-col items-center gap-4 text-center">
-          <WhatsAppButton message={WHATSAPP_MESSAGES.finance} size="lg">
-            Simular no WhatsApp
+        <div className="mt-10 flex flex-col items-stretch gap-3 text-center sm:items-center">
+          <WhatsAppButton
+            message={WHATSAPP_MESSAGES.finance}
+            size="lg"
+            trackingLabel="financiamento"
+          >
+            Simular financiamento no WhatsApp
           </WhatsAppButton>
-          <p className="text-sm text-cream/80">
-            Quer avaliar seu veículo?{" "}
-            <Link
-              href="/vender"
-              className="font-semibold text-brand-light underline-offset-4 hover:underline"
-            >
-              Vender ou trocar
-            </Link>
-            {" · "}
+          <WhatsAppButton
+            message={WHATSAPP_MESSAGES.sell}
+            variant="outline"
+            trackingLabel="financiamento-troca"
+          >
+            Quero avaliar meu usado na troca
+          </WhatsAppButton>
+          <ButtonLink href="/vender" variant="outline">
+            Preencher dados do meu usado
+          </ButtonLink>
+          <p className="mt-2 text-sm text-cream/80">
+            Antes de decidir:{" "}
             <Link
               href="/como-funciona"
               className="font-semibold text-brand-light underline-offset-4 hover:underline"
             >
               Como funciona
+            </Link>
+            {" · "}
+            <Link
+              href="/estoque"
+              className="font-semibold text-brand-light underline-offset-4 hover:underline"
+            >
+              Ver estoque
             </Link>
           </p>
         </div>
