@@ -17,10 +17,19 @@ export function isE2ePhotoStubUrl(url: string) {
   ) {
     return true;
   }
+  if (path === "/_next/image") {
+    const target = parsed.searchParams.get("url") ?? "";
+    return !target.startsWith("/branding/");
+  }
   if (parsed.hostname.includes("supabase.co") && path.includes("/storage/")) {
     return true;
   }
-  if (parsed.hostname.endsWith(".public.blob.vercel-storage.com")) {
+  if (
+    parsed.hostname === "r2.dev" ||
+    parsed.hostname.endsWith(".r2.dev") ||
+    parsed.hostname === "blob.vercel-storage.com" ||
+    parsed.hostname.endsWith(".blob.vercel-storage.com")
+  ) {
     return true;
   }
   return false;

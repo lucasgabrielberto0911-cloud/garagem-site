@@ -37,7 +37,7 @@ function OfflinePending({ onSend }: { onSend: () => Promise<void> }) {
   return (
     <section
       aria-label="Pedidos guardados neste aparelho"
-      className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 rounded-2xl border border-white/20 bg-asphalt p-3 text-cream shadow-lg sm:bottom-4 sm:left-4 sm:right-auto sm:w-[22rem]"
+      className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] z-40 rounded-2xl border border-white/20 bg-asphalt p-3 text-cream shadow-lg sm:bottom-4 sm:left-4 sm:right-auto sm:w-[22rem]"
     >
       <p className="font-display text-sm font-semibold">
         {items.length === 1 ? "1 pedido guardado" : `${items.length} pedidos guardados`}

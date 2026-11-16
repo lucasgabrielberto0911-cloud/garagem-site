@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
-import { BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
-import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
+import { Suspense, lazy, useEffect, useId, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
+import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import {
@@ -14,7 +14,6 @@ import {
   type StockModelOption,
 } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
-import { chipTrackInsets } from "@/lib/stock-chip-track";
 import {
   formatColorLabel,
   transmissionFilterLabel,
@@ -23,7 +22,11 @@ import {
 } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
-import { ShareStockSearch } from "./ShareStockSearch";
+const LazyShareStockSearch = lazy(() =>
+  import("./ShareStockSearch").then((module) => ({
+    default: module.ShareStockSearch,
+  })),
+);
 
 export type Facets = {
   categories?: string[];
@@ -62,7 +65,11 @@ type ActiveFilter = {
 };
 
 function ShareSearchButton({ className = "" }: { className?: string }) {
-  return <ShareStockSearch className={className} icon={<IconShare className="h-4 w-4" />} />;
+  return (
+    <Suspense fallback={null}>
+      <LazyShareStockSearch className={className} />
+    </Suspense>
+  );
 }
 
 /** Só a leitura da URL aguarda hidratação; o campo de busca permanece no HTML. */
@@ -76,12 +83,23 @@ function StockFilterQueryObserver({ onChange }: { onChange: (search: string) => 
 export function StockFilters({ facets }: { facets: Facets }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  useEffect(() => {
+    const sync = () => setSearch(window.location.search.replace(/^\?/, ""));
+    sync();
+    window.addEventListener("popstate", sync);
+    window.addEventListener("garagem:stock-url", sync);
+    return () => {
+      window.removeEventListener("popstate", sync);
+      window.removeEventListener("garagem:stock-url", sync);
+    };
+  }, []);
   const params = useMemo(() => new URLSearchParams(search), [search]);
   const { isPending, startTransition } = useStockPendingOptional();
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const shortcutsLabelId = useId();
+  const mobileShortcutsLabelId = useId();
   const desktopAccessoryLabelId = useId();
   const activeFiltersLabelId = useId();
 
@@ -298,6 +316,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
         if (typeof window !== "undefined" && window.location.pathname === "/estoque") {
           if (href !== window.location.pathname + window.location.search) {
             window.history.replaceState(null, "", href);
+            setSearch(query);
+            window.dispatchEvent(new Event("garagem:stock-url"));
           }
         } else {
           router.replace(href);
@@ -306,6 +326,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
         // A lista já busca a API ao mudar a URL; não refaça o payload da página.
         if (href !== window.location.pathname + window.location.search) {
           window.history.pushState(null, "", href);
+          setSearch(query);
+          window.dispatchEvent(new Event("garagem:stock-url"));
         }
       } else {
         router.push(href);
@@ -349,14 +371,37 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const gearValue = transmissionFilterParam(current.transmission);
   const quickChips = [
     {
+      key: "ate-60-mil",
+      label: "Até R$ 60 mil",
+      active: !current.minPrice && current.maxPrice === "60000",
+      onClick: () =>
+        update(
+          !current.minPrice && current.maxPrice === "60000"
+            ? { minPrice: "", maxPrice: "" }
+            : { minPrice: "", maxPrice: "60000" },
+        ),
+    },
+    {
+      key: "automatico",
+      label: "Automático",
+      active: gearValue === "automatico",
+      onClick: () => update({ transmission: gearValue === "automatico" ? "" : "automatico" }),
+    },
+    {
+      key: "manual",
+      label: "Manual",
+      active: gearValue === "manual",
+      onClick: () => update({ transmission: gearValue === "manual" ? "" : "manual" }),
+    },
+    {
       key: "carro",
       label: "Carros",
-      active: current.category === "carro",
+      active: current.category === "carro" && !current.body,
       onClick: () =>
         navigate(
           sanitizeFiltersForCategory(
             current,
-            current.category === "carro" ? "" : "carro",
+            current.category === "carro" && !current.body ? "" : "carro",
             facets.models,
           ),
         ),
@@ -374,33 +419,17 @@ export function StockFilters({ facets }: { facets: Facets }) {
           ),
         ),
     },
-    ...STOCK_BODY_OPTIONS.map((option) => ({
-      key: `body-${option.value}`,
-      label: option.label,
-      active: current.body === option.value,
+    {
+      key: "body-suv",
+      label: "SUV",
+      active: current.body === "suv",
       onClick: () =>
         navigate({
           ...current,
-          category: option.value === current.body ? current.category : "carro",
-          body: current.body === option.value ? "" : option.value,
+          category: current.body === "suv" ? current.category : "carro",
+          body: current.body === "suv" ? "" : "suv",
         }),
-    })),
-    {
-      key: "automatico",
-      label: "Automático",
-      active: gearValue === "automatico",
-      onClick: () => update({ transmission: gearValue === "automatico" ? "" : "automatico" }),
     },
-    ...BUDGET_CHIPS.map((chip) => {
-      const active = current.minPrice === chip.minPrice && current.maxPrice === chip.maxPrice;
-      return {
-        key: `faixa-${chip.label}`,
-        label: chip.label,
-        active,
-        onClick: () =>
-          update(active ? { minPrice: "", maxPrice: "" } : { minPrice: chip.minPrice, maxPrice: chip.maxPrice }),
-      };
-    }),
   ];
 
   // "Ver X veículos": conta o resultado do rascunho enquanto a gaveta está aberta.
@@ -445,7 +474,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       <div
         aria-busy={isPending}
         data-pending={isPending}
-        className={`border-0 bg-transparent p-0 transition-opacity lg:border lg:border-white/20 lg:bg-ink lg:p-5 ${
+        className={`border-0 bg-transparent p-0 transition-opacity lg:border lg:border-white/20 lg:bg-ink lg:p-3.5 ${
           isPending ? "opacity-70" : ""
         }`}
       >
@@ -460,7 +489,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto max-w-2xl"
           role="search"
         >
-          <div className="flex min-h-11 items-center gap-2.5 border border-white/25 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand lg:min-h-[48px]">
+          <div className="flex min-h-11 items-center gap-2.5 border border-white/25 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand lg:min-h-[38px]">
             <IconSearch className="h-4 w-4 shrink-0 text-cream/75" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -480,7 +509,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 }, 600);
               }}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-cream/65 focus:outline-none lg:text-sm"
+              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-cream/65 focus:outline-none lg:py-1.5 lg:text-sm"
             />
             {current.q ? (
               <button
@@ -503,22 +532,22 @@ export function StockFilters({ facets }: { facets: Facets }) {
           </div>
         </form>
 
-        {/* Desktop: filtros completos, sem rolagem interna. */}
-        <div className="mt-5 hidden lg:block">
+        {/* Desktop: atalhos compactos + filtros completos visíveis sem corte. */}
+        <div className="mt-2.5 hidden lg:block">
           <div>
-            <p id={shortcutsLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-cream/80">
+            <p id={shortcutsLabelId} className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-cream/80">
               Atalhos
             </p>
-            <div role="group" aria-labelledby={shortcutsLabelId} className="flex flex-wrap gap-2">
+            <div role="group" aria-labelledby={shortcutsLabelId} className="flex flex-wrap gap-1.5">
               {quickChips.map((chip) => (
-                <Chip key={chip.key} active={chip.active} onClick={chip.onClick}>
+                <Chip key={chip.key} active={chip.active} compact onClick={chip.onClick}>
                   {chip.label}
                 </Chip>
               ))}
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/20 pt-5">
+          <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-white/15 pt-2.5">
             <FilterSelect
               label="Marca"
               id="desktop-marca"
@@ -542,6 +571,32 @@ export function StockFilters({ facets }: { facets: Facets }) {
               onChange={(value) => update({ model: value })}
               options={modelFilterOptions(facets.models, current.brand, current.model)}
               emptyLabel="Todos"
+            />
+            <FilterSelect
+              label="Tipo"
+              id="desktop-tipo"
+              value={current.category}
+              onChange={(value) =>
+                navigate(sanitizeFiltersForCategory(current, value, facets.models))
+              }
+              options={[
+                { value: "carro", label: "Carros" },
+                { value: "moto", label: "Motos" },
+              ]}
+              emptyLabel="Todos"
+            />
+            <FilterSelect
+              label="Carroceria"
+              id="desktop-carroceria"
+              value={current.body}
+              onChange={(value) =>
+                update({
+                  category: value ? "carro" : current.category,
+                  body: value,
+                })
+              }
+              options={STOCK_BODY_OPTIONS}
+              emptyLabel="Todas"
             />
             <DesktopField label="Preço mínimo" htmlFor="desktop-preco-min">
               <select
@@ -601,29 +656,43 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 ))}
               </select>
             </DesktopField>
+            <FilterSelect
+              label="Câmbio"
+              id="desktop-cambio"
+              value={gearValue}
+              onChange={(value) => update({ transmission: value })}
+              options={gearOptions}
+              emptyLabel="Todos"
+            />
+            <DesktopField label="Quilometragem" htmlFor="desktop-km">
+              <select
+                id="desktop-km"
+                value={current.maxKm}
+                onChange={(event) => update({ maxKm: event.target.value })}
+                className={selectClass}
+              >
+                {kmFilterOptions(current.maxKm).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
           </div>
 
           <details
-            className="mt-5 border border-white/20 bg-asphalt/30 px-3.5 py-1"
+            className="mt-2.5 border border-white/20 bg-asphalt/30 px-3"
             open={Boolean(
-              current.transmission || current.fuel || current.color || current.accessory || current.laudo || current.maxKm,
+              current.fuel || current.color || current.accessory || current.laudo,
             )}
           >
-            <summary className="flex min-h-[44px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
-              Mais filtros
-              <span className="ml-auto text-xs font-medium normal-case tracking-wide text-cream/75">
-                câmbio, combustível, cor, km
+            <summary className="flex min-h-[36px] cursor-pointer list-none items-center gap-2 whitespace-nowrap font-display text-xs font-semibold uppercase tracking-wider text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+              <span>Mais filtros</span>
+              <span className="ml-auto truncate text-[11px] font-medium normal-case tracking-normal text-cream/75">
+                combustível, cor, acessórios
               </span>
             </summary>
-            <div className="space-y-4 pb-4 pt-2">
-              <FilterSelect
-                label="Câmbio"
-                id="desktop-cambio"
-                value={gearValue}
-                onChange={(value) => update({ transmission: value })}
-                options={gearOptions}
-                emptyLabel="Todos os câmbios"
-              />
+            <div className="space-y-3 pb-3 pt-2">
               <FilterSelect
                 label="Combustível"
                 id="desktop-combustivel"
@@ -642,23 +711,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   emptyLabel="Todas as cores"
                 />
               ) : null}
-              <DesktopField label="Quilometragem" htmlFor="desktop-km">
-                <select
-                  id="desktop-km"
-                  value={current.maxKm}
-                  onChange={(event) => update({ maxKm: event.target.value })}
-                  className={selectClass}
-                >
-                  {kmFilterOptions(current.maxKm).map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </DesktopField>
               {(facets.accessories ?? []).length > 0 ? (
                 <div>
-                  <p id={desktopAccessoryLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-cream/80">
+                  <p id={desktopAccessoryLabelId} className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-cream/80">
                     Acessórios
                   </p>
                   <AccessoryChips
@@ -673,7 +728,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   />
                 </div>
               ) : null}
-              <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/20 bg-asphalt px-3.5 text-sm text-cream">
+              <label className="flex min-h-[44px] cursor-pointer items-center gap-2.5 border border-white/20 bg-asphalt px-3 text-sm text-cream">
                 <input
                   type="checkbox"
                   checked={Boolean(current.laudo)}
@@ -721,16 +776,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
         data-stock-filters=""
         className="stock-chip-bar mt-2 border border-white/20 bg-ink px-2.5 py-2 lg:hidden"
       >
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-          <MobileChipRow label="Atalhos">
-            {quickChips.map((chip) => (
-              <Chip key={`sticky-${chip.key}`} active={chip.active} onClick={chip.onClick}>
-                {chip.label}
-              </Chip>
-            ))}
-          </MobileChipRow>
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <p id={mobileShortcutsLabelId} className="stock-chip-label">
+            Atalhos
+          </p>
           <button
             type="button"
             onClick={() => {
@@ -755,6 +804,22 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </span>
             ) : null}
           </button>
+        </div>
+        <div
+          role="group"
+          aria-labelledby={mobileShortcutsLabelId}
+          className="-my-1 flex flex-wrap gap-x-1.5 gap-y-0"
+        >
+          {quickChips.map((chip) => (
+            <Chip
+              key={`sticky-${chip.key}`}
+              active={chip.active}
+              touchTarget
+              onClick={chip.onClick}
+            >
+              {chip.label}
+            </Chip>
+          ))}
         </div>
         {current.brand &&
         modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (
@@ -840,7 +905,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             aria-modal="true"
             id="painel-filtros"
             aria-labelledby="titulo-filtros"
-            className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col overflow-hidden border-t border-white/20 bg-ink animate-slide-up focus:outline-none"
+            className="absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,calc(100dvh-env(safe-area-inset-top,0px)-1rem))] flex-col overflow-hidden border-t border-white/20 bg-ink pl-safe pr-safe animate-slide-up focus:outline-none"
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/20 bg-ink px-4 py-3 sm:px-5">
               <div>
@@ -914,65 +979,12 @@ function MobileChipRow({
   label: string;
   children: ReactNode;
 }) {
-  const trackRef = useRef<HTMLDivElement>(null);
   const labelId = useId();
-
-  useLayoutEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    const fit = () => {
-      const view = track.getBoundingClientRect();
-      const chips = [...track.querySelectorAll<HTMLButtonElement>("button")];
-      const { insetLeft, insetRight, hidden } = chipTrackInsets(
-        { left: view.left, right: view.right },
-        chips.map((chip) => {
-          const box = chip.getBoundingClientRect();
-          return { left: box.left, right: box.right };
-        }),
-      );
-      track.style.clipPath =
-        insetLeft > 0 || insetRight > 0
-          ? `inset(0px ${Math.ceil(insetRight)}px 0px ${Math.ceil(insetLeft)}px)`
-          : "";
-      chips.forEach((chip, index) => {
-        if (hidden[index]) {
-          chip.setAttribute("aria-hidden", "true");
-          chip.tabIndex = -1;
-        } else {
-          chip.removeAttribute("aria-hidden");
-          chip.removeAttribute("tabindex");
-        }
-      });
-    };
-
-    let cancelled = false;
-    const apply = () => {
-      if (!cancelled) fit();
-    };
-
-    apply();
-    const resize = new ResizeObserver(apply);
-    resize.observe(track);
-    const mutations = new MutationObserver(apply);
-    mutations.observe(track, { childList: true });
-    track.addEventListener("scroll", apply, { passive: true });
-    window.addEventListener("resize", apply);
-    void document.fonts?.ready.then(apply);
-
-    return () => {
-      cancelled = true;
-      resize.disconnect();
-      mutations.disconnect();
-      track.removeEventListener("scroll", apply);
-      window.removeEventListener("resize", apply);
-    };
-  }, []);
 
   return (
     <div className="stock-chip-row">
       <p id={labelId} className="stock-chip-label">{label}</p>
-      <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
+      <div role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
         {children}
       </div>
     </div>
@@ -1037,7 +1049,7 @@ function DesktopField({
     <div className={className}>
       <label
         htmlFor={htmlFor}
-        className="mb-2 block text-xs font-medium uppercase tracking-wider text-cream/80"
+        className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-cream/80"
       >
         {label}
       </label>
