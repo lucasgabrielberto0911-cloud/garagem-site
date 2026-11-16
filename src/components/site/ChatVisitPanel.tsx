@@ -42,7 +42,7 @@ export function ChatVisitPanel({
       id="chat-visit-panel"
       role="group"
       aria-label="Marcar visita"
-      className="max-h-[55%] shrink-0 overflow-y-auto space-y-2 border-t border-white/[0.07] bg-asphalt px-3 pb-2 pt-3"
+      className="max-h-[min(55%,50dvh)] shrink-0 overflow-y-auto space-y-2 border-t border-white/[0.07] bg-asphalt px-3 pb-2 pt-3"
     >
       <div className="flex items-center justify-between">
         <p className="text-[12px] font-semibold text-cream">Marcar visita</p>

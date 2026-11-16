@@ -24,27 +24,13 @@ export function toggleAccessoryValue(current: string, name: string) {
   );
 }
 
-export const CATEGORY_FILTER_OPTIONS = [
-  { value: "", label: "Todos" },
-  { value: "carro", label: "Carros" },
-  { value: "moto", label: "Motos" },
-] as const;
-
-export const BUDGET_CHIPS = [
-  { label: "Até R$ 30 mil", minPrice: "", maxPrice: "30000" },
-  { label: "Até R$ 50 mil", minPrice: "", maxPrice: "50000" },
-  { label: "R$ 50 mil a R$ 80 mil", minPrice: "50000", maxPrice: "80000" },
-  { label: "R$ 80 mil a R$ 120 mil", minPrice: "80000", maxPrice: "120000" },
-  { label: "Acima de R$ 120 mil", minPrice: "120000", maxPrice: "" },
-] as const;
-
 /**
  * 16px no celular/iPad: abaixo disso o Safari dá zoom ao focar o campo.
  * No Mac (pointer fino) `lg:text-sm` mantém 14px; globals.css força 16px
  * em ponteiro grosso e em iOS/iPadOS (`-webkit-touch-callout`).
  */
 export const selectClass =
-  "w-full min-h-[48px] border border-white/20 bg-asphalt px-3.5 py-3 text-base text-cream transition touch-manipulation focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand lg:text-sm";
+  "w-full min-h-[48px] border border-white/20 bg-asphalt px-3.5 py-3 text-base text-cream transition touch-manipulation focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand lg:min-h-[38px] lg:px-2.5 lg:py-1.5 lg:text-sm";
 
 export const MIN_PRICE_OPTIONS = [
   { value: "", label: "Preço mínimo" },
@@ -61,6 +47,7 @@ export const MAX_PRICE_OPTIONS = [
   { value: "20000", label: "Até R$ 20 mil" },
   { value: "35000", label: "Até R$ 35 mil" },
   { value: "50000", label: "Até R$ 50 mil" },
+  { value: "60000", label: "Até R$ 60 mil" },
   { value: "80000", label: "Até R$ 80 mil" },
   { value: "120000", label: "Até R$ 120 mil" },
   { value: "180000", label: "Até R$ 180 mil" },
@@ -97,22 +84,48 @@ export function selectedOption(options: string[], value: string) {
 export function Chip({
   active,
   onClick,
+  compact = false,
+  touchTarget = false,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  compact?: boolean;
+  /** Mantém alvo de toque ≥ 44 px no celular com pílula visual compacta. */
+  touchTarget?: boolean;
   children: ReactNode;
 }) {
+  const tone = active
+    ? "border-brand bg-brand/15 text-cream"
+    : "border-white/20 text-cream/85 hover:border-white/40 hover:text-cream active:bg-white/5";
+
+  if (touchTarget) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
+      >
+        <span
+          className={`inline-flex h-8 w-full items-center justify-center whitespace-nowrap border px-2.5 text-xs font-medium leading-none transition ${tone}`}
+        >
+          {children}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap border px-3 text-xs font-medium leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation ${
-        active
-          ? "border-brand bg-brand/10 text-cream"
-          : "border-white/20 text-cream/80 hover:border-white/35 hover:text-cream active:bg-white/5"
-      }`}
+      className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap border font-medium leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation ${
+        compact
+          ? "h-7 px-2 text-xs"
+          : "h-11 px-3 text-xs"
+      } ${tone}`}
     >
       {children}
     </button>

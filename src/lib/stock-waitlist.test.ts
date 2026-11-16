@@ -89,21 +89,25 @@ test("empty state do estoque: WhatsApp primário, Ajuda secundária, UTM certo",
     join(dirname(fileURLToPath(import.meta.url)), "..", "components/site/EstoqueBrowse.tsx"),
     "utf8",
   );
+  const emptyState = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "..", "components/site/StockEmptyState.tsx"),
+    "utf8",
+  );
   assert.match(browse, /stockEmptyWhatsAppCta/);
-  assert.match(browse, /campaign=\{emptyWhatsApp\.campaign\}/);
-  assert.match(browse, /variant="solid"/);
-  assert.match(browse, /\{emptyWhatsApp\.label\}/);
-  assert.match(browse, /ChatOpenButton/);
-  assert.match(browse, /variant="outline"/);
+  assert.match(emptyState, /campaign=\{emptyWhatsApp\.campaign\}/);
+  assert.match(emptyState, /variant="solid"/);
+  assert.match(emptyState, /\{emptyWhatsApp\.label\}/);
+  assert.match(emptyState, /ChatOpenButton/);
+  assert.match(emptyState, /variant="outline"/);
 
-  const whatsappIndex = browse.indexOf("<WhatsAppButton");
-  const ajudaIndex = browse.indexOf("<ChatOpenButton");
+  const whatsappIndex = emptyState.indexOf("<WhatsAppButton");
+  const ajudaIndex = emptyState.indexOf("<ChatOpenButton");
   assert.ok(whatsappIndex > 0);
   assert.ok(ajudaIndex > 0);
   assert.ok(
     whatsappIndex < ajudaIndex,
     "WhatsApp precisa ser o CTA primário (antes da Ajuda)",
   );
-  assert.doesNotMatch(browse, /campaign="home"/);
-  assert.doesNotMatch(browse, /Quero avisar o que procuro/);
+  assert.doesNotMatch(browse + emptyState, /campaign="home"/);
+  assert.doesNotMatch(browse + emptyState, /Quero avisar o que procuro/);
 });
