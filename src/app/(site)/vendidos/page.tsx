@@ -137,20 +137,22 @@ export default async function VendidosPage() {
                     <p className="truncate font-display text-base font-semibold text-cream">
                       {item.customerName}
                     </p>
-                    <span
-                      className="flex shrink-0 items-center gap-0.5 text-brand-light"
-                      role="img"
-                      aria-label={`${item.rating} de 5`}
-                    >
-                      {([1, 2, 3, 4, 5] as const).map((star) => (
-                        <IconStar
-                          key={star}
-                          className={`h-3.5 w-3.5 ${
-                            star <= item.rating ? "text-brand-light" : "text-white/15"
-                          }`}
-                        />
-                      ))}
-                    </span>
+                    {item.message ? (
+                      <span
+                        className="flex shrink-0 items-center gap-0.5 text-brand-light"
+                        role="img"
+                        aria-label={`${item.rating} de 5`}
+                      >
+                        {([1, 2, 3, 4, 5] as const).map((star) => (
+                          <IconStar
+                            key={star}
+                            className={`h-3.5 w-3.5 ${
+                              star <= item.rating ? "text-brand-light" : "text-white/15"
+                            }`}
+                          />
+                        ))}
+                      </span>
+                    ) : null}
                   </div>
 
                   {(item.city || item.dateLabel) ? (
@@ -159,9 +161,13 @@ export default async function VendidosPage() {
                     </p>
                   ) : null}
 
-                  <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-cream/85">
-                    {item.message}
-                  </blockquote>
+                  {item.message ? (
+                    <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-cream/85">
+                      {item.message}
+                    </blockquote>
+                  ) : (
+                    <div className="flex-1" />
+                  )}
 
                   <div className="mt-4 border-t border-white/10 pt-3">
                     <TrackedWhatsAppLink

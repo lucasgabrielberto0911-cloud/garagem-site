@@ -44,7 +44,7 @@ export type DeliveryShowcaseItem = {
   customerName: string;
   city: string | null;
   vehicleLabel: string | null;
-  message: string;
+  message: string | null;
   photoSrc: string;
   dateLabel: string | null;
   rating: number;
@@ -133,13 +133,14 @@ export function formatDeliveryMonthYear(value: Date | string | null | undefined)
 
 export function buildDeliveryShowcaseItems(
   rows: readonly RawDeliveryTestimonial[],
+  limit?: number,
 ): DeliveryShowcaseItem[] {
   const items: DeliveryShowcaseItem[] = [];
   for (const row of rows) {
     const rawPhoto = row.photoUrl?.trim();
     if (!rawPhoto) continue;
     const customerName = cleanTestimonialField(row.name) ?? row.name.trim();
-    const message = cleanTestimonialField(row.message) ?? row.message.trim();
+    const message = cleanTestimonialField(row.message);
     const vehicleLabel = cleanTestimonialField(row.vehicleLabel);
     const city = cleanTestimonialField(row.city);
     const whatsappText = vehicleLabel
@@ -160,6 +161,7 @@ export function buildDeliveryShowcaseItems(
         content: `entrega-${row.id}`.slice(0, 80),
       }),
     });
+    if (limit !== undefined && items.length >= limit) break;
   }
   return items;
 }
@@ -203,26 +205,49 @@ export function toSoldVehicleShowcaseItem(
   };
 }
 
-async function fetchDeliveriesWithPhoto(take: number) {
-  const rows = await prisma.testimonial.findMany({
-    where: {
-      published: true,
-      photoUrl: { not: null },
-    },
-    select: {
-      id: true,
-      name: true,
-      city: true,
-      message: true,
-      vehicleLabel: true,
-      photoUrl: true,
-      rating: true,
-      createdAt: true,
-    },
+export const DELIVERIES_WITH_PHOTO_WHERE = {
+  published: true,
+  AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+};
+
+const DELIVERY_TESTIMONIAL_SELECT = {
+  id: true,
+  name: true,
+  city: true,
+  message: true,
+  vehicleLabel: true,
+  photoUrl: true,
+  rating: true,
+  createdAt: true,
+};
+
+export type DeliveryQueryArgs = {
+  where: typeof DELIVERIES_WITH_PHOTO_WHERE;
+  select: typeof DELIVERY_TESTIMONIAL_SELECT;
+  orderBy: [{ order: "asc" }, { createdAt: "desc" }];
+  take: number;
+};
+
+export async function queryDeliveriesWithPhoto(
+  take: number,
+  findMany: (args: DeliveryQueryArgs) => Promise<readonly RawDeliveryTestimonial[]> = (
+    args,
+  ) => prisma.testimonial.findMany(args),
+): Promise<DeliveryShowcaseItem[]> {
+  if (take <= 0) return [];
+  // Filtra null/vazio no where e busca com folga para entradas só com espaços.
+  const slackTake = Math.max(take * 3, take + 24);
+  const rows = await findMany({
+    where: DELIVERIES_WITH_PHOTO_WHERE,
+    select: DELIVERY_TESTIMONIAL_SELECT,
     orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-    take,
+    take: slackTake,
   });
-  return buildDeliveryShowcaseItems(rows);
+  return buildDeliveryShowcaseItems(rows, take);
+}
+
+async function fetchDeliveriesWithPhoto(take: number) {
+  return queryDeliveriesWithPhoto(take);
 }
 
 async function fetchSoldVehicles(take: number): Promise<SoldVehicleShowcaseItem[]> {
@@ -253,7 +278,7 @@ async function fetchSoldVehicles(take: number): Promise<SoldVehicleShowcaseItem[
 
 const loadDeliveriesCached = unstable_cache(
   async (take: number) => fetchDeliveriesWithPhoto(take),
-  ["sold-deliveries-v1"],
+  ["sold-deliveries-v2"],
   { revalidate: 3600, tags: [TESTIMONIALS_CACHE_TAG] },
 );
 
