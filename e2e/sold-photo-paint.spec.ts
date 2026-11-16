@@ -14,6 +14,12 @@ test("ficha vendida: WhatsApp convida para similares sem o preço antigo",async(
   await page.goto(vehiclePath(sold));
   await expect(page).toHaveTitle(/\(vendido\)/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content",/noindex.*follow/);
+  const nav=page.getByRole("navigation",{name:"Continuar procurando"});
+  await expect(nav.getByRole("link",{name:"Ver entregas e histórico da loja"})).toHaveAttribute("href","/vendidos");
+  await expect(nav.getByRole("link",{name:/^Outros .+ disponíveis$/})).toHaveAttribute("href",/^\/estoque\?brand=/);
+  await expect(nav.getByRole("link",{name:/disponíveis$/})).toHaveCount(2);
+  expect(await nav.textContent()).not.toMatch(/R\$|74[.,]?900/);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   const similar=page.locator('[data-similar-vehicles]').getByRole("link",{name:"Pedir outros nesta faixa",exact:true});
   await expect(similar).toHaveAttribute("href",/^https:\/\/wa\.me\/5527996330706\?/);
   const links=await page.locator('a[href^="https://wa.me/"]').evaluateAll(elements=>elements.map(element=>(element as HTMLAnchorElement).href));

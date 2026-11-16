@@ -36,6 +36,13 @@ const STEPS = [
   },
 ] as const;
 
+const NEXT_STEPS = [
+  { href: "/estoque", label: "Ver estoque" },
+  { href: "/financiamento", label: "Financiamento" },
+  { href: "/vendidos", label: "Ver entregas realizadas" },
+  { href: "/guias", label: "Guias de compra" },
+] as const;
+
 export default function ComoFuncionaPage() {
   return (
     <div className="py-12 lg:py-16">
@@ -75,23 +82,29 @@ export default function ComoFuncionaPage() {
           <WhatsAppButton message={WHATSAPP_MESSAGES.help} size="lg">
             Falar no WhatsApp
           </WhatsAppButton>
-          <p className="text-sm text-cream/80">
-            Prefere ver os carros primeiro?{" "}
-            <Link
-              href="/estoque"
-              className="font-semibold text-brand-light underline-offset-4 hover:underline"
-            >
-              Ver estoque
-            </Link>
-            {" · "}
-            <Link
-              href="/financiamento"
-              className="font-semibold text-brand-light underline-offset-4 hover:underline"
-            >
-              Financiamento
-            </Link>
-          </p>
         </div>
+        <nav
+          aria-label="Próximos passos"
+          className="mt-10 border-t border-white/20 pt-6"
+        >
+          <h2 className="text-center font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand-light">
+            Próximos passos
+          </h2>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {NEXT_STEPS.map(({ href, label }) => (
+              <li key={href}>
+                <Link
+                  href={href}
+                  prefetch={false}
+                  className="flex min-h-11 items-center justify-between gap-3 border border-white/20 bg-ink px-4 py-2 text-sm font-semibold text-cream transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+                >
+                  {label}
+                  <span aria-hidden="true" className="text-brand-light">→</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </Container>
     </div>
   );

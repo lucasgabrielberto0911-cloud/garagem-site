@@ -61,6 +61,7 @@ import {
 import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
+import { soldFichaNavLinks } from "@/lib/sold-ficha-nav";
 import { getVehicleConditions } from "@/lib/site-content";
 import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
@@ -227,6 +228,7 @@ export default async function VehicleDetailPage({
       intent: "similar",
     }),
   };
+  const soldNavLinks = soldFichaNavLinks(vehicle);
   const sameBandHref = sold ? "/estoque" : priceBandHref(vehicle.price);
   const sameBandTitle = isMoto
     ? "Motos na mesma faixa"
@@ -338,6 +340,21 @@ export default async function VehicleDetailPage({
               </Link>
               .
             </p>
+            <nav
+              aria-label="Continuar procurando"
+              className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-2"
+            >
+              {soldNavLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  prefetch={false}
+                  className="inline-flex min-h-11 items-center text-sm font-medium text-brand-light underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
           </div>
         ) : null}
 
