@@ -31,7 +31,7 @@ test("chips de carroceria filtram o estoque e somem com a carroceria ao trocar p
   await expect(page).not.toHaveURL(/body=/);
 });
 
-test("card do estoque: WhatsApp largo com 44 px e coração com rótulo Salvar", async ({ page }) => {
+test("card do estoque: WhatsApp largo com 44 px e coração discreto sem texto", async ({ page }) => {
   await page.goto("/estoque");
   const card = page.locator("article.listing-card").first();
   const whatsapp = card.locator(".listing-card-interest a");
@@ -41,10 +41,12 @@ test("card do estoque: WhatsApp largo com 44 px e coração com rótulo Salvar",
   expect(waBox.width).toBeGreaterThanOrEqual(cardBox.width - 2);
   expect(await whatsapp.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(14);
   const save = card.getByRole("button", { name: /^Salvar/ });
-  await expect(save).toHaveText("Salvar");
-  expect((await save.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  await expect(save).toHaveText("");
+  const saveBox = (await save.boundingBox())!;
+  expect(saveBox.height).toBeGreaterThanOrEqual(40);
+  expect(saveBox.width).toBeGreaterThanOrEqual(40);
   await save.click();
-  await expect(card.getByRole("button", { name: /^Remover/ })).toHaveText("Salvo");
+  await expect(card.getByRole("button", { name: /^Remover/ })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("celular: textos do card e da barra de baixo com pelo menos 12 px", async ({ page }) => {
@@ -64,17 +66,41 @@ test("celular: textos do card e da barra de baixo com pelo menos 12 px", async (
   for (const size of sizes) expect(size).toBeGreaterThanOrEqual(12);
 });
 
-test("celular: selos do card ficam no alto da foto, um só, sem cobrir o carro", async ({ page }) => {
-  test.skip(page.viewportSize()!.width >= 640, "selos no alto só no celular");
+test("selos do card ficam na área de texto, um só, sem cobrir a foto", async ({ page }) => {
   await page.goto("/estoque");
   const photo = page.locator(".listing-card-photo").first();
-  const badges = photo.locator(".listing-card-badges > span:visible");
-  expect(await badges.count()).toBeLessThanOrEqual(1);
+  await expect(photo.locator(".listing-card-badges")).toHaveCount(0);
+  const card = page.locator("article.listing-card").first();
+  expect(await card.locator(".listing-card-badges > span:visible").count()).toBeLessThanOrEqual(1);
   const photoBox = (await photo.boundingBox())!;
-  const badgeBox = await badges.first().boundingBox();
-  if (badgeBox) {
-    expect(badgeBox.y + badgeBox.height).toBeLessThan(photoBox.y + photoBox.height * 0.4);
-    expect(badgeBox.width).toBeLessThan(photoBox.width * 0.55);
+  const badgeBox = await card.locator(".listing-card-badges > span:visible").first().boundingBox();
+  if (badgeBox) expect(badgeBox.y).toBeGreaterThanOrEqual(photoBox.y + photoBox.height - 1);
+});
+
+test("selos sem reticências e cards da mesma linha com a mesma largura e foto 4:3", async ({ page }) => {
+  await page.goto("/estoque");
+  await expect(page.locator("article.listing-card").first()).toBeVisible();
+  const clipped = await page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>(".listing-card-badges > span"))
+    .filter(el => el.offsetParent !== null && el.scrollWidth > el.clientWidth + 1)
+    .map(el => el.textContent));
+  expect(clipped).toEqual([]);
+  const boxes = await page.evaluate(() => {
+    const rows = new Map<number, { w: number; h: number }[]>();
+    document.querySelectorAll(".listing-card-item").forEach(item => {
+      const card = item.getBoundingClientRect();
+      const photo = item.querySelector(".listing-card-photo")?.getBoundingClientRect();
+      if (!photo) return;
+      const key = Math.round(card.top);
+      rows.set(key, [...(rows.get(key) ?? []), { w: card.width, h: photo.height }]);
+    });
+    return Array.from(rows.values()).filter(row => row.length > 1);
+  });
+  expect(boxes.length).toBeGreaterThan(0);
+  for (const row of boxes) {
+    for (const b of row) {
+      expect(Math.abs(b.w - row[0].w)).toBeLessThanOrEqual(1);
+      expect(Math.abs(b.h - row[0].h)).toBeLessThanOrEqual(1);
+    }
   }
 });
 
