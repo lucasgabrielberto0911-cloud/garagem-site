@@ -953,13 +953,15 @@ async function fetchPublishedTestimonials(take: number) {
       take,
     });
 
-    return rows.map((item) => ({
-      ...item,
-      name: cleanTestimonialField(item.name) ?? item.name,
-      city: cleanTestimonialField(item.city),
-      vehicleLabel: cleanTestimonialField(item.vehicleLabel),
-      message: cleanTestimonialField(item.message) ?? item.message,
-    }));
+    return rows
+      .map((item) => ({
+        ...item,
+        name: cleanTestimonialField(item.name) ?? item.name,
+        city: cleanTestimonialField(item.city),
+        vehicleLabel: cleanTestimonialField(item.vehicleLabel),
+        message: cleanTestimonialField(item.message) ?? "",
+      }))
+      .filter((item) => item.message.length >= 10);
   } catch (error) {
     if (!isMissingColumnError(error, "rating")) throw error;
     const rows = await prisma.testimonial.findMany({
@@ -968,14 +970,16 @@ async function fetchPublishedTestimonials(take: number) {
       orderBy: [{ order: "asc" }, { createdAt: "desc" }],
       take,
     });
-    return rows.map((item) => ({
-      ...item,
-      name: cleanTestimonialField(item.name) ?? item.name,
-      city: cleanTestimonialField(item.city),
-      vehicleLabel: cleanTestimonialField(item.vehicleLabel),
-      message: cleanTestimonialField(item.message) ?? item.message,
-      rating: 5,
-    }));
+    return rows
+      .map((item) => ({
+        ...item,
+        name: cleanTestimonialField(item.name) ?? item.name,
+        city: cleanTestimonialField(item.city),
+        vehicleLabel: cleanTestimonialField(item.vehicleLabel),
+        message: cleanTestimonialField(item.message) ?? "",
+        rating: 5,
+      }))
+      .filter((item) => item.message.length >= 10);
   }
 }
 

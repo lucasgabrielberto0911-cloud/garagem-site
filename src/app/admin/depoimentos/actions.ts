@@ -34,7 +34,7 @@ export async function saveTestimonial(
 
   const name = cleanTestimonialField(rawName) ?? rawName;
   const city = cleanTestimonialField(rawCity);
-  const message = cleanTestimonialField(rawMessage) ?? rawMessage;
+  const message = cleanTestimonialField(rawMessage) ?? "";
   const vehicleLabel = cleanTestimonialField(rawVehicleLabel);
   const photoUrl = String(formData.get("photoUrl") || "").trim() || null;
   const published = formData.get("published") === "on";
@@ -47,9 +47,13 @@ export async function saveTestimonial(
       : 5;
 
   const fieldErrors: Record<string, string> = {};
-  if (name.length < 2) fieldErrors.name = "Informe o nome de quem avaliou.";
-  if (message.length < 10) {
-    fieldErrors.message = "O depoimento precisa de pelo menos 10 caracteres.";
+  if (name.length < 2) fieldErrors.name = "Informe o nome do cliente.";
+  if (!photoUrl && message.length < 10) {
+    fieldErrors.message =
+      "O depoimento precisa de pelo menos 10 caracteres (ou envie a foto da entrega).";
+  } else if (photoUrl && message.length > 0 && message.length < 10) {
+    fieldErrors.message =
+      "Se preencher o relato, use pelo menos 10 caracteres (ou deixe em branco para publicar só a foto em /vendidos).";
   }
 
   if (Object.keys(fieldErrors).length > 0) {

@@ -44,14 +44,29 @@ test("buildDeliveryShowcaseItems filtra entradas sem foto e monta link de simila
       rating: 5,
       createdAt: null,
     },
+    {
+      id: "t3",
+      name: "Carla S.",
+      city: null,
+      message: "",
+      vehicleLabel: "Corolla 2022",
+      photoUrl: "https://pub-123.r2.dev/depoimentos/carla.webp",
+      rating: 5,
+      createdAt: null,
+    },
   ]);
 
-  assert.equal(items.length, 1);
+  assert.equal(items.length, 2);
   assert.equal(items[0].customerName, "Marcos A.");
   assert.equal(items[0].vehicleLabel, "Honda Civic 2020");
+  assert.equal(items[0].message, "Carro impecável e entrega rápida.");
   assert.equal(items[0].photoSrc, "https://pub-123.r2.dev/depoimentos/marcos.webp");
   assert.match(items[0].whatsappHref, /^https:\/\/wa\.me\//);
   assert.equal(items[0].whatsappHref.includes("R%24"), false);
+
+  assert.equal(items[1].customerName, "Carla S.");
+  assert.equal(items[1].vehicleLabel, "Corolla 2022");
+  assert.equal(items[1].message, null);
 });
 
 test("toSoldVehicleShowcaseItem omite preço e gera mensagem de veículo vendido no WhatsApp", () => {

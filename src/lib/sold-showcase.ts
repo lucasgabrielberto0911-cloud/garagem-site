@@ -44,7 +44,7 @@ export type DeliveryShowcaseItem = {
   customerName: string;
   city: string | null;
   vehicleLabel: string | null;
-  message: string;
+  message: string | null;
   photoSrc: string;
   dateLabel: string | null;
   rating: number;
@@ -139,7 +139,7 @@ export function buildDeliveryShowcaseItems(
     const rawPhoto = row.photoUrl?.trim();
     if (!rawPhoto) continue;
     const customerName = cleanTestimonialField(row.name) ?? row.name.trim();
-    const message = cleanTestimonialField(row.message) ?? row.message.trim();
+    const message = cleanTestimonialField(row.message);
     const vehicleLabel = cleanTestimonialField(row.vehicleLabel);
     const city = cleanTestimonialField(row.city);
     const whatsappText = vehicleLabel

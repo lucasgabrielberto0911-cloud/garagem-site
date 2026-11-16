@@ -45,12 +45,26 @@ const emptyForm = {
   published: true,
 };
 
-export function TestimonialsManager({ items }: { items: Testimonial[] }) {
+export function TestimonialsManager({
+  items,
+  initialPrefill = null,
+}: {
+  items: Testimonial[];
+  initialPrefill?: { name?: string; vehicleLabel?: string } | null;
+}) {
   const [confirmAction, confirmDialog] = useConfirmDialog();
   const router = useRouter();
   const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [form, setForm] = useState<typeof emptyForm | null>(null);
+  const [form, setForm] = useState<typeof emptyForm | null>(() =>
+    initialPrefill
+      ? {
+          ...emptyForm,
+          name: initialPrefill.name?.trim() ?? "",
+          vehicleLabel: initialPrefill.vehicleLabel?.trim() ?? "",
+        }
+      : null,
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Testimonial | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -254,10 +268,10 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
               </div>
 
               <Field
-                label="Depoimento"
-                required
+                label="Depoimento (opcional quando houver foto)"
+                required={!form.photoUrl}
                 error={errors.message}
-                hint="Use as palavras do cliente. Publique apenas avaliações reais."
+                hint="Com texto, sai na Home e em /vendidos. Em branco (com foto), sai só na galeria /vendidos."
               >
                 <textarea
                   name="message"
@@ -332,7 +346,17 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
               </div>
 
               {form.photoUrl ? (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="relative h-20 w-28 overflow-hidden border border-white/10 bg-asphalt">
+                    <Image
+                      src={form.photoUrl}
+                      alt="Enquadramento 4:3 da entrega em /vendidos"
+                      fill
+                      sizes="112px"
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
                   <div className="relative h-12 w-12 overflow-hidden rounded-full bg-asphalt">
                     <Image
                       src={form.photoUrl}
@@ -445,7 +469,8 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
               </div>
 
               <p className="mt-3 break-words text-sm leading-relaxed text-muted">
-                {cleanTestimonialField(item.message) ?? item.message}
+                {cleanTestimonialField(item.message) ??
+                  (item.message.trim() || "Entrega só com foto (exibida em /vendidos)")}
               </p>
 
               <div className="mt-3 grid grid-cols-3 border-t border-white/10">

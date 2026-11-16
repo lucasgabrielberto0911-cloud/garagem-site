@@ -6,9 +6,28 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export default async function DepoimentosPage() {
+export default async function DepoimentosPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    novo?: string | string[];
+    cliente?: string | string[];
+    veiculo?: string | string[];
+  }>;
+}) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
+
+  const params = searchParams ? await searchParams : {};
+  const first = (value?: string | string[]) =>
+    Array.isArray(value) ? value[0] : value;
+  const initialPrefill =
+    first(params.novo) === "1"
+      ? {
+          name: first(params.cliente) ?? "",
+          vehicleLabel: first(params.veiculo) ?? "",
+        }
+      : null;
 
   const items = await prisma.testimonial.findMany({
     orderBy: [{ order: "asc" }, { createdAt: "desc" }],
@@ -19,8 +38,8 @@ export default async function DepoimentosPage() {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Depoimentos"
-        subtitle="Os depoimentos publicados aparecem na home, na ordem do campo Ordem (menor primeiro). Sem nenhum publicado, a home mostra “Depoimentos em atualização”. Cadastre somente relatos reais, autorizados pelo cliente."
+        title="Depoimentos e entregas"
+        subtitle="Relatos com texto aparecem na home; registros com foto aparecem na galeria /vendidos (mesmo sem texto). Cadastre somente entregas e relatos reais."
       />
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -32,7 +51,7 @@ export default async function DepoimentosPage() {
         />
       </section>
 
-      <TestimonialsManager items={items} />
+      <TestimonialsManager items={items} initialPrefill={initialPrefill} />
     </div>
   );
 }

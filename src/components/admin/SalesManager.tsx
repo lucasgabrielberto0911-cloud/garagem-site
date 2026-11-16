@@ -113,6 +113,21 @@ function formatDate(date: Date) {
   return adminDate(new Date(date));
 }
 
+function saleDeliveryHref(sale: SaleRow) {
+  const params = new URLSearchParams({ novo: "1" });
+  if (sale.customer?.name) params.set("cliente", sale.customer.name);
+  const vehicleLabel = [
+    sale.vehicle.brand,
+    sale.vehicle.model,
+    sale.vehicle.yearModel > 0 ? String(sale.vehicle.yearModel) : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  if (vehicleLabel) params.set("veiculo", vehicleLabel);
+  return `/admin/depoimentos?${params.toString()}`;
+}
+
 function saleFinance(
   salePrice: number,
   vehicle: Pick<SaleRow["vehicle"], "purchasePrice" | "costs" | "consigned">,
@@ -1118,6 +1133,14 @@ export function SalesManager({
                       Desfazer
                     </button>
                   </div>
+                  <div className="border-t border-white/10">
+                    <Link
+                      href={saleDeliveryHref(sale)}
+                      className={`${mobileActionCell} w-full text-brand-light`}
+                    >
+                      Publicar entrega
+                    </Link>
+                  </div>
                 </li>
               );
             })}
@@ -1257,6 +1280,13 @@ export function SalesManager({
                               {missingContract(sale) ? "Gerar contrato" : "Ver venda/documentos"}
                             </button>
                           ) : null}
+                          <Link
+                            href={saleDeliveryHref(sale)}
+                            className="p-2 text-xs text-brand-light transition hover:text-cream"
+                            title="Publicar foto da entrega em /vendidos"
+                          >
+                            Publicar entrega
+                          </Link>
                           <button
                             type="button"
                             onClick={() => setCancelTarget(sale)}
