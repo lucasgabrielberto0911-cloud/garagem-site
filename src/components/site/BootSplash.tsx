@@ -8,6 +8,8 @@ export function BootSplash() {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const forced = new URLSearchParams(window.location.search).get("garagem_splash") === "1";
+    // Splash só vale na abertura imediata; carregado após o load sobre a página pintada, causava piscar tardio.
+    if (!forced && (document.readyState === "complete" || performance.now() > 500)) return;
     const standalone = window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(display-mode: fullscreen)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
     if (!forced && !standalone) return;
     try {

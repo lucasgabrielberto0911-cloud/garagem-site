@@ -162,8 +162,13 @@ export function EstoqueBrowse({
     const syncFromLocation = () => {
       setSearch(window.location.search.replace(/^\?/, ""));
     };
+    syncFromLocation();
     window.addEventListener("popstate", syncFromLocation);
-    return () => window.removeEventListener("popstate", syncFromLocation);
+    window.addEventListener("garagem:stock-url", syncFromLocation);
+    return () => {
+      window.removeEventListener("popstate", syncFromLocation);
+      window.removeEventListener("garagem:stock-url", syncFromLocation);
+    };
   }, []);
   const params = useMemo(
     () => paramsToRecord(new URLSearchParams(search ?? "")),

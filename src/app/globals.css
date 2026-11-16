@@ -156,82 +156,49 @@ body {
     body:has([data-ficha-page]) .pt-site-header {
       padding-top: calc(4.75rem + 1px + 0.75rem);
     }
+
+    body:has([data-stock-page]) .pt-site-header {
+      padding-top: calc(4.75rem + 1px + 0.5rem);
+    }
+
+    .stock-page header h1,
+    .stock-page header > p.font-display.text-3xl {
+      margin-top: 0.25rem;
+      font-size: 1.875rem;
+      line-height: 1.15;
+    }
+
+    .stock-page header > div {
+      margin-top: 0.5rem;
+    }
+
+    .stock-page header > p:last-child:not(:first-child):not(.font-display) {
+      margin-top: 0.5rem;
+      max-width: 56rem;
+      font-size: 0.9375rem;
+      line-height: 1.4;
+    }
   }
 
-  /* Espaço para a bottom nav no mobile. */
+  /* Espaço para a bottom nav no mobile (56px + respiro + safe-area). */
   .pb-site-nav {
-    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  @media (min-width: 1024px) {
-    .pb-site-nav {
-      padding-bottom: 0;
-    }
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
   }
 
   /*
-   * Estoque no celular rola a janela, como o resto do site. A bottom nav
-   * é position:fixed e fica dentro de .site-shell. Travar a altura do body
-   * e fazer o shell rolar mais baixo que a tela esconde a barra no iPhone
-   * (o fixed passa a ser do shell) e deixa a faixa preta. A lista passa
-   * por baixo da barra; .pb-site-nav segue no fluxo para o fim chegar
-   * acima dela. Não esconder a nav para abrir espaço.
-   */
-
-  /*
-   * Folga para o chip “Ajuda para escolher” não cobrir foto, preço,
-   * Ver ficha, filtro ou telefone no fim da rolagem. A barra de baixo entra
-   * na conta. A ficha já esconde o FAB fechado. No mobile, a ajuda está
-   * no cabeçalho e o aviso de cookies rola com o conteúdo.
-   */
-  @media (max-width: 1023px) {
-    body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
-      padding-bottom: calc(
-        var(--site-bottom-nav) + var(--help-bubble-gap) + var(--help-bubble-h) +
-          var(--help-bubble-clear) + env(safe-area-inset-bottom, 0px)
-      );
-    }
-
-    /*
-     * Contato e vender: o chip “Ajuda para escolher” (h-11) fica 0.75rem
-     * acima da bottom nav. O fim da página sobe essa pilha inteira, com
-     * 1.5rem de leitura, para o telefone do rodapé não parar embaixo do chip.
-     */
-    body:has([data-clear-fab]):not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
-      padding-bottom: calc(4.5rem + 0.75rem + 2.75rem + 1.5rem + env(safe-area-inset-bottom, 0px));
-    }
-  }
-
-  /*
-   * Primeira dobra de contato/vender no celular: o miolo termina acima do
-   * chip e da bottom nav. O que vem depois começa fora da tela.
+   * Contato e vender no celular: o botão flutuante do chat fica oculto nessa
+   * largura (a ajuda está no header), então basta compensar a bottom nav.
    */
   @media (max-width: 1023px) {
     .clear-fab-screen {
       box-sizing: border-box;
       min-height: calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px));
-      padding-bottom: calc(4.5rem + 0.75rem + 2.75rem + 1rem + env(safe-area-inset-bottom, 0px));
-    }
-  }
-
-  /* O aviso inline mantém só a folga normal para a ajuda e a bottom nav. */
-  body:has(.site-consent):not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])) .pb-site-nav {
-    padding-bottom: calc(
-      var(--site-bottom-nav) + var(--help-bubble-gap) + var(--help-bubble-h) +
-        var(--help-bubble-clear) + env(safe-area-inset-bottom, 0px)
-    );
-  }
-
-  /* No celular, o botão flutuante do chat fica oculto (a ajuda está no header); basta compensar a bottom nav. */
-  @media (max-width: 1023px) {
-    body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav,
-    body:has(.site-consent):not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])) .pb-site-nav {
-      padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
     }
   }
 
   @media (min-width: 1024px) {
-    body:has(.site-consent) .pb-site-nav {
+    .pb-site-nav {
       padding-bottom: 0;
     }
   }
@@ -1903,7 +1870,8 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
   }
 
   .hero-cta,
-  .hero-search {
+  .hero-search,
+  .hero-stats {
     margin-top: 0.5rem;
   }
 
@@ -1949,7 +1917,8 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
 
   .hero-text,
   .hero-cta,
-  .hero-search {
+  .hero-search,
+  .hero-stats {
     margin-top: 0.5rem;
   }
 

@@ -30,7 +30,7 @@ function Stat({
   suffix: string;
 }) {
   return (
-    <div className="px-3 py-2.5 text-center sm:px-4 sm:py-3">
+    <div className="px-2.5 py-1.5 text-center sm:px-4 sm:py-3">
       <dd
         className="font-display text-xl font-semibold text-cream sm:text-2xl"
         aria-label={`${formatNumberBR(value)} ${suffix}`}
@@ -42,7 +42,7 @@ function Stat({
           </span>
         </span>
       </dd>
-      <dt className="mt-1 text-xs uppercase tracking-wider text-cream/75 sm:mt-1.5 sm:text-[13px]">
+      <dt className="mt-0.5 text-xs uppercase tracking-wider text-cream/75 sm:mt-1.5 sm:text-[13px]">
         {label}
       </dt>
     </div>

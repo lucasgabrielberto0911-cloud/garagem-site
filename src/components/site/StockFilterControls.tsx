@@ -30,7 +30,7 @@ export function toggleAccessoryValue(current: string, name: string) {
  * em ponteiro grosso e em iOS/iPadOS (`-webkit-touch-callout`).
  */
 export const selectClass =
-  "w-full min-h-[48px] border border-white/20 bg-asphalt px-3.5 py-3 text-base text-cream transition touch-manipulation focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand lg:min-h-[40px] lg:px-2.5 lg:py-2 lg:text-sm";
+  "w-full min-h-[48px] border border-white/20 bg-asphalt px-3.5 py-3 text-base text-cream transition touch-manipulation focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand lg:min-h-[38px] lg:px-2.5 lg:py-1.5 lg:text-sm";
 
 export const MIN_PRICE_OPTIONS = [
   { value: "", label: "Preço mínimo" },
@@ -85,13 +85,37 @@ export function Chip({
   active,
   onClick,
   compact = false,
+  touchTarget = false,
   children,
 }: {
   active: boolean;
   onClick: () => void;
   compact?: boolean;
+  /** Mantém alvo de toque ≥ 44 px no celular com pílula visual compacta. */
+  touchTarget?: boolean;
   children: ReactNode;
 }) {
+  const tone = active
+    ? "border-brand bg-brand/15 text-cream"
+    : "border-white/20 text-cream/85 hover:border-white/40 hover:text-cream active:bg-white/5";
+
+  if (touchTarget) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
+      >
+        <span
+          className={`inline-flex h-8 w-full items-center justify-center whitespace-nowrap border px-2.5 text-xs font-medium leading-none transition ${tone}`}
+        >
+          {children}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -99,13 +123,9 @@ export function Chip({
       aria-pressed={active}
       className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap border font-medium leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation ${
         compact
-          ? "h-8 px-2.5 text-xs"
+          ? "h-7 px-2 text-xs"
           : "h-11 px-3 text-xs"
-      } ${
-        active
-          ? "border-brand bg-brand/15 text-cream"
-          : "border-white/20 text-cream/85 hover:border-white/40 hover:text-cream active:bg-white/5"
-      }`}
+      } ${tone}`}
     >
       {children}
     </button>

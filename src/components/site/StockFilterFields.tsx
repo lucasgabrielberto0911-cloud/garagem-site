@@ -2,8 +2,8 @@
 
 import { cloneElement, isValidElement, useId, type Dispatch, type SetStateAction, type ReactNode } from "react";
 import type { Facets, FilterValues } from "./StockFilters";
-import { MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
-import { modelAfterBrandChange, modelFilterOptions, sanitizeFiltersForCategory } from "@/lib/stock-query";
+import { MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, formatCompactNumber } from "./StockFilterControls";
+import { modelAfterBrandChange, modelFilterOptions, sanitizeFiltersForCategory, STOCK_BODY_OPTIONS } from "@/lib/stock-query";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { transmissionFilterOptions, transmissionFilterParam } from "@/lib/vehicle-display";
 import { stockRangeError } from "@/lib/stock-range-validation";
@@ -14,24 +14,16 @@ const CATEGORY_FILTER_OPTIONS = [
   { value: "moto", label: "Motos" },
 ] as const;
 
-const BUDGET_CHIPS = [
-  { label: "Até R$ 30 mil", minPrice: "", maxPrice: "30000" },
-  { label: "Até R$ 50 mil", minPrice: "", maxPrice: "50000" },
-  { label: "R$ 50 mil a R$ 80 mil", minPrice: "50000", maxPrice: "80000" },
-  { label: "R$ 80 mil a R$ 120 mil", minPrice: "80000", maxPrice: "120000" },
-  { label: "Acima de R$ 120 mil", minPrice: "120000", maxPrice: "" },
-] as const;
-
 export type StockFilterFieldsProps = {
   facets: Facets; draft: FilterValues; setDraft: Dispatch<SetStateAction<FilterValues>>; onApply: () => void; resultCount?: number | null;
 };
 export function StockFilterFields({ facets, draft, setDraft, onApply, resultCount }: StockFilterFieldsProps) {
   const rangeError = stockRangeError(draft);
-  const priceLabelId = useId();
   const accessoryLabelId = useId();
   /** Só os campos que existem dentro do painel do celular (a busca fica fora). */
   const draftFilterCount = [
     draft.category,
+    draft.body,
     draft.brand,
     draft.model,
     draft.transmission,
@@ -71,21 +63,23 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                     ))}
                   </select>
                 </MobileField>
-                <MobileField label="Câmbio">
+                <MobileField label="Carroceria">
                   <select
-                    value={transmissionFilterParam(draft.transmission)}
-                    onChange={(event) =>
-                      setDraft({ ...draft, transmission: event.target.value })
-                    }
+                    value={draft.body}
+                    onChange={(event) => {
+                      const body = event.target.value;
+                      setDraft({
+                        ...draft,
+                        category: body ? "carro" : draft.category,
+                        body,
+                      });
+                    }}
                     className={selectClass}
                   >
-                    <option value="">Qualquer</option>
-                    {transmissionFilterOptions(
-                      facets.transmissions,
-                      draft.transmission,
-                    ).map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
+                    <option value="">Todas</option>
+                    {STOCK_BODY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
                       </option>
                     ))}
                   </select>
@@ -129,33 +123,6 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   ))}
                 </select>
               </MobileField>
-              <div>
-                <p id={priceLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-cream/80">
-                  Faixa de preço
-                </p>
-                <div role="group" aria-labelledby={priceLabelId} className="flex flex-wrap gap-2">
-                  {BUDGET_CHIPS.map((chip) => {
-                    const active =
-                      (draft.minPrice || "") === chip.minPrice &&
-                      (draft.maxPrice || "") === chip.maxPrice;
-                    return (
-                      <Chip
-                        key={`sheet-${chip.label}`}
-                        active={active}
-                        onClick={() =>
-                          setDraft({
-                            ...draft,
-                            minPrice: active ? "" : chip.minPrice,
-                            maxPrice: active ? "" : chip.maxPrice,
-                          })
-                        }
-                      >
-                        {chip.label}
-                      </Chip>
-                    );
-                  })}
-                </div>
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <MobileField label="Preço mínimo">
                   <RangeSelect value={draft.minPrice} options={MIN_PRICE_OPTIONS} fallbackLabel={(value) => `R$ ${formatCompactNumber(value)}`} emptyLabel="Sem mínimo" onChange={(value) => setDraft({ ...draft, minPrice: value })} />
@@ -172,17 +139,38 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   <RangeSelect value={draft.maxYear} options={facets.years.map(year => ({ value: String(year), label: String(year) }))} fallbackLabel={(value) => value} emptyLabel="Qualquer" onChange={(value) => setDraft({ ...draft, maxYear: value })} />
                 </MobileField>
               </div>
-              <MobileField label="Quilometragem máxima">
-                <select
-                  value={draft.maxKm}
-                  onChange={(event) => setDraft({ ...draft, maxKm: event.target.value })}
-                  className={selectClass}
-                >
-                  {kmFilterOptions(draft.maxKm).map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </MobileField>
+              <div className="grid grid-cols-2 gap-3">
+                <MobileField label="Câmbio">
+                  <select
+                    value={transmissionFilterParam(draft.transmission)}
+                    onChange={(event) =>
+                      setDraft({ ...draft, transmission: event.target.value })
+                    }
+                    className={selectClass}
+                  >
+                    <option value="">Qualquer</option>
+                    {transmissionFilterOptions(
+                      facets.transmissions,
+                      draft.transmission,
+                    ).map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </MobileField>
+                <MobileField label="Quilometragem máxima">
+                  <select
+                    value={draft.maxKm}
+                    onChange={(event) => setDraft({ ...draft, maxKm: event.target.value })}
+                    className={selectClass}
+                  >
+                    {kmFilterOptions(draft.maxKm).map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </MobileField>
+              </div>
               <details
                 className="border border-white/20 bg-asphalt/30 px-3.5 py-1"
                 open={Boolean(draft.fuel || draft.color || draft.accessory || draft.laudo)}
@@ -260,6 +248,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                     setDraft({
                       ...draft,
                       category: "",
+                      body: "",
                       brand: "",
                       model: "",
                       transmission: "",

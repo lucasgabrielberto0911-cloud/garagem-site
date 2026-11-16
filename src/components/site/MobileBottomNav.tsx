@@ -53,7 +53,7 @@ export function MobileBottomNav() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-brand/50 to-transparent"
       />
-      <ul className="mx-auto grid max-w-lg grid-cols-5 items-end px-1 pb-[max(0.375rem,env(safe-area-inset-bottom,0px))]">
+      <ul className="mx-auto grid max-w-lg grid-cols-5 items-stretch px-1 pb-[env(safe-area-inset-bottom,0px)]">
         {ITEMS.slice(0, 2).map((item) => (
           <NavItem key={item.href} {...item} active={item.match(pathname)} />
         ))}
@@ -67,10 +67,10 @@ export function MobileBottomNav() {
             rel="noopener noreferrer"
             aria-label="Abrir WhatsApp da Garagem"
             onClick={() => trackWhatsAppClick("nav-mobile")}
-            className="relative flex min-h-[52px] flex-1 flex-col items-center justify-end gap-1 pb-1.5 pt-0 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cream"
+            className="relative flex h-14 flex-1 flex-col items-center justify-center gap-1 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cream"
           >
-            <span className="whatsapp-pulse -mt-5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-asphalt shadow-[0_6px_18px_rgba(37,211,102,0.42)] ring-[3px] ring-asphalt transition active:scale-95">
-              <IconWhatsApp className="h-6 w-6" />
+            <span className="whatsapp-pulse flex h-7 w-12 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-asphalt shadow-[0_2px_10px_rgba(37,211,102,0.38)] transition active:scale-95">
+              <IconWhatsApp className="h-[18px] w-[18px]" />
             </span>
             <span className="font-display text-[12px] font-semibold leading-none tracking-[0.01em] text-[#25D366]">
               WhatsApp
@@ -103,7 +103,7 @@ function NavItem({
         href={href}
         prefetch={false}
         aria-current={active ? "page" : undefined}
-        className={`relative flex min-h-[48px] flex-1 flex-col items-center justify-end gap-1 pb-1.5 pt-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand touch-manipulation ${
+        className={`relative flex h-14 flex-1 flex-col items-center justify-center gap-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand touch-manipulation ${
           active ? "text-cream" : "text-cream/75 active:text-cream"
         }`}
       >
@@ -113,9 +113,11 @@ function NavItem({
             className="absolute top-0 h-[2.5px] w-7 rounded-full bg-brand shadow-[0_0_8px_rgba(232,24,28,0.75)]"
           />
         ) : null}
-        <Icon
-          className={`h-5 w-5 shrink-0 ${active ? "text-brand-light" : "text-cream/75"}`}
-        />
+        <span className="flex h-7 items-center justify-center">
+          <Icon
+            className={`h-5 w-5 shrink-0 ${active ? "text-brand-light" : "text-cream/75"}`}
+          />
+        </span>
         <span
           className={`font-display text-[12px] leading-none tracking-[0.01em] ${
             active ? "font-semibold text-cream" : "font-medium text-cream/80"
