@@ -97,6 +97,7 @@ export default async function VendidosPage() {
 
       {deliveries.length > 0 ? (
         <Section spacing="tight" className="mt-8 border-t border-white/10">
+          <div data-sold-showcase="">
           <SectionHeading
             eyebrow="Clientes"
             title="Entregas registradas"
@@ -176,11 +177,13 @@ export default async function VendidosPage() {
               </li>
             ))}
           </ul>
+          </div>
         </Section>
       ) : null}
 
       {vehicles.length > 0 ? (
         <Section spacing="tight" className="border-t border-white/10 bg-ink/30">
+          <div data-sold-showcase="">
           <SectionHeading
             eyebrow="Histórico"
             title="Veículos vendidos recentemente"
@@ -249,6 +252,7 @@ export default async function VendidosPage() {
               </li>
             ))}
           </ul>
+          </div>
         </Section>
       ) : null}
 

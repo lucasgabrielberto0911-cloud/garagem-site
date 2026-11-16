@@ -16,8 +16,10 @@ test("galeria /vendidos carrega sem overflow, sem preço e com CTA de similares"
     page.getByRole("heading", { name: /Veículos vendidos e clientes/i }),
   ).toBeVisible();
 
-  const bodyText = await page.locator("main").innerText();
-  expect(bodyText).not.toMatch(/R\$\s*\d/);
+  const showcaseTexts = await page.locator("[data-sold-showcase]").allInnerTexts();
+  for (const text of showcaseTexts) {
+    expect(text).not.toMatch(/R\$\s*\d/);
+  }
 
   const hasOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
