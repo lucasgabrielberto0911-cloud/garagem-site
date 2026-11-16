@@ -15,6 +15,18 @@ test("intercepta rotas de foto do site, da API e do Storage", () => {
     isE2ePhotoStubUrl("https://abc.public.blob.vercel-storage.com/veiculos/a.jpg"),
     true,
   );
+  assert.equal(
+    isE2ePhotoStubUrl("https://pub-1234.r2.dev/veiculos/a.webp"),
+    true,
+  );
+  assert.equal(
+    isE2ePhotoStubUrl("http://127.0.0.1:3362/_next/image?url=%2Ffotos%2Fa.jpg&w=640&q=75"),
+    true,
+  );
+  assert.equal(
+    isE2ePhotoStubUrl("http://127.0.0.1:3362/_next/image?url=%2Fbranding%2Flogo.png&w=384&q=75"),
+    false,
+  );
 });
 
 test("não intercepta HTML, APIs de dados nem o WhatsApp", () => {

@@ -233,7 +233,7 @@ export function SiteHeader() {
             onClick={closeMenu}
             aria-hidden="true"
           />
-          <div className="relative mt-[calc(4.5rem+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/15 bg-asphalt animate-slide-up pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+          <div className="relative mt-[calc(4.5rem+1px+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-1px-env(safe-area-inset-top,0px))] max-h-[calc(100dvh-4.5rem-1px-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/15 bg-asphalt pl-safe pr-safe animate-slide-up pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
             <nav className="px-5 py-4" aria-label="Menu mobile">
               <button
                 ref={closeButtonRef}

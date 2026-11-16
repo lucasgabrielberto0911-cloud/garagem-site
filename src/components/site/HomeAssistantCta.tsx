@@ -26,7 +26,7 @@ export function HomeAssistantButton() {
         type="button"
         onClick={() => openAssistant("home-hero-cta")}
         aria-label="Pergunte ao assistente"
-        className="assistant-cta relative isolate inline-flex min-h-[52px] w-full lg:flex lg:h-full items-center justify-center gap-2 overflow-hidden border border-brand/80 bg-asphalt px-3 py-4 lg:py-3.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-ink touch-manipulation sm:gap-2.5 sm:px-7 sm:text-base lg:text-sm"
+        className="assistant-cta relative isolate inline-flex min-h-[52px] w-full lg:flex lg:h-full items-center justify-center gap-2 overflow-hidden border border-brand bg-[#151519] px-3 py-4 lg:py-3.5 font-display text-sm font-semibold uppercase tracking-wide text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-brand-light hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream touch-manipulation sm:gap-2.5 sm:px-7 sm:text-base lg:text-sm"
       >
         <span className="relative z-10 inline-flex items-center gap-2 sm:gap-2.5">
           <IconChat className="h-5 w-5 shrink-0 text-brand-light" />
@@ -76,7 +76,7 @@ export function HomeAssistantAsk() {
       <div
         role="group"
         aria-label="Sugestões de perguntas"
-        className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:mt-1.5 lg:mt-2 xl:mt-2.5 sm:flex-wrap sm:overflow-visible sm:px-0 lg:gap-1 xl:flex-nowrap xl:overflow-x-auto"
+        className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:mt-1.5 lg:mt-2 xl:mt-2.5 sm:flex-wrap sm:overflow-visible sm:px-0 lg:gap-1.5"
       >
         {SUGGESTIONS.map((suggestion) => (
           <button

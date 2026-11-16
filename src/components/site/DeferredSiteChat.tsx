@@ -44,7 +44,7 @@ export function DeferredSiteChat() {
     <ChatNudge />
     <div className="site-chat pointer-events-none fixed z-[60] flex flex-col items-end">
       <button type="button" onClick={() => requestSiteChat({ source: "launcher" })} aria-label={CHAT_HELP_LABEL} aria-busy={status === "loading"}
-        className="site-chat-launcher pointer-events-auto flex h-11 w-auto max-w-[calc(100vw-2rem)] items-center justify-center gap-2 rounded-full bg-brand-dark pl-3.5 pr-4 text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_12px_28px_-8px_rgba(201,20,24,0.65),0_2px_6px_rgba(0,0,0,0.4)] ring-1 ring-white/15 transition hover:-translate-y-0.5 hover:bg-brand active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt touch-manipulation sm:h-14 sm:gap-2.5 sm:pl-5 sm:pr-6">
+        className="site-chat-launcher pointer-events-auto flex h-11 w-auto max-w-[calc(100vw-2rem)] items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#E8181C] to-[#B91216] pl-3.5 pr-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_12px_28px_-8px_rgba(232,24,28,0.65),0_2px_6px_rgba(0,0,0,0.45)] ring-1 ring-white/25 transition hover:-translate-y-0.5 hover:from-[#F0282C] hover:to-[#C91418] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt touch-manipulation sm:h-14 sm:gap-2.5 sm:pl-5 sm:pr-6">
         <IconChat className="h-[18px] w-[18px] shrink-0 sm:h-5 sm:w-5" /><span className="whitespace-nowrap font-display text-[13px] font-semibold sm:text-sm">{CHAT_HELP_LABEL}</span>
       </button>
     </div>

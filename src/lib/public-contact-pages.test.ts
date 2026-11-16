@@ -95,11 +95,11 @@ test("a confirmação da venda só cita fotos quando houve anexo", () => {
   assert.doesNotMatch(sellReceivedLine(0), /foto/i);
 });
 
-test("contato e vender reservam a altura do chip e da bottom nav", () => {
+test("contato e vender reservam apenas a altura da bottom nav sem padding morto do FAB oculto", () => {
   assert.match(css, /\.clear-fab-screen/);
   assert.match(
     css,
-    /padding-bottom: calc\(4\.5rem \+ 0\.75rem \+ 2\.75rem \+ 1rem \+ env\(safe-area-inset-bottom, 0px\)\)/,
+    /\.clear-fab-screen\s*\{[\s\S]*padding-bottom:\s*calc\(4\.25rem \+ env\(safe-area-inset-bottom, 0px\)\)/,
   );
-  assert.match(css, /body:has\(\[data-clear-fab\]\)/);
+  assert.doesNotMatch(css, /4\.5rem \+ 0\.75rem \+ 2\.75rem/);
 });
