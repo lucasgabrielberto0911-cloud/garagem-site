@@ -89,8 +89,8 @@ export function StockBrowseShell({
 }) {
   return (
     <StockPendingProvider>
-      <div className="stock-shell mt-3 lg:mt-8 lg:grid lg:grid-cols-[minmax(300px,340px)_minmax(0,1fr)] lg:items-start lg:gap-8">
-        <aside className="contents lg:block lg:sticky lg:top-24">
+      <div className="stock-shell mt-3 lg:mt-5 lg:grid lg:grid-cols-[minmax(300px,340px)_minmax(0,1fr)] lg:items-start lg:gap-8">
+        <aside className="contents lg:block lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
           {filters}
         </aside>
         <StockResultsPending>{results}</StockResultsPending>

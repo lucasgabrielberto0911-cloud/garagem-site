@@ -320,7 +320,7 @@ export function PhotoLightbox({
         onClick={onClose}
       />
 
-      <div className="relative z-[1] flex h-[100dvh] w-full max-w-7xl flex-col overflow-hidden bg-black pt-safe shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/20 sm:pt-0">
+      <div className="relative z-[1] flex h-[100dvh] w-full max-w-7xl flex-col overflow-hidden bg-black pt-safe pb-safe pl-safe pr-safe shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/20 sm:p-0">
         <header className="relative z-[2] flex shrink-0 items-center justify-between gap-3 border-b border-white/20 bg-black/70 px-3 py-2.5 backdrop-blur sm:px-4">
           <div className="min-w-0">
             <p id={titleId} className="truncate text-sm font-medium text-cream">

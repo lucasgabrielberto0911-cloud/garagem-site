@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
-import { BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
+import { MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
 import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName, formatModelName } from "@/lib/format";
@@ -351,12 +351,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
     {
       key: "carro",
       label: "Carros",
-      active: current.category === "carro",
+      active: current.category === "carro" && !current.body,
       onClick: () =>
         navigate(
           sanitizeFiltersForCategory(
             current,
-            current.category === "carro" ? "" : "carro",
+            current.category === "carro" && !current.body ? "" : "carro",
             facets.models,
           ),
         ),
@@ -374,33 +374,40 @@ export function StockFilters({ facets }: { facets: Facets }) {
           ),
         ),
     },
-    ...STOCK_BODY_OPTIONS.map((option) => ({
-      key: `body-${option.value}`,
-      label: option.label,
-      active: current.body === option.value,
+    {
+      key: "body-suv",
+      label: "SUV",
+      active: current.body === "suv",
       onClick: () =>
         navigate({
           ...current,
-          category: option.value === current.body ? current.category : "carro",
-          body: current.body === option.value ? "" : option.value,
+          category: current.body === "suv" ? current.category : "carro",
+          body: current.body === "suv" ? "" : "suv",
         }),
-    })),
+    },
     {
       key: "automatico",
       label: "Automático",
       active: gearValue === "automatico",
       onClick: () => update({ transmission: gearValue === "automatico" ? "" : "automatico" }),
     },
-    ...BUDGET_CHIPS.map((chip) => {
-      const active = current.minPrice === chip.minPrice && current.maxPrice === chip.maxPrice;
-      return {
-        key: `faixa-${chip.label}`,
-        label: chip.label,
-        active,
-        onClick: () =>
-          update(active ? { minPrice: "", maxPrice: "" } : { minPrice: chip.minPrice, maxPrice: chip.maxPrice }),
-      };
-    }),
+    {
+      key: "manual",
+      label: "Manual",
+      active: gearValue === "manual",
+      onClick: () => update({ transmission: gearValue === "manual" ? "" : "manual" }),
+    },
+    {
+      key: "ate-60-mil",
+      label: "Até R$ 60 mil",
+      active: !current.minPrice && current.maxPrice === "60000",
+      onClick: () =>
+        update(
+          !current.minPrice && current.maxPrice === "60000"
+            ? { minPrice: "", maxPrice: "" }
+            : { minPrice: "", maxPrice: "60000" },
+        ),
+    },
   ];
 
   // "Ver X veículos": conta o resultado do rascunho enquanto a gaveta está aberta.
@@ -445,7 +452,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       <div
         aria-busy={isPending}
         data-pending={isPending}
-        className={`border-0 bg-transparent p-0 transition-opacity lg:border lg:border-white/20 lg:bg-ink lg:p-5 ${
+        className={`border-0 bg-transparent p-0 transition-opacity lg:border lg:border-white/20 lg:bg-ink lg:p-4 ${
           isPending ? "opacity-70" : ""
         }`}
       >
@@ -460,7 +467,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto max-w-2xl"
           role="search"
         >
-          <div className="flex min-h-11 items-center gap-2.5 border border-white/25 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand lg:min-h-[48px]">
+          <div className="flex min-h-11 items-center gap-2.5 border border-white/25 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand lg:min-h-[42px]">
             <IconSearch className="h-4 w-4 shrink-0 text-cream/75" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -503,22 +510,22 @@ export function StockFilters({ facets }: { facets: Facets }) {
           </div>
         </form>
 
-        {/* Desktop: filtros completos, sem rolagem interna. */}
-        <div className="mt-5 hidden lg:block">
+        {/* Desktop: atalhos compactos + filtros completos visíveis sem corte. */}
+        <div className="mt-3 hidden lg:block">
           <div>
-            <p id={shortcutsLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-cream/80">
+            <p id={shortcutsLabelId} className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-cream/80">
               Atalhos
             </p>
-            <div role="group" aria-labelledby={shortcutsLabelId} className="flex flex-wrap gap-2">
+            <div role="group" aria-labelledby={shortcutsLabelId} className="flex flex-wrap gap-1.5">
               {quickChips.map((chip) => (
-                <Chip key={chip.key} active={chip.active} onClick={chip.onClick}>
+                <Chip key={chip.key} active={chip.active} compact onClick={chip.onClick}>
                   {chip.label}
                 </Chip>
               ))}
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/20 pt-5">
+          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/15 pt-3">
             <FilterSelect
               label="Marca"
               id="desktop-marca"
@@ -601,29 +608,43 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 ))}
               </select>
             </DesktopField>
+            <FilterSelect
+              label="Câmbio"
+              id="desktop-cambio"
+              value={gearValue}
+              onChange={(value) => update({ transmission: value })}
+              options={gearOptions}
+              emptyLabel="Todos"
+            />
+            <DesktopField label="Quilometragem" htmlFor="desktop-km">
+              <select
+                id="desktop-km"
+                value={current.maxKm}
+                onChange={(event) => update({ maxKm: event.target.value })}
+                className={selectClass}
+              >
+                {kmFilterOptions(current.maxKm).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
           </div>
 
           <details
-            className="mt-5 border border-white/20 bg-asphalt/30 px-3.5 py-1"
+            className="mt-3 border border-white/20 bg-asphalt/30 px-3 py-0.5"
             open={Boolean(
-              current.transmission || current.fuel || current.color || current.accessory || current.laudo || current.maxKm,
+              current.fuel || current.color || current.accessory || current.laudo,
             )}
           >
-            <summary className="flex min-h-[44px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-[40px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
               Mais filtros
               <span className="ml-auto text-xs font-medium normal-case tracking-wide text-cream/75">
-                câmbio, combustível, cor, km
+                combustível, cor, acessórios
               </span>
             </summary>
-            <div className="space-y-4 pb-4 pt-2">
-              <FilterSelect
-                label="Câmbio"
-                id="desktop-cambio"
-                value={gearValue}
-                onChange={(value) => update({ transmission: value })}
-                options={gearOptions}
-                emptyLabel="Todos os câmbios"
-              />
+            <div className="space-y-3 pb-3 pt-2">
               <FilterSelect
                 label="Combustível"
                 id="desktop-combustivel"
@@ -642,23 +663,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   emptyLabel="Todas as cores"
                 />
               ) : null}
-              <DesktopField label="Quilometragem" htmlFor="desktop-km">
-                <select
-                  id="desktop-km"
-                  value={current.maxKm}
-                  onChange={(event) => update({ maxKm: event.target.value })}
-                  className={selectClass}
-                >
-                  {kmFilterOptions(current.maxKm).map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </DesktopField>
               {(facets.accessories ?? []).length > 0 ? (
                 <div>
-                  <p id={desktopAccessoryLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-cream/80">
+                  <p id={desktopAccessoryLabelId} className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-cream/80">
                     Acessórios
                   </p>
                   <AccessoryChips
@@ -673,7 +680,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   />
                 </div>
               ) : null}
-              <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/20 bg-asphalt px-3.5 text-sm text-cream">
+              <label className="flex min-h-[44px] cursor-pointer items-center gap-2.5 border border-white/20 bg-asphalt px-3 text-sm text-cream">
                 <input
                   type="checkbox"
                   checked={Boolean(current.laudo)}
@@ -840,7 +847,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             aria-modal="true"
             id="painel-filtros"
             aria-labelledby="titulo-filtros"
-            className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col overflow-hidden border-t border-white/20 bg-ink animate-slide-up focus:outline-none"
+            className="absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,calc(100dvh-env(safe-area-inset-top,0px)-1rem))] flex-col overflow-hidden border-t border-white/20 bg-ink pl-safe pr-safe animate-slide-up focus:outline-none"
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/20 bg-ink px-4 py-3 sm:px-5">
               <div>
@@ -1037,7 +1044,7 @@ function DesktopField({
     <div className={className}>
       <label
         htmlFor={htmlFor}
-        className="mb-2 block text-xs font-medium uppercase tracking-wider text-cream/80"
+        className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-cream/80"
       >
         {label}
       </label>

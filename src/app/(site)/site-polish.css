@@ -1,0 +1,77 @@
+/* Ajustes visuais da home, barra móvel, assistente e PWA standalone (sem diretivas Tailwind). */
+
+/* Compensa a borda do header fixo + notch para o topo do hero não encostar no menu. */
+@media (max-width: 1023px) {
+  .pt-site-header {
+    padding-top: calc(4.5rem + 2px + env(safe-area-inset-top, 0px));
+  }
+
+  body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav,
+  body:has(.site-consent):not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])) .pb-site-nav {
+    padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .site-chat.is-open {
+    max-height: 100dvh;
+  }
+
+  body:not([data-chat-keyboard]) .site-chat.is-open .site-chat-panel {
+    max-height: calc(
+      100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
+  }
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  html,
+  body {
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+}
+
+/* Pulso suave e contraste do botão flutuante do assistente (SiteChat). */
+.site-chat-launcher {
+  position: relative;
+  isolation: isolate;
+}
+
+.site-chat-launcher::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid rgba(232, 24, 28, 0.5);
+  box-shadow: 0 0 18px 2px rgba(232, 24, 28, 0.35);
+  opacity: 0;
+  transform: scale(0.96);
+  animation: siteChatLauncherPulse 3.8s ease-in-out 1.4s infinite both;
+}
+
+@keyframes siteChatLauncherPulse {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  45% {
+    opacity: 0.72;
+    transform: scale(1.04);
+  }
+}
+
+/* Mantém a animação suave do botão do assistente na home bem visível. */
+.assistant-cta-glow::before {
+  opacity: 0.32;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-chat-launcher::after,
+  .assistant-cta::after,
+  .assistant-cta-glow::before {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}

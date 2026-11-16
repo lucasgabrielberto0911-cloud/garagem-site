@@ -103,7 +103,7 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="py-4 sm:py-6 lg:py-7">
+        <Container className="pt-5 pb-4 sm:py-6 lg:py-7">
           {/* Computador: grade de 2 colunas; a da direita ocupa as 2 linhas (texto + números),
               com topo no logo e base na base dos cards de números. Celular/tablet: sem mudança. */}
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_30rem] xl:gap-x-10">
