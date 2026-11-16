@@ -70,6 +70,30 @@ function topFacts(
   return { facts: shown, color };
 }
 
+export function VehicleMobileKeyFacts({
+  facts,
+  color,
+  yearLabel,
+  specAnchor = false,
+  className = "mt-2.5",
+}: {
+  facts: readonly VehicleKeyFact[];
+  color?: string | null;
+  yearLabel?: string;
+  specAnchor?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`${className}${specAnchor ? " ficha-jump-target" : ""}`.trim()}
+      id={specAnchor ? "especificacoes" : undefined}
+      data-ficha-section={specAnchor ? "especificacoes" : undefined}
+    >
+      <VehicleKeyFacts {...topFacts(facts, color, yearLabel)} />
+    </div>
+  );
+}
+
 export function VehicleMobileSummary({
   title,
   version,
@@ -122,13 +146,12 @@ export function VehicleMobileSummary({
       </p>
       {/* Logo abaixo do preço: é o que ainda cabe na primeira tela em celular baixo. */}
       {!sold ? <VehicleTrustNotes warranty={warranty} compact className="mt-2.5" /> : null}
-      <div
-        className={`mt-2.5${specAnchor ? " ficha-jump-target" : ""}`}
-        id={specAnchor ? "especificacoes" : undefined}
-        data-ficha-section={specAnchor ? "especificacoes" : undefined}
-      >
-        <VehicleKeyFacts {...topFacts(facts, color, yearLabel)} />
-      </div>
+      <VehicleMobileKeyFacts
+        facts={facts}
+        color={color}
+        yearLabel={yearLabel}
+        specAnchor={specAnchor}
+      />
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
       ) : null}

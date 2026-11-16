@@ -267,7 +267,7 @@ export function VehicleGallery({
         <button
           type="button"
           onClick={() => setZoomOpen(true)}
-          className="absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex min-h-11 items-center gap-2 border border-white/40 bg-asphalt/90 px-3 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-brand active:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+          className="absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex min-h-11 items-center gap-2 rounded-lg border border-asphalt/15 bg-cream/95 px-3.5 font-display text-sm font-semibold text-asphalt shadow-[0_4px_14px_rgba(0,0,0,0.45)] transition touch-manipulation hover:bg-white hover:ring-2 hover:ring-brand active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <ExpandIcon />
           {total > 1 ? `Ver as ${total} fotos` : "Ampliar foto"}
@@ -295,7 +295,7 @@ export function VehicleGallery({
             </button>
 
             <span
-              className="pointer-events-none absolute bottom-2 right-2 z-[2] border border-white/30 bg-asphalt/90 px-2 py-1 text-sm font-medium text-cream lg:bottom-auto lg:top-2"
+              className="pointer-events-none absolute bottom-2 right-2 z-[2] rounded-md border border-white/30 bg-asphalt/90 px-2.5 py-1 text-sm font-semibold tabular-nums text-cream lg:bottom-auto lg:top-2"
               aria-live="polite"
             >
               {active + 1}/{total}

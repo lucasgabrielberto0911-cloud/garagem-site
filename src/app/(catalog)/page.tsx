@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { HomeAssistantAsk, HomeAssistantButton } from "@/components/site/HomeAssistantCta";
 import { Suspense } from "react";
-import { preload } from "react-dom";
 import { JsonLd } from "@/components/JsonLd";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
-import { SiteWordmark, WORDMARK_SRC as HERO_WORDMARK, WORDMARK_SRC_SET, WORDMARK_SIZES } from "@/components/site/SiteWordmark";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
 import { HeroSearch } from "@/components/site/HeroSearch";
 import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
@@ -70,10 +68,6 @@ const REASONS = [
 ] as const;
 
 export default async function HomePage() {
-  // O logo do hero fica oculto no celular (.hero-brand) e o LCP lá é a foto do
-  // carro: só pré-carrega a partir de 640 px, em prioridade baixa.
-  preload(HERO_WORDMARK, { as: "image", fetchPriority: "low", imageSrcSet: WORDMARK_SRC_SET, imageSizes: WORDMARK_SIZES, media: "(min-width: 640px)" });
-
   const [featured, brands, publicSite] =
     await Promise.all([
     getFeaturedVehicles(MAX_HOME_FEATURED),
@@ -103,16 +97,16 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="pt-4 pb-4 sm:py-7 lg:py-8">
+        <Container className="pt-4 pb-4 sm:py-6 lg:py-6">
           {/* Computador: grade de 2 colunas; a da direita alinha ações (WhatsApp principal,
               Ver estoque secundário) + assistente leve e integrado ao hero. */}
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-center lg:gap-x-10 xl:grid-cols-[minmax(0,1fr)_28rem] xl:gap-x-12">
           <div className="flex flex-col gap-3.5 sm:gap-5 lg:contents">
             <div className="hero-text min-w-0 max-w-2xl lg:col-start-1 lg:row-start-1">
-              <div className="hero-brand">
-                <SiteWordmark size="hero" />
-              </div>
-              <h1 className="mt-3 font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
+              <p className="hidden font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light sm:block">
+                Garagem · Loja digital
+              </p>
+              <h1 className="font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-2 sm:text-3xl sm:leading-[1.12] lg:text-[2.125rem]">
                 Seminovos com procedência para todo o norte do ES.
               </h1>
               <ul className="mt-3 flex max-w-lg flex-col gap-2 border-l-2 border-brand/60 pl-3 text-sm leading-snug text-cream sm:gap-1.5 sm:border-0 sm:pl-0 sm:text-base">
@@ -165,7 +159,7 @@ export default async function HomePage() {
       </section>
 
       {/* 2. ESTOQUE — busca e anúncios reais, logo abaixo da loja */}
-      <Section id="destaques" spacing="none" className="border-t border-white/5 py-3 sm:py-6 lg:py-9">
+      <Section id="destaques" spacing="none" className="border-t border-white/5 py-3 sm:py-5 lg:py-6">
         <div className="flex flex-col">
         <div>
           <p className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light sm:block">

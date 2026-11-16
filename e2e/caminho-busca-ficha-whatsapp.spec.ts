@@ -93,12 +93,12 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
     const aside = page.locator("[data-ficha-page] aside");
     await expect(aside).toBeVisible();
 
-    const vehicleTitle = aside.locator("p.font-display").first();
+    const vehicleTitle = aside.getByRole("heading", { level: 1 });
     await expect(vehicleTitle).toBeVisible();
     await expect(vehicleTitle).toContainText("Civic");
     await expect(vehicleTitle).toHaveClass(/font-display/);
 
-    const vehiclePrice = aside.locator("p.font-display").nth(1);
+    const vehiclePrice = aside.locator("[data-ficha-price]");
     await expect(vehiclePrice).toBeVisible();
     await expect(vehiclePrice).toContainText("74.900");
     await expect(vehiclePrice).toHaveClass(/font-display/);

@@ -275,11 +275,11 @@ export function EstoqueBrowse({
         </div>
       ) : null}
 
-      <div className="mb-2 mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:mb-0 lg:mt-0">
+      <div className="mb-1.5 mt-1.5 flex items-center justify-between gap-2 lg:mb-0 lg:mt-0 lg:flex-wrap lg:gap-x-4 lg:gap-y-2">
       <p
         role="status"
         aria-atomic="true"
-        className="stock-count text-left text-sm font-medium text-cream lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-cream/75"
+        className="stock-count min-w-0 truncate text-left text-sm font-medium text-cream lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-cream/75"
       >
         {loading
           ? "Atualizando o estoque…"

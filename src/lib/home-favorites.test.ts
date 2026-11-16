@@ -24,7 +24,8 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.match(hero, /hidden sm:flex[\s\S]{0,120}<HomeAssistantButton \/>/);
   assert.match(hero, /<HomeAssistantButton \/>/);
   assert.match(hero, /<HomeAssistantAsk \/>/);
-  assert.doesNotMatch(hero, /hero-brand hidden/);
+  assert.doesNotMatch(hero, /hero-brand/);
+  assert.doesNotMatch(hero, /<SiteWordmark/);
   assert.match(hero, /site\.whatsappLabel/);
   assert.doesNotMatch(hero, /text-xs[\s\S]{0,40}Ver estoque/);
   assert.match(hero, /A gente revisa cada veículo, e ele sai com garantia/);
@@ -33,7 +34,7 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.doesNotMatch(page, /Procedência conferida/);
   assert.doesNotMatch(page, /alinhada na transferência/);
   assert.doesNotMatch(hero, /ChatOpenButton/);
-  assert.match(page, /preload\(HERO_WORDMARK/);
+  assert.doesNotMatch(page, /preload\(HERO_WORDMARK/);
   const chat = page.indexOf("<ChatOpenButton");
   assert.ok(chat > page.indexOf('id="destaques"'));
   assert.match(page.slice(chat, chat + 220), /variant="outline"/);

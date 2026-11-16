@@ -243,6 +243,49 @@ test("home desktop: assistente visível com animação respeitando prefers-reduc
   }));
   expect(animReduced.launcherAfter).toBe("none");
   expect(animReduced.caretCount).toBe(0);
+
+  // Uma logo só visível no topo (sem repetição no hero)
+  const visibleLogos = await page
+    .locator('img[alt="Garagem"]:visible')
+    .evaluateAll((els) => els.filter((el) => el.getBoundingClientRect().top < 400).length);
+  expect(visibleLogos).toBe(1);
+
+  // Botão flutuante único abre mini-menu com WhatsApp e Assistente
+  await expect(page.locator(".whatsapp-float")).toHaveCount(0);
+  await launcher.click();
+  const floatMenu = page.getByRole("menu", { name: "Opções de atendimento" });
+  await expect(floatMenu).toBeVisible();
+  await expect(floatMenu.getByRole("menuitem", { name: "Falar no WhatsApp" })).toHaveAttribute("href", /wa\.me/);
+  await expect(floatMenu.getByRole("menuitem", { name: "Perguntar ao assistente" })).toBeVisible();
+  await floatMenu.getByRole("menuitem", { name: "Perguntar ao assistente" }).click();
+  await expect(page.locator(".site-chat-panel")).toBeVisible();
+  await page.getByRole("button", { name: "Fechar chat" }).click();
+});
+
+test("home desktop 1280x800: flutuante e aviso de cookies não cobrem Salvar dos cards", async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    const page = await context.newPage();
+    await interceptNonBrandImages(page);
+    await page.goto(baseURL!);
+    const launcherBox = (await page.locator(".site-chat-launcher").boundingBox())!;
+    const consentBox = (await page.locator(".site-consent").boundingBox())!;
+    expect(consentBox.x + consentBox.width).toBeLessThan(launcherBox.x);
+    const saveBoxes = await page
+      .locator("article.listing-card .vehicle-card-favorite button")
+      .evaluateAll((els) => els.map((el) => el.getBoundingClientRect()));
+    const overlaps = (a: { x: number; y: number; width: number; height: number }, b: DOMRect) =>
+      !(a.x + a.width <= b.left || b.right <= a.x || a.y + a.height <= b.top || b.bottom <= a.y);
+    for (const save of saveBoxes) {
+      expect(overlaps(launcherBox, save)).toBe(false);
+      expect(overlaps(consentBox, save)).toBe(false);
+    }
+  } finally {
+    await context.close();
+  }
 });
 
 test("estoque: 6 atalhos na ordem certa, Carroceria nos selects, painel 1280x800 <= 790 e gaveta sem duplicar preço", async ({
@@ -310,6 +353,12 @@ test("estoque: 6 atalhos na ordem certa, Carroceria nos selects, painel 1280x800
     await shortcutsGroup.getByRole("button", { name: "Manual", exact: true }).click();
     await expect(page).toHaveURL(/transmission=manual/);
   } else {
+    if (width >= 390) {
+      const navTop = (await page.locator("[data-mobile-bottom-nav]").boundingBox())!.y;
+      const firstCardBox = (await page.locator("article.listing-card").first().boundingBox())!;
+      expect(firstCardBox.y + firstCardBox.height).toBeLessThanOrEqual(navTop + 1);
+    }
+
     const mobileBar = page.locator("[data-stock-filters]");
     const shortcutsGroup = mobileBar.getByRole("group", { name: "Atalhos" });
     const labels = await shortcutsGroup.locator("button").allInnerTexts();
