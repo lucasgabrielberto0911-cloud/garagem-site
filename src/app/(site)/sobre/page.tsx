@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { FounderSection } from "@/components/site/FounderSection";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import {
@@ -70,10 +71,10 @@ export default async function SobrePage() {
   const soldLabel =
     stats.sales > 0 ? `+${formatNumberBR(stats.sales)}` : "0";
   const highlightStats = [
-    { value: publicSite.aboutYears, label: "anos de história" },
-    { value: soldLabel, label: "veículos vendidos" },
-    { value: publicSite.aboutHours, label: "atendimento online" },
-    { value: publicSite.aboutFocus, label: "foco no cliente" },
+    { value: publicSite.aboutYears, label: "anos de história", href: undefined },
+    { value: soldLabel, label: "veículos vendidos", href: "/vendidos" },
+    { value: publicSite.aboutHours, label: "atendimento online", href: undefined },
+    { value: publicSite.aboutFocus, label: "foco no cliente", href: undefined },
   ];
 
   return (
@@ -138,6 +139,15 @@ export default async function SobrePage() {
               <p className="mt-2 text-xs uppercase tracking-wider text-cream/75">
                 {stat.label}
               </p>
+              {stat.href ? (
+                <Link
+                  href={stat.href}
+                  prefetch={false}
+                  className="mt-2 inline-flex min-h-11 items-center text-xs font-semibold text-brand-light underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+                >
+                  Ver entregas →
+                </Link>
+              ) : null}
             </li>
           ))}
         </ul>

@@ -39,6 +39,24 @@
       "permanent": true
     },
     {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "vendidos.suagaragem.net" }],
+      "destination": "https://www.suagaragem.net/vendidos",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "vender.suagaragem.net" }],
+      "destination": "https://www.suagaragem.net/vender",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "links.suagaragem.net" }],
+      "destination": "https://www.suagaragem.net/links",
+      "permanent": true
+    },
+    {
       "source": "/honda-hrv-2020",
       "destination": "/estoque",
       "statusCode": 301

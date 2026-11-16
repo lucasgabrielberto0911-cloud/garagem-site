@@ -302,6 +302,16 @@ export default async function HomePage() {
         }>
           <HomeTestimonials publicSite={publicSite} />
         </Suspense>
+        <div className="mt-5">
+          <Link
+            href="/vendidos"
+            prefetch={false}
+            className="inline-flex min-h-11 items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+          >
+            Ver entregas e veículos vendidos
+            <IconArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       </Section>
 
       {/* 6. ATENDIMENTO — um número, horário e modalidade reais */}
