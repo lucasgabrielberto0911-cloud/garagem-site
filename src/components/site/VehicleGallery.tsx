@@ -2,8 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { VehicleImage } from "@/components/VehicleImage";
-import { useSpeculativeLoading } from "./useSpeculativeLoading";
+import { VEHICLE_PLACEHOLDER, VehicleImage } from "@/components/VehicleImage";
 import { vehiclePhotoAlt } from "@/lib/format";
 import {
   GALLERY_HERO_SIZES,
@@ -48,30 +47,37 @@ export function VehicleGallery({
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
   activeRef.current = active;
-  const [neighbors, setNeighbors] = useState(false);
+  const targetScrollIndexRef = useRef<{ index: number; until: number } | null>(null);
+  const [warmedSlides, setWarmedSlides] = useState<number[]>(() =>
+    [0, 1, 2].filter((idx) => idx < photos.length),
+  );
+  const [decodedUrls, setDecodedUrls] = useState<ReadonlySet<string>>(() => new Set());
+  const [lastDecodedSrc, setLastDecodedSrc] = useState<string | null>(null);
+  const [failedUrls, setFailedUrls] = useState<ReadonlySet<string>>(() => new Set());
   const [showThumbs, setShowThumbs] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
-  const speculativeLoading = useSpeculativeLoading();
 
   useEffect(() => {
-    if (!speculativeLoading) return;
-    let cancelled = false;
-    let timer = 0;
-    const arm = () => {
-      if (!cancelled) setNeighbors(true);
-    };
-    const onLoad = () => {
-      timer = window.setTimeout(arm, 1200);
-    };
-    if (document.readyState === "complete") onLoad();
-    else window.addEventListener("load", onLoad, { once: true });
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-      window.removeEventListener("load", onLoad);
-    };
-  }, [speculativeLoading]);
+    if (total === 0) return;
+    const targets = [active - 1, active, active + 1, ...(active === 0 ? [2] : [])]
+      .filter((idx) => idx >= 0 && idx < total);
+    setWarmedSlides((prev) => {
+      if (targets.every((idx) => prev.includes(idx))) return prev;
+      const next = new Set(prev);
+      for (const idx of targets) next.add(idx);
+      return Array.from(next);
+    });
+  }, [active, total]);
+
+  const markDecoded = useCallback((url: string) => {
+    setLastDecodedSrc(url);
+    setDecodedUrls((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
+  }, []);
+
+  const markFailed = useCallback((url: string) => {
+    setFailedUrls((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -104,6 +110,14 @@ export function VehicleGallery({
       if (!el) return;
       const width = el.clientWidth;
       if (width <= 0) return;
+      const pending = targetScrollIndexRef.current;
+      if (pending) {
+        if (Math.abs(el.scrollLeft - pending.index * width) <= 2 || Date.now() > pending.until) {
+          targetScrollIndexRef.current = null;
+        } else {
+          return;
+        }
+      }
       const index = Math.round(el.scrollLeft / width);
       setActive(Math.min(Math.max(index, 0), total - 1));
     }
@@ -141,6 +155,8 @@ export function VehicleGallery({
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const next = Math.min(Math.max(index, 0), Math.max(total - 1, 0));
+    targetScrollIndexRef.current = { index: next, until: Date.now() + 600 };
+    activeRef.current = next;
     scroller.scrollTo({
       left: next * scroller.clientWidth,
       behavior: prefersReducedMotion() ? "auto" : "smooth",
@@ -204,10 +220,26 @@ export function VehicleGallery({
           aria-label={`Fotos de ${alt}`}
         >
           {photos.map((photo, index) => {
+            const shouldMount =
+              index === active ||
+              shouldLoadGallerySlide(index, active) ||
+              (active === 0 && index === 2) ||
+              warmedSlides.includes(index);
+            const slideSrc = index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo);
+            const slideSrcSet = galleryPreviewSrcSet(photo);
+            const isReady = decodedUrls.has(slideSrc);
+            const isFailed = failedUrls.has(slideSrc);
+            const thumbSrc = galleryThumbSrc(photo);
+            const previewSrc =
+              thumbSrc && thumbSrc !== slideSrc
+                ? thumbSrc
+                : lastDecodedSrc ?? VEHICLE_PLACEHOLDER;
+            const showPreview = index > 0 && !isFailed;
+
             return (
               <li
                 key={photo.id}
-                className="relative h-full w-full min-w-full shrink-0 snap-center snap-always bg-asphalt"
+                className="relative h-full w-full min-w-full shrink-0 snap-center snap-always bg-ink"
               >
                 <button
                   type="button"
@@ -220,42 +252,79 @@ export function VehicleGallery({
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
-                {index === active ||
-                (speculativeLoading && neighbors && shouldLoadGallerySlide(index, active)) ? (
+                {shouldMount ? (
                   <>
-                    {/* Foto fora do 4:3: a sobra mostra a própria foto desfocada (mesma src e
-                        srcSet, então o navegador reaproveita o download), nunca faixa preta.
-                        Em foto 4:3 o primeiro plano cobre o fundo por inteiro. */}
+                    {/* Foto fora do 4:3: a sobra mostra a própria foto desfocada (mesma src
+                        montada junto, para o navegador reaproveitar a mesma requisição). */}
                     <div
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 overflow-hidden"
+                      className="pointer-events-none absolute inset-0 overflow-hidden bg-ink bg-gradient-to-br from-white/[0.08] via-ink to-white/[0.03]"
                     >
+                      {showPreview ? (
+                        <VehicleImage
+                          src={previewSrc}
+                          alt=""
+                          fill
+                          sizes={GALLERY_HERO_SIZES}
+                          eager
+                          className="scale-125 object-cover blur-2xl"
+                        />
+                      ) : null}
                       <VehicleImage
-                        src={index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo)}
+                        src={slideSrc}
                         alt=""
                         fill
                         sizes={GALLERY_HERO_SIZES}
-                        srcSet={galleryPreviewSrcSet(photo)}
+                        srcSet={slideSrcSet}
                         eager
-                        className="scale-125 object-cover blur-2xl"
+                        className={`scale-125 object-cover blur-2xl transition-opacity duration-150 ${
+                          index === 0 || isReady ? "opacity-100" : "opacity-0"
+                        }`}
                       />
                     </div>
-                    <VehicleImage
-                      src={index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo)}
-                      alt={vehiclePhotoAlt(alt, index, total)}
-                      fill
-                      sizes={GALLERY_HERO_SIZES}
-                      srcSet={galleryPreviewSrcSet(photo)}
-                      recoverable
-                      priority={index === 0}
-                      // Foto inteira no visor: cover cortava teto e chão de fotos
-                      // fora do 4:3 (Uno 2013); a sobra é preenchida pelo fundo desfocado.
-                      className="object-contain [-webkit-touch-callout:none]"
-                    />
+                    {showPreview ? (
+                      <div
+                        aria-hidden="true"
+                        className={`pointer-events-none absolute inset-0 overflow-hidden transition-opacity duration-150 ${
+                          isReady ? "opacity-0" : "opacity-100"
+                        }`}
+                      >
+                        <VehicleImage
+                          src={previewSrc}
+                          alt=""
+                          fill
+                          sizes={GALLERY_HERO_SIZES}
+                          eager
+                          className="scale-105 object-cover blur-md"
+                        />
+                      </div>
+                    ) : null}
+                    <div
+                      className={`absolute inset-0 transition-opacity duration-150 ${
+                        index === 0 || isReady || isFailed ? "opacity-100" : "opacity-0"
+                      }`}
+                    >
+                      <VehicleImage
+                        src={slideSrc}
+                        alt={vehiclePhotoAlt(alt, index, total)}
+                        fill
+                        sizes={GALLERY_HERO_SIZES}
+                        srcSet={slideSrcSet}
+                        recoverable
+                        priority={index === 0}
+                        eager
+                        decoding={index === 0 ? "sync" : "async"}
+                        onReady={() => markDecoded(slideSrc)}
+                        onErrorState={() => markFailed(slideSrc)}
+                        // Foto inteira no visor: cover cortava teto e chão de fotos
+                        // fora do 4:3 (Uno 2013); a sobra é preenchida pelo fundo desfocado.
+                        className="object-contain [-webkit-touch-callout:none]"
+                      />
+                    </div>
                   </>
                 ) : (
                   <div
-                    className="absolute inset-0 bg-asphalt"
+                    className="absolute inset-0 bg-ink bg-gradient-to-br from-white/[0.06] via-ink to-white/[0.03]"
                     aria-hidden="true"
                   />
                 )}
@@ -277,7 +346,7 @@ export function VehicleGallery({
           <>
             <button
               type="button"
-              onClick={() => goTo(active - 1)}
+              onClick={() => goTo(activeRef.current - 1)}
               aria-label="Foto anterior"
               disabled={active === 0}
               className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/40 bg-asphalt/90 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
@@ -286,7 +355,7 @@ export function VehicleGallery({
             </button>
             <button
               type="button"
-              onClick={() => goTo(active + 1)}
+              onClick={() => goTo(activeRef.current + 1)}
               aria-label="Próxima foto"
               disabled={active === total - 1}
               className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/40 bg-asphalt/90 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"

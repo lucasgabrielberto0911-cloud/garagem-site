@@ -9,6 +9,7 @@ import {
   hasR2Config,
   isR2PhotoUrl,
   isR2StorageHost,
+  R2_PHOTO_CACHE_CONTROL,
   r2KeyFromUrl,
   uploadR2Photo,
 } from "./r2-photos";
@@ -99,7 +100,7 @@ test(
 );
 
 test(
-  "uploadR2Photo envia objeto com PUT, cabeçalho de autorização e content-type",
+  "uploadR2Photo envia objeto com PUT, cabeçalho de autorização, content-type e Cache-Control imutável",
   withEnv(TEST_ENV, async () => {
     let capturedUrl = "";
     let capturedMethod = "";
@@ -124,6 +125,8 @@ test(
     assert.equal(capturedMethod, "PUT");
     assert.equal(capturedHeaders["Authorization"], "Bearer token-secret-xyz-never-logged");
     assert.equal(capturedHeaders["Content-Type"], "image/webp");
+    assert.equal(capturedHeaders["Cache-Control"], R2_PHOTO_CACHE_CONTROL);
+    assert.equal(capturedHeaders["Cache-Control"], "public, max-age=31536000, immutable");
     assert.equal(capturedBody, buffer);
     assert.equal(result.url, "https://pub-abc123def456.r2.dev/1731170000000-uuid.webp");
     assert.equal(result.key, "1731170000000-uuid.webp");
