@@ -92,7 +92,7 @@ export const DEFAULT_VEHICLE_CONDITIONS: VehicleConditionsContent = {
     },
     {
       label: "Entrega",
-      text: "Somos loja digital: visita, entrega ou retirada são combinadas no WhatsApp. Não publicamos valor de frete — depende da cidade e do veículo.",
+      text: "Atendemos Linhares, Aracruz e Grande Vitória: combinamos visita, entrega ou retirada pelo WhatsApp. Não publicamos valor de frete — depende da cidade e do veículo.",
     },
     {
       label: "O que a garantia não cobre",
