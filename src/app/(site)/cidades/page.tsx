@@ -31,7 +31,7 @@ export default function CidadesPage() {
 
       <Container>
         <PageHeader
-          eyebrow={`${site.state} · loja digital`}
+          eyebrow={`${site.state} · atendimento pelo WhatsApp`}
           title="Cidades atendidas no Espírito Santo"
           description="Encontre sua cidade e conheça o atendimento da Garagem na sua região. Nossa equipe atende pelo site e WhatsApp, todos os dias, das 8h às 23h."
         />

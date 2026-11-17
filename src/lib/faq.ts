@@ -83,7 +83,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: "compra",
     question: "Como funciona a compra de um veículo na Garagem?",
     answer:
-      "Você escolhe o veículo no site, chama no WhatsApp e a gente tira as dúvidas — com fotos extras, vídeo e detalhes do veículo. Depois do aceite, alinhamos pagamento e os próximos passos da documentação. Somos loja digital, com atendimento humano do início ao fim.",
+      "Você escolhe o veículo no site, chama no WhatsApp e a gente tira as dúvidas — com fotos extras, vídeo e detalhes do veículo. Depois do aceite, alinhamos pagamento e os próximos passos da documentação. Combinamos o atendimento pelo WhatsApp, com contato humano do início ao fim.",
   },
   {
     category: "troca",
@@ -99,9 +99,9 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     category: "loja",
-    question: "Vocês têm loja física?",
+    question: "Como funciona para ver o carro pessoalmente?",
     answer:
-      `Não: somos loja digital. O estoque está no site e o atendimento é online, todos os dias das 8h às 23h. Combinamos visita ao veículo, entrega ou retirada pelo WhatsApp, em ${site.region} e região.`,
+      "Atendemos Linhares, Aracruz e Grande Vitória e combinamos o atendimento pelo WhatsApp, todos os dias das 8h às 23h. O estoque está no site, e visita ao veículo, entrega ou retirada são combinadas na conversa.",
   },
   {
     category: "atendimento",

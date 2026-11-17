@@ -31,7 +31,7 @@ export const site = {
   email: "suagaragem2@gmail.com",
   instagram: "@suagaragem1",
   instagramUrl: "https://instagram.com/suagaragem1",
-  address: "Loja digital — atendimento online",
+  address: "Combinamos o atendimento pelo WhatsApp",
   hours: "Todos os dias, 8h às 23h (online)",
   hoursWeekdays: "08:00 – 23:00",
   hoursSaturday: "08:00 – 23:00",
@@ -49,13 +49,15 @@ export type SiteConfig = {
   [K in keyof typeof site]: string;
 };
 
-/** Endereço físico real — loja digital não entra no mapa nem no schema.org. */
+/** Endereço físico real — atendimento combinado pelo WhatsApp não entra no mapa nem no schema.org. */
 export function isPhysicalAddress(value: string) {
   if (!value || value.includes("[")) return false;
   const lower = value.toLowerCase();
   return !(
     lower.includes("digital") ||
     lower.includes("online") ||
+    lower.includes("whatsapp") ||
+    lower.includes("combinamos") ||
     lower.includes("sem endereço") ||
     lower.includes("atendimento online")
   );

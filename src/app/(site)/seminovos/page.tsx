@@ -50,7 +50,7 @@ export default async function SeminovosHubPage() {
 
       <Container>
         <PageHeader
-          eyebrow={`${site.state} · loja digital`}
+          eyebrow={`${site.state} · atendimento pelo WhatsApp`}
           title="Seminovos no Espírito Santo"
           description="Encontre seu próximo carro ou moto na Garagem. Explore os destaques, confira fotos e detalhes de cada anúncio e converse com a equipe sobre compra ou troca."
         />

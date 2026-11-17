@@ -69,7 +69,7 @@ test("home: Instagram no atendimento é atalho, sem rótulo de canais", () => {
   assert.match(block, /IconInstagram/);
   assert.match(block, /min-h-14/);
   assert.match(block, /whatsappLabel/);
-  assert.match(block, /Loja digital no \$\{publicSite\.state\}/);
+  assert.match(block, /title="Atendemos Linhares, Aracruz e Grande Vitória"/);
   assert.match(
     block,
     /Atendemos \$\{publicSite\.region\}\. Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada\./,

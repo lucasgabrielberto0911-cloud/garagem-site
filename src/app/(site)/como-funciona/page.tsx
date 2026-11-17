@@ -9,7 +9,7 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Como funciona comprar na ${site.name}`,
-  description: `Loja 100% digital no Espírito Santo: vistoria e procedência, preparação do carro, vídeo detalhado, simulação no WhatsApp, documentação e entrega combinada.`,
+  description: `Atendemos Linhares, Aracruz e Grande Vitória e combinamos o atendimento pelo WhatsApp: vistoria e procedência, preparação do carro, vídeo detalhado, simulação, documentação e entrega.`,
   path: "/como-funciona",
 });
 
@@ -56,7 +56,7 @@ export default function ComoFuncionaPage() {
         <PageHeader
           eyebrow="Como funciona"
           title={`Comprar na ${site.name}, passo a passo`}
-          description="Loja 100% digital no Espírito Santo: você escolhe, confere e fecha com segurança, sem sair de casa."
+          description="Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp: você escolhe, confere e fecha com segurança."
         />
         <ol className="mt-10 grid gap-3">
           {STEPS.map(({ title, text }, index) => (

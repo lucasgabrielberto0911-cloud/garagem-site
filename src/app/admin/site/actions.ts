@@ -97,7 +97,7 @@ export async function updateSiteSettings(
   if (email && !email.includes("@")) fieldErrors.email = "E-mail inválido.";
   if (address.length < 5) {
     fieldErrors.address =
-      "Informe o endereço ou a modalidade (ex.: loja digital).";
+      "Informe o endereço ou a modalidade (ex.: atendimento pelo WhatsApp).";
   }
   if (hours.length < 2) fieldErrors.hours = "Informe o horário resumido.";
   if (hoursWeekdays.length < 2) {

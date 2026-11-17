@@ -3804,7 +3804,7 @@ export const CHAT_VISIT_REPLY =
   `Dá sim! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_ADDRESS_REPLY =
-  `A Garagem é uma loja digital, sem loja aberta ao público. Pra ver um carro, a visita é com horário marcado, combinada com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+  `Combinamos o atendimento pelo WhatsApp, todos os dias das 8h às 23h. Pra ver um carro, o consultor combina a visita com você por lá. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_VALUE_REPLY =
   `O valor do seu carro o consultor avalia com algumas fotos no WhatsApp (ano, km e estado contam) e já encaixa na conta do carro que você quer. ${CHAT_WHATSAPP_URL}`;
@@ -4087,7 +4087,7 @@ export function localGarageReply(
     return CHAT_WARRANTY_REPLY;
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
-    return `A gente atende online todos os dias, das 8h às 23h. Loja digital, visita combinada. Um consultor confirma o melhor jeito no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `Atendemos todos os dias, das 8h às 23h, e combinamos o atendimento e a visita pelo WhatsApp. Um consultor confirma o melhor jeito por lá: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\btroca\b/.test(withoutGearShiftWords(text))) {
     return CHAT_TRADE_REPLY;
