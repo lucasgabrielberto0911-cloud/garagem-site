@@ -25,11 +25,15 @@ export function CookieConsent() {
 
   const isFicha = Boolean(pathname && /^\/estoque\/[^/]+/.test(pathname));
   // Na ficha o globals.css fixa no canto inferior direito (fora da galeria).
-  // Nas demais páginas desktop fica em barra compacta no canto inferior esquerdo,
-  // sem disputar o canto direito com o botão único de atendimento nem cobrir os cards.
+  // Nas demais páginas desktop vira faixa horizontal compacta antes do botão único
+  // de atendimento, sem invadir a barra lateral de filtros nem os botões "Salvar".
   const desktopLayoutClass = isFicha
     ? ""
-    : "lg:left-4 lg:bottom-4 lg:max-w-[15.5rem] lg:px-3.5 lg:py-2.5";
+    : "lg:flex-row lg:items-center lg:gap-3 lg:px-3 lg:py-1.5";
+  const buttonGroupClass = isFicha
+    ? "grid grid-cols-2 gap-2"
+    : "grid grid-cols-2 gap-2 lg:flex lg:shrink-0 lg:items-center";
+  const buttonHeightClass = isFicha ? "min-h-11" : "min-h-11 lg:min-h-9";
 
   return (
     <div
@@ -37,7 +41,11 @@ export function CookieConsent() {
       aria-label="Consentimento de cookies"
       className={`site-consent pointer-events-auto flex flex-col gap-1 border border-white/20 bg-ink/95 px-2.5 py-1 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur sm:gap-2 sm:px-3.5 sm:py-3 ${desktopLayoutClass}`}
     >
-      <p className="text-xs leading-tight text-cream sm:text-[13px] sm:leading-snug">
+      <p
+        className={`text-xs leading-tight text-cream sm:text-[13px] sm:leading-snug${
+          isFicha ? "" : " lg:whitespace-nowrap"
+        }`}
+      >
         Usamos cookies para medir visitas e anúncios. Aceita?{" "}
         <Link
           href="/privacidade"
@@ -47,14 +55,14 @@ export function CookieConsent() {
           Privacidade
         </Link>
       </p>
-      <div className="grid grid-cols-2 gap-2">
+      <div className={buttonGroupClass}>
         <button
           type="button"
           onClick={() => {
             writeStoredConsent("accepted");
             setChoice("accepted");
           }}
-          className="inline-flex min-h-11 items-center justify-center whitespace-nowrap bg-brand-dark px-2.5 text-center font-display text-xs font-semibold uppercase leading-tight tracking-wide text-cream transition hover:bg-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-ink touch-manipulation"
+          className={`inline-flex ${buttonHeightClass} items-center justify-center whitespace-nowrap bg-brand-dark px-2.5 text-center font-display text-xs font-semibold uppercase leading-tight tracking-wide text-cream transition hover:bg-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-ink touch-manipulation`}
         >
           Aceitar
         </button>
@@ -64,7 +72,7 @@ export function CookieConsent() {
             writeStoredConsent("essential");
             setChoice("essential");
           }}
-          className="inline-flex min-h-11 items-center justify-center whitespace-nowrap border border-white/25 bg-white/[0.04] px-2.5 text-center font-display text-xs font-semibold uppercase leading-tight tracking-wide text-cream transition hover:border-white/45 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-ink touch-manipulation"
+          className={`inline-flex ${buttonHeightClass} items-center justify-center whitespace-nowrap border border-white/25 bg-white/[0.04] px-2.5 text-center font-display text-xs font-semibold uppercase leading-tight tracking-wide text-cream transition hover:border-white/45 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-ink touch-manipulation`}
         >
           Só o essencial
         </button>

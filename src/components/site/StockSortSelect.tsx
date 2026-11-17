@@ -34,7 +34,7 @@ export function StockSortSelect({ value }: { value?: string }) {
         id="estoque-ordem"
         value={current}
         onChange={(event) => change(event.target.value)}
-        className="min-h-11 max-w-[11.5rem] border border-white/20 bg-asphalt py-1.5 pl-2.5 pr-7 text-base text-cream focus:border-brand focus-visible:ring-2 focus-visible:ring-brand lg:min-h-10 lg:max-w-none lg:py-2 lg:text-sm"
+        className="min-h-11 max-w-[10.5rem] border border-white/20 bg-asphalt py-1.5 pl-2 pr-6 text-base text-cream focus:border-brand focus-visible:ring-2 focus-visible:ring-brand min-[390px]:max-w-[12.5rem] lg:min-h-10 lg:max-w-none lg:py-2 lg:pl-2.5 lg:pr-7 lg:text-sm"
         aria-label={`Ordenar resultados: ${stockSortLabel(current)}`}
       >
         {STOCK_SORT_OPTIONS.map((option) => (

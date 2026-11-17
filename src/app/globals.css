@@ -662,8 +662,8 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 
 @media (min-width: 1024px) {
   .site-chat:not(.is-open) {
-    right: 1.25rem;
-    bottom: 1rem;
+    right: 1rem;
+    bottom: 0.75rem;
   }
 }
 
@@ -845,9 +845,10 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 
 @media (min-width: 1024px) {
   .site-consent {
-    left: 1.5rem;
-    bottom: 1.5rem;
-    max-width: 22rem;
+    left: auto;
+    right: 5rem;
+    bottom: 0.75rem;
+    max-width: min(40rem, calc(100vw - 6rem));
   }
 }
 
@@ -2126,6 +2127,31 @@ html[data-consent="essential"] .site-consent {
 /* O teclado usa o espaço dos atalhos para preservar a conversa. */
 body[data-chat-keyboard] [data-chat-quick-actions],
 body[data-chat-keyboard] [data-chat-footer] { display: none; }
+
+@media (max-width: 1023px) {
+  .ficha-mobile-sheet > * {
+    order: 5;
+  }
+  .ficha-mobile-sheet > [data-ficha-title-block] {
+    order: 1;
+  }
+  .ficha-mobile-sheet > [data-ficha-price] {
+    order: 2;
+  }
+  .ficha-mobile-sheet > [data-trust-notes] {
+    order: 3;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .ficha-mobile-sheet > [data-trust-notes] > li:nth-child(3) {
+    display: none;
+  }
+  .ficha-mobile-sheet > [data-key-facts] {
+    order: 4;
+  }
+}
 
 /* Botão de WhatsApp da barra do celular: pulso sutil, só com movimento liberado. */
 @media (prefers-reduced-motion: no-preference) {

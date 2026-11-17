@@ -1,11 +1,20 @@
-import {test,expect} from "@playwright/test";
+import {test,expect,type Page} from "@playwright/test";
 import {readFileSync} from "node:fs";
+
+async function openChat(page:Page){
+  if(page.viewportSize()!.width>=1024){
+    await page.locator(".site-chat-launcher").click();
+    await page.getByRole("menuitem",{name:"Perguntar ao assistente",exact:true}).click();
+  }else{
+    await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
+  }
+}
 
 test("Civic: pergunta técnica, continuidade do torque e nova busca", async ({page})=>{
   await page.addInitScript(()=>localStorage.setItem("garagem_consent","essential"));
   await page.route("**/fotos/**", route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
   await page.goto("/estoque");
-  await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
+  await openChat(page);
   const dialog=page.getByRole("dialog",{name:"Garagem",exact:true});
   async function send(question:string){
     await dialog.locator("textarea").fill(question);
@@ -32,7 +41,7 @@ test("Civic e Duster: comparação responde primeiro e só depois mostra os card
   await page.addInitScript(()=>localStorage.setItem("garagem_consent","essential"));
   await page.route("**/fotos/**",route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
   await page.goto("/estoque");
-  await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
+  await openChat(page);
   const dialog=page.getByRole("dialog",{name:"Garagem",exact:true});
   await dialog.locator("textarea").fill("entre Civic e Duster, qual é o mais potente?");
   await dialog.getByRole("button",{name:"Enviar",exact:true}).click();
