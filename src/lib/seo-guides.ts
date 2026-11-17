@@ -246,9 +246,9 @@ export const SEO_GUIDES: readonly SeoGuide[] = [
           "Sim. Use “Pedir vídeo” em cada ficha ou chame no WhatsApp.",
       },
       {
-        question: "Vocês têm loja física para test-drive?",
+        question: "Como funciona para ver o carro ou fazer test-drive?",
         answer:
-          "Somos loja digital. Combinamos visita, entrega ou retirada pelo WhatsApp.",
+          "Atendemos Linhares, Aracruz e Grande Vitória e combinamos o atendimento, visita, entrega ou retirada pelo WhatsApp.",
       },
       {
         question: "Dá para comparar financiamento de dois modelos?",

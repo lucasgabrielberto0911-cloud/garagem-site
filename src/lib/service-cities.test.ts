@@ -39,7 +39,7 @@ test("slugs são únicos e o texto não inventa loja física", () => {
   assert.equal(new Set(slugs).size, slugs.length);
   for (const city of SERVICE_CITIES) {
     const blob = `${city.lead} ${city.paragraphs.join(" ")}`;
-    assert.match(blob, /loja digital|WhatsApp|site/i);
+    assert.match(blob, /WhatsApp|site/i);
   }
 });
 

@@ -68,7 +68,7 @@ const CITY_LOCAL_CONTENT: Record<string, CityLocalContent> = {
     heading: "Seminovos para quem mora em Vila Velha",
     paragraphs: [
       "Quem mora na Praia da Costa, em Itapuã, em Itaparica ou na Glória costuma comparar vários anúncios antes de decidir. Na Garagem cada ficha traz o ano, a quilometragem, o câmbio e as fotos reais, e você escolhe com calma, sem ir de loja em loja pela Rodovia do Sol.",
-      "A Garagem atende Vila Velha de forma digital, a partir de Linhares. O vídeo do carro ou da moto vem no WhatsApp quando você pedir, e a entrega ou retirada é combinada só depois de a proposta estar clara para os dois lados.",
+      "A Garagem atende Vila Velha e combina o atendimento pelo WhatsApp. O vídeo do carro ou da moto vem no WhatsApp quando você pedir, e a entrega ou retirada é combinada só depois de a proposta estar clara para os dois lados.",
       "Tem um usado em Vila Velha para dar na troca? Envie os dados pela página Vender/Trocar. Dependendo do caso, o valor da troca entra como parte do pagamento do seminovo escolhido.",
     ],
     faqs: [

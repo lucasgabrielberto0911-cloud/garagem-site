@@ -37,7 +37,7 @@ test("visita e endereço: horário marcado, sem endereço de loja", async () => 
     assert.equal(turn.vehicles.length, 0);
   }
   const address = await ask("qual o endereço da loja?");
-  assert.match(textoVisivelChat(address.reply), /loja digital.*horário marcado/);
+  assert.match(textoVisivelChat(address.reply), /Combinamos o atendimento pelo WhatsApp.*visita/);
   assert.doesNotMatch(textoVisivelChat(address.reply), /\bRua\b|\bAv\.|Avenida/);
 });
 
@@ -93,7 +93,7 @@ test("vender o carro, multa/IPVA e 'ficam onde': respostas da loja, sem lista de
     assert.doesNotMatch(textoVisivelChat(turn.reply), /Esse modelo não está/, question);
   }
   const where = await ask("os carros de vcs ficam onde?");
-  assert.match(textoVisivelChat(where.reply), /horário marcado/);
+  assert.match(textoVisivelChat(where.reply), /Combinamos o atendimento pelo WhatsApp.*visita/);
 });
 
 test("'sedan' sozinho não vira o Ka Sedan; 'HB20 ou Mobi' compara os dois escritos", async () => {
@@ -180,7 +180,7 @@ test("orçamento sem carro na faixa: diz o carro mais em conta e oferece ampliar
 
 test("cidade: área de atendimento, não modelo", async () => {
   const turn = await ask("boa noite, tem algum carro em Aracruz?");
-  assert.match(textoVisivelChat(turn.reply), /loja digital.*horário marcado/);
+  assert.match(textoVisivelChat(turn.reply), /Combinamos o atendimento pelo WhatsApp.*visita/);
   assert.doesNotMatch(textoVisivelChat(turn.reply), /não está na lista/);
 });
 

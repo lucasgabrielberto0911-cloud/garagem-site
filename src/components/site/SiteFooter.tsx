@@ -60,8 +60,9 @@ export async function SiteFooter() {
               Seminovos com procedência em {site.region}
             </p>
             <p className="mt-2 max-w-sm text-sm leading-relaxed text-cream/75">
-              Loja 100% digital · atendimento online das 8h às 23h. Sem ponto
-              físico: combinamos visita, entrega ou retirada pelo WhatsApp.
+              Atendemos Linhares, Aracruz e Grande Vitória · todos os dias, das
+              8h às 23h. Combinamos o atendimento, visita, entrega ou retirada
+              pelo WhatsApp.
             </p>
             <a
               href={site.instagramUrl}

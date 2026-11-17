@@ -67,11 +67,10 @@ export function FounderSection({
               pressão de balcão.
             </p>
             <p>
-              Foi essa estrada que o trouxe à frente da Garagem: uma loja digital
-              no Espírito Santo, com atendimento em Aracruz, Vitória, Linhares,
-              Serra, Vila Velha e região, feita para quem busca seminovo com
-              procedência e alguém do
-              outro lado do WhatsApp que realmente resolve.
+              Foi essa estrada que o trouxe à frente da Garagem: atendemos
+              Linhares, Aracruz e Grande Vitória e combinamos o atendimento pelo
+              WhatsApp, para quem busca seminovo com procedência e alguém do
+              outro lado que realmente resolve.
             </p>
             <p>
               O foco dele é simples e difícil de fingir: entregar a melhor

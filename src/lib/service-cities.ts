@@ -57,7 +57,7 @@ export const SERVICE_CITIES = [
       "Seminovos em Vitória (ES): Praia do Canto, Jardim da Penha, Enseada e Camburi. Compare ficha e preço no site da Garagem e fale no WhatsApp, das 8h às 23h.",
     lead: "Entre o trabalho e a ponte, sobra pouco tempo. Na Praia do Canto, no Jardim da Penha, na Enseada ou em Camburi, você olha o seminovo no site da Garagem e chama no WhatsApp quando der.",
     paragraphs: [
-      "No celular estão a ficha, as fotos e o preço. Peça o vídeo do que quiser conferir — motor, câmbio, um detalhe da lataria. A Garagem é loja digital: tem gente do outro lado, do primeiro recado até a documentação, e ninguém empurra a decisão.",
+      "No celular estão a ficha, as fotos e o preço. Peça o vídeo do que quiser conferir — motor, câmbio, um detalhe da lataria. Combinamos o atendimento pelo WhatsApp: tem gente do outro lado, do primeiro recado até a documentação, e ninguém empurra a decisão.",
       "Se você mora na ilha ou cruza a Terceira Ponte e a Segunda Ponte todo dia, o horário ajuda: das 8h às 23h, inclusive no fim de semana. Troca, orientação de financiamento e documentação ficam nessa conversa. O encontro só entra quando a proposta estiver clara.",
     ],
     bullets: [
@@ -127,7 +127,7 @@ export const SERVICE_CITIES = [
       {
         question: "Consigo resolver quase tudo sem ir à loja?",
         answer:
-          "A Garagem é loja digital. A escolha, as dúvidas e a proposta acontecem no site e no WhatsApp. Visita, entrega ou retirada só entram quando vocês combinam.",
+          "Combinamos o atendimento pelo WhatsApp. A escolha, as dúvidas e a proposta acontecem no site e na conversa. Visita, entrega ou retirada só entram quando vocês combinam.",
       },
       {
         question: "Posso colocar meu veículo na troca?",
@@ -166,7 +166,7 @@ export const SERVICE_CITIES = [
       {
         question: "Tem loja física na Serra?",
         answer:
-          "Não. A Garagem é loja digital. A vitrine é o site e o atendimento é no WhatsApp. Combinamos visita ao veículo, entrega ou retirada quando o negócio avançar.",
+          "Atendemos Linhares, Aracruz e Grande Vitória, com a vitrine no site e o atendimento combinado pelo WhatsApp. Visita ao veículo, entrega ou retirada são combinadas quando o negócio avançar.",
       },
       {
         question: "Consigo colocar meu veículo na troca morando na Serra?",
@@ -200,7 +200,7 @@ export const SERVICE_CITIES = [
       {
         question: "Vocês têm loja na Praia da Costa?",
         answer:
-          "Não. Somos loja digital. O estoque está no site e o contato é no WhatsApp. Visita, entrega ou retirada são combinadas depois que você já viu o veículo com calma.",
+          "Atendemos Linhares, Aracruz e Grande Vitória. O estoque está no site e combinamos o atendimento pelo WhatsApp. Visita, entrega ou retirada são combinadas depois que você já viu o veículo com calma.",
       },
       {
         question: "Posso avaliar meu carro para troca em Vila Velha?",
@@ -217,7 +217,7 @@ export const SERVICE_CITIES = [
     lead: "Na Praia do Morro, em Meaípe, no Centro ou na Muquiçaba, você vê o seminovo no site da Garagem. Se quiser falar, mesmo com a ES-060 cheia, chama no WhatsApp.",
     paragraphs: [
       "Na temporada, o sábado some no trânsito da orla. No celular você olha preço, câmbio, km e fotos e pede o vídeo do carro que passou no seu filtro. A gente responde todos os dias, das 8h às 23h.",
-      "A Garagem é loja digital: não temos ponto na Praia do Morro. Compra, venda e troca entram na mesma conversa. Visita, entrega ou retirada ficam para quando você já tiver visto o carro com calma e a proposta fizer sentido.",
+      "Combinamos o atendimento pelo WhatsApp: compra, venda e troca entram na mesma conversa. Visita, entrega ou retirada ficam para quando você já tiver visto o carro com calma e a proposta fizer sentido.",
     ],
     bullets: [
       "Ficha e fotos no site, para olhar com calma mesmo na temporada",
@@ -234,7 +234,7 @@ export const SERVICE_CITIES = [
       {
         question: "Tem loja na Praia do Morro?",
         answer:
-          "Não. A Garagem é loja digital. O estoque está no site e o contato é no WhatsApp. Combinamos visita ou entrega quando o negócio avançar.",
+          "O estoque está no site e combinamos o atendimento pelo WhatsApp. Visita ou entrega são combinadas quando o negócio avançar.",
       },
       {
         question: "Posso colocar meu veículo na troca morando em Guarapari?",
@@ -268,7 +268,7 @@ export const SERVICE_CITIES = [
       {
         question: "Consigo resolver quase tudo sem ir à capital?",
         answer:
-          "A Garagem é loja digital. A escolha, as dúvidas e a proposta acontecem no site e no WhatsApp. Visita, entrega ou retirada só entram quando vocês combinam.",
+          "Combinamos o atendimento pelo WhatsApp. A escolha, as dúvidas e a proposta acontecem no site e na conversa. Visita, entrega ou retirada só entram quando vocês combinam.",
       },
       {
         question: "Posso colocar meu veículo na troca?",
@@ -302,7 +302,7 @@ export const SERVICE_CITIES = [
       {
         question: "Tem loja física em Colatina?",
         answer:
-          "Não. A Garagem é loja digital. A vitrine é o site e o atendimento é no WhatsApp. Combinamos visita, entrega ou retirada quando o negócio avançar.",
+          "A vitrine é o site e combinamos o atendimento pelo WhatsApp. Visita, entrega ou retirada são combinadas quando o negócio avançar.",
       },
       {
         question: "Consigo colocar meu veículo na troca morando em Colatina?",
@@ -336,7 +336,7 @@ export const SERVICE_CITIES = [
       {
         question: "Vocês têm loja em Campo Grande?",
         answer:
-          "Não. Somos loja digital. O estoque está no site e o contato é no WhatsApp. Visita, entrega ou retirada são combinadas depois que você já viu o veículo com calma.",
+          "Atendemos Linhares, Aracruz e Grande Vitória. O estoque está no site e combinamos o atendimento pelo WhatsApp. Visita, entrega ou retirada são combinadas depois que você já viu o veículo com calma.",
       },
       {
         question: "Posso avaliar meu carro para troca em Cariacica?",
@@ -352,7 +352,7 @@ export const SERVICE_CITIES = [
       "Seminovos em Viana (ES), no eixo da BR-262. Ficha, fotos e preço no site da Garagem — Centro e Marcílio de Noronha. WhatsApp das 8h às 23h.",
     lead: "Viana fica na BR-262, no meio do caminho. Se você mora no Centro, em Marcílio de Noronha ou no Universal, o seminovo está no site da Garagem — troca, dúvida ou visita a gente combina no WhatsApp.",
     paragraphs: [
-      "Dá para comparar ficha, fotos e preço no celular, pedir o vídeo e conversar sem furar o expediente. A Garagem é loja digital: tem gente atendendo, do primeiro recado até a documentação.",
+      "Dá para comparar ficha, fotos e preço no celular, pedir o vídeo e conversar sem furar o expediente. Combinamos o atendimento pelo WhatsApp: tem gente atendendo, do primeiro recado até a documentação.",
       "Compra, venda e troca ficam no mesmo canal, todos os dias das 8h às 23h. Não temos ponto físico em Viana. A visita ou a entrega só acontece quando a proposta já estiver alinhada.",
     ],
     bullets: [

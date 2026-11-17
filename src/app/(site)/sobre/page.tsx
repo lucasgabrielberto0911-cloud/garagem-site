@@ -27,7 +27,7 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Sobre a ${site.name}`,
-  description: `Conheça a ${site.name}: mais de 20 anos de história, seminovos com procedência e atendimento digital em ${site.region}.`,
+  description: `Conheça a ${site.name}: mais de 20 anos de história e seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória e combinamos o atendimento pelo WhatsApp.`,
   path: "/sobre",
 });
 
@@ -45,12 +45,12 @@ const DIFERENCIAIS = [
   {
     Icon: IconHandshake,
     title: "Atendimento de perto, mesmo online",
-    text: "Somos loja digital, mas o contato é humano: WhatsApp rápido, vídeo do veículo, avaliação de troca e acompanhamento até a transferência. Qualidade no atendimento é o nosso padrão.",
+    text: "Combinamos o atendimento pelo WhatsApp, com contato humano de ponta a ponta: resposta rápida, vídeo do veículo, avaliação de troca e acompanhamento até a transferência. Qualidade no atendimento é o nosso padrão.",
   },
   {
     Icon: IconWhatsApp,
     title: "Disponíveis quando você precisa",
-    text: "Atendemos todos os dias, das 8h às 23h. Escolha pelo site, tire dúvidas pelo WhatsApp e avance no seu ritmo — com a praticidade de quem vive o digital sem abrir mão do cuidado.",
+    text: "Atendemos todos os dias, das 8h às 23h. Escolha pelo site, tire dúvidas pelo WhatsApp e avance no seu ritmo — com praticidade e sem abrir mão do cuidado.",
   },
 ] as const;
 
@@ -193,11 +193,14 @@ export default async function SobrePage() {
                     volta para indicar um amigo.
                   </p>
                   <p>
-                    Hoje operamos como{" "}
-                    <strong className="text-cream">loja digital</strong>, com
-                    atendimento online todos os dias, das 8h às 23h. A vitrine
-                    está no site, a conversa no WhatsApp e o compromisso continua o
-                    mesmo: qualidade em cada veículo e excelência no atendimento.
+                    Hoje atendemos{" "}
+                    <strong className="text-cream">
+                      Linhares, Aracruz e Grande Vitória
+                    </strong>{" "}
+                    e combinamos o atendimento pelo WhatsApp, todos os dias, das
+                    8h às 23h. A vitrine está no site, a conversa no WhatsApp e o
+                    compromisso continua o mesmo: qualidade em cada veículo e
+                    excelência no atendimento.
                   </p>
                 </div>
               </article>
@@ -223,7 +226,7 @@ export default async function SobrePage() {
                     <strong className="font-display font-semibold text-cream">
                       Visão.
                     </strong>{" "}
-                      Ser uma loja digital de seminovos de confiança em {publicSite.region}: a loja em que o cliente confia para negociar com
+                      Ser referência de confiança em seminovos em {publicSite.region}: a Garagem em que o cliente confia para negociar com
                     clareza e sair satisfeito.
                   </p>
                   <p>
@@ -273,7 +276,7 @@ export default async function SobrePage() {
               className="mt-14 scroll-mt-28 border border-brand/30 bg-ink p-8 text-center sm:p-10 lg:text-left"
             >
               <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-                Como funciona a Garagem digital
+                Como funciona o atendimento da Garagem
               </h2>
               <div
                 className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
