@@ -8,7 +8,6 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { OfflineLeadFlush } from "@/components/site/OfflineLeadFlush";
 import { DeferredSiteChat } from "@/components/site/DeferredSiteChat";
-import { WhatsAppFloat } from "@/components/site/WhatsAppFloat";
 import { FavoritesProvider } from "@/lib/favorites";
 import { localBusinessJsonLd } from "@/lib/seo";
 import { getGoogleReviews } from "@/lib/site-content";
@@ -47,7 +46,6 @@ export default function SiteLayout({
         <SiteFooter />
         <div className="pb-site-nav lg:hidden" aria-hidden="true" />
         <MobileBottomNav />
-        <WhatsAppFloat />
         <DeferredSiteChat />
         <OfflineLeadFlush />
       </div>

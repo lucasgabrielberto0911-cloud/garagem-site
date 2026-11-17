@@ -1,11 +1,20 @@
-import {test,expect} from "@playwright/test";
+import {test,expect,type Page} from "@playwright/test";
 import {readFileSync} from "node:fs";
+
+async function openChat(page:Page){
+  if(page.viewportSize()!.width>=1024){
+    await page.locator(".site-chat-launcher").click();
+    await page.getByRole("menuitem",{name:"Perguntar ao assistente",exact:true}).click();
+  }else{
+    await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
+  }
+}
 
 test("resposta técnica curta, mensagem visível e viewport de teclado",async({page},info)=>{
   await page.addInitScript(()=>localStorage.setItem("garagem_consent","essential"));
   await page.route("**/fotos/**",route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
   await page.goto("/estoque");
-  await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
+  await openChat(page);
   const dialog=page.getByRole("dialog",{name:"Garagem",exact:true});
   await dialog.locator("textarea").fill("quantos cv tem a Duster?");
   await dialog.getByRole("button",{name:"Enviar",exact:true}).click();
@@ -54,7 +63,7 @@ test("fontes ficam em uma linha recolhida sem painel ou sugestões abaixo da res
     }),
   }));
   await page.goto("/estoque");
-  await page.getByRole("button", {name: "Ajuda para escolher", exact: true}).first().click();
+  await openChat(page);
   const dialog = page.getByRole("dialog", {name: "Garagem", exact: true});
   await dialog.locator("textarea").fill("pesquise a potência do Civic");
   await dialog.getByRole("button", {name: "Enviar", exact: true}).click();
@@ -80,7 +89,7 @@ test("bateria40: nomes em negrito abrem a ficha nos dois formatos de link", asyn
     }),
   }));
   await page.goto("/estoque");
-  await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  await openChat(page);
   const dialog = page.getByRole("dialog", { name: "Garagem", exact: true });
   await dialog.locator("textarea").fill("quais opções vocês têm?");
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
