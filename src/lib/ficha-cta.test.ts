@@ -231,8 +231,8 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     "Itens e acessórios",
     "Atendimento",
   ]);
-  assert.match(html, /Loja digital em Linhares\/ES/);
-  assert.match(html, /hora marcada pelo WhatsApp/);
+  assert.match(html, /Atendemos Linhares, Aracruz e Grande Vitória/);
+  assert.match(html, /Combinamos o atendimento pelo WhatsApp/);
   assert.doesNotMatch(html, /Onde estamos|Nossa loja|visite nossa loja/i);
   const details = [...html.matchAll(/<details([^>]*)>/g)];
   assert.equal(details.length, 1);

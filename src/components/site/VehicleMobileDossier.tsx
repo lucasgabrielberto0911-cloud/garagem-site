@@ -362,10 +362,10 @@ export function VehicleMobileBlocks({
       <DossierBlock title="Atendimento" id="atendimento">
         <p className="flex items-start gap-2 text-cream">
           <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
-          <span>Loja digital em Linhares/ES</span>
+          <span>Atendemos Linhares, Aracruz e Grande Vitória</span>
         </p>
         <p className="mt-1.5">
-          Atendimento com hora marcada pelo WhatsApp. {hours}
+          Combinamos o atendimento pelo WhatsApp. {hours}
         </p>
         {!sold ? (
           <FavoriteButton
