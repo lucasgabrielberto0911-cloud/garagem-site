@@ -47,7 +47,6 @@ O `CLAUDE.md` e as regras em `.cursor/rules/` reforçam o `AGENTS.md` (incluindo
 ```bash
 cp .env.example .env      # preencha DATABASE_URL, DIRECT_URL e as chaves do Supabase
 npm ci
-npm run db:push           # aplica o schema no banco
 npm run dev
 ```
 

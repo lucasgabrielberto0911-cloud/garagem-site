@@ -20,7 +20,7 @@ Mexeu em tela pública sem spec óbvio: pelo menos um percurso de [`public-journ
 ```bash
 cp .env.example .env    # banco LOCAL
 export E2E_TEST=1
-npm ci && npx prisma generate && npm run db:push
+npm ci && npx prisma generate
 npm run e2e:seed
 npm run build
 npx playwright install chromium

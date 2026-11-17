@@ -145,7 +145,7 @@ export function SiteSettingsForm({
               label="Endereço / modalidade"
               required
               error={errors.address}
-              hint='Loja digital: use "Loja digital — atendimento online". Com showroom, informe o endereço completo.'
+              hint="Ex.: Combinamos o atendimento pelo WhatsApp"
               className="sm:col-span-2"
             >
               <ReviewedInput reviewable onValueChange={() => setDirty(true)}
@@ -153,7 +153,7 @@ export function SiteSettingsForm({
                 defaultValue={
                   initial.address.includes("[") ? "" : initial.address
                 }
-                placeholder="Loja digital — atendimento online"
+                placeholder="Combinamos o atendimento pelo WhatsApp"
                 className={inputClass}
                 aria-invalid={Boolean(errors.address)}
               />

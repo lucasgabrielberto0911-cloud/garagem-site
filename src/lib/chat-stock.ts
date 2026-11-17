@@ -3938,7 +3938,7 @@ export function chatPolicyShortcut(
     !/\b(financi\w*|parcela|fipe)\b/.test(folded.replace(/recuperad[oa]s? de financiamento/g, ""))) {
     return "origin";
   }
-  // Endereço da loja: loja digital, visita com hora marcada em Linhares.
+  // Endereço: atendemos Linhares, Aracruz e Grande Vitória; combinamos o atendimento pelo WhatsApp.
   if (/\b(?:carros?|motos?|veiculos?|voces|vcs) (?:de (?:voces|vcs) )?(?:ficam|estao) onde\b|\bonde (?:ficam|estao) os (?:carros|veiculos)\b/.test(folded)) {
     return "address";
   }
