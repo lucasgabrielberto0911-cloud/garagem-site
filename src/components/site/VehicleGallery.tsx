@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
-import { useSpeculativeLoading } from "./useSpeculativeLoading";
 import { vehiclePhotoAlt } from "@/lib/format";
 import {
   GALLERY_HERO_SIZES,
@@ -48,30 +47,34 @@ export function VehicleGallery({
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
   activeRef.current = active;
-  const [neighbors, setNeighbors] = useState(false);
+  const [warmedSlides, setWarmedSlides] = useState<number[]>(() =>
+    [0, 1, 2].filter((idx) => idx < photos.length),
+  );
+  const [decodedUrls, setDecodedUrls] = useState<ReadonlySet<string>>(() => new Set());
+  const [failedUrls, setFailedUrls] = useState<ReadonlySet<string>>(() => new Set());
   const [showThumbs, setShowThumbs] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
-  const speculativeLoading = useSpeculativeLoading();
 
   useEffect(() => {
-    if (!speculativeLoading) return;
-    let cancelled = false;
-    let timer = 0;
-    const arm = () => {
-      if (!cancelled) setNeighbors(true);
-    };
-    const onLoad = () => {
-      timer = window.setTimeout(arm, 1200);
-    };
-    if (document.readyState === "complete") onLoad();
-    else window.addEventListener("load", onLoad, { once: true });
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-      window.removeEventListener("load", onLoad);
-    };
-  }, [speculativeLoading]);
+    if (total === 0) return;
+    const targets = [active - 1, active, active + 1, ...(active === 0 ? [2] : [])]
+      .filter((idx) => idx >= 0 && idx < total);
+    setWarmedSlides((prev) => {
+      if (targets.every((idx) => prev.includes(idx))) return prev;
+      const next = new Set(prev);
+      for (const idx of targets) next.add(idx);
+      return Array.from(next);
+    });
+  }, [active, total]);
+
+  const markDecoded = useCallback((url: string) => {
+    setDecodedUrls((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
+  }, []);
+
+  const markFailed = useCallback((url: string) => {
+    setFailedUrls((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -204,10 +207,20 @@ export function VehicleGallery({
           aria-label={`Fotos de ${alt}`}
         >
           {photos.map((photo, index) => {
+            const shouldMount =
+              index === active ||
+              shouldLoadGallerySlide(index, active) ||
+              (active === 0 && index === 2) ||
+              warmedSlides.includes(index);
+            const slideSrc = index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo);
+            const slideSrcSet = galleryPreviewSrcSet(photo);
+            const isReady = decodedUrls.has(slideSrc);
+            const isFailed = failedUrls.has(slideSrc);
+
             return (
               <li
                 key={photo.id}
-                className="relative h-full w-full min-w-full shrink-0 snap-center snap-always bg-asphalt"
+                className="relative h-full w-full min-w-full shrink-0 snap-center snap-always bg-ink"
               >
                 <button
                   type="button"
@@ -220,42 +233,52 @@ export function VehicleGallery({
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
-                {index === active ||
-                (speculativeLoading && neighbors && shouldLoadGallerySlide(index, active)) ? (
+                {shouldMount ? (
                   <>
-                    {/* Foto fora do 4:3: a sobra mostra a própria foto desfocada (mesma src e
-                        srcSet, então o navegador reaproveita o download), nunca faixa preta.
-                        Em foto 4:3 o primeiro plano cobre o fundo por inteiro. */}
+                    {/* Foto fora do 4:3: a sobra mostra a própria foto desfocada (mesma src
+                        montada junto, para o navegador reaproveitar a mesma requisição). */}
                     <div
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 overflow-hidden"
+                      className="pointer-events-none absolute inset-0 overflow-hidden bg-ink bg-gradient-to-br from-white/[0.08] via-ink to-white/[0.03]"
                     >
                       <VehicleImage
-                        src={index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo)}
+                        src={slideSrc}
                         alt=""
                         fill
                         sizes={GALLERY_HERO_SIZES}
-                        srcSet={galleryPreviewSrcSet(photo)}
+                        srcSet={slideSrcSet}
                         eager
-                        className="scale-125 object-cover blur-2xl"
+                        className={`scale-125 object-cover blur-2xl transition-opacity duration-150 ${
+                          index === 0 || isReady ? "opacity-100" : "opacity-0"
+                        }`}
                       />
                     </div>
-                    <VehicleImage
-                      src={index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo)}
-                      alt={vehiclePhotoAlt(alt, index, total)}
-                      fill
-                      sizes={GALLERY_HERO_SIZES}
-                      srcSet={galleryPreviewSrcSet(photo)}
-                      recoverable
-                      priority={index === 0}
-                      // Foto inteira no visor: cover cortava teto e chão de fotos
-                      // fora do 4:3 (Uno 2013); a sobra é preenchida pelo fundo desfocado.
-                      className="object-contain [-webkit-touch-callout:none]"
-                    />
+                    <div
+                      className={`absolute inset-0 transition-opacity duration-150 ${
+                        index === 0 || isReady || isFailed ? "opacity-100" : "opacity-0"
+                      }`}
+                    >
+                      <VehicleImage
+                        src={slideSrc}
+                        alt={vehiclePhotoAlt(alt, index, total)}
+                        fill
+                        sizes={GALLERY_HERO_SIZES}
+                        srcSet={slideSrcSet}
+                        recoverable
+                        priority={index === 0}
+                        eager
+                        decoding={index === 0 ? "sync" : "async"}
+                        onReady={() => markDecoded(slideSrc)}
+                        onErrorState={() => markFailed(slideSrc)}
+                        // Foto inteira no visor: cover cortava teto e chão de fotos
+                        // fora do 4:3 (Uno 2013); a sobra é preenchida pelo fundo desfocado.
+                        className="object-contain [-webkit-touch-callout:none]"
+                      />
+                    </div>
                   </>
                 ) : (
                   <div
-                    className="absolute inset-0 bg-asphalt"
+                    className="absolute inset-0 bg-ink bg-gradient-to-br from-white/[0.06] via-ink to-white/[0.03]"
                     aria-hidden="true"
                   />
                 )}

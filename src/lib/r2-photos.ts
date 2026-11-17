@@ -146,6 +146,8 @@ export function r2KeyFromUrl(url: string | URL): string | null {
   }
 }
 
+export const R2_PHOTO_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
 /**
  * Envia um objeto para o bucket do Cloudflare R2 via API REST.
  * Endpoint: PUT https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT_ID}/r2/buckets/${R2_BUCKET}/objects/${objectKey}
@@ -169,6 +171,7 @@ export async function uploadR2Photo(
     headers: {
       Authorization: `Bearer ${config.apiToken}`,
       "Content-Type": contentType || "application/octet-stream",
+      "Cache-Control": R2_PHOTO_CACHE_CONTROL,
     },
     body: body as BodyInit,
   });

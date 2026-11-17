@@ -22,6 +22,8 @@ export function NativeRemoteFillImage({
   eager = false,
   decoding,
   recoverable = false,
+  onReady,
+  onErrorState,
 }: {
   src: string;
   alt: string;
@@ -35,8 +37,10 @@ export function NativeRemoteFillImage({
   eager?: boolean;
   decoding?: "sync" | "async" | "auto";
   recoverable?: boolean;
+  onReady?: () => void;
+  onErrorState?: () => void;
 }) {
-  if (recoverable) return <RecoverableVehicleImage key={src} src={src} alt={alt} width={width} height={height} sizes={sizes} srcSet={srcSet} mobileSrcSet={mobileSrcSet} className={className} priority={priority} eager={eager} decoding={decoding} />;
+  if (recoverable) return <RecoverableVehicleImage key={src} src={src} alt={alt} width={width} height={height} sizes={sizes} srcSet={srcSet} mobileSrcSet={mobileSrcSet} className={className} priority={priority} eager={eager} decoding={decoding} onReady={onReady} onErrorState={onErrorState} />;
   const image = (
     // eslint-disable-next-line @next/next/no-img-element
     <img

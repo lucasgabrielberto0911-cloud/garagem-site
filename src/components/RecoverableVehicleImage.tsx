@@ -6,13 +6,39 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 
 /** O retry pertence à galeria, fora de links de cards e de botões de miniatura. */
-export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet, mobileSrcSet, className, priority, eager = false, decoding }: {
+export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet, mobileSrcSet, className, priority, eager = false, decoding, onReady, onErrorState }: {
   src: string; alt: string; width: number; height: number; sizes?: string;
   srcSet?: string; mobileSrcSet?: string; className?: string; priority?: boolean; eager?: boolean;
   decoding?: "sync" | "async" | "auto";
+  onReady?: () => void;
+  onErrorState?: () => void;
 }) {
   const [state, setState] = useState({ original: null as string | null, failed: false, attempt: 0, retrying: false });
   const imageRef = useRef<HTMLImageElement>(null);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
+  const onErrorStateRef = useRef(onErrorState);
+  onErrorStateRef.current = onErrorState;
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const notifyReady = useCallback((image: HTMLImageElement) => {
+    setState(current => current.retrying ? { ...current, retrying: false } : current);
+    const done = () => {
+      if (mountedRef.current) onReadyRef.current?.();
+    };
+    if (typeof image.decode === "function") {
+      void image.decode().catch(() => {}).then(done);
+    } else {
+      done();
+    }
+  }, []);
+
   const failedImage = useCallback((image: HTMLImageElement) => {
     if (!state.original) {
       const original = publicVehiclePhotoSrc(supabaseOriginalSrc(image.currentSrc || src));
@@ -22,15 +48,21 @@ export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet
       }
     }
     setState(current => ({ ...current, failed: true, retrying: false }));
+    onErrorStateRef.current?.();
   }, [src, state.original]);
   // Uma falha do HTML inicial pode acontecer antes da hidratação do React.
   useEffect(() => {
     const image = imageRef.current;
-    if (image?.complete && image.naturalWidth === 0) failedImage(image);
-  }, [failedImage, state.attempt]);
+    if (!image?.complete) return;
+    if (image.naturalWidth === 0) failedImage(image);
+    else notifyReady(image);
+  }, [failedImage, notifyReady, state.attempt]);
   useEffect(() => {
     if (!state.retrying) return;
-    const timeout = window.setTimeout(() => setState(current => ({ ...current, failed: true, retrying: false })), 12_000);
+    const timeout = window.setTimeout(() => {
+      setState(current => ({ ...current, failed: true, retrying: false }));
+      onErrorStateRef.current?.();
+    }, 12_000);
     return () => window.clearTimeout(timeout);
   }, [state.retrying, state.attempt]);
 
@@ -40,7 +72,7 @@ export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet
       sizes={!state.original && srcSet ? sizes : undefined} alt={alt} width={width} height={height}
       loading={priority || eager || state.attempt > 0 ? "eager" : "lazy"} decoding={decoding ?? (priority ? "sync" : "async")} fetchPriority={priority ? "high" : "low"}
       draggable={false} className={`absolute inset-0 h-full w-full ${className ?? ""}`}
-      onLoad={() => setState(current => current.retrying ? { ...current, retrying: false } : current)}
+      onLoad={event => notifyReady(event.currentTarget)}
       onError={event => failedImage(event.currentTarget)} />
   );
   return <>

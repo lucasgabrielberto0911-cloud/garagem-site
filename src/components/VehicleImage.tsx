@@ -18,6 +18,8 @@ export function VehicleImage({
   srcSet,
   mobileSrcSet,
   recoverable = false,
+  onReady,
+  onErrorState,
 }: {
   src?: string | null;
   alt: string;
@@ -29,6 +31,8 @@ export function VehicleImage({
   mobileSrcSet?: string;
   /** Galeria pública: recupera falhas sem colocar botão dentro de um link de card. */
   recoverable?: boolean;
+  onReady?: () => void;
+  onErrorState?: () => void;
   className?: string;
   /**
    * Aceito por compatibilidade. As fotos públicas já são WebP
@@ -79,6 +83,8 @@ export function VehicleImage({
         eager={eager}
         decoding={decoding}
         recoverable={recoverable}
+        onReady={onReady}
+        onErrorState={onErrorState}
       />
     );
   }

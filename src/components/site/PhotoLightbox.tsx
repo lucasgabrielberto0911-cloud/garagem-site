@@ -14,6 +14,7 @@ import { IconClose } from "@/components/site/icons";
 import { vehiclePhotoAlt } from "@/lib/format";
 import { handleFocusTrap } from "@/lib/focus-trap";
 import { clampPhotoOffset } from "@/lib/photo-zoom";
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import {
   galleryPreviewSrc,
   galleryThumbSrc,
@@ -50,6 +51,7 @@ export function PhotoLightbox({
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [gesturing, setGesturing] = useState(false);
+  const preloadedUrls = useRef<Set<string>>(new Set());
 
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef({ x: 0, y: 0 });
@@ -82,6 +84,27 @@ export function PhotoLightbox({
   useEffect(() => {
     resetZoom();
   }, [safeIndex, resetZoom]);
+
+  useEffect(() => {
+    if (!mounted || total < 2) return;
+    const neighborIndices = [
+      (safeIndex + 1) % total,
+      (safeIndex - 1 + total) % total,
+    ];
+    for (const idx of neighborIndices) {
+      const target = photos[idx];
+      if (!target) continue;
+      const src = publicVehiclePhotoSrc(galleryPreviewSrc(target));
+      if (!src || preloadedUrls.current.has(src)) continue;
+      preloadedUrls.current.add(src);
+      const img = new Image();
+      img.decoding = "async";
+      img.src = src;
+      if (typeof img.decode === "function") {
+        void img.decode().catch(() => {});
+      }
+    }
+  }, [mounted, safeIndex, total, photos]);
 
   useEffect(() => {
     const strip = thumbStripRef.current;
@@ -303,6 +326,7 @@ export function PhotoLightbox({
   }
 
   const photo = photos[safeIndex];
+  const activeSrc = photo ? galleryPreviewSrc(photo) : null;
 
   const content = (
     <div
@@ -320,7 +344,7 @@ export function PhotoLightbox({
         onClick={onClose}
       />
 
-      <div className="relative z-[1] flex h-[100dvh] w-full max-w-7xl flex-col overflow-hidden bg-black pt-safe pb-safe pl-safe pr-safe shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/20 sm:p-0">
+      <div className="relative z-[1] flex h-[100dvh] w-full max-w-7xl flex-col overflow-hidden bg-ink pt-safe pb-safe pl-safe pr-safe shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/20 sm:p-0">
         <header className="relative z-[2] flex shrink-0 items-center justify-between gap-3 border-b border-white/20 bg-black/70 px-3 py-2.5 backdrop-blur sm:px-4">
           <div className="min-w-0">
             <p id={titleId} className="truncate text-sm font-medium text-cream">
@@ -370,7 +394,7 @@ export function PhotoLightbox({
           </div>
         </header>
 
-        <div className="relative min-h-0 flex-1 bg-black">
+        <div className="relative min-h-0 flex-1 bg-ink bg-gradient-to-br from-white/[0.06] via-ink to-white/[0.03]">
           <div
             ref={viewportRef}
             className="absolute inset-0 touch-none select-none [-webkit-touch-callout:none]"
@@ -394,7 +418,7 @@ export function PhotoLightbox({
               }}
             >
               <VehicleImage
-                src={photo ? galleryPreviewSrc(photo) : null}
+                src={activeSrc}
                 alt={vehiclePhotoAlt(alt, safeIndex, total)}
                 fill
                 sizes="100vw"
