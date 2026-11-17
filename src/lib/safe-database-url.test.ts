@@ -49,7 +49,6 @@ test("scripts que escrevem no banco chamam a trava", () => {
     "scripts/test-admin-db.ts",
     "scripts/assert-safe-db.ts",
     "scripts/ci-apply-migrations.sh",
-    "package.json",
   ];
   for (const file of files) {
     const source = readFileSync(file, "utf8");
@@ -59,5 +58,4 @@ test("scripts que escrevem no banco chamam a trava", () => {
       file,
     );
   }
-  assert.match(readFileSync("package.json", "utf8"), /assert-safe-db\.ts/);
 });

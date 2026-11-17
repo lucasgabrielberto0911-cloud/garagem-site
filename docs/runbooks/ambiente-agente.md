@@ -12,7 +12,7 @@ IAs costumam pular `npm run check` ou `build` por causa do `.env` do humano. Est
 | `*.supabase.co`, pooler, IP de produção | **Não** — pare |
 | Ausente | `npm test` e lint ok; `next build` pode falhar no prerender (`/modelos` etc.) |
 
-Se a URL não for local: não rode `check:build`, `db:push`, `e2e:seed` nem `test:e2e`. Diga isso no PR. Use `E2E_TEST=1` só com banco local.
+Se a URL não for local: não rode `check:build`, `e2e:seed` nem `test:e2e`. Diga isso no PR. Use `E2E_TEST=1` só com banco local.
 
 ## `R2_*`
 

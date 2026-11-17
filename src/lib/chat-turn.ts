@@ -1683,7 +1683,7 @@ export function formatChatResult(result: ChatTurnResult, input: Parameters<typeo
   result.reply = result.reply.replace(/(?:, pelo |\/|referência )?Inmetro/gi, source => { if (inmetroUsed) return ""; inmetroUsed = true; return source; });
   if (/km\/l/.test(result.reply) && !/varia|variam/.test(result.reply)) result.reply += "\n\nOs números de consumo variam conforme o uso.";
   // Só o texto livre da IA passa pelo filtro de frases: respostas de política/atalho já vêm conferidas
-  // (ex.: "financiamento em até 60 vezes", "loja digital", preço do carro que ainda está no estoque).
+  // (ex.: "financiamento em até 60 vezes", "endereço de loja", preço do carro que ainda está no estoque).
   if (!result.meta?.plain && !result.meta?.policy && !result.meta?.offScope && !result.meta?.fipe) {
     result.reply = result.reply
       .split("\n")
