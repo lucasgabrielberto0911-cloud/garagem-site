@@ -51,6 +51,8 @@ export function PhotoLightbox({
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [gesturing, setGesturing] = useState(false);
+  const [settledSrc, setSettledSrc] = useState<string | null>(null);
+  const [failedSrcs, setFailedSrcs] = useState<ReadonlySet<string>>(() => new Set());
   const preloadedUrls = useRef<Set<string>>(new Set());
 
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
@@ -171,7 +173,9 @@ export function PhotoLightbox({
 
   const clampOffset = useCallback((next: { x: number; y: number }, currentScale: number) => {
     const viewport = viewportRef.current;
-    const image = viewport?.querySelector("img");
+    const image =
+      viewport?.querySelector<HTMLImageElement>('[data-lightbox-current="true"] img') ??
+      viewport?.querySelector("img");
     return clampPhotoOffset(next, {
       width: viewport?.clientWidth ?? 0,
       height: viewport?.clientHeight ?? 0,
@@ -327,6 +331,33 @@ export function PhotoLightbox({
 
   const photo = photos[safeIndex];
   const activeSrc = photo ? galleryPreviewSrc(photo) : null;
+  const activeThumbSrc = photo ? galleryThumbSrc(photo) : null;
+  const activeAlt = vehiclePhotoAlt(alt, safeIndex, total);
+  const isActiveReady = Boolean(activeSrc && settledSrc === activeSrc);
+  const isActiveFailed = Boolean(activeSrc && failedSrcs.has(activeSrc));
+  const keepPreviousLayer = Boolean(
+    settledSrc && activeSrc && settledSrc !== activeSrc && !isActiveFailed,
+  );
+  const showThumbPreview = Boolean(
+    activeSrc &&
+      !keepPreviousLayer &&
+      !isActiveReady &&
+      !isActiveFailed &&
+      activeThumbSrc &&
+      activeThumbSrc !== activeSrc,
+  );
+  const photoLayers = [
+    ...(keepPreviousLayer && settledSrc ? [{ src: settledSrc, isCurrent: false }] : []),
+    ...(activeSrc ? [{ src: activeSrc, isCurrent: true }] : []),
+  ];
+
+  const markReady = useCallback((src: string) => {
+    setSettledSrc(src);
+  }, []);
+
+  const markFailed = useCallback((src: string) => {
+    setFailedSrcs((prev) => (prev.has(src) ? prev : new Set(prev).add(src)));
+  }, []);
 
   const content = (
     <div
@@ -397,6 +428,7 @@ export function PhotoLightbox({
         <div className="relative min-h-0 flex-1 bg-ink bg-gradient-to-br from-white/[0.06] via-ink to-white/[0.03]">
           <div
             ref={viewportRef}
+            data-lightbox-viewport="true"
             className="absolute inset-0 touch-none select-none [-webkit-touch-callout:none]"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
@@ -417,16 +449,42 @@ export function PhotoLightbox({
                 cursor: scale > 1 ? (gesturing ? "grabbing" : "grab") : "zoom-in",
               }}
             >
-              <VehicleImage
-                src={activeSrc}
-                alt={vehiclePhotoAlt(alt, safeIndex, total)}
-                fill
-                sizes="100vw"
-                priority
-                recoverable
-                className="pointer-events-none object-contain [-webkit-touch-callout:none]"
-              />
-              {photo ? <ZoomDetailImage photoId={photo.id} zoomed={scale > 1} alt={vehiclePhotoAlt(alt, safeIndex, total)} /> : null}
+              {showThumbPreview && activeThumbSrc ? (
+                <VehicleImage
+                  src={activeThumbSrc}
+                  alt=""
+                  fill
+                  sizes="100vw"
+                  eager
+                  className="pointer-events-none object-contain blur-sm [-webkit-touch-callout:none]"
+                />
+              ) : null}
+              {photoLayers.map((layer) => (
+                <div
+                  key={layer.src}
+                  data-lightbox-current={layer.isCurrent ? "true" : undefined}
+                  aria-hidden={layer.isCurrent ? undefined : "true"}
+                  className={`absolute inset-0 transition-opacity duration-150 ${
+                    !layer.isCurrent || isActiveReady || isActiveFailed
+                      ? "opacity-100"
+                      : "opacity-0"
+                  }`}
+                >
+                  <VehicleImage
+                    src={layer.src}
+                    alt={layer.isCurrent ? activeAlt : ""}
+                    fill
+                    sizes="100vw"
+                    priority={layer.isCurrent}
+                    eager={!layer.isCurrent}
+                    recoverable
+                    onReady={layer.isCurrent ? () => markReady(layer.src) : undefined}
+                    onErrorState={layer.isCurrent ? () => markFailed(layer.src) : undefined}
+                    className="pointer-events-none object-contain [-webkit-touch-callout:none]"
+                  />
+                </div>
+              ))}
+              {photo ? <ZoomDetailImage photoId={photo.id} zoomed={scale > 1} alt={activeAlt} /> : null}
             </div>
           </div>
           <p className="pointer-events-none absolute bottom-3 left-1/2 z-[2] hidden -translate-x-1/2 whitespace-nowrap bg-black/75 px-2.5 py-1 text-xs text-cream/85 backdrop-blur sm:block">

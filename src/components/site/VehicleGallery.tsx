@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { VehicleImage } from "@/components/VehicleImage";
+import { VEHICLE_PLACEHOLDER, VehicleImage } from "@/components/VehicleImage";
 import { vehiclePhotoAlt } from "@/lib/format";
 import {
   GALLERY_HERO_SIZES,
@@ -47,10 +47,12 @@ export function VehicleGallery({
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
   activeRef.current = active;
+  const targetScrollIndexRef = useRef<{ index: number; until: number } | null>(null);
   const [warmedSlides, setWarmedSlides] = useState<number[]>(() =>
     [0, 1, 2].filter((idx) => idx < photos.length),
   );
   const [decodedUrls, setDecodedUrls] = useState<ReadonlySet<string>>(() => new Set());
+  const [lastDecodedSrc, setLastDecodedSrc] = useState<string | null>(null);
   const [failedUrls, setFailedUrls] = useState<ReadonlySet<string>>(() => new Set());
   const [showThumbs, setShowThumbs] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
@@ -69,6 +71,7 @@ export function VehicleGallery({
   }, [active, total]);
 
   const markDecoded = useCallback((url: string) => {
+    setLastDecodedSrc(url);
     setDecodedUrls((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
   }, []);
 
@@ -107,6 +110,14 @@ export function VehicleGallery({
       if (!el) return;
       const width = el.clientWidth;
       if (width <= 0) return;
+      const pending = targetScrollIndexRef.current;
+      if (pending) {
+        if (Math.abs(el.scrollLeft - pending.index * width) <= 2 || Date.now() > pending.until) {
+          targetScrollIndexRef.current = null;
+        } else {
+          return;
+        }
+      }
       const index = Math.round(el.scrollLeft / width);
       setActive(Math.min(Math.max(index, 0), total - 1));
     }
@@ -144,6 +155,8 @@ export function VehicleGallery({
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const next = Math.min(Math.max(index, 0), Math.max(total - 1, 0));
+    targetScrollIndexRef.current = { index: next, until: Date.now() + 600 };
+    activeRef.current = next;
     scroller.scrollTo({
       left: next * scroller.clientWidth,
       behavior: prefersReducedMotion() ? "auto" : "smooth",
@@ -216,6 +229,12 @@ export function VehicleGallery({
             const slideSrcSet = galleryPreviewSrcSet(photo);
             const isReady = decodedUrls.has(slideSrc);
             const isFailed = failedUrls.has(slideSrc);
+            const thumbSrc = galleryThumbSrc(photo);
+            const previewSrc =
+              thumbSrc && thumbSrc !== slideSrc
+                ? thumbSrc
+                : lastDecodedSrc ?? VEHICLE_PLACEHOLDER;
+            const showPreview = index > 0 && !isFailed;
 
             return (
               <li
@@ -241,6 +260,16 @@ export function VehicleGallery({
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-0 overflow-hidden bg-ink bg-gradient-to-br from-white/[0.08] via-ink to-white/[0.03]"
                     >
+                      {showPreview ? (
+                        <VehicleImage
+                          src={previewSrc}
+                          alt=""
+                          fill
+                          sizes={GALLERY_HERO_SIZES}
+                          eager
+                          className="scale-125 object-cover blur-2xl"
+                        />
+                      ) : null}
                       <VehicleImage
                         src={slideSrc}
                         alt=""
@@ -253,6 +282,23 @@ export function VehicleGallery({
                         }`}
                       />
                     </div>
+                    {showPreview ? (
+                      <div
+                        aria-hidden="true"
+                        className={`pointer-events-none absolute inset-0 overflow-hidden transition-opacity duration-150 ${
+                          isReady ? "opacity-0" : "opacity-100"
+                        }`}
+                      >
+                        <VehicleImage
+                          src={previewSrc}
+                          alt=""
+                          fill
+                          sizes={GALLERY_HERO_SIZES}
+                          eager
+                          className="scale-105 object-cover blur-md"
+                        />
+                      </div>
+                    ) : null}
                     <div
                       className={`absolute inset-0 transition-opacity duration-150 ${
                         index === 0 || isReady || isFailed ? "opacity-100" : "opacity-0"
@@ -300,7 +346,7 @@ export function VehicleGallery({
           <>
             <button
               type="button"
-              onClick={() => goTo(active - 1)}
+              onClick={() => goTo(activeRef.current - 1)}
               aria-label="Foto anterior"
               disabled={active === 0}
               className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/40 bg-asphalt/90 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
@@ -309,7 +355,7 @@ export function VehicleGallery({
             </button>
             <button
               type="button"
-              onClick={() => goTo(active + 1)}
+              onClick={() => goTo(activeRef.current + 1)}
               aria-label="Próxima foto"
               disabled={active === total - 1}
               className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/40 bg-asphalt/90 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
