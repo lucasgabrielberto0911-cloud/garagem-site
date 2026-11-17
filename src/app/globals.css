@@ -848,7 +848,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     left: auto;
     right: 5rem;
     bottom: 0.75rem;
-    max-width: min(40rem, calc(100vw - 6rem));
+    max-width: min(43rem, calc(100vw - 6rem));
   }
 }
 
@@ -863,6 +863,7 @@ body:has([data-ficha-page]) .site-consent {
     left: auto;
     right: 1.5rem;
     bottom: 1.5rem;
+    max-width: 22rem;
   }
 }
 
