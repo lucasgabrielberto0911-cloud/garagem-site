@@ -774,12 +774,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
       <div
         data-stock-filters=""
-        className="stock-chip-bar mt-2 border border-white/20 bg-ink px-2.5 py-2 lg:hidden"
+        className="stock-chip-bar mt-1.5 border border-white/20 bg-ink px-2 py-1 lg:hidden"
       >
-        <div className="flex items-center justify-between gap-2">
-          <p id={mobileShortcutsLabelId} className="stock-chip-label">
-            Atalhos
-          </p>
+        <p id={mobileShortcutsLabelId} className="sr-only">
+          Atalhos
+        </p>
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => {
@@ -787,7 +787,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
               setOpen(true);
             }}
             ref={filterButtonRef}
-            className="stock-chip-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="stock-chip-action shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             aria-expanded={open}
             aria-controls="painel-filtros"
             aria-label={
@@ -804,22 +804,22 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </span>
             ) : null}
           </button>
-        </div>
-        <div
-          role="group"
-          aria-labelledby={mobileShortcutsLabelId}
-          className="-my-1 flex flex-wrap gap-x-1.5 gap-y-0"
-        >
-          {quickChips.map((chip) => (
-            <Chip
-              key={`sticky-${chip.key}`}
-              active={chip.active}
-              touchTarget
-              onClick={chip.onClick}
-            >
-              {chip.label}
-            </Chip>
-          ))}
+          <div
+            role="group"
+            aria-labelledby={mobileShortcutsLabelId}
+            className="stock-chip-track scrollbar-hide"
+          >
+            {quickChips.map((chip) => (
+              <Chip
+                key={`sticky-${chip.key}`}
+                active={chip.active}
+                touchTarget
+                onClick={chip.onClick}
+              >
+                {chip.label}
+              </Chip>
+            ))}
+          </div>
         </div>
         {current.brand &&
         modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (

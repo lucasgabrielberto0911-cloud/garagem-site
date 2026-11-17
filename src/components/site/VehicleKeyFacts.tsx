@@ -28,46 +28,90 @@ export function VehicleKeyFacts({
   color,
   className = "",
   onInk = false,
+  hideYearBelowLg = false,
+  specAnchor = false,
 }: {
   facts: readonly VehicleKeyFact[];
   color?: string | null;
   className?: string;
-  onInk?: boolean;
+  onInk?: boolean | "lg";
+  /** Na ficha unificada o ano já aparece ao lado do título abaixo de `lg`. */
+  hideYearBelowLg?: boolean;
+  /** Quando a ficha mobile não tem especificações extras, a âncora aponta para estes fatos. */
+  specAnchor?: boolean;
 }) {
   if (facts.length === 0 && !color) return null;
-  const surface = `border border-white/20 px-2.5 ${onInk ? "bg-asphalt/80" : "bg-ink"}`;
+  const surfaceBg =
+    onInk === "lg" ? "bg-ink lg:bg-asphalt/80" : onInk ? "bg-asphalt/80" : "bg-ink";
+  const surface = `border border-white/20 px-2.5 ${surfaceBg}`;
+  const hasHiddenYear = hideYearBelowLg && facts.some((fact) => fact.label === "Ano");
+  const mobileFactCount = hasHiddenYear
+    ? facts.filter((fact) => fact.label !== "Ano").length
+    : facts.length;
+  const colorFillsMobileCell = Boolean(
+    hasHiddenYear && color && mobileFactCount % 2 === 1,
+  );
+
   return (
     <dl
       data-key-facts=""
-      className={`grid grid-cols-2 gap-1.5 ${WIDE_COLS[Math.min(facts.length, 4)]} ${className}`}
+      data-ficha-section={specAnchor ? "especificacoes" : undefined}
+      className={`grid grid-cols-2 gap-1.5 ${WIDE_COLS[Math.min(facts.length, 4)]}${specAnchor ? " ficha-jump-target" : ""} ${className}`}
     >
-      {facts.map((fact, index) => (
-        <div
-          key={fact.label}
-          data-key-fact={fact.label}
-          className={`min-w-0 py-2 ${surface} ${
-            index === facts.length - 1 && facts.length % 2 === 1 ? "col-span-2 xl:col-span-1" : ""
-          }`}
-        >
-          <dt className="text-sm font-medium text-cream/75">{fact.label}</dt>
-          <dd
-            className={`mt-0.5 font-display text-sm font-semibold leading-tight text-cream sm:text-[15px] ${
-              fact.label === "Ano"
-                ? "whitespace-nowrap"
-                : "[overflow-wrap:break-word]"
-            }`}
+      {facts.map((fact, index) => {
+        const isHiddenYearOnMobile = hasHiddenYear && fact.label === "Ano";
+        const isLastOddDesktop = index === facts.length - 1 && facts.length % 2 === 1;
+        const isLastOddMobile =
+          index === facts.length - 1 &&
+          !colorFillsMobileCell &&
+          mobileFactCount % 2 === 1;
+        const spanClass =
+          isLastOddDesktop && isLastOddMobile
+            ? "col-span-2 xl:col-span-1"
+            : isLastOddDesktop
+              ? "lg:col-span-2 xl:col-span-1"
+              : isLastOddMobile
+                ? "col-span-2 lg:col-span-1"
+                : "";
+        return (
+          <div
+            key={fact.label}
+            data-key-fact={isHiddenYearOnMobile ? undefined : fact.label}
+            className={`min-w-0 py-2 ${surface} ${isHiddenYearOnMobile ? "hidden lg:block " : ""}${spanClass}`.trim()}
           >
-            {breakAfterSlash(fact.value)}
-            {fact.label === "KM" && !/\bkm\b/i.test(fact.value) ? (
-              <span className="font-medium text-cream/75"> km</span>
-            ) : null}
-          </dd>
-        </div>
-      ))}
+            <dt className="text-sm font-medium text-cream/75">{fact.label}</dt>
+            <dd
+              className={`mt-0.5 font-display text-sm font-semibold leading-tight text-cream sm:text-[15px] ${
+                fact.label === "Ano"
+                  ? "whitespace-nowrap"
+                  : "[overflow-wrap:break-word]"
+              }`}
+            >
+              {breakAfterSlash(fact.value)}
+              {fact.label === "KM" && !/\bkm\b/i.test(fact.value) ? (
+                <span className="font-medium text-cream/75"> km</span>
+              ) : null}
+            </dd>
+          </div>
+        );
+      })}
       {color ? (
-        <div data-key-fact="Cor" className={`col-span-full flex min-w-0 items-baseline gap-2 py-1.5 ${surface}`}>
+        <div
+          data-key-fact="Cor"
+          className={
+            colorFillsMobileCell
+              ? `min-w-0 py-2 ${surface} lg:col-span-full lg:flex lg:items-baseline lg:gap-2 lg:py-1.5`
+              : `col-span-full flex min-w-0 items-baseline gap-2 py-1.5 ${surface}`
+          }
+        >
           <dt className="shrink-0 text-sm font-medium text-cream/75">Cor</dt>
-          <dd className="min-w-0 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:break-word]">
+          <dd
+            className={
+              colorFillsMobileCell
+                ? "mt-0.5 min-w-0 font-display text-sm font-semibold leading-tight text-cream [overflow-wrap:break-word] sm:text-[15px] lg:mt-0 lg:leading-snug lg:sm:text-sm"
+                : "min-w-0 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:break-word]"
+            }
+          >
             {color}
           </dd>
         </div>

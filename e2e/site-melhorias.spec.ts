@@ -36,7 +36,12 @@ test("buscar mantém alvo de toque maior sem transbordar", async ({ page }) => {
 test("falha do chat fica junto ao campo com WhatsApp e mensagem preservada", async ({ page }) => {
   await page.route("**/api/chat", route => route.fulfill({ status: 503, json: { error: "Atendimento temporariamente indisponível." } }));
   await page.goto("/estoque");
-  await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  if (page.viewportSize()!.width >= 1024) {
+    await page.locator(".site-chat-launcher").click();
+    await page.getByRole("menuitem", { name: "Perguntar ao assistente", exact: true }).click();
+  } else {
+    await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  }
   const dialog = page.locator(".site-chat-panel");
   const input = dialog.locator("textarea");
   await input.fill("Quero um carro automático");

@@ -13,7 +13,6 @@ import {
   hasMobileFichaSpecs,
   sheetSpecs,
   VehicleMobileBlocks,
-  VehicleMobileSummary,
 } from "@/components/site/VehicleMobileDossier";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
 import { VehicleVerifiedSection } from "@/components/site/VehicleVerifiedInfo";
@@ -381,8 +380,6 @@ export default async function VehicleDetailPage({
           </nav>
         </div>
 
-        {/* No celular o título visível do resumo é o h1; aqui só o desktop. */}
-        <h1 className="sr-only hidden lg:block">{title}</h1>
         <FichaSectionAnchors hasDetails={hasDetails} />
 
         {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
@@ -399,21 +396,6 @@ export default async function VehicleDetailPage({
                 </Suspense>
               </div>
               <VehicleGallery photos={vehicle.photos} alt={galleryAlt} />
-            </div>
-            <div className="shrink-0 lg:hidden">
-              <VehicleMobileSummary
-                title={title}
-                version={collapseWhitespace(vehicle.version ?? "")}
-                yearLabel={yearBadge !== SPEC_EMPTY ? yearBadge : undefined}
-                price={sold ? 0 : vehicle.price}
-                sold={sold}
-                facts={keyFacts}
-                color={keyColor}
-                inspection={sold ? null : vehicle.inspection}
-                warranty={sold ? null : vehicle.warranty}
-                seals={seals}
-                specAnchor={!hasMobileFichaSpecs(specs)}
-              />
             </div>
 
             <section
@@ -506,10 +488,12 @@ export default async function VehicleDetailPage({
             ) : null}
           </div>
 
-          <aside className="ficha-aside order-2 hidden lg:block">
-            {/* Sem sticky: o card rola junto com a página (um scroll só). */}
-            <div className="space-y-4 border border-white/20 bg-ink p-5 xl:p-6">
-              <div className="flex flex-wrap items-center gap-2">
+          <aside className="ficha-aside order-2 min-w-0">
+            {/* Sem sticky: o card rola junto com a página (um scroll só).
+                O resumo do topo (com o único h1 visível) serve celular e desktop. */}
+            <div className="pb-3 pt-3 lg:border lg:border-white/20 lg:bg-ink lg:p-5 xl:p-6">
+              <div className="ficha-mobile-sheet flex flex-col gap-2.5 lg:gap-4">
+              <div className="hidden flex-wrap items-center gap-2 lg:flex">
                 <span className="font-display text-sm font-semibold uppercase tracking-wider text-brand-light">
                   {vehicleCategoryLabel(vehicle.category)}
                 </span>
@@ -534,25 +518,25 @@ export default async function VehicleDetailPage({
                   />
                 ) : null}
               </div>
-              <div>
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <p className="font-display text-[1.75rem] font-bold leading-tight tracking-tight text-cream">
+              <div data-ficha-title-block="">
+                <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 lg:gap-x-3">
+                  <h1 className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream lg:text-[1.75rem] lg:leading-tight">
                     {title}
-                  </p>
+                  </h1>
                   {yearBadge !== SPEC_EMPTY ? (
-                    <span className="inline-flex shrink-0 items-center border border-white/20 bg-asphalt/80 px-2.5 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap">
+                    <span className="inline-flex shrink-0 items-center border border-white/20 bg-ink px-2 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap lg:bg-asphalt/80 lg:px-2.5">
                       {yearBadge}
                     </span>
                   ) : null}
                 </div>
                 {vehicle.version?.trim() ? (
-                  <p className="mt-1 text-[15px] leading-snug text-cream/80">{collapseWhitespace(vehicle.version ?? "")}</p>
+                  <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-cream/80 lg:text-[15px] lg:leading-snug">{collapseWhitespace(vehicle.version ?? "")}</p>
                 ) : null}
               </div>
 
               <p
                 data-ficha-price=""
-                className="font-display text-[2.25rem] font-bold leading-none tracking-tight text-brand-light"
+                className="-mt-1 font-display text-[1.75rem] font-bold leading-none tracking-tight text-brand-light lg:mt-0 lg:text-[2.25rem]"
               >
                 {sold ? (
                   <span className="text-base text-cream/80">Já vendido</span>
@@ -561,15 +545,15 @@ export default async function VehicleDetailPage({
                 )}
               </p>
 
-              <VehicleKeyFacts facts={keyFacts} color={keyColor} onInk />
+              <VehicleKeyFacts facts={keyFacts} color={keyColor} onInk="lg" hideYearBelowLg={yearBadge !== SPEC_EMPTY} specAnchor={!hasMobileFichaSpecs(specs)} />
 
+              <VehicleInspectionBadge inspection={sold ? null : vehicle.inspection} />
               {!sold ? (
-                <VehicleInspectionBadge inspection={vehicle.inspection} />
+                <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} />
               ) : null}
-              <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} />
 
               {sold ? (
-                <div className="space-y-2">
+                <div className="hidden space-y-2 lg:block">
                   <Link
                     href="#mesma-faixa"
                     prefetch={false}
@@ -593,7 +577,7 @@ export default async function VehicleDetailPage({
                 </div>
               ) : (
                 <>
-                  <div>
+                  <div className="hidden lg:block">
                     <VehicleLeadHit
                       contentId={vehicle.id}
                       contentName={fullLabel}
@@ -622,7 +606,7 @@ export default async function VehicleDetailPage({
                   </div>
 
                   {/* Financiamento, troca, vídeo e visita: à vista, em estilo discreto para não competir com o botão principal. */}
-                  <div data-ficha-more-actions="" className="border-t border-white/20 pt-3">
+                  <div data-ficha-more-actions="" className="hidden border-t border-white/20 pt-3 lg:block">
                     <VehicleQuickActions
                       contentId={vehicle.id}
                       contentSlug={canonicalSlug}
@@ -642,11 +626,12 @@ export default async function VehicleDetailPage({
                     />
                   </div>
 
+                  {/* No celular o CSS sobe este bloco para logo abaixo do preço (sem Linhares/ES). */}
                   <VehicleTrustNotes warranty={vehicle.warranty} />
                 </>
               )}
 
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+              <div className="hidden flex-wrap items-center gap-x-5 gap-y-1 text-sm lg:flex">
                 {/* No computador o botão flutuante do chat some na ficha: este é o acesso. O link de avaliar o usado saiu: "Tenho um usado para trocar" já cobre. */}
                 {!sold ? (
                   <ChatOpenButton
@@ -665,15 +650,16 @@ export default async function VehicleDetailPage({
                 />
               </div>
 
-              <p className="text-sm leading-relaxed text-cream/80">
+              <p className="hidden text-sm leading-relaxed text-cream/80 lg:block">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
                   : `Valores sujeitos a alteração. Financiamento e cartão com análise de crédito; condições pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
+              </div>
             </div>
 
             {!sold ? (
-              <>
+              <div className="hidden lg:block">
                 <VehicleConditions
                   vehicleWarranty={vehicle.warranty}
                   conditions={conditions}
@@ -709,7 +695,7 @@ export default async function VehicleDetailPage({
                     </WhatsAppButton>
                   </VehicleLeadHit>
                 </div>
-              </>
+              </div>
             ) : null}
           </aside>
         </div>

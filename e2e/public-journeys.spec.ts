@@ -151,7 +151,12 @@ test("busca tolerante encontra o Civic e mantém ordenação", async ({ page }) 
 test("pergunta de potência responde o dado antes do card e WhatsApp oficial", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
   await page.goto("/estoque");
-  await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  if (page.viewportSize()!.width >= 1024) {
+    await page.locator(".site-chat-launcher").click();
+    await page.getByRole("menuitem", { name: "Perguntar ao assistente", exact: true }).click();
+  } else {
+    await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  }
   const dialog = page.getByRole("dialog", { name: "Garagem", exact: true });
   await dialog.locator("textarea").fill("quantos cv tem a duster?");
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();

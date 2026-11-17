@@ -6,11 +6,11 @@ import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChatVisitPanel } from "@/components/site/ChatVisitPanel";
+import { SiteSupportFloat } from "@/components/site/SiteSupportFloat";
 import { trackEvent } from "@/lib/track-event";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import {
   IconArrowRight,
-  IconChat,
   IconFileText,
   IconGearShift,
   IconPlay,
@@ -763,7 +763,7 @@ export function SiteChat() {
           ? previous
           : Array.from(
               document.querySelectorAll<HTMLElement>(
-                `[aria-label="${CHAT_HELP_LABEL}"]`,
+                `[aria-label="${CHAT_HELP_LABEL}"], .site-chat-launcher`,
               ),
             ).find((node) => node.getClientRects().length);
       target?.focus({ preventScroll: true });
@@ -1560,31 +1560,9 @@ export function SiteChat() {
         </section>
       ) : null}
 
-      <button
-        type="button"
-        onClick={() => {
-          if (open) closeChat();
-          else openChat("launcher");
-        }}
-        aria-expanded={open}
-        aria-hidden={open}
-        tabIndex={open ? -1 : undefined}
-        aria-label={open ? "Fechar chat" : CHAT_HELP_LABEL}
-        className={`site-chat-launcher pointer-events-auto h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#E8181C] to-[#B91216] pl-3.5 pr-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_12px_28px_-8px_rgba(232,24,28,0.65),0_2px_6px_rgba(0,0,0,0.45)] ring-1 ring-white/25 transition hover:-translate-y-0.5 hover:from-[#F0282C] hover:to-[#C91418] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_16px_32px_-8px_rgba(232,24,28,0.75),0_2px_6px_rgba(0,0,0,0.35)] active:translate-y-0 touch-manipulation sm:h-14 sm:gap-2.5 sm:pl-5 sm:pr-6 ${
-          open ? "hidden w-12" : "flex w-auto"
-        }`}
-      >
-        {open ? (
-          <IconClose className="h-6 w-6" />
-        ) : (
-          <>
-            <IconChat className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
-            <span className="whitespace-nowrap font-display text-[12px] font-semibold sm:text-[14px]">
-              {CHAT_HELP_LABEL}
-            </span>
-          </>
-        )}
-      </button>
+      {!open ? (
+        <SiteSupportFloat onOpenAssistant={() => openChat("launcher")} />
+      ) : null}
     </div>
   );
 }

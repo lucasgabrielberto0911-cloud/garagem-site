@@ -20,6 +20,15 @@ const stock = [
   { ...car("cg", "CG 160", 17000), brand: "Honda", category: "moto", engine: "160cc" },
 ];
 
+async function openChat(page: import("@playwright/test").Page) {
+  if (page.viewportSize()!.width >= 1024) {
+    await page.locator(".site-chat-launcher").click();
+    await page.getByRole("menuitem", { name: "Perguntar ao assistente", exact: true }).click();
+  } else {
+    await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  }
+}
+
 test("cada recomendação fecha com WhatsApp, ano e link mesmo sem convite no texto", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
   const vehicles = stock.filter(vehicle => ["hb", "fox"].includes(vehicle.id)).map(toChatVehicleCard);
@@ -28,7 +37,7 @@ test("cada recomendação fecha com WhatsApp, ano e link mesmo sem convite no te
     body: JSON.stringify({ reply: "Estas opções atendem ao que você procura.", vehicles }),
   }));
   await page.goto("/estoque");
-  await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  await openChat(page);
   const dialog = page.getByRole("dialog", { name: "Garagem", exact: true });
   await dialog.locator("textarea").fill("automático até 70 mil");
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
@@ -64,7 +73,7 @@ test("vendedor mantém filtros, lembra todos os IDs e oferece continuidade sem r
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(result) });
   });
   await page.goto("/estoque");
-  await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  await openChat(page);
   const dialog = page.getByRole("dialog", { name: "Garagem", exact: true });
   const send = async (question: string) => {
     await dialog.locator("textarea").fill(question);
@@ -98,7 +107,7 @@ test("vendedor mantém filtros, lembra todos os IDs e oferece continuidade sem r
   expect(payloads.at(-1)?.searchHistory[0].content).toBe("Manual de 45 a 50 mil");
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem("garagem_site_chat_history_v3")?.includes("searchContext"))).toBe(true);
   await page.reload();
-  await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  await openChat(page);
   answer = await send("outros");
   await expect(answer.locator("[data-chat-vehicle]")).toHaveCount(0);
   expect(payloads.at(-1)?.searchHistory[0].content).toBe("Manual de 45 a 50 mil");

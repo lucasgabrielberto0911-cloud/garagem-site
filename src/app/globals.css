@@ -662,28 +662,8 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 
 @media (min-width: 1024px) {
   .site-chat:not(.is-open) {
-    right: calc(1.5rem + 3.5rem + 0.75rem);
-    bottom: 1.5rem;
-  }
-
-  body:has(.site-chat.is-open) .whatsapp-float {
-    display: none;
-  }
-
-
-  body:has(.listing-card-grid) .site-chat:not(.is-open) {
-    right: 1.5rem;
-    bottom: calc(1.5rem + 3.5rem + 0.75rem);
-  }
-
-  body:has(.listing-card-grid) .site-chat:not(.is-open) .site-chat-launcher {
-    width: 3.5rem;
-    height: 3.5rem;
-    padding: 0;
-  }
-
-  body:has(.listing-card-grid) .site-chat:not(.is-open) .site-chat-launcher span {
-    display: none;
+    right: 1rem;
+    bottom: 0.75rem;
   }
 }
 
@@ -865,9 +845,10 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 
 @media (min-width: 1024px) {
   .site-consent {
-    left: 1.5rem;
-    bottom: 1.5rem;
-    max-width: 22rem;
+    left: auto;
+    right: 5rem;
+    bottom: 0.75rem;
+    max-width: min(43rem, calc(100vw - 6rem));
   }
 }
 
@@ -882,6 +863,7 @@ body:has([data-ficha-page]) .site-consent {
     left: auto;
     right: 1.5rem;
     bottom: 1.5rem;
+    max-width: 22rem;
   }
 }
 
@@ -2077,83 +2059,37 @@ html[data-consent="essential"] .site-consent {
   .stock-compact-opening header h1,
   .stock-compact-opening header > p.font-display.text-3xl {
     margin-top: 0;
-    font-size: 1.35rem;
-    line-height: 1.2;
+    font-size: 1.25rem;
+    line-height: 1.15;
   }
-  .stock-compact-opening header > div { margin-top: 0.375rem; }
+  .stock-compact-opening header > div { display: none; }
   /* Intro visível também no celular (texto escondido é má prática de SEO): só fica compacta. */
   .stock-compact-opening header > p:last-child:not(:first-child):not(.font-display) {
-    margin-top: 0.375rem;
-    font-size: 0.8125rem;
-    line-height: 1.35;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.25;
   }
 }
 
-/* CTA do assistente no hero: reflexo diagonal de tempos em tempos + glow vermelho suave.
-   Só transform/opacity (sem layout); desligado com prefers-reduced-motion. */
-.assistant-cta-glow::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  box-shadow: 0 0 22px 2px rgba(232, 24, 28, 0.45);
-  opacity: 0.32;
-  /* Começa depois do 1º paint do hero. */
-  animation: assistantGlow 4.6s ease-in-out 2s infinite both;
+/* Cursor do placeholder animado do assistente no hero; desligado em prefers-reduced-motion. */
+.assistant-placeholder-caret {
+  animation: assistantCaretBlink 1s step-end infinite;
 }
 
-.assistant-cta {
-  z-index: 1;
-}
-
-.assistant-cta::after {
-  content: "";
-  position: absolute;
-  top: -20%;
-  bottom: -20%;
-  left: 0;
-  width: 38%;
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    105deg,
-    transparent 0%,
-    rgba(255, 90, 80, 0.2) 40%,
-    rgba(255, 225, 215, 0.3) 50%,
-    rgba(255, 90, 80, 0.2) 60%,
-    transparent 100%
-  );
-  transform: translateX(-160%) skewX(-18deg);
-  animation: assistantSheen 4.6s ease-in-out 2s infinite both;
-}
-
-@keyframes assistantSheen {
-  0% {
-    transform: translateX(-160%) skewX(-18deg);
-  }
-  26% {
-    transform: translateX(330%) skewX(-18deg);
-  }
-  100% {
-    transform: translateX(330%) skewX(-18deg);
-  }
-}
-
-@keyframes assistantGlow {
+@keyframes assistantCaretBlink {
   0%,
-  100% {
-    opacity: 0.2;
+  49% {
+    opacity: 1;
   }
-  50% {
-    opacity: 0.6;
+  50%,
+  100% {
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .site-chat-launcher::after,
-  .assistant-cta::after,
-  .assistant-cta-glow::before {
+  .assistant-placeholder-caret {
     animation: none !important;
     opacity: 0 !important;
   }
@@ -2192,6 +2128,31 @@ html[data-consent="essential"] .site-consent {
 /* O teclado usa o espaço dos atalhos para preservar a conversa. */
 body[data-chat-keyboard] [data-chat-quick-actions],
 body[data-chat-keyboard] [data-chat-footer] { display: none; }
+
+@media (max-width: 1023px) {
+  .ficha-mobile-sheet > * {
+    order: 5;
+  }
+  .ficha-mobile-sheet > [data-ficha-title-block] {
+    order: 1;
+  }
+  .ficha-mobile-sheet > [data-ficha-price] {
+    order: 2;
+  }
+  .ficha-mobile-sheet > [data-trust-notes] {
+    order: 3;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .ficha-mobile-sheet > [data-trust-notes] > li:nth-child(3) {
+    display: none;
+  }
+  .ficha-mobile-sheet > [data-key-facts] {
+    order: 4;
+  }
+}
 
 /* Botão de WhatsApp da barra do celular: pulso sutil, só com movimento liberado. */
 @media (prefers-reduced-motion: no-preference) {

@@ -148,6 +148,10 @@ test("dobra da ficha tem foto 4:3 fixa e não cresce quando a barra do navegador
   // Faixa de miniaturas com altura reservada antes do JS; botão claro para abrir as fotos.
   assert.match(gallery, /hidden h-\[4\.25rem\] lg:block/);
   assert.match(gallery, /Ver as \$\{total\} fotos/);
+  assert.match(gallery, /bg-cream\/95/);
+  // Um único h1 visível na ficha (sem sr-only duplicado).
+  assert.equal((page.match(/<h1\b/g) ?? []).length, 1);
+  assert.doesNotMatch(page, /<h1[^>]*sr-only/);
 });
 
 test("blocos da ficha mobile ficam sempre abertos; só o saiba mais de vistoria e garantia fecha", () => {
@@ -314,8 +318,8 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.match(page, /Abre o WhatsApp com este anúncio — modelo, ano e preço\./);
   assert.match(dossier, /VehicleTrustNotes/);
 
-  // Hierarquia de anúncio: o WhatsApp principal vem antes da faixa de confiança.
-  const trustAt = page.indexOf("<VehicleTrustNotes");
+  // Hierarquia de anúncio no desktop: o WhatsApp principal vem antes da faixa de confiança completa.
+  const trustAt = page.indexOf("<VehicleTrustNotes warranty={vehicle.warranty} />");
   const interestAt = page.indexOf("Falar no WhatsApp");
   assert.ok(trustAt >= 0 && interestAt >= 0 && interestAt < trustAt);
 
