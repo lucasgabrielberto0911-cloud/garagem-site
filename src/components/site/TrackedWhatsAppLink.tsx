@@ -12,6 +12,7 @@ export function TrackedWhatsAppLink({
   ariaLabel,
   vehicleId,
   slug,
+  pageOrigin,
 }: {
   href: string;
   trackingLabel: string;
@@ -20,10 +21,10 @@ export function TrackedWhatsAppLink({
   ariaLabel?: string;
   vehicleId?: string;
   slug?: string;
+  pageOrigin?: string;
 }) {
-  const funnel: VehicleFunnelRef | undefined = vehicleId
-    ? { vehicleId, slug }
-    : undefined;
+  const funnel: VehicleFunnelRef | undefined =
+    vehicleId || pageOrigin ? { vehicleId, slug, pageOrigin } : undefined;
   return (
     <a
       href={href}

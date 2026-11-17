@@ -230,6 +230,7 @@ export default async function HomePage() {
               priorityCount={1}
               desktopCols={4}
               destaqueLimit={0}
+              pageOrigin="home"
             />
           )}
         </div>

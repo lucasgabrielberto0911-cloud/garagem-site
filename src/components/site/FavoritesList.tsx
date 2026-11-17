@@ -245,6 +245,7 @@ export function FavoritesList() {
         <VehicleGrid
           vehicles={ordered}
           returnTo="/favoritos"
+          pageOrigin="favoritos"
         />
       </div>
 

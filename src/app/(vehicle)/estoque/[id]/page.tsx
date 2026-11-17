@@ -51,11 +51,11 @@ import { getPublicSite } from "@/lib/site-settings";
 import { priceBandHref } from "@/lib/related-vehicles";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
+  buildWhatsAppCarMessage,
   collapseDuplicateAccessories,
   collapseWhitespace,
   formatUpdatedAt,
   formatVehicleDisplay,
-  formatVehicleWhatsAppMessage,
 } from "@/lib/vehicle-display";
 import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
@@ -190,41 +190,54 @@ export default async function VehicleDetailPage({
   ];
   const accessories = collapseDuplicateAccessories(vehicle.accessories);
   const whatsapp = {
-    interest: formatVehicleWhatsAppMessage({
+    interest: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "interest",
+      pageOrigin: "ficha",
     }),
-    video: formatVehicleWhatsAppMessage({
+    mobileBar: buildWhatsAppCarMessage({
+      ...vehicle,
+      path,
+      isMoto,
+      intent: "interest",
+      pageOrigin: "barra fixa",
+    }),
+    video: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "video",
+      pageOrigin: "ficha",
     }),
-    finance: formatVehicleWhatsAppMessage({
+    finance: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "finance",
+      pageOrigin: "ficha",
     }),
-    visit: formatVehicleWhatsAppMessage({
+    visit: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "visit",
+      pageOrigin: "ficha",
     }),
-    trade: formatVehicleWhatsAppMessage({
+    trade: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "trade",
+      pageOrigin: "ficha",
     }),
-    sameBand: formatVehicleWhatsAppMessage({
+    sameBand: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "similar",
+      pageOrigin: "ficha",
     }),
   };
   const soldNavLinks = soldFichaNavLinks(vehicle);
@@ -307,6 +320,7 @@ export default async function VehicleDetailPage({
           price: sold ? undefined : vehicle.price,
           path,
           category: vehicle.category,
+          status: vehicle.status,
           sold: sold,
         }}
       />
@@ -570,6 +584,7 @@ export default async function VehicleDetailPage({
                     content={fichaTrack.content}
                     vehicleId={vehicle.id}
                     slug={canonicalSlug}
+                    pageOrigin="ficha"
                     message={whatsapp.interest}
                   >
                     Pedir parecido no WhatsApp
@@ -595,6 +610,7 @@ export default async function VehicleDetailPage({
                         content={fichaTrack.content}
                         vehicleId={vehicle.id}
                         slug={canonicalSlug}
+                        pageOrigin="ficha"
                         message={whatsapp.interest}
                       >
                         Falar no WhatsApp
@@ -689,6 +705,7 @@ export default async function VehicleDetailPage({
                       content={fichaTrack.content}
                       vehicleId={vehicle.id}
                       slug={canonicalSlug}
+                      pageOrigin="ficha"
                       message={whatsapp.interest}
                     >
                       Tirar dúvidas no WhatsApp
@@ -795,9 +812,11 @@ export default async function VehicleDetailPage({
         vehicleSlug={canonicalSlug}
         vehiclePath={path}
         contentName={fullLabel}
-        message={whatsapp.interest}
+        message={whatsapp.mobileBar}
         brand={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
+        version={vehicle.version}
+        status={vehicle.status}
         year={vehicle.yearModel}
         price={sold ? 0 : vehicle.price}
         stateOfVehicle={autoHit.stateOfVehicle}

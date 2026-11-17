@@ -116,6 +116,7 @@ export function VehicleQuickActions({
             ariaLabel={action.ariaLabel}
             vehicleId={contentId}
             slug={contentSlug}
+            pageOrigin="ficha"
             className={
               variant === "secondary"
                 ? "inline-flex min-h-14 w-full items-center justify-start gap-2.5 rounded-lg border border-white/20 bg-white/[0.04] px-3 py-2 text-left font-display text-sm font-medium leading-snug text-cream transition touch-manipulation hover:border-[#25D366]/60 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
