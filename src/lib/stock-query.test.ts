@@ -260,7 +260,7 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
   assert.match(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../components/site/StockSortSelect.tsx"), "utf8"), /destaques/);
   assert.match(browse, /stockViewNeedsFetch/);
   assert.match(vehicles, /stockOrderBy\(filters\.sort\)/);
-  assert.match(vehicles, /model: \{/);
+  assert.match(vehicles, /modelWhere\(filters\.model\)/);
   const where = vehicles.slice(
     vehicles.indexOf("function buildStockWhere"),
     vehicles.indexOf("function stockQueryKey"),
@@ -293,4 +293,10 @@ test("body na URL só aceita carrocerias conhecidas", () => {
   assert.equal(parseStockFilters({ body: "SUV" }).body, "suv");
   assert.equal(parseStockFilters({ body: "picape" }).body, undefined);
   assert.equal(parseStockFilters({}).body, undefined);
+});
+
+test("modelFilterOptions e modelAfterBrandChange reconhecem sinônimo Fazer FZ25 como Fazer 250", () => {
+  const models = [{ brand: "Yamaha", model: "Fazer 250" }];
+  assert.deepEqual(modelFilterOptions(models, "Yamaha", "Fazer FZ25"), ["Fazer 250"]);
+  assert.equal(modelAfterBrandChange(models, "Yamaha", "Fazer FZ25"), "Fazer 250");
 });

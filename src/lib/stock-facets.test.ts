@@ -83,3 +83,26 @@ test("carroceria sem modelo no estoque devolve lista vazia, não tudo", () => {
   };
   assert.deepEqual(where.AND[0], { id: { in: [] } });
 });
+
+test("facetas unificam Fazer 250 / Fazer FZ25 e agrupam cores compostas pela cor base", () => {
+  const facets = buildStockFacets([
+    { ...row, category: "moto", brand: "Yamaha", model: "Fazer 250", color: "Azul Meia-noite" },
+    { ...row, category: "moto", brand: "Yamaha", model: "Fazer FZ25", color: "Branca Com Rodas Douradas" },
+    { ...row, category: "moto", brand: "Yamaha", model: "FZ25", color: "Preta E Laranja" },
+  ]);
+
+  assert.deepEqual(facets.models, [
+    { brand: "Yamaha", model: "Fazer 250", categories: ["moto"] },
+  ]);
+  assert.deepEqual(facets.colors, ["Azul", "Branco", "Preto"]);
+});
+
+test("buildStockWhere combina modelo unificado e cor sem sobrescrever OR", () => {
+  const where = buildStockWhere({ model: "Fazer 250", color: "Branco" }) as {
+    OR?: unknown[];
+    AND?: Array<{ OR?: Array<{ model?: { equals: string } }> }>;
+  };
+  assert.ok(Array.isArray(where.OR));
+  const modelCond = where.AND?.find((item) => Array.isArray(item.OR));
+  assert.ok(modelCond?.OR?.some((cond) => cond.model?.equals === "fazer fz25"));
+});

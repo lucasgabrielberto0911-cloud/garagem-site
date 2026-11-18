@@ -10,11 +10,14 @@ import {
   featuredBadgeIds,
   formatCardVersion,
   formatColorLabel,
+  formatStockModelLabel,
   formatTransmissionLabel,
   formatVehicleDisplay,
   formatVehicleWhatsAppMessage,
   gearsConflict,
   inferGearFromText,
+  modelFilterValues,
+  modelWhere,
   resolveTransmission,
   shortVersion,
   suggestedTransmission,
@@ -445,4 +448,49 @@ test("Destaque fica limitado aos primeiros N featured", () => {
   );
   assert.deepEqual([...ids], ["a", "c", "d"]);
   assert.equal(featuredBadgeIds([{ id: "a", featured: true }], 0).size, 0);
+});
+
+test("cores compostas agrupam pela cor base e colorWhere usa startsWith", () => {
+  assert.equal(formatColorLabel("Azul Meia-noite"), "Azul");
+  assert.equal(formatColorLabel("Branca Com Rodas Douradas"), "Branco");
+  assert.equal(formatColorLabel("Preta E Laranja"), "Preto");
+  assert.equal(formatColorLabel("Azul-Marinho"), "Azul");
+  assert.equal(formatColorLabel("Chumbo Grafite"), "Cinza");
+
+  const whereBranco = colorWhere("Branco") as { OR: Array<{ color: Record<string, unknown> }> };
+  assert.ok(
+    whereBranco.OR.some(
+      (cond) => cond.color.startsWith === "branca " && cond.color.mode === "insensitive",
+    ),
+  );
+  const whereAzul = colorWhere("Azul") as { OR: Array<{ color: Record<string, unknown> }> };
+  assert.ok(
+    whereAzul.OR.some(
+      (cond) => cond.color.startsWith === "azul " && cond.color.mode === "insensitive",
+    ),
+  );
+  const wherePreto = colorWhere("Preto") as { OR: Array<{ color: Record<string, unknown> }> };
+  assert.ok(
+    wherePreto.OR.some(
+      (cond) => cond.color.startsWith === "preta " && cond.color.mode === "insensitive",
+    ),
+  );
+});
+
+test("modelos equivalentes da Fazer 250 / FZ25 unificam no rótulo e no filtro", () => {
+  assert.equal(formatStockModelLabel("Fazer FZ25"), "Fazer 250");
+  assert.equal(formatStockModelLabel("Fazer FZ-25"), "Fazer 250");
+  assert.equal(formatStockModelLabel("FZ25"), "Fazer 250");
+  assert.equal(formatStockModelLabel("Fazer 250"), "Fazer 250");
+  assert.equal(formatStockModelLabel("Civic"), "Civic");
+
+  const values = modelFilterValues("Fazer 250");
+  assert.ok(values.includes("Fazer 250"));
+  assert.ok(values.includes("fazer fz25"));
+  assert.ok(values.includes("fazer fz-25"));
+  assert.ok(values.includes("fz25"));
+
+  const where = modelWhere("Fazer 250") as { OR: Array<{ model: { equals: string } }> };
+  assert.ok(Array.isArray(where.OR));
+  assert.ok(where.OR.some((cond) => cond.model.equals === "fazer fz25"));
 });

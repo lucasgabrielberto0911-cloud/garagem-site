@@ -1,8 +1,8 @@
 import { accessoryGroup } from "./legend-parser";
 import { sanitizeAccessory } from "./vehicle-accessories";
-import { brandKey, formatBrandName, formatModelName } from "./format";
+import { brandKey, formatBrandName } from "./format";
 import { canonicalStockAccessoryLabel } from "./vehicle-accessories";
-import { formatColorLabel } from "./vehicle-display";
+import { formatColorLabel, formatStockModelLabel } from "./vehicle-display";
 import type { StockModelOption } from "./stock-query";
 
 export type StockFacets = {
@@ -54,7 +54,7 @@ export function buildStockFacets(rows: FacetRow[]): StockFacets {
   const categoriesByModelKey = new Map<string, Set<string>>();
   for (const row of rows) {
     const brand = formatBrandName(row.brand ?? "");
-    const model = formatModelName(row.model ?? "");
+    const model = formatStockModelLabel(row.model ?? "");
     if (!brand || !model) continue;
     const key = `${brandKey(brand)}|${brandKey(model)}`;
     if (!categoriesByModelKey.has(key)) {
