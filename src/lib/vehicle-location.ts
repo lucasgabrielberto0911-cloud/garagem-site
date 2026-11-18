@@ -20,7 +20,7 @@ export const DEFAULT_VEHICLE_LOCATION_CITY: VehicleLocationCity = "linhares";
  * O admin informa a localização real; modelo e região atendida não a definem.
  */
 export const VEHICLE_LOCATION_HINT =
-  "Escolha a cidade onde o veículo está hoje. Essa informação aparece no anúncio, nos filtros do estoque e no Marketplace. A região atendida pela loja não muda a localização do veículo.";
+  "Escolha a cidade onde o veículo está hoje. No site, o cliente vê a região atendida pela loja; a cidade fica só no painel.";
 
 function normalizeLocationToken(value: unknown) {
   return String(value ?? "")

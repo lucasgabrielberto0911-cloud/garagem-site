@@ -103,7 +103,7 @@ export function PriceStatusSection({
             className={`col-span-2 flex flex-col gap-2 border px-3 py-2.5 text-sm text-cream sm:flex-row sm:items-center sm:justify-between ${
               priceSaveBlocked
                 ? "border-brand/50 bg-brand/10"
-                : "border-brand-orange/40 bg-brand-orange/10"
+                : "border-brand/40 bg-brand/10"
             }`}
           >
             <p className="leading-relaxed">

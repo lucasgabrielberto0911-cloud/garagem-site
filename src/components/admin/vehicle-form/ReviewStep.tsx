@@ -5,9 +5,13 @@ import {
   descriptionSummary,
   accessoriesSummary,
 } from "@/lib/admin-form-sections";
+import { VEHICLE_LOCATION_CITIES } from "@/lib/vehicle-location";
 import type { VehicleFormModel } from "./useVehicleFormState";
 import type { VehicleFormProps } from "./types";
-import { MoreDetailsSection } from "./sections/MoreDetailsSection";
+import {
+  LocationCitySection,
+  MoreDetailsSection,
+} from "./sections/MoreDetailsSection";
 
 export function ReviewStep({
   form,
@@ -35,13 +39,18 @@ export function ReviewStep({
     description,
     accessories,
     statusLabel,
+    locationCity,
+    consigned,
   } = form;
+  const city = VEHICLE_LOCATION_CITIES.find(
+    (option) => option.value === locationCity,
+  )?.label;
   return (
     <div className="space-y-3">
       <h2
         id="wizard-title"
         tabIndex={-1}
-        className="font-display text-lg font-semibold text-cream"
+        className="font-display text-xl font-semibold text-cream"
       >
         Etapa {step} de 4: {WIZARD_STEP_LABELS[step - 1]}
       </h2>
@@ -67,11 +76,16 @@ export function ReviewStep({
         <p>
           {values.price ? `R$ ${values.price}` : "Sem preço"} · {statusLabel}
         </p>
+        <p>
+          Cidade: {city ? `${city} ES` : "não escolhida"}
+          {consigned ? " · Consignado" : ""}
+        </p>
         {mode === "edit" ? (
-          <div className="border-t border-white/10 pt-3">
-            <p className="mb-4 font-display text-xs font-semibold uppercase tracking-wider text-cream">
+          <div className="space-y-4 border-t border-white/10 pt-3">
+            <p className="mb-4 font-display text-sm font-semibold uppercase tracking-wider text-cream">
               Mais opções
             </p>
+            <LocationCitySection form={form} />
             <MoreDetailsSection form={form} vehicle={vehicle} />
           </div>
         ) : null}

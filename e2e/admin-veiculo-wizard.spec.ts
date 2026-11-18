@@ -170,12 +170,14 @@ test.describe("wizard nos tamanhos configurados", () => {
       await next(page).click();
       await expect(form.locator('[name="description"]')).toHaveValue("Veículo revisado e bem cuidado.");
       await expect(form.getByRole("button", { name: "Remover Ar-condicionado", exact: true })).toBeVisible();
-      // Cidade e destaque ficam em "Mais detalhes" na etapa 3; o erro (já disparado ao tentar avançar sem preço) abre a seção sozinho.
+      // A cidade fica à vista na etapa 3; destaque e consignado seguem nos "Mais detalhes (opcional)".
       await next(page).click();
       await expect(title(page)).toContainText("Etapa 3 de 4");
       await expect(page.getByText("Selecione a cidade onde o veículo está.", { exact: true }).first()).toBeVisible();
-      await expect(page.locator("#vehicle-more-details")).toHaveAttribute("open", "");
+      await expect(page.getByRole("group", { name: "Onde está o veículo" })).toBeVisible();
+      await expect(page.locator("#vehicle-more-details")).not.toHaveAttribute("open", "");
       await page.getByRole("button", { name: "Linhares ES", exact: true }).click();
+      await page.locator("#vehicle-more-details > summary").click();
       await page.locator('[name="featured"]').check();
       await next(page).click();
       await expect(title(page)).toContainText("Etapa 4 de 4");

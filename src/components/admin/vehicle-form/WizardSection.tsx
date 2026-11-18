@@ -19,7 +19,7 @@ export function WizardSection({
       className={`scroll-mt-admin-form border bg-ink/50 ${errorCount ? "border-brand/50" : "border-white/10"}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3 sm:px-5">
-        <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+        <h3 className="font-display text-base font-semibold uppercase tracking-wider text-cream">
           {title}
           {errorCount ? (
             <span className="ml-2 text-red-400">
