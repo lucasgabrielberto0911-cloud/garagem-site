@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
+import { VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
+import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleSeals } from "@/components/site/VehicleSeals";
-import { publicVehicleSeals } from "./vehicle-seals";
+import { publicDossierChips } from "@/lib/vehicle-dossier";
+import { publicVehicleSeals, dossierSeals } from "./vehicle-seals";
 
 test("sem dado nenhum, não há selo", () => {
   assert.deepEqual(publicVehicleSeals({ verified: [], accessories: [] }), []);
@@ -83,4 +86,124 @@ test("componente de selos não renderiza sem selo e lista os que existem", () =>
   assert.match(html, /Revisões/);
   assert.match(html, /2 opcionais/);
   assert.doesNotMatch(html, /Procedência/);
+});
+
+
+test("dossierSeals: sem flag nenhuma, não há selo de dossiê", () => {
+  assert.deepEqual(dossierSeals({}), []);
+  assert.deepEqual(
+    dossierSeals({ hasSpareKey: false, hasManual: false, hasVideo: false }),
+    [],
+  );
+  assert.deepEqual(
+    dossierSeals({ hasSpareKey: null, hasManual: null, hasVideo: null }),
+    [],
+  );
+});
+
+test("dossierSeals: só flags verdadeiras geram selo", () => {
+  assert.deepEqual(dossierSeals({ hasSpareKey: true }), [
+    { id: "chave-reserva", label: "Chave reserva" },
+  ]);
+  assert.deepEqual(dossierSeals({ hasManual: true }), [
+    { id: "manual", label: "Manual do proprietário" },
+  ]);
+  assert.deepEqual(dossierSeals({ hasVideo: true }), [
+    { id: "video", label: "Vídeo disponível" },
+  ]);
+});
+
+test("dossierSeals: ordem é chave reserva, manual, vídeo", () => {
+  const seals = dossierSeals({
+    hasSpareKey: true,
+    hasManual: true,
+    hasVideo: true,
+  });
+  assert.deepEqual(
+    seals.map((s) => s.id),
+    ["chave-reserva", "manual", "video"],
+  );
+});
+
+test("componente renderiza chips de publicDossierChips junto com os selos sem duplicar", () => {
+  const chips = publicDossierChips({
+    hasSpareKey: true,
+    hasManual: true,
+    hasVideo: true,
+  });
+  const html = renderToStaticMarkup(
+    createElement(VehicleSeals, {
+      seals: [{ id: "procedencia", label: "Procedência" }],
+      chips,
+    }),
+  );
+  assert.match(html, /data-vehicle-seal="procedencia"/);
+  assert.match(html, /Procedência/);
+  assert.match(html, /data-vehicle-seal="chave-reserva"/);
+  assert.match(html, /Chave reserva/);
+  assert.match(html, /data-vehicle-seal="manual"/);
+  assert.match(html, /Manual do proprietário/);
+  assert.match(html, /data-vehicle-seal="video"/);
+  assert.match(html, /Vídeo disponível/);
+});
+
+test("VehicleMobileSummary exibe selos de dossiê apenas quando disponível", () => {
+  const available = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, {
+      title: "Honda Fit",
+      price: 62900,
+      sold: false,
+      facts: [],
+      hasSpareKey: true,
+      hasManual: true,
+      hasVideo: true,
+    }),
+  );
+  assert.match(available, /Chave reserva/);
+  assert.match(available, /Manual do proprietário/);
+  assert.match(available, /Vídeo disponível/);
+
+  const soldHtml = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, {
+      title: "Honda Fit",
+      price: 0,
+      sold: true,
+      facts: [],
+      hasSpareKey: true,
+      hasManual: true,
+      hasVideo: true,
+    }),
+  );
+  assert.doesNotMatch(soldHtml, /Chave reserva/);
+  assert.doesNotMatch(soldHtml, /Manual do proprietário/);
+  assert.doesNotMatch(soldHtml, /Vídeo disponível/);
+});
+
+test("VehicleQuickActions muda 'Pedir vídeo' para 'Ver vídeo no WhatsApp' quando hasVideo é true", () => {
+  const baseProps = {
+    contentId: "v-test-1",
+    contentSlug: "honda-fit-2020-v-test-1",
+    contentPath: "/estoque/honda-fit-2020-v-test-1",
+    contentName: "Honda Fit 2020",
+    value: 62900,
+    make: "Honda",
+    model: "Fit",
+    year: 2020,
+    video: "Quero vídeo",
+    finance: "Quero financiar",
+    trade: "Tenho troca",
+  };
+
+  const withoutVideo = renderToStaticMarkup(
+    createElement(VehicleQuickActions, { ...baseProps, hasVideo: false }),
+  );
+  assert.match(withoutVideo, /Pedir vídeo/);
+  assert.doesNotMatch(withoutVideo, /Ver vídeo no WhatsApp/);
+
+  const withVideo = renderToStaticMarkup(
+    createElement(VehicleQuickActions, { ...baseProps, hasVideo: true }),
+  );
+  assert.match(withVideo, /Ver vídeo no WhatsApp/);
+  assert.match(withVideo, /aria-label="Ver vídeo deste veículo no WhatsApp"/);
+  assert.doesNotMatch(withVideo, />Pedir vídeo</);
 });

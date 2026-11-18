@@ -26,7 +26,7 @@ test("chips do dossiê só aparecem quando o item é verdadeiro", () => {
       hasManual: true,
       hasVideo: true,
     }),
-    ["Chave reserva", "Manual do proprietário", "Vídeo sob pedido"],
+    ["Chave reserva", "Manual do proprietário", "Vídeo disponível"],
   );
 });
 

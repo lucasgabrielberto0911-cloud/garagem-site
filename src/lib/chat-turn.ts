@@ -66,7 +66,7 @@ import {
   CHAT_WARRANTY_REPLY,
   CHAT_DOCS_REPLY,
   CHAT_ORIGIN_REPLY,
-  CHAT_KEYS_REPLY,
+  formatChatKeysReply,
   CHAT_SOCIAL_REPLY,
   CHAT_PCD_REPLY,
   CHAT_GEAR_EXTRA_REPLY,
@@ -582,8 +582,12 @@ async function runChatTurnInternal(input: {
   if (!tradeTurn && !mayCreateLead && mediaMessage) {
     const candidates = resolveChatMediaVehicles(mediaMessage, input.stock, input.vehicleId, input.previousVehicleIds);
     const video = /v[ií]deo/i.test(mediaMessage);
+    const videoNote =
+      video && candidates.length === 1 && candidates[0]?.hasVideo
+        ? " (vídeo disponível deste anúncio)"
+        : "";
     const reply = candidates.length === 1
-      ? `O consultor manda ${video ? "um vídeo" : "mais fotos"} do ${chatMediaVehicleName(candidates[0]!)} pelo WhatsApp: ${CHAT_WHATSAPP_URL}`
+      ? `O consultor manda ${video ? "um vídeo" : "mais fotos"} do ${chatMediaVehicleName(candidates[0]!)}${videoNote} pelo WhatsApp: ${CHAT_WHATSAPP_URL}`
       : candidates.length > 1
         ? `De qual deles: ${candidates.map(chatMediaVehicleName).join(", ")}?`
         : "De qual carro você quer fotos ou vídeo?";
@@ -816,15 +820,7 @@ async function runChatTurnInternal(input: {
     }
   }
   if (policy === "keys") {
-    // Chave reserva / manual que constam na ficha do carro em tela (ou do único citado): diz que consta.
-    const unit = activeVehicle ?? (() => {
-      const pool = singleMentionedModelPool(input.stock, visitorMessage);
-      return pool?.length === 1 ? pool[0] : undefined;
-    })();
-    const items = unit?.accessories?.filter((item) => /chave|manual do|manual de|livro|revis/i.test(item)) ?? [];
-    const reply = unit && items.length
-      ? `Na ficha desse ${unit.model.length <= 4 ? unit.model.toUpperCase() : unit.model.charAt(0).toUpperCase() + unit.model.slice(1).toLowerCase()} consta: ${items.map((item) => item.trim()).join(", ")}. Qualquer outro detalhe, o consultor confere no carro e te confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`
-      : CHAT_KEYS_REPLY;
+    const reply = formatChatKeysReply(visitorMessage, input.stock, activeVehicle);
     emit(reply);
     return finish(reply, false, { policy, cards: false });
   }
