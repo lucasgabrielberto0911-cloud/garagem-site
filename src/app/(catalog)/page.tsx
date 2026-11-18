@@ -119,14 +119,16 @@ export default async function HomePage() {
                 segue no cabeçalho); tablet/computador: ambos lado a lado + assistente leve. */}
             <div className="hero-cta flex w-full shrink-0 flex-col gap-3 sm:max-w-md sm:gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none lg:self-center">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5">
-                <WhatsAppButton
-                  size="md"
-                  className="w-full rounded-lg !min-h-[44px] sm:!min-h-[46px] !px-4 !py-2.5 !text-[13px] sm:!text-sm shadow-md shadow-brand/20 whitespace-nowrap"
-                  trackingLabel="home-hero"
-                  message={WHATSAPP_MESSAGES.help}
-                >
-                  Falar no WhatsApp
-                </WhatsAppButton>
+                <SiteLeadHit contentName="Home Hero">
+                  <WhatsAppButton
+                    size="md"
+                    className="w-full rounded-lg !min-h-[44px] sm:!min-h-[46px] !px-4 !py-2.5 !text-[13px] sm:!text-sm shadow-md shadow-brand/20 whitespace-nowrap"
+                    trackingLabel="home-hero"
+                    message={WHATSAPP_MESSAGES.help}
+                  >
+                    Falar no WhatsApp
+                  </WhatsAppButton>
+                </SiteLeadHit>
                 <ButtonLink
                   href="/estoque"
                   size="md"
@@ -452,14 +454,16 @@ export default async function HomePage() {
           WhatsApp {site.whatsappLabel}.
         </p>
         <ActionRow className="mt-4 sm:justify-start">
-          <WhatsAppButton
-            size="lg"
-            className="w-full sm:w-auto"
-            trackingLabel="home-final"
-            message={WHATSAPP_MESSAGES.visit}
-          >
-            Falar com um consultor
-          </WhatsAppButton>
+          <SiteLeadHit contentName="Home Final">
+            <WhatsAppButton
+              size="lg"
+              className="w-full sm:w-auto"
+              trackingLabel="home-final"
+              message={WHATSAPP_MESSAGES.visit}
+            >
+              Falar com um consultor
+            </WhatsAppButton>
+          </SiteLeadHit>
           <ButtonLink href="/estoque" size="lg" variant="outline" className="w-full sm:w-auto">
             Continuar no estoque
           </ButtonLink>

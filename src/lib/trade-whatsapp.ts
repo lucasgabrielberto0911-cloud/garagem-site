@@ -8,13 +8,41 @@ import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 export const TRADE_TRANSMISSION_OPTIONS = ["Manual", "Automático"] as const;
 export type TradeTransmission = (typeof TRADE_TRANSMISSION_OPTIONS)[number];
 
+export const TRADE_TRANSMISSION_CHOICES = [
+  {
+    value: "Manual",
+    label: "Manual",
+    description: "Com pedal de embreagem",
+  },
+  {
+    value: "Automático",
+    label: "Automático",
+    description: "Sem pedal de embreagem",
+  },
+] as const;
+
 export const TRADE_CONDITION_OPTIONS = [
-  { value: "ótimo", label: "Ótimo" },
-  { value: "bom", label: "Bom" },
-  { value: "regular", label: "Regular" },
+  {
+    value: "ótimo",
+    label: "Ótimo",
+    description: "Bem conservado, tudo funcionando direitinho",
+  },
+  {
+    value: "bom",
+    label: "Bom",
+    description: "Rodando bem, só com marcas normais do uso",
+  },
+  {
+    value: "regular",
+    label: "Regular",
+    description: "Precisa de reparo na pintura, pneus ou mecânica",
+  },
 ] as const;
 export type TradeConditionValue = (typeof TRADE_CONDITION_OPTIONS)[number]["value"];
 export type TradeConditionLabel = (typeof TRADE_CONDITION_OPTIONS)[number]["label"];
+
+export const TRADE_STEP_COUNT = 5 as const;
+export type TradeStep = 1 | 2 | 3 | 4 | 5;
 
 export const TRADE_ORIGIN_TAG = "[origem: troca]" as const;
 
@@ -57,6 +85,14 @@ export type TradeFormFieldErrorKey =
   | "km"
   | "transmission"
   | "condition";
+
+export const TRADE_FIELD_ERRORS: Record<TradeFormFieldErrorKey, string> = {
+  brandModel: "Escreva qual é o seu carro (por exemplo: Gol, Onix ou Corolla).",
+  year: "Digite o ano com 4 números (por exemplo: 2020 ou 2019/2020).",
+  km: "Digite quantos km o carro tem mais ou menos (por exemplo: 65.000).",
+  transmission: "Toque em uma opção: Manual ou Automático.",
+  condition: "Toque na opção que melhor mostra como está o carro hoje.",
+};
 
 function cleanSingleLine(raw?: string | number | null, maxLen = 120): string {
   if (raw == null) return "";
@@ -115,6 +151,59 @@ export function formatTradeKm(raw?: string | number | null): string | null {
   return `${formatNumberBR(value)} km`;
 }
 
+export function stepForTradeFieldError(field: TradeFormFieldErrorKey): TradeStep {
+  switch (field) {
+    case "brandModel":
+      return 1;
+    case "year":
+    case "km":
+      return 2;
+    case "transmission":
+      return 3;
+    case "condition":
+      return 4;
+  }
+}
+
+export function validateTradeStep(
+  step: TradeStep,
+  input: TradeFormRawInput,
+):
+  | { ok: true }
+  | { ok: false; errors: Partial<Record<TradeFormFieldErrorKey, string>> } {
+  const errors: Partial<Record<TradeFormFieldErrorKey, string>> = {};
+
+  if (step === 1) {
+    const brandModel = cleanSingleLine(input.brandModel, 80);
+    if (brandModel.length < 2) {
+      errors.brandModel = TRADE_FIELD_ERRORS.brandModel;
+    }
+  } else if (step === 2) {
+    if (!normalizeTradeYear(input.year)) {
+      errors.year = TRADE_FIELD_ERRORS.year;
+    }
+    if (!formatTradeKm(input.km)) {
+      errors.km = TRADE_FIELD_ERRORS.km;
+    }
+  } else if (step === 3) {
+    if (!normalizeTradeTransmission(input.transmission)) {
+      errors.transmission = TRADE_FIELD_ERRORS.transmission;
+    }
+  } else if (step === 4) {
+    if (!normalizeTradeCondition(input.condition)) {
+      errors.condition = TRADE_FIELD_ERRORS.condition;
+    }
+  } else {
+    const full = validateTradeForm(input);
+    if (!full.ok) return { ok: false, errors: full.errors };
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { ok: false, errors };
+  }
+  return { ok: true };
+}
+
 export function validateTradeForm(input: TradeFormRawInput):
   | {
       ok: true;
@@ -144,19 +233,19 @@ export function validateTradeForm(input: TradeFormRawInput):
   const interestText = cleanSingleLine(input.interestText, 120);
 
   if (brandModel.length < 2) {
-    errors.brandModel = "Informe a marca e o modelo do veículo.";
+    errors.brandModel = TRADE_FIELD_ERRORS.brandModel;
   }
   if (!year) {
-    errors.year = "Informe um ano válido (ex.: 2020 ou 2019/2020).";
+    errors.year = TRADE_FIELD_ERRORS.year;
   }
   if (!km) {
-    errors.km = "Informe a quilometragem aproximada.";
+    errors.km = TRADE_FIELD_ERRORS.km;
   }
   if (!transmission) {
-    errors.transmission = "Selecione o câmbio.";
+    errors.transmission = TRADE_FIELD_ERRORS.transmission;
   }
   if (!condition) {
-    errors.condition = "Selecione o estado geral.";
+    errors.condition = TRADE_FIELD_ERRORS.condition;
   }
 
   if (

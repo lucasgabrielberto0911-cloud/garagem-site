@@ -3,6 +3,7 @@ import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 
 export const revalidate = 3600;
@@ -79,9 +80,11 @@ export default function ComoFuncionaPage() {
           ))}
         </ol>
         <div className="mt-10 flex flex-col items-center gap-4 text-center">
-          <WhatsAppButton message={WHATSAPP_MESSAGES.help} size="lg">
-            Falar no WhatsApp
-          </WhatsAppButton>
+          <SiteLeadHit contentName="Como funciona">
+            <WhatsAppButton message={WHATSAPP_MESSAGES.help} size="lg">
+              Falar no WhatsApp
+            </WhatsAppButton>
+          </SiteLeadHit>
         </div>
         <nav
           aria-label="Próximos passos"

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useHotLeadViewedCars } from "@/components/site/RememberHotLeadVehicle";
 import { VehicleLeadHit } from "@/lib/funnel-events";
 import { IconWhatsApp } from "@/components/site/icons";
 import { formatCurrencyBRL } from "@/lib/format";
+import { withHotLeadAlsoViewed } from "@/lib/hot-lead";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import {
@@ -82,11 +84,17 @@ export function VehicleMobileBar({
   soldLabel?: string;
 }) {
   const isMoto = category === "moto";
+  const viewedCars = useHotLeadViewedCars(!sold);
   const track = fichaWhatsAppTracking({ id: vehicleId, path: vehiclePath });
-  const href = whatsappUrl(
-    message ??
-      buildWhatsAppCarMessage({
+  const resolvedMessage = message
+    ? withHotLeadAlsoViewed(message, viewedCars, {
         id: vehicleId,
+        slug: vehicleSlug,
+        path: vehiclePath,
+      })
+    : buildWhatsAppCarMessage({
+        id: vehicleId,
+        slug: vehicleSlug,
         brand,
         model,
         version,
@@ -98,9 +106,9 @@ export function VehicleMobileBar({
         path: vehiclePath,
         isMoto,
         pageOrigin: "barra fixa",
-      }),
-    track,
-  );
+        alsoViewed: viewedCars,
+      });
+  const href = whatsappUrl(resolvedMessage, track);
 
   return (
     <div
