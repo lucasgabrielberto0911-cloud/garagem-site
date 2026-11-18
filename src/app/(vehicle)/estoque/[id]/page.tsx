@@ -1,6 +1,5 @@
 import { publicVehicleDescription } from "@/lib/public-vehicle-description";
 import type { Metadata } from "next";
-import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import Link from "next/link";
 import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
 import { Suspense } from "react";
@@ -34,8 +33,8 @@ import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { MissingModelDisclosure } from "@/components/site/MissingModelDisclosure";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { JsonLd } from "@/components/JsonLd";
-import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
-import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
+import { buildVehicleFichaMetadata } from "@/lib/vehicle-seo";
+import { formatCurrencyBRL, formatBrandName, formatModelName } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
 import {
   buildVehiclePublicSpecs,
@@ -45,7 +44,7 @@ import {
   vehicleKeyFacts,
 } from "@/lib/vehicle-specs";
 import { VehicleKeyFacts } from "@/components/site/VehicleKeyFacts";
-import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
 import { priceBandHref } from "@/lib/related-vehicles";
@@ -94,62 +93,7 @@ export async function generateMetadata({
     return { title: `Veículo não encontrado | ${site.name}` };
   }
 
-  const sold = vehicle.status === "vendido";
-  const display = formatVehicleDisplay(vehicle);
-  const label = display.fullLabel;
-  const title = vehicleSeoTitle({
-    brand: vehicle.brand,
-    model: vehicle.model,
-    version: vehicle.version,
-    yearModel: vehicle.yearModel,
-    price: vehicle.price,
-    sold,
-    siteName: site.name,
-  });
-  const description = vehicleSeoDescription({
-    brand: vehicle.brand,
-    model: vehicle.model,
-    version: display.version,
-    year: vehicle.yearModel,
-    price: vehicle.price,
-    km: vehicle.km,
-    transmission: display.transmission,
-    sold,
-    siteName: site.name,
-  });
-  const rawCover = vehicle.photos[0]?.url;
-  const cover = rawCover ? absoluteUrl(publicVehiclePhotoSrc(rawCover)) : null;
-  const path = vehiclePath(vehicle);
-
-  return {
-    title,
-    description,
-    alternates: { canonical: path },
-    robots: sold ? { index: false, follow: true } : undefined,
-    openGraph: {
-      type: "website",
-      siteName: site.name,
-      title,
-      description,
-      url: absoluteUrl(path),
-      images: cover
-        ? [vehicleOpenGraphImage({ url: cover, alt: label })]
-        : [
-            {
-              url: absoluteUrl("/og.png"),
-              width: 1200,
-              height: 630,
-              alt: title,
-            },
-          ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [{ url: cover ?? absoluteUrl("/og.png"), alt: label }],
-    },
-  };
+  return buildVehicleFichaMetadata(vehicle);
 }
 
 export default async function VehicleDetailPage({
