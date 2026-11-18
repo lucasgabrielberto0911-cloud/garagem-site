@@ -31,6 +31,7 @@ export function VehicleCardWhatsApp({
   trackingLabel = "vehicle-card",
   campaign,
   showOnStockList = false,
+  catalog,
 }: {
   vehicleId: string;
   label: string;
@@ -46,6 +47,7 @@ export function VehicleCardWhatsApp({
   campaign?: WhatsAppCampaign;
   /** O novo card mobile reutiliza a barra original mesmo dentro do estoque. */
   showOnStockList?: boolean;
+  catalog?: boolean;
 }) {
   const hideOnStockList = useHideStockCardInterest();
   const compact = variant === "chat-compact";
@@ -65,6 +67,7 @@ export function VehicleCardWhatsApp({
       make={make}
       model={model}
       year={year}
+      catalog={catalog}
     >
       <a
         href={href}

@@ -270,6 +270,7 @@ export type FavoriteSnapshot = {
   color?: string | null;
   locationCity?: string | null;
   updatedAt?: string | null;
+  catalog?: boolean;
   photos: Array<{ url: string; thumbnailUrl?: string | null }>;
 };
 

@@ -38,6 +38,28 @@ async function withPriceDrops(cards: VehicleCardRecord[]) {
   return cards.map((card) => (drops.has(card.id) ? { ...card, priceDrop: drops.get(card.id) } : card));
 }
 
+/** Marca `catalog: false` em unidades consignadas sem expor o campo interno `consigned`. */
+async function withCatalogFlag(cards: VehicleCardRecord[]) {
+  const availableIds = cards
+    .filter((card) => card.status === "disponivel")
+    .map((card) => card.id);
+  if (availableIds.length === 0) return cards;
+  try {
+    const consigned = await prisma.vehicle.findMany({
+      where: { id: { in: availableIds }, consigned: true },
+      select: { id: true },
+    });
+    if (consigned.length === 0) return cards;
+    const consignedIds = new Set(consigned.map((row) => row.id));
+    return cards.map((card) =>
+      consignedIds.has(card.id) ? { ...card, catalog: false } : card,
+    );
+  } catch (error) {
+    if (!isMissingColumnError(error, "consigned")) throw error;
+    return cards;
+  }
+}
+
 export async function queryPublicVehicleCards(
   args: CardQuery,
 ): Promise<VehicleCardRecord[]> {
@@ -46,13 +68,13 @@ export async function queryPublicVehicleCards(
       ...args,
       select: PUBLIC_VEHICLE_CARD_SELECT,
     });
-    return withPriceDrops(rows.map(withCardDefaults));
+    return withCatalogFlag(await withPriceDrops(rows.map(withCardDefaults)));
   } catch (error) {
     if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
     const rows = await prisma.vehicle.findMany({
       ...args,
       select: PUBLIC_VEHICLE_CARD_SELECT_LEGACY,
     });
-    return withPriceDrops(rows.map(withCardDefaults));
+    return withCatalogFlag(await withPriceDrops(rows.map(withCardDefaults)));
   }
 }

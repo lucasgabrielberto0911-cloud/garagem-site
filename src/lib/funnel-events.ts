@@ -125,7 +125,11 @@ export function buildCatalogPayload(
         id,
         quantity: 1,
       };
-      if (typeof params.value === "number" && Number.isFinite(params.value)) {
+      if (
+        content_ids.length === 1 &&
+        typeof params.value === "number" &&
+        Number.isFinite(params.value)
+      ) {
         row.item_price = params.value;
       }
       return row;
@@ -331,6 +335,28 @@ export function trackLead(params: CatalogEventParams) {
   fireGtag("generate_lead", gtagItemParams(payload));
 }
 
+export type CatalogVehicleCandidate = {
+  id?: string | null;
+  price?: number | null;
+  status?: string | null;
+  catalog?: boolean;
+  consigned?: boolean | null;
+  sold?: boolean;
+};
+
+/**
+ * Veículo elegível ao catálogo da Meta: disponível e do estoque próprio
+ * (`consigned` e vendidos/reservados não entram em `content_ids`).
+ */
+export function isCatalogVehicle(
+  vehicle?: CatalogVehicleCandidate | null,
+): boolean {
+  if (!vehicle?.id?.trim()) return false;
+  if (vehicle.sold || vehicle.consigned || vehicle.catalog === false) return false;
+  if (vehicle.status && vehicle.status !== "disponivel") return false;
+  return true;
+}
+
 /** Dados do veículo da ficha (contexto do chat) no formato de evento de catálogo. */
 export function catalogParamsFromChatVehicle(vehicle: {
   id: string;
@@ -339,11 +365,18 @@ export function catalogParamsFromChatVehicle(vehicle: {
   model: string;
   year?: number;
   price?: number;
+  catalog?: boolean;
+  consigned?: boolean;
 }): CatalogEventParams {
+  const inCatalog = isCatalogVehicle(vehicle);
+  const value =
+    typeof vehicle.price === "number" && Number.isFinite(vehicle.price) && vehicle.price > 0
+      ? vehicle.price
+      : undefined;
   return {
-    content_ids: [vehicle.id],
+    content_ids: inCatalog ? [vehicle.id] : [],
     content_name: vehicle.label,
-    value: vehicle.price,
+    ...(value !== undefined ? { value, currency: "BRL" as const } : {}),
     make: vehicle.brand,
     model: vehicle.model,
     year: vehicle.year,
@@ -358,6 +391,57 @@ export function trackCatalogWhatsAppClick(params?: CatalogEventParams) {
   if (!params || params.content_ids.length === 0) return;
   trackLead(params);
   trackAddToCart(params);
+}
+
+/**
+ * Clique de WhatsApp numa lista de veículos (ex.: Favoritos).
+ * Envia AddToCart + Lead apenas com `content_ids` do catálogo (sem consignados).
+ * Se nenhum item estiver no catálogo, envia apenas Lead sem `content_ids`.
+ */
+export function trackVehiclesWhatsAppLead(
+  vehicles: readonly CatalogVehicleCandidate[],
+  contentName = "Favoritos",
+) {
+  if (vehicles.length === 0) return;
+  const catalogItems = vehicles.filter(isCatalogVehicle);
+  const content_ids = catalogItems
+    .map((vehicle) => vehicle.id?.trim() ?? "")
+    .filter(Boolean);
+  const catalogValue = catalogItems.reduce(
+    (sum, vehicle) =>
+      typeof vehicle.price === "number" &&
+      Number.isFinite(vehicle.price) &&
+      vehicle.price > 0
+        ? sum + vehicle.price
+        : sum,
+    0,
+  );
+
+  if (content_ids.length > 0) {
+    trackCatalogWhatsAppClick({
+      content_ids,
+      content_name: contentName,
+      ...(catalogValue > 0 ? { value: catalogValue, currency: "BRL" } : {}),
+    });
+    return;
+  }
+
+  const fallbackValue = vehicles.reduce(
+    (sum, vehicle) =>
+      !vehicle.sold &&
+      vehicle.status !== "vendido" &&
+      typeof vehicle.price === "number" &&
+      Number.isFinite(vehicle.price) &&
+      vehicle.price > 0
+        ? sum + vehicle.price
+        : sum,
+    0,
+  );
+  trackLead({
+    content_ids: [],
+    content_name: contentName,
+    ...(fallbackValue > 0 ? { value: fallbackValue, currency: "BRL" } : {}),
+  });
 }
 
 /** @deprecated Use trackLead — Commerce Manager casa Lead, não Contact. */
@@ -566,6 +650,9 @@ export type VehicleHitProps = {
   make?: string;
   model?: string;
   year?: number;
+  /** `false` quando fora do catálogo da Meta (ex.: consignado ou reservado). */
+  catalog?: boolean;
+  consigned?: boolean;
   stateOfVehicle?: string;
   exteriorColor?: string;
   transmission?: string;
@@ -592,6 +679,9 @@ function catalogParams({
     content_ids: [contentId],
     content_name: contentName,
     value,
+    ...(typeof value === "number" && Number.isFinite(value)
+      ? { currency: "BRL" as const }
+      : {}),
     make,
     model,
     year,
@@ -607,7 +697,7 @@ function catalogParams({
 export function VehicleViewContent({
   catalog = true,
   ...props
-}: VehicleHitProps & { catalog?: boolean }) {
+}: VehicleHitProps) {
   const {
     contentId,
     contentName,
@@ -616,6 +706,7 @@ export function VehicleViewContent({
     make,
     model,
     year,
+    consigned,
     stateOfVehicle,
     exteriorColor,
     transmission,
@@ -627,7 +718,7 @@ export function VehicleViewContent({
   useEffect(() => {
     if (!contentId) return;
     trackVehicleView({ vehicleId: contentId, slug });
-    if (!catalog) return;
+    if (!catalog || consigned) return;
     trackViewContent(
       catalogParams({
         contentId,
@@ -646,6 +737,7 @@ export function VehicleViewContent({
     );
   }, [
     catalog,
+    consigned,
     contentId,
     contentName,
     slug,
@@ -665,7 +757,41 @@ export function VehicleViewContent({
 }
 
 /**
- * WhatsApp da ficha: Lead (catálogo) e AddToCart (otimização da campanha atual).
+ * Dispara eventos de clique em WhatsApp de veículo:
+ * - No catálogo: `Lead` + `AddToCart` com `content_ids`, `value` e `currency: "BRL"`.
+ * - Fora do catálogo (ex.: consignado): apenas `Lead` sem `content_ids`.
+ */
+export function trackVehicleLeadHit(props: VehicleHitProps) {
+  if (!props.contentId?.trim()) return;
+  const value =
+    typeof props.value === "number" &&
+    Number.isFinite(props.value) &&
+    props.value > 0
+      ? props.value
+      : undefined;
+  if (
+    !isCatalogVehicle({
+      id: props.contentId,
+      catalog: props.catalog,
+      consigned: props.consigned,
+    })
+  ) {
+    trackLead({
+      content_ids: [],
+      content_name: props.contentName,
+      ...(value !== undefined ? { value, currency: "BRL" } : {}),
+    });
+    return;
+  }
+  const params = catalogParams({
+    ...props,
+    value,
+  });
+  trackCatalogWhatsAppClick(params);
+}
+
+/**
+ * WhatsApp da ficha/cards/comparador/chat: Lead (catálogo) e AddToCart (otimização da campanha atual).
  * Não usa preventDefault — o wa.me abre na hora. vehicle_view / whatsapp_click seguem no link.
  */
 export function VehicleLeadHit({
@@ -677,10 +803,7 @@ export function VehicleLeadHit({
     {
       className: "contents",
       onClickCapture: () => {
-        if (!props.contentId) return;
-        const params = catalogParams(props);
-        trackLead(params);
-        trackAddToCart(params);
+        trackVehicleLeadHit(props);
       },
     },
     children,

@@ -69,6 +69,7 @@ export function VehicleCard({
     status: vehicle.status,
     featured: vehicle.featured,
     color: vehicle.color,
+    catalog: vehicle.catalog,
     updatedAt:
       vehicle.updatedAt instanceof Date
         ? vehicle.updatedAt.toISOString()
@@ -158,6 +159,7 @@ export function VehicleCard({
           <VehicleCardWhatsApp
             showOnStockList
             vehicleId={vehicle.id}
+            catalog={vehicle.status === "disponivel" && vehicle.catalog !== false}
             label={display.fullLabel}
             message={formatVehicleWhatsAppMessage({
               ...vehicle,

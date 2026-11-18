@@ -28,6 +28,8 @@ export type ChatWhatsAppCta = {
   benefit: string;
   /** Rótulo do `WhatsAppClick`; só muda onde a intenção precisa ser contada à parte. */
   trackingLabel?: string;
+  /** Veículo específico associado ao CTA (para `AddToCart`/`Lead` fora da ficha). */
+  vehicle?: ChatWhatsAppVehicle | null;
 };
 
 const URL_RE = /https?:\/\/[^\s]+/g;
@@ -141,9 +143,11 @@ export type ChatWhatsAppVehicle = {
   path?: string;
   category?: string;
   sold?: boolean;
+  catalog?: boolean;
 };
 
 export function chatCardWhatsAppVehicle(vehicle: {
+  id?: string;
   href: string;
   title: string;
   brand: string;
@@ -152,23 +156,29 @@ export function chatCardWhatsAppVehicle(vehicle: {
   year: number;
   price: number;
   category?: string;
+  sold?: boolean;
+  catalog?: boolean;
 }): ChatWhatsAppVehicle {
   const version = shortVersion(vehicle.version, vehicle.model);
   return {
+    ...(vehicle.id ? { id: vehicle.id } : {}),
     label: `${vehicle.title}${version ? ` ${version}` : ""} ${vehicle.year}`.trim(),
     brand: vehicle.brand,
     model: vehicle.model,
     version: vehicle.version,
     year: vehicle.year,
-    price: vehicle.price,
+    price: vehicle.sold ? undefined : vehicle.price,
     path: vehicle.href,
     category: vehicle.category,
+    ...(vehicle.sold ? { sold: true } : {}),
+    ...(vehicle.catalog === false ? { catalog: false } : {}),
   };
 }
 
 export function resolveChatWhatsAppVehicle(
   pageVehicle?: ChatWhatsAppVehicle | null,
   cards: Array<{
+    id?: string;
     href: string;
     title: string;
     brand: string;
@@ -177,6 +187,8 @@ export function resolveChatWhatsAppVehicle(
     year: number;
     price: number;
     category?: string;
+    sold?: boolean;
+    catalog?: boolean;
   }> = [],
 ): ChatWhatsAppVehicle | null {
   if (pageVehicle?.sold) return pageVehicle;
@@ -456,6 +468,7 @@ export function chatWhatsAppCta(
       href: whatsappUrl(WHATSAPP_MESSAGES.wanted(vehicle.label), track),
       label: "Avisar quando chegar",
       benefit: "Consultor procura o modelo pra você",
+      vehicle: null,
     };
   }
 
@@ -464,6 +477,7 @@ export function chatWhatsAppCta(
       href: whatsappUrl(WHATSAPP_MESSAGES.help, track),
       label: "Falar com a loja",
       benefit: "Consultor humano · das 8h às 23h",
+      vehicle: null,
     };
   }
   // Cards abaixo são alternativas disponíveis; o aviso continua sobre o modelo vendido.
@@ -472,6 +486,7 @@ export function chatWhatsAppCta(
       href: waitlistHref,
       label: "Avisar quando chegar",
       benefit: "Consultor procura o modelo pra você",
+      vehicle: null,
     };
   }
   if (wants("finance", /financi|parcela|60x|simul|cartao|18 vez/)) {
@@ -484,6 +499,7 @@ export function chatWhatsAppCta(
       ),
       label: "Falar sobre financiamento",
       benefit: "O consultor explica as condições no seu caso",
+      vehicle: subject,
     };
   }
   if (wants("trade", /\btroca\b/)) {
@@ -496,6 +512,7 @@ export function chatWhatsAppCta(
       ),
       label: "Avaliar minha troca",
       benefit: "Valor da troca com fotos, pelo WhatsApp",
+      vehicle: subject,
     };
   }
   if (userIntent === "visit") {
@@ -508,6 +525,7 @@ export function chatWhatsAppCta(
       ),
       label: "Agendar visita",
       benefit: "Consultor combina dia e local",
+      vehicle: subject,
     };
   }
   if (userIntent === "photos" || userIntent === "video") {
@@ -521,6 +539,7 @@ export function chatWhatsAppCta(
       label: userIntent === "video" ? "Pedir vídeo" : "Pedir mais fotos",
       benefit: "O consultor manda pelo WhatsApp",
       ...(userIntent === "video" ? { trackingLabel: "chat-video" } : {}),
+      vehicle: subject,
     };
   }
   if (
@@ -532,6 +551,7 @@ export function chatWhatsAppCta(
       href: waitlistHref,
       label: "Avisar quando chegar",
       benefit: "Consultor procura o modelo pra você",
+      vehicle: null,
     };
   }
   const handoffVehicles = opts.handoff?.vehicles?.filter(
@@ -553,6 +573,7 @@ export function chatWhatsAppCta(
         ? `Perguntar sobre ${vehicle.category === "moto" ? "a" : "o"} ${name}`
         : "Tirar dúvidas",
       benefit: "Tirar dúvidas com o consultor",
+      vehicle,
     };
   }
   return {
@@ -570,6 +591,7 @@ export function chatWhatsAppCta(
     ),
     label: "Chamar consultor",
     benefit: "Confirma o modelo · das 8h às 23h",
+    vehicle: vehicle ?? null,
   };
 }
 

@@ -33,6 +33,8 @@ export type VehicleCardRecord = {
   /** Preço atual menor que o último registrado (VehiclePriceHistory). */
   /** Valor da queda em R$ (histórico real); ausente = sem queda. */
   priceDrop?: number;
+  /** `false` quando o veículo não faz parte do catálogo da Meta (ex.: consignado). */
+  catalog?: boolean;
   photos: VehicleCardPhoto[];
 };
 
