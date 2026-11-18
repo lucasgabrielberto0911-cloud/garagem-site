@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
-import { Container } from "@/components/site/ui";
+import { Container, WhatsAppButton } from "@/components/site/ui";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import {
   IconClock,
   IconInstagram,
@@ -210,6 +211,15 @@ export async function SiteFooter() {
               ))}
             </ul>
           </nav>
+          <SiteLeadHit contentName="Rodapé">
+            <WhatsAppButton
+              size="md"
+              className="w-full"
+              trackingLabel="footer"
+            >
+              Falar no WhatsApp
+            </WhatsAppButton>
+          </SiteLeadHit>
           {PHONES.map((phone, index) => (
             <a
               key={phone.digits}
