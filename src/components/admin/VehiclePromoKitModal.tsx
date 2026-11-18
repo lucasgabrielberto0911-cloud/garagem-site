@@ -264,7 +264,7 @@ export function VehiclePromoKitModal({
                 id="promo-kit-title"
                 className="font-display text-xl sm:text-2xl font-bold text-cream"
               >
-                Kit de divulgação
+                Kit de Divulgação
               </h2>
               <p className="mt-1 font-body text-base text-cream/85">
                 {cleanHeading}
@@ -273,7 +273,6 @@ export function VehiclePromoKitModal({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Fechar kit de divulgação"
               className="inline-flex min-h-[48px] min-w-[48px] shrink-0 items-center justify-center border border-white/20 bg-asphalt px-3 font-display text-base font-semibold text-cream transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
             >
               Fechar
