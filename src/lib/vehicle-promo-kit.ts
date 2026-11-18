@@ -14,7 +14,8 @@ export const PROMO_BG_DARK = "#0D0D0F";
 export const PROMO_SURFACE_DARK = "#16161A";
 export const PROMO_BORDER_DARK = "#2A2A30";
 
-export const PROMO_TRADE_FINANCE_TEXT = "ACEITAMOS TROCA · FINANCIAMOS";
+export const PROMO_TRADE_FINANCE_TEXT =
+  "ACEITAMOS TROCA · FINANCIAMOS EM ATÉ 60X";
 export const PROMO_SERVICE_AREAS_TEXT =
   "Atendemos Linhares, Aracruz e Grande Vitória";
 export const PROMO_APPOINTMENT_TEXT =
@@ -55,7 +56,7 @@ export const FEED_CARD_WIDTH = 1080;
 export const FEED_CARD_HEIGHT = 1350;
 export const STORY_CARD_WIDTH = 1080;
 export const STORY_CARD_HEIGHT = 1920;
-export const COVER_CARD_WIDTH = 1440;
+export const COVER_CARD_WIDTH = 1080;
 export const COVER_CARD_HEIGHT = 1080;
 
 export const FEED_PHOTO_BOX: PhotoPlacement = {
@@ -73,10 +74,10 @@ export const STORY_PHOTO_BOX: PhotoPlacement = {
 };
 
 export const COVER_PHOTO_BOX: PhotoPlacement = {
-  x: 56,
-  y: 126,
-  width: 880,
-  height: 660,
+  x: 160,
+  y: 94,
+  width: 760,
+  height: 570,
 };
 
 export const PROMO_ART_SPECS: Record<PromoArtKind, PromoArtSpec> = {
@@ -108,13 +109,13 @@ export const PROMO_ART_SPECS: Record<PromoArtKind, PromoArtSpec> = {
     kind: "cover",
     label: "Capa do anúncio",
     shortLabel: "Capa",
-    helperText: "Horizontal 1440×1080 (4:3) para portais, grupos e vitrine",
+    helperText: "Quadrada 1080×1080 (1:1) para capa, vitrine e grupos",
     width: COVER_CARD_WIDTH,
     height: COVER_CARD_HEIGHT,
-    ratioLabel: "4:3",
-    fileSuffix: "capa-1440x1080",
+    ratioLabel: "1:1",
+    fileSuffix: "capa-1080x1080",
     photoBox: COVER_PHOTO_BOX,
-    safeArea: { top: 24, bottom: 1056, left: 56, right: 1384 },
+    safeArea: { top: 24, bottom: 1056, left: 60, right: 1020 },
   },
 };
 
@@ -479,7 +480,7 @@ export function buildWhatsAppPromo(
       ? [`💰 À vista: *${formatCurrencyBRL(vehicle.price)}*`]
       : [`🏷️ *Veículo vendido*`]),
     "",
-    `✅ Aceitamos troca · Financiamos`,
+    `✅ Aceitamos troca · Financiamos em até 60x`,
     `📍 ${PROMO_SERVICE_AREAS_TEXT}`,
     `📲 ${PROMO_APPOINTMENT_TEXT}: ${site.whatsappLabel}`,
     `🔗 Veja as fotos e a ficha completa: ${url}`,
@@ -535,7 +536,7 @@ export function buildInstagramPromo(
     ...(transmission ? [`• Câmbio: ${transmission}`] : []),
     ...accessories.map((item) => `• ${item}`),
     "",
-    "Aceitamos troca e financiamos.",
+    "Aceitamos troca e financiamos em até 60x.",
     `${PROMO_SERVICE_AREAS_TEXT}. ${PROMO_APPOINTMENT_TEXT}: ${site.whatsappLabel}.`,
     `Confira no site: ${domain}`,
     "",
@@ -1098,153 +1099,94 @@ export function renderPromoArt(
     return;
   }
 
-  // CAPA 1440×1080 (4:3 editorial de duas colunas)
+  // CAPA 1080×1080 (1:1 quadrada com quadro de foto 4:3 centralizado 760×570)
   ctx.fillStyle = PROMO_BRAND_RED;
   ctx.fillRect(0, 0, W, 10);
+  drawDiagonalSlash(ctx, W - 180, 10, 70, 8, 12, PROMO_BRAND_RED_DARK);
 
   // Cabeçalho: logo à esquerda + contato à direita
   drawBrandLogo(
     ctx,
     options?.logoImg,
-    { x: 56, y: 34, width: 310, height: 60 },
+    { x: 60, y: 24, width: 280, height: 54 },
     "left",
   );
 
   ctx.textAlign = "right";
   ctx.fillStyle = "#D4D4D8";
-  ctx.font = `600 22px ${bodyFamily}`;
+  ctx.font = `600 20px ${bodyFamily}`;
   ctx.fillText(
     `${PROMO_DOMAIN_TEXT}  ·  WhatsApp ${site.whatsappLabel}`,
-    W - 56,
-    72,
-    760,
+    W - 60,
+    58,
+    620,
   );
 
-  // Coluna esquerda: foto 4:3 (880×660) 100% livre de sobreposições
+  // Quadro 4:3 (760×570) em x = 160, y = 94 (100% livre de sobreposições)
   drawPhotoFrame4x3(ctx, spec.photoBox, options?.photoImg, bodyFamily);
 
-  // Coluna direita: x = 968, width = 416
-  const colX = 968;
-  const colW = 416;
+  const contentX = 60;
+  const contentW = 960;
 
-  ctx.fillStyle = PROMO_BRAND_RED;
-  ctx.fillRect(colX, 126, 68, 8);
-
+  // Título em Barlow Condensed ExtraBold Italic
   ctx.textAlign = "left";
-  ctx.fillStyle = "#D4D4D8";
-  fitFontSize(
-    ctx,
-    cleanBrand,
-    colW,
-    38,
-    24,
-    (px) => `italic 800 ${px}px ${titleFamily}`,
-  );
-  ctx.fillText(cleanBrand, colX, 176, colW);
-
   ctx.fillStyle = "#FFFFFF";
   fitFontSize(
     ctx,
-    cleanModel,
-    colW,
-    68,
+    fullTitle,
+    contentW,
+    62,
     38,
     (px) => `italic 800 ${px}px ${titleFamily}`,
   );
-  ctx.fillText(cleanModel, colX, 244, colW);
+  ctx.fillText(fullTitle, contentX, 728, contentW);
 
   if (cleanVersion) {
     ctx.fillStyle = "#D4D4D8";
     fitFontSize(
       ctx,
       cleanVersion,
-      colW,
+      contentW,
       24,
       18,
       (px) => `600 ${px}px ${bodyFamily}`,
     );
-    ctx.fillText(cleanVersion, colX, 286, colW);
+    ctx.fillText(cleanVersion, contentX, 764, contentW);
   }
 
-  // Blocos verticais de ANO / KM / CÂMBIO na coluna direita
-  const specStartY = 320;
-  const specGap = 14;
-  const specH = specsList.length === 3 ? 88 : 110;
-  specsList.forEach((item, idx) => {
-    const sy = specStartY + idx * (specH + specGap);
-    ctx.fillStyle = PROMO_SURFACE_DARK;
-    ctx.fillRect(colX, sy, colW, specH);
-    if (ctx.strokeRect) {
-      ctx.strokeStyle = PROMO_BORDER_DARK;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(colX, sy, colW, specH);
-    }
-    ctx.fillStyle = PROMO_BRAND_RED;
-    ctx.fillRect(colX, sy, 6, specH);
+  // Dados ANO / KM / CÂMBIO lado a lado
+  drawSpecsRow(
+    ctx,
+    specsList,
+    { x: contentX, y: 782, width: contentW, height: 86 },
+    displayFamily,
+    bodyFamily,
+  );
 
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#A1A1AA";
-    ctx.font = `600 18px ${bodyFamily}`;
-    ctx.fillText(item.label, colX + 22, sy + specH / 2 + 6);
-
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#FFFFFF";
-    fitFontSize(
-      ctx,
-      item.value,
-      colW - 150,
-      30,
-      20,
-      (px) => `700 ${px}px ${displayFamily}`,
-    );
-    ctx.fillText(
-      item.value,
-      colX + colW - 22,
-      sy + specH / 2 + 10,
-      colW - 150,
-    );
-  });
-
-  // Preço à vista na base da coluna direita (y = 654..786)
+  // Preço à vista
   drawPriceBlock(
     ctx,
     vehicle,
-    { x: colX, y: 654, width: colW, height: 132 },
+    { x: contentX, y: 882, width: contentW, height: 92 },
     titleFamily,
     displayFamily,
     bodyFamily,
-    "compact",
+    "wide",
   );
 
-  // Rodapé institucional horizontal (x = 56..1384)
-  const footerX = 56;
-  const footerW = W - 112;
-  ctx.fillStyle = PROMO_SURFACE_DARK;
-  ctx.fillRect(footerX, 824, footerW, 86);
-  ctx.fillStyle = PROMO_BRAND_RED;
-  ctx.fillRect(footerX, 824, 10, 86);
-
+  // Rodapé institucional
   ctx.textAlign = "center";
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `700 30px ${displayFamily}`;
-  ctx.fillText(PROMO_TRADE_FINANCE_TEXT, W / 2, 878, footerW - 48);
+  ctx.font = `700 23px ${displayFamily}`;
+  ctx.fillText(PROMO_TRADE_FINANCE_TEXT, W / 2, 1012, contentW);
 
   ctx.fillStyle = "#D4D4D8";
-  ctx.font = `600 24px ${bodyFamily}`;
+  ctx.font = `600 20px ${bodyFamily}`;
   ctx.fillText(
     `${PROMO_SERVICE_AREAS_TEXT}  ·  ${PROMO_DOMAIN_TEXT}`,
     W / 2,
-    964,
-    footerW,
-  );
-
-  ctx.fillStyle = "#A1A1AA";
-  ctx.font = `500 21px ${bodyFamily}`;
-  ctx.fillText(
-    `${PROMO_APPOINTMENT_TEXT}  ·  ${site.whatsappLabel}`,
-    W / 2,
-    1006,
-    footerW,
+    1048,
+    contentW,
   );
 }
 

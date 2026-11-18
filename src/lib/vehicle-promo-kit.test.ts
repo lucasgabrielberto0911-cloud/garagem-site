@@ -211,7 +211,7 @@ test("buildInstagramPromo: gera legenda pronta com #garagem #<modelo> #linhares 
   assert.match(text, /• Ano: 2021\/2022/);
   assert.match(text, /• KM: 42\.000 km/);
   assert.match(text, /• Câmbio: Automático/);
-  assert.match(text, /Aceitamos troca e financiamos\./);
+  assert.match(text, /Aceitamos troca e financiamos em até 60x\./);
   assert.ok(text.includes(PROMO_SERVICE_AREAS_TEXT));
   assert.ok(text.includes(PROMO_APPOINTMENT_TEXT));
   assert.ok(text.includes(PROMO_DOMAIN_TEXT));
@@ -245,7 +245,7 @@ test("buildWhatsAppPromo: inclui link canônico da ficha, câmbio Manual/Automá
   assert.match(text, /🛣️ KM: 42\.000 km/);
   assert.match(text, /⚙️ Câmbio: Automático/);
   assert.match(text, /💰 À vista: \*R\$\s*119\.900\*/);
-  assert.match(text, /Aceitamos troca · Financiamos/);
+  assert.match(text, /Aceitamos troca · Financiamos em até 60x/);
   assert.ok(text.includes(PROMO_SERVICE_AREAS_TEXT));
   assert.ok(text.includes(PROMO_APPOINTMENT_TEXT));
   assert.match(
@@ -263,12 +263,12 @@ test("buildWhatsAppPromo: inclui link canônico da ficha, câmbio Manual/Automá
   assert.doesNotMatch(soldText, /119\.900/);
 });
 
-test("layout e geometria das 3 artes: FEED 1080x1350, STORY 1080x1920 e CAPA 1440x1080 com quadros 4:3, fundo desfocado sem barras pretas e safe zones", () => {
+test("layout e geometria das 3 artes: FEED 1080x1350, STORY 1080x1920 e CAPA 1080x1080 com quadros 4:3, fundo desfocado sem barras pretas e safe zones", () => {
   assert.equal(FEED_CARD_WIDTH, 1080);
   assert.equal(FEED_CARD_HEIGHT, 1350);
   assert.equal(STORY_CARD_WIDTH, 1080);
   assert.equal(STORY_CARD_HEIGHT, 1920);
-  assert.equal(COVER_CARD_WIDTH, 1440);
+  assert.equal(COVER_CARD_WIDTH, 1080);
   assert.equal(COVER_CARD_HEIGHT, 1080);
 
   // Quadro da foto é estritamente 4:3 nas três artes
@@ -287,8 +287,8 @@ test("layout e geometria das 3 artes: FEED 1080x1350, STORY 1080x1920 e CAPA 144
   // Foto nativa 4:3 (1440x1080): sem camada extra de blur
   const native4x3 = computePhotoBox4x3Layout(1440, 1080, COVER_PHOTO_BOX);
   assert.equal(native4x3.needsBlurredBackdrop, false);
-  assert.equal(Math.round(native4x3.foreground.width), 880);
-  assert.equal(Math.round(native4x3.foreground.height), 660);
+  assert.equal(Math.round(native4x3.foreground.width), 760);
+  assert.equal(Math.round(native4x3.foreground.height), 570);
 
   // Logo proporcional nunca distorce o aspect ratio real (887x160)
   const logoPlaced = computeProportionalPlacement(887, 160, {
@@ -415,7 +415,7 @@ test("buildZipArchive e nomes de arquivo: gera pacote ZIP válido com CRC-32 exa
 
   assert.match(feedName, /-feed-1080x1350\.png$/);
   assert.match(storyName, /-story-1080x1920\.png$/);
-  assert.match(coverName, /-capa-1440x1080\.png$/);
+  assert.match(coverName, /-capa-1080x1080\.png$/);
   assert.match(zipName, /^kit-divulgacao-.*\.zip$/);
 
   const samplePng = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -510,7 +510,7 @@ test("resolvePromoPhotoSrc, modal e menus: funciona para consignados, alvos >= 4
 
 test("GET /api/fotos/story/[vehicleId]: exige sessão admin (401), bloqueia SSRF (400) e serve foto same-origin para estoque próprio e consignado (200)", async () => {
   let sessionActive = true;
-  let dbVehicle: { photos: Array<{ url: string }> } | null = {
+  const dbVehicle: { photos: Array<{ url: string }> } | null = {
     photos: [{ url: "https://pub-revisao123.r2.dev/corolla-capa.webp" }],
   };
 
