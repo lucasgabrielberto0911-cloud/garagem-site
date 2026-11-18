@@ -438,6 +438,16 @@ export function trackWhatsAppClick(label: string, ref?: VehicleFunnelRef) {
   });
 }
 
+/** Clique de envio em /troca: evento genérico sem conteúdo do formulário e sem gravação no banco. */
+export function trackTradeWhatsAppClick() {
+  if (typeof window === "undefined") return;
+  fireCustom("WhatsAppClick", { label: "troca" });
+  fireGtag("whatsapp_click", {
+    event_category: "engagement",
+    event_label: "troca",
+  });
+}
+
 const CHAT_GA_EVENTS: Record<ChatEventName, string> = {
   ChatOpen: "chat_open",
   ChatFirstMessage: "chat_first_message",

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
@@ -390,6 +391,19 @@ export function VehicleMobileBlocks({
         <p className="mt-1.5">
           Combinamos o atendimento pelo WhatsApp. {hours}
         </p>
+        {!sold && path.startsWith("/estoque/") ? (
+          <p className="mt-2.5 text-sm">
+            <Link
+              href={`/troca?carro=${encodeURIComponent(
+                path.slice("/estoque/".length).split(/[?#]/)[0].replace(/\/+$/, ""),
+              )}`}
+              prefetch={false}
+              className="inline-flex min-h-11 items-center text-cream/85 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand"
+            >
+              Tem carro pra dar na troca?
+            </Link>
+          </p>
+        ) : null}
         {!sold ? (
           <FavoriteButton
             vehicleId={vehicleId}
