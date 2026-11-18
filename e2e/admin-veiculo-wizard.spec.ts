@@ -183,9 +183,7 @@ test.describe("wizard nos tamanhos configurados", () => {
       await back(page).click();
       await expect(page.locator('[name="featured"]')).toBeChecked();
       await next(page).click();
-      // Prévia sob demanda: fechada ao chegar na revisão; abre com a foto local, preço e sem cidade.
-      await expect(page.getByTestId("listing-preview")).toBeHidden();
-      await page.getByRole("button", { name: "Ver como fica no site", exact: true }).click();
+      // Prévia aberta por padrão na Etapa 4; abre com a foto local, preço e sem cidade.
       const preview = page.getByTestId("listing-preview");
       await expect(preview).toBeVisible();
       await expect(preview).toContainText("59.900");
@@ -194,6 +192,9 @@ test.describe("wizard nos tamanhos configurados", () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await page.getByRole("button", { name: "Esconder prévia", exact: true }).click();
       await expect(preview).toBeHidden();
+      await page.getByRole("button", { name: "Ver como fica no site", exact: true }).click();
+      await expect(preview).toBeVisible();
+      await expect(preview).toContainText("59.900");
       await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/veiculos\/(?!novo$)[^/?]+$/);
       await expect.poll(() => prisma.vehicle.findFirst({ where: { model: modelName } })).not.toBeNull();
