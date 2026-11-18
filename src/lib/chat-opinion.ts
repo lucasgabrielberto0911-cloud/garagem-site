@@ -13,7 +13,7 @@
 import type { ChatTurn } from "@/lib/chat-gemini";
 import { vehicleBodyStyle } from "@/lib/chat-prompt";
 import { parseChatDisplacementFilter } from "@/lib/chat-search-filters";
-import { findVehicleSpec, type VehicleSpec } from "@/lib/chat-specs";
+import { findVehicleSpec, stripCvAndMarchas, type VehicleSpec } from "@/lib/chat-specs";
 import { mentionedModelPools, type ChatVehicleRecord } from "@/lib/chat-stock";
 import { formatModelName } from "@/lib/format";
 
@@ -200,9 +200,9 @@ function gearSentence(vehicle: ChatVehicleRecord, level: number, withGear = true
     case "auto":
       return `E ${isMoto(vehicle) ? "essa" : "esse"} é automático, mais confortável no dia a dia.`;
     case "cvt":
-      return "E o câmbio CVT deixa tudo bem suave no trânsito.";
+      return "E o câmbio automático deixa tudo bem suave no trânsito.";
     case "semi":
-      return "E o câmbio semiautomático dispensa a embreagem no trânsito.";
+      return "E o câmbio automático dispensa a embreagem no trânsito.";
     default:
       return isMoto(vehicle) ? "" : level >= 3 ? "Com o câmbio manual, você escolhe a marcha certa na hora de ultrapassar." : "E o câmbio manual dá bastante controle na estrada.";
   }
@@ -213,7 +213,8 @@ function performanceReply(vehicle: ChatVehicleRecord, message: string, withGear 
   const name = opinionName(vehicle, spec);
   const o = article(vehicle, spec);
   const power = powerOf(spec);
-  if (isWeakEngine(vehicle, spec, power, engineLabel(vehicle, spec))) {
+  const engine = engineLabel(vehicle, spec);
+  if (isWeakEngine(vehicle, spec, power, engine)) {
     const turbo = /turbo/i.test(spec?.motor ?? "");
     const acceleration = turbo && spec?.zeroACem ? ` Pela ficha, faz o 0 a 100 em cerca de ${num(spec.zeroACem)} s.` : "";
     const torque = turbo && spec?.torqueRpm ? " O turbo entrega torque já em baixa rotação." : "";
@@ -222,27 +223,26 @@ function performanceReply(vehicle: ChatVehicleRecord, message: string, withGear 
   const text = fold(message);
   const asksWeak = /\bfrac[oa]|fraquinh/.test(text);
   if (isMoto(vehicle)) {
-    const base = power
-      ? `${cap(o)} ${name} tem ${power.approx}${num(power.cv)} cv${power.fuel}: é ágil no trânsito e, na estrada, viaja tranquila em velocidade de cruzeiro.`
+    const base = engine
+      ? `${cap(o)} ${name} tem motor ${engine}: é ágil no trânsito e, na estrada, viaja tranquila em velocidade de cruzeiro.`
       : `${cap(o)} ${name} é ágil no trânsito e econômica no dia a dia.`;
     return `${asksWeak ? "Fraca não!" : "Anda bem, sim!"} ${base} ${gearSentence(vehicle, 2, withGear)}`.trim();
   }
   if (!power) {
-    const engine = engineLabel(vehicle, spec);
     return `Anda bem, sim! ${cap(o)} ${name}${engine ? ` tem motor ${engine}` : ""} com boa disposição pro dia a dia. ${gearSentence(vehicle, 2, withGear)} Os números de fábrica dessa versão o consultor confirma.`.replace(/\s+/g, " ").trim();
   }
   const light = spec?.peso && spec.peso <= 1100 ? " num carro leve" : "";
   const turbo = /turbo/i.test(spec?.motor ?? "") ? " O motor turbo entrega força logo em baixa rotação." : "";
   const zero = spec?.zeroACem && power.level <= 2 ? ` Faz o 0 a 100 em cerca de ${num(spec.zeroACem)} s.` : "";
-  const cvText = `${power.approx}${num(power.cv)} cv${power.fuel}${light}`;
+  const motorText = `${engine ? `motor ${engine}` : "bom conjunto mecânico"}${light}`;
   const lead = asksWeak
     ? power.level <= 2 ? "Fraco nada!" : "Fraco não, pro que ele se propõe!"
     : ["Sim!", "Anda bem, sim!", "Anda bem pro dia a dia!", "Ele é mais focado em economia do que em velocidade:"][power.level - 1];
   const body = [
-    `${cap(o)} ${name} tem ${cvText}, então é bem esperto na cidade e na estrada.`,
-    `${cap(o)} ${name} tem ${cvText}, com fôlego de sobra pro dia a dia e boa disposição na estrada.`,
-    `${cap(o)} ${name} tem ${cvText}: é ágil na cidade e vai bem na estrada, só pedindo um pouco de planejamento nas ultrapassagens com o carro cheio.`,
-    `${o} ${name} tem ${cvText}, então é ágil na cidade e, na estrada, viaja bem em ritmo tranquilo, planejando as ultrapassagens.`,
+    `${cap(o)} ${name} usa ${motorText}, então é bem esperto na cidade e na estrada.`,
+    `${cap(o)} ${name} usa ${motorText}, com fôlego de sobra pro dia a dia e boa disposição na estrada.`,
+    `${cap(o)} ${name} usa ${motorText}: é ágil na cidade e vai bem na estrada, só pedindo um pouco de planejamento nas ultrapassagens com o carro cheio.`,
+    `${o} ${name} usa ${motorText}, então é ágil na cidade e, na estrada, viaja bem em ritmo tranquilo, planejando as ultrapassagens.`,
   ][power.level - 1]!;
   return `${lead} ${body}${turbo}${zero} ${gearSentence(vehicle, power.level, withGear)}`.replace(/\s+/g, " ").trim();
 }
@@ -265,9 +265,9 @@ function economyReply(vehicle: ChatVehicleRecord, message: string, withGear = tr
   const lead = asksSpend
     ? ["Não, gasta pouco!", "Não, é econômico pro porte!", "Gasta o normal pro motor que tem.", "Gasta um pouco mais, porque o foco dele é desempenho e conforto."][level - 1]
     : ["É econômico, sim!", "É, sim! Bem econômico pro porte.", "É bem razoável no consumo pro motor que tem.", "O foco dele é desempenho e conforto, mas o consumo é coerente com o motor."][level - 1];
-  const cvt = withGear && gearOf(vehicle) === "cvt" ? " E o câmbio CVT ajuda a economizar na cidade." : "";
+  const cvt = withGear && gearOf(vehicle) === "cvt" ? " E o câmbio automático ajuda a economizar na cidade." : "";
   // Gasta mais: puxa para o lado bom do carro, sem esconder o número.
-  const favor = level >= 3 && spec.manutencao ? ` A favor dele: ${spec.manutencao}.` : "";
+  const favor = level >= 3 && spec.manutencao ? ` A favor dele: ${stripCvAndMarchas(spec.manutencao)}.` : "";
   return `${lead} Pelo Inmetro, ${o} ${name} faz cerca de ${num(city)} km/l na cidade e ${num(road)} km/l na estrada com gasolina${etanol}.${cvt}${favor}`;
 }
 
@@ -284,7 +284,7 @@ function reliabilityReply(vehicle: ChatVehicleRecord, message: string) {
       : "Pode ficar tranquilo";
   const gearbox = /\b(cambio|cvt|transmissao)\b/.test(folded);
   const fact = spec?.manutencao
-    ? `${lead}: ${o} ${name} tem ${spec.manutencao.replace(/^(?:uma das|motor|mecanica|mecânica)/i, (m) => m.toLowerCase())}.`
+    ? `${lead}: ${o} ${name} tem ${stripCvAndMarchas(spec.manutencao).replace(/^(?:uma das|motor|mecanica|mecânica)/i, (m) => m.toLowerCase())}.`
     : `${cap(o)} ${name} é um modelo bem conhecido pelas oficinas.`;
   return `${fact} ${gearbox ? "O estado do câmbio e as revisões desta unidade" : "O estado e as revisões desta unidade"} o consultor mostra pra você no WhatsApp.`.replace("tem uma das", "é uma das").replace(/tem (câmbio|cambio)/, "usa $1");
 }
@@ -352,20 +352,19 @@ export function positivePoints(vehicle: ChatVehicleRecord): Array<[string, strin
   const weak = isWeakEngine(vehicle, spec, power, engine);
   const points: Record<string, [string, string] | null> = {};
   if (moto) {
-    points.motor = power && !weak ? ["Motor", `${power.approx}${num(power.cv)} cv, ágil no trânsito`] : null;
+    points.motor = power && !weak ? ["Motor", `${engine ? `${engine}, ` : ""}ágil no trânsito`] : null;
   } else if (!weak && power) {
     const adjective = ["esperto na cidade e na estrada", "disposto no dia a dia", "ágil na cidade", "focado em economia"][power.level - 1];
-    points.motor = ["Motor", `${engine ? `${engine} de ` : ""}${power.approx}${num(power.cv)} cv${power.fuel}, ${adjective}`];
+    points.motor = ["Motor", `${engine ? `${engine}, ` : ""}${adjective}`];
   } else {
     points.motor = null;
   }
   const gear = gearOf(vehicle);
-  const marchas = spec?.marchas && gear === "manual" ? `manual de ${spec.marchas} marchas` : null;
   points.cambio = ["Câmbio", {
     auto: "automático, confortável no trânsito",
-    cvt: "CVT, suave e econômico na cidade",
-    semi: "semiautomático, sem embreagem no trânsito",
-    manual: marchas ?? "manual",
+    cvt: "automático, suave e econômico na cidade",
+    semi: "automático, sem embreagem no trânsito",
+    manual: "manual",
   }[gear]];
   const city = spec?.cidade?.gasolina;
   const road = spec?.estrada?.gasolina;

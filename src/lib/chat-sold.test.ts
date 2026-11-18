@@ -4,12 +4,13 @@ import { runChatTurn } from "./chat-turn";
 import { matchChatSoldVehicle, similarToChatSoldVehicle, type ChatSoldVehicle } from "./chat-sold";
 import { CHAT_SOLD_VEHICLE_SELECT, loadChatSoldStock } from "./chat-stock-cache";
 import { prisma } from "./prisma";
-import { chatWhatsAppCta, resolveChatWhatsAppVehicle } from "./chat-text";
-import type { ChatVehicleRecord } from "./chat-stock";
+import { chatWhatsAppCta, displayChatText, resolveChatWhatsAppVehicle } from "./chat-text";
+import { chatCityReply, type ChatVehicleRecord } from "./chat-stock";
 
 const sold: ChatSoldVehicle[] = [
   { id: "vendido-pulse", brand: "Fiat", model: "Pulse", version: "Audace 1.0 Turbo", yearModel: 2022, category: "carro", transmission: "Automático" },
   { id: "vendido-altis", brand: "Toyota", model: "Corolla", version: "Altis 2.0", yearModel: 2020, category: "carro", transmission: "Automático" },
+  { id: "vendido-grand-siena", brand: "Fiat", model: "Grand Siena", version: "Attractive 1.4 EVO 8V Flex", yearModel: 2014, category: "carro", transmission: "Manual" },
 ];
 const unit = (id: string, model: string, yearModel: number, price: number, extra: Partial<ChatVehicleRecord> = {}): ChatVehicleRecord => ({
   id, model, yearModel, price, brand: "Honda", version: null, km: 65000, transmission: "Automático", fuel: "Flex", color: "Prata", category: "carro", ...extra,
@@ -70,5 +71,82 @@ test("consulta de vendidos seleciona só identidade pública mínima, sem preço
     assert.deepEqual(await loadChatSoldStock(), sold);
   } finally {
     prisma.vehicle.findMany = original;
+  }
+});
+
+test("Grande Vitória, carro grande e porta-malas grande não citam Grand Siena vendido; Grand Siena ainda casa", async () => {
+  assert.equal(
+    displayChatText(chatCityReply("Vocês atendem em Linhares e Grande Vitória?")),
+    "Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp.",
+  );
+
+  for (const question of [
+    "Vocês atendem em Linhares e Grande Vitória?",
+    "Vocês atendem na Grande Vitória?",
+    "Atendem Aracruz?",
+  ]) {
+    assert.equal(matchChatSoldVehicle(question, stock, sold), undefined, question);
+    const cityTurn = await runChatTurn({
+      mensagem: question,
+      historico: [],
+      stock,
+      soldStock: sold,
+      readIntent: async () => null,
+      generate: noModel,
+    });
+    assert.equal(cityTurn.meta?.policy, "city", question);
+    assert.equal(cityTurn.vehicles.length, 0, question);
+    assert.doesNotMatch(cityTurn.reply, /Grand Siena|já foi vendido|loja digital|loja física|pontos de venda|atendimento com hora marcada/i, question);
+    assert.match(
+      displayChatText(cityTurn.reply),
+      /^Atendemos Linhares, Aracruz e Grande Vitória\. Combinamos o atendimento pelo WhatsApp\./,
+      question,
+    );
+  }
+
+  for (const search of ["carro grande", "porta-malas grande", "tem carro grande?", "tem carro com porta-malas grande?"]) {
+    assert.equal(matchChatSoldVehicle(search, stock, sold), undefined, search);
+    const result = await runChatTurn({
+      mensagem: search,
+      historico: [],
+      stock,
+      soldStock: sold,
+      readIntent: async () => null,
+      generate: noModel,
+    });
+    assert.doesNotMatch(result.reply, /Grand Siena|já foi vendido|não está na lista/i, search);
+    assert.ok(result.vehicles.length > 0, search);
+    assert.ok(result.vehicles.every((vehicle) => !vehicle.id.startsWith("vendido")), search);
+  }
+
+  assert.equal(matchChatSoldVehicle("Grand Siena", stock, sold)?.id, "vendido-grand-siena");
+  assert.equal(matchChatSoldVehicle("tem o Grand Siena?", stock, sold)?.id, "vendido-grand-siena");
+  const grandSienaTurn = await runChatTurn({
+    mensagem: "Grand Siena",
+    historico: [],
+    stock,
+    soldStock: sold,
+    readIntent: async () => null,
+    generate: noModel,
+  });
+  assert.equal(grandSienaTurn.meta?.policy, "sold");
+  assert.match(grandSienaTurn.reply, /Grand Siena .*já foi vendido/);
+  assert.doesNotMatch(grandSienaTurn.reply, /R\$/);
+});
+
+test("modelo vendido citado com cidade informa a venda, não a área de atendimento", async () => {
+  for (const question of ["tem o Grand Siena em Vitória?", "Grand Siena, atendem Aracruz?"]) {
+    assert.equal(matchChatSoldVehicle(question, stock, sold)?.id, "vendido-grand-siena", question);
+    const result = await runChatTurn({
+      mensagem: question,
+      historico: [],
+      stock,
+      soldStock: sold,
+      readIntent: async () => null,
+      generate: noModel,
+    });
+    assert.equal(result.meta?.policy, "sold", question);
+    assert.match(result.reply, /Grand Siena .*já foi vendido/, question);
+    assert.doesNotMatch(result.reply, /Atendemos Linhares/, question);
   }
 });

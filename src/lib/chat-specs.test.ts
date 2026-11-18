@@ -6,10 +6,12 @@ import {
   directSpecReply,
   fallbackSpecReply,
   findVehicleSpec,
+  formatSpecCompact,
   formatSpecForPrompt,
   rankingSpecReply,
   specAutonomy,
   specCriterionFromMessage,
+  stripCvAndMarchas,
   type SpecSubject,
   type VehicleSpec,
 } from "./chat-specs";
@@ -135,10 +137,15 @@ test("autonomia é tanque × consumo do Inmetro, arredondada a 10 km", () => {
   assert.equal(specAutonomy(cg), null, "sem tanque na ficha, sem autonomia inventada");
 });
 
-test("a ficha no prompt traz a autonomia já calculada e separa dado do modelo", () => {
+test("a ficha no prompt não expõe cv nem marchas, e traz a autonomia já calculada", () => {
   const kicks = VEHICLE_SPECS.find((spec) => spec.id === "nissan-kicks-1.6-cvt")!;
   const text = formatSpecForPrompt(kicks, "Kicks 1.6");
-  assert.match(text, /Potência: 114 cv, tanto no etanol quanto na gasolina; torque: 15,5 kgfm/);
+  assert.doesNotMatch(text, /Potência:/);
+  assert.doesNotMatch(text, /\bcv\b/);
+  assert.match(text, /Torque: 15,5 kgfm/);
+  // Câmbio sem "marchas fixas" e sem número de marchas
+  assert.doesNotMatch(text, /marchas/);
+  assert.match(text, /Câmbio:/);
   assert.match(text, /autonomia teórica de tanque cheio \(já calculada\): cidade ~320 km etanol \/ ~470 km gasolina; estrada ~390 km etanol \/ ~560 km gasolina/);
   assert.match(text, /Consumo Inmetro \(km\/l\): cidade 7,7 km\/l no etanol e 11,4 km\/l na gasolina/);
   assert.match(text, /Manutenção típica do modelo/);
@@ -174,26 +181,29 @@ test("tópicos das perguntas de especialista", () => {
 
 const entry = (id: string, nome: string) => ({ spec: VEHICLE_SPECS.find((spec) => spec.id === id)!, nome });
 
-test("resposta direta: cv do HB20 1.6 como o vendedor falaria", () => {
+test("resposta direta: motor do HB20 1.6 sem expor cv", () => {
   const reply = directSpecReply(["potencia"], [entry("hyundai-hb20-1.6-at", "HB20 1.6")], "quantos cv tem o hb20 1.6?");
   assert.equal(
     reply,
-    "O HB20 1.6 tem cerca de 128 cv no etanol e 122 cv na gasolina. São números de referência dessa versão; podem variar um pouco na prática.",
+    "O HB20 1.6 usa motor 1.6 16V Gamma, 4 cilindros, aspirado, flex.",
   );
 });
 
-test("resposta direta: câmbio e marchas de CVT, automático convencional e manual", () => {
+test("resposta direta: câmbio normalizado sem CVT nem número de marchas", () => {
   const city = directSpecReply(["cambio"], [entry("honda-city-1.5-cvt", "City 1.5")], "quantas marchas tem o City?")!;
-  assert.match(city, /câmbio CVT, que não tem marchas fixas; no modo manual ele simula 7 marchas/);
+  assert.match(city, /câmbio automático \(na versão EXL, com borboletas no volante\)/);
+  assert.doesNotMatch(city, /CVT|\d+\s+marchas/i);
   const corolla = directSpecReply(["cambio"], [entry("toyota-corolla-altis-2.0", "Corolla 2.0")], "quantas marchas tem o Corolla?")!;
-  assert.match(corolla, /CVT.*7 marchas/);
+  assert.equal(corolla, "O Corolla 2.0 tem câmbio automático.");
   const hb = directSpecReply(["cambio"], [entry("hyundai-hb20-1.6-at", "HB20 1.6")], "quantas marchas tem o hb20?")!;
-  assert.match(hb, /automático convencional \(conversor de torque\) de 4 marchas/);
+  assert.match(hb, /automático convencional \(conversor de torque\)/);
+  assert.doesNotMatch(hb, /\d+\s+marchas/);
   assert.doesNotMatch(hb, /podem variar/, "câmbio é fixo do modelo; sem aviso de variação");
   const gol = directSpecReply(["cambio"], [entry("vw-gol-1.0-g5", "Gol 1.0")], "quantas marchas")!;
-  assert.match(gol, /manual de 5 marchas/);
+  assert.equal(gol, "O Gol 1.0 tem câmbio manual.");
   const dualogic = directSpecReply(["cambio"], [entry("fiat-palio-weekend-adventure-1.8-dualogic", "Weekend Adventure 1.8")], "que câmbio é esse")!;
-  assert.match(dualogic, /Dualogic.*embreagem a seco/);
+  assert.match(dualogic, /automático Dualogic.*embreagem a seco/);
+  assert.doesNotMatch(dualogic, /\d+\s+marchas|automatizado/i);
 });
 
 test("resposta direta: 0 a 100, torque, porta-malas e consumo", () => {
@@ -214,9 +224,10 @@ test("resposta direta: vários carros em frases separadas e nada de chute fora d
     [entry("hyundai-hb20s-1.0-tgdi", "HB20S 1.0 turbo"), entry("hyundai-hb20-1.6-at", "HB20 1.6"), entry("hyundai-hb20-1.0", "HB20 1.0")],
     "quantos cv tem o hb20?",
   )!;
-  assert.match(reply, /HB20S 1\.0 turbo tem cerca de 120 cv, tanto no etanol quanto na gasolina/);
-  assert.match(reply, /HB20 1\.6 tem cerca de 128 cv/);
-  assert.match(reply, /HB20 1\.0 tem cerca de 80 cv no etanol e 75 cv na gasolina/);
+  assert.match(reply, /HB20S 1\.0 turbo usa motor 1\.0 TGDI/);
+  assert.match(reply, /HB20 1\.6 usa motor 1\.6 16V Gamma/);
+  assert.match(reply, /HB20 1\.0 usa motor 1\.0 12V Kappa/);
+  assert.doesNotMatch(reply, /\bcv\b/i);
   // Comparação, ranking e mais de 3 carros ficam para o modelo de linguagem.
   assert.equal(directSpecReply(["ranking", "potencia"], [entry("hyundai-hb20-1.6-at", "HB20 1.6")], "qual o mais forte"), null);
   assert.equal(directSpecReply(["seguranca"], [entry("hyundai-hb20-1.6-at", "HB20 1.6")], "tem abs?"), null);
@@ -241,16 +252,18 @@ test("ranking: o mais forte em cv, com a nuance do torque do turbo", () => {
   const power = rankingSpecReply("forca", entries)!;
   // Potência e torque juntos, sem contradição: o 1.6 leva em cv, o turbo entrega o torque bem mais cedo.
   assert.match(power, /^Depende do que você chama de forte: em potência leva o HB20 1\.6; na força ao pisar \(torque, retomada\) leva o HB20S 1\.0 turbo\./);
-  assert.match(power, /\n• HB20 1\.6 — 128 cv · 16,5 kgfm\n• HB20S 1\.0 turbo — 120 cv · 17,5 kgfm\n• HB20 1\.0 — 80 cv/);
-  assert.doesNotMatch(power, /R\$|\bkm\b/);
+  assert.match(power, /\n• HB20 1\.6 — motor 1\.6 16V Gamma · 16,5 kgfm\n• HB20S 1\.0 turbo — motor 1\.0 TGDI \(Kappa\) · 17,5 kgfm\n• HB20 1\.0 — motor 1\.0 12V Kappa · 10,2 kgfm/);
+  assert.doesNotMatch(power, /\bcv\b|R\$|\bkm\b/i);
   assert.doesNotMatch(power, /é o mais forte|mais fraco/);
-  // "Mais potente" pergunta só potência: resposta direta, com a nuance do torque no fim.
+  // "Mais potente" pergunta só potência: resposta direta sem cv, com a nuance do torque no fim.
   const potente = rankingSpecReply("potencia", entries)!;
-  assert.match(potente, /^Pela ficha de fábrica, o HB20 1\.6 é o mais forte em potência:\n• HB20 1\.6 — 128 cv\n/);
+  assert.match(potente, /^Pela ficha de fábrica, o HB20 1\.6 é o mais forte em potência:\n• HB20 1\.6 — motor 1\.6 16V Gamma · 16,5 kgfm\n/);
   assert.match(potente, /Em torque \(força na retomada\), o HB20S 1\.0 turbo leva: 17,5 kgfm\./);
+  assert.doesNotMatch(potente, /\bcv\b/i);
   // Quando o mesmo carro lidera cv e torque, a resposta é direta.
   const same = rankingSpecReply("forca", [entry("hyundai-hb20s-1.0-tgdi", "HB20S 1.0 turbo"), entry("hyundai-hb20-1.0", "HB20 1.0")])!;
-  assert.match(same, /^Pela ficha de fábrica, o HB20S 1\.0 turbo é o mais forte em potência:\n• HB20S 1\.0 turbo — 120 cv/);
+  assert.match(same, /^Pela ficha de fábrica, o HB20S 1\.0 turbo é o mais forte em potência:\n• HB20S 1\.0 turbo — motor 1\.0 TGDI \(Kappa\) · 17,5 kgfm/);
+  assert.doesNotMatch(same, /\bcv\b/i);
   assert.equal(specCriterionFromMessage("qual gasta menos?"), "economia");
   const economy = rankingSpecReply("economia", entries)!;
   assert.match(economy, /o HB20 1\.0 é o mais econômico:\n• HB20 1\.0 — 13,1 km\/l na cidade/);
@@ -288,4 +301,48 @@ test("números de referência do coordenador: HB20 1.6, HB20S TGDI, Kicks, City 
   assert.match(city.cambio, /7 marchas/);
   assert.match(city.cambio, /borboletas/);
   assert.equal(byId("hyundai-hb20-1.0").cv.etanol, 80);
+});
+
+
+/* ---------- Normalização de câmbio no assistente (item 3 da auditoria) ---------- */
+
+test("stripCvAndMarchas: remove CVT, marchas e cv do texto de câmbio", () => {
+  assert.equal(
+    stripCvAndMarchas("CVT (variação contínua, sem marchas fixas); no modo manual simula 7 marchas (na versão EXL, com borboletas no volante)"),
+    "automático (na versão EXL, com borboletas no volante)",
+  );
+  assert.equal(
+    stripCvAndMarchas("CVT (variação contínua, sem marchas fixas); no modo manual simula 7 marchas"),
+    "automático",
+  );
+  assert.equal(
+    stripCvAndMarchas("automático convencional (conversor de torque) de 6 marchas"),
+    "automático convencional (conversor de torque)",
+  );
+  assert.equal(
+    stripCvAndMarchas("manual de 5 marchas"),
+    "manual",
+  );
+  assert.equal(
+    stripCvAndMarchas("CVT (variação contínua, sem marchas fixas)"),
+    "automático",
+  );
+});
+
+test("formatSpecForPrompt não expõe cv nem número de marchas em nenhuma ficha", () => {
+  for (const spec of VEHICLE_SPECS) {
+    const text = formatSpecForPrompt(spec);
+    assert.doesNotMatch(text, /\bcv\b/, `${spec.id} expõe cv no prompt`);
+    assert.doesNotMatch(text, /Potência:/, `${spec.id} expõe Potência no prompt`);
+    assert.doesNotMatch(text, /\d+\s+marchas/, `${spec.id} expõe número de marchas no prompt`);
+  }
+});
+
+test("formatSpecCompact não expõe cv nem número de marchas em nenhuma ficha", () => {
+  for (const spec of VEHICLE_SPECS) {
+    const text = formatSpecCompact(spec);
+    assert.doesNotMatch(text, /\bcv\b/, `${spec.id} expõe cv no compact`);
+    assert.doesNotMatch(text, /potência/, `${spec.id} expõe potência no compact`);
+    assert.doesNotMatch(text, /\d+\s+marchas/, `${spec.id} expõe número de marchas no compact`);
+  }
 });

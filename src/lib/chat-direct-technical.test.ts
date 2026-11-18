@@ -15,8 +15,8 @@ for (const question of ["quantos cv tem a duster?", "qual a potência da Duster?
   const streamed: string[] = [];
   const result = await runChatTurn({ mensagem: question, historico: question.includes("ela") ? [{ role: "user", content: "quero saber da Duster" }] : [], stock: [duster, civic], vehicleId: "civic", onToken: text => streamed.push(text), generate: noModel });
   assert.equal(result.meta?.policy, "spec-direct");
-  assert.match(result.reply, /142 cv no etanol e 138 cv na gasolina/);
-  assert.doesNotMatch(result.reply, /mais potente|Achei|No estoque|54\.900|101 mil|kgfm/);
+  assert.match(result.reply, /Duster 2\.0 usa motor 2\.0 16V \(F4R\), 4 cilindros, aspirado, flex/);
+  assert.doesNotMatch(result.reply, /\bcv\b|mais potente|Achei|No estoque|54\.900|101 mil|kgfm/i);
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [duster.id]);
   assert.equal(streamed.join(""), result.reply);
 });
@@ -42,9 +42,9 @@ test("dois Civic no estoque: responde os dois, com o ano, sem misturar os númer
   const stock = [civic, { ...civic, id: "civic2020", version: "EXL 2.0 FLEX 16v", yearModel: 2020 }, duster];
   const result = await runChatTurn({ mensagem: "quantos cv tem o Civic?", historico: [], stock, generate: noModel });
   assert.equal(result.meta?.policy, "spec-direct");
-  assert.match(result.reply, /Civic 2\.0 2015 tem cerca de 155 cv/);
-  assert.match(result.reply, /Civic 2\.0 2020 tem cerca de 155 cv/);
-  assert.doesNotMatch(result.reply, /142 cv|Achei|R\$/);
+  assert.match(result.reply, /Civic 2\.0 2015 usa motor 2\.0 16V i-VTEC/);
+  assert.match(result.reply, /Civic 2\.0 2020 usa motor 2\.0 16V i-VTEC/);
+  assert.doesNotMatch(result.reply, /\bcv\b|Duster|Achei|R\$/i);
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id).sort(), ["civic", "civic2020"]);
 });
 
@@ -86,8 +86,8 @@ test("números de potência e aceleração não viram cilindrada de moto", async
   const bike = { ...duster, id: "bike", brand: "Honda", model: "Biz", version: "ES 125", engine: "125cc", category: "moto", yearModel: 2023, transmission: "Semi-automático" };
   const power = await runChatTurn({ mensagem: "essa Biz tem 150 cv?", historico: [], stock: [bike], vehicleId: bike.id, generate: noModel });
   assert.equal(power.meta?.policy, "spec-direct");
-  assert.match(power.reply, /Biz 125 tem motor adequado ao dia a dia/);
-  assert.doesNotMatch(power.reply, /\bcv\b/i);
+  assert.match(power.reply, /Biz 125 usa motor 124,9 cc/);
+  assert.doesNotMatch(power.reply, /\bcv\b|150/i);
   assert.doesNotMatch(power.reply, /150 cv/);
   const accel = await runChatTurn({ mensagem: "essa Biz faz de 0 a 100 em quanto tempo?", historico: [], stock: [bike], vehicleId: bike.id,
     generate: async () => ({ text: "Moto de 125 cc não é feita para isso: o 0 a 100 dela não é um número que a Honda divulga.", functionCall: null }) });

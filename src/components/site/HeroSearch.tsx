@@ -13,8 +13,14 @@ const BUDGET_LINKS = [
   { label: "Acima de R$ 120 mil", href: "/estoque?minPrice=120000" },
 ] as const;
 
+const POPULAR_LINKS = [
+  { label: "Automático", href: "/estoque?transmission=automatico" },
+  { label: "SUVs", href: "/estoque?body=suv" },
+  { label: "Motos", href: "/estoque?category=moto" },
+] as const;
+
 const CHIP_CLASS =
-  "inline-flex min-h-[44px] sm:min-h-0 sm:h-8 shrink-0 items-center border border-white/25 bg-ink px-3 sm:px-2.5 font-body text-[13px] sm:text-xs font-medium text-cream transition hover:border-brand hover:bg-white/5 active:border-brand active:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation whitespace-nowrap";
+  "inline-flex min-h-[44px] sm:min-h-0 sm:h-8 [@media(pointer:coarse)]:!min-h-[44px] [@media(pointer:coarse)]:!h-auto shrink-0 items-center border border-white/25 bg-ink px-3 sm:px-2.5 font-body text-[13px] sm:text-xs font-medium text-cream transition hover:border-brand hover:bg-white/5 active:border-brand active:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation whitespace-nowrap";
 
 /**
  * Formulário nativo GET — busca no estoque sem esperar hidratação.
@@ -119,6 +125,24 @@ export function HeroSearch({
             Faixa:
           </span>
           {BUDGET_LINKS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch={false}
+              className={CHIP_CLASS}
+            >
+              {item.label}
+            </Link>
+          ))}
+
+          <span
+            className="mx-0.5 h-4 w-px shrink-0 bg-white/20 self-center sm:hidden"
+            aria-hidden="true"
+          />
+          <span className="sr-only sm:not-sr-only sm:shrink-0 sm:font-display sm:text-xs sm:font-semibold sm:uppercase sm:tracking-wider sm:text-muted sm:ml-1">
+            Tipos:
+          </span>
+          {POPULAR_LINKS.map((item) => (
             <Link
               key={item.href}
               href={item.href}

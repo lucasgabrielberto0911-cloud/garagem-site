@@ -133,10 +133,9 @@ test("Bloqueante 2: sanitizePower remove potência aproximada ou exata para moto
     [hb16, hb10],
   );
 
-  // O 1.6 mantém seus 128 cv
-  assert.match(result.reply, /128 cv/i);
-  // O 1.0 NÃO deve conter "80 cv", "cavalos" ou menção de potência do 1.0
-  assert.doesNotMatch(result.reply, /80\s*cv|cavalos de potência|80\s*cavalos/i);
+  // Regra atual: nenhum modelo (nem 1.6 nem 1.0) deve expor cv ou cavalos
+  assert.match(result.reply, /Motor 1\.6\b/);
+  assert.doesNotMatch(result.reply, /\bcv\b|cavalos/i);
 });
 
 // 3) chat-turn.ts:1483: km/l na prosa da IA sem conferir com a ficha
