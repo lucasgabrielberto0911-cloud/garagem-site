@@ -1,5 +1,10 @@
 import type { ChatVehicleContext } from "@/lib/chat-vehicle-context";
 import {
+  withHotLeadAlsoViewed,
+  type HotLeadCarInput,
+  type HotLeadViewedCar,
+} from "@/lib/hot-lead";
+import {
   WHATSAPP_MESSAGES,
   isVehicleFichaPath,
   pageWhatsAppTracking,
@@ -14,6 +19,7 @@ export { buildWhatsAppCarMessage } from "@/lib/vehicle-display";
 export function pageWhatsAppMessage(
   vehicle?: ChatVehicleContext | null,
   pathname?: string | null,
+  alsoViewed?: readonly (HotLeadViewedCar | HotLeadCarInput)[] | null,
 ): string {
   if (!vehicle) return cityPageMessage(pathname) ?? WHATSAPP_MESSAGES.general;
   const fallbackPath =
@@ -40,6 +46,7 @@ export function pageWhatsAppMessage(
       category: vehicle.category,
       intent: "interest",
       pageOrigin: "ficha",
+      alsoViewed,
     });
   }
   return WHATSAPP_MESSAGES.general;
@@ -58,11 +65,21 @@ export function pageWhatsAppHref(input: {
   pathname?: string | null;
   vehicle?: ChatVehicleContext | null;
   message?: string;
+  alsoViewed?: readonly (HotLeadViewedCar | HotLeadCarInput)[] | null;
 }) {
   const onFicha = isVehicleFichaPath(input.pathname || "/");
   const vehicle = onFicha ? input.vehicle : null;
+  const alsoViewed = onFicha ? input.alsoViewed : undefined;
+  const resolvedMessage = input.message
+    ? onFicha && alsoViewed?.length
+      ? withHotLeadAlsoViewed(input.message, alsoViewed, {
+          id: vehicle?.id,
+          path: vehicle?.path || input.pathname,
+        })
+      : input.message
+    : pageWhatsAppMessage(vehicle, input.pathname, alsoViewed);
   return whatsappUrl(
-    input.message ?? pageWhatsAppMessage(vehicle, input.pathname),
+    resolvedMessage,
     pageWhatsAppTracking({
       pathname: input.pathname,
       vehicle,

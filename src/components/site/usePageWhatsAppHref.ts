@@ -2,12 +2,13 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useHotLeadViewedCars } from "@/components/site/RememberHotLeadVehicle";
 import {
   getChatVehicleContext,
   subscribeChatVehicleContext,
 } from "@/lib/chat-vehicle-context";
 import { catalogParamsFromChatVehicle } from "@/lib/meta-pixel";
-import { whatsappContentFromVehicle } from "@/lib/site";
+import { isVehicleFichaPath, whatsappContentFromVehicle } from "@/lib/site";
 import { pageWhatsAppHref } from "@/lib/whatsapp-cta";
 
 /**
@@ -16,12 +17,19 @@ import { pageWhatsAppHref } from "@/lib/whatsapp-cta";
  */
 export function usePageWhatsAppTarget(message?: string) {
   const pathname = usePathname() || "/";
+  const onFicha = isVehicleFichaPath(pathname);
   const [vehicle, setVehicle] = useState(getChatVehicleContext);
+  const viewedCars = useHotLeadViewedCars(onFicha);
 
   useEffect(() => subscribeChatVehicleContext(setVehicle), []);
 
   return {
-    href: pageWhatsAppHref({ pathname, vehicle, message }),
+    href: pageWhatsAppHref({
+      pathname,
+      vehicle,
+      message,
+      alsoViewed: onFicha ? viewedCars : undefined,
+    }),
     vehicleId: vehicle?.id,
     /** Params de catálogo (Lead/AddToCart); vendido não entra no catálogo. */
     catalogParams:

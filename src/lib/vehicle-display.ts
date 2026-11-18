@@ -17,6 +17,11 @@ import {
   site,
   type CustomerWhatsAppVehicleIntent,
 } from "@/lib/site";
+import {
+  withHotLeadAlsoViewed,
+  type HotLeadCarInput,
+  type HotLeadViewedCar,
+} from "@/lib/hot-lead";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { sanitizeAccessory } from "@/lib/vehicle-accessories";
 
@@ -390,6 +395,17 @@ export function buildVehicleTitle(brand: string, model: string, year?: number) {
   return formatVehicleLabel(brand, model, year);
 }
 
+/** Marca + modelo + versão curta sem ano nem preço (ex.: "Honda Civic EXL 2.0 FlexOne"). */
+export function buildVehicleShortName(input: {
+  brand: string;
+  model: string;
+  version?: string | null;
+}) {
+  const title = formatVehicleLabel(input.brand, input.model);
+  const version = shortVersion(input.version, input.model);
+  return collapseWhitespace(`${title}${version ? ` ${version}` : ""}`);
+}
+
 /** Marca + modelo + versão curta + ano, sem "XS XS" / "ALTIS ALTIS". */
 export function buildVehicleFullLabel(input: {
   brand: string;
@@ -470,6 +486,10 @@ export type WhatsAppCarMessageInput = {
   origin?: string;
   /** Origem curta da página exibida entre colchetes no fim (ex.: "card do estoque", "ficha", "home"). */
   pageOrigin?: WhatsAppCarPageOrigin | (string & {}) | null;
+  /** Slug explícito do veículo atual (para não duplicar em `alsoViewed`). */
+  slug?: string | null;
+  /** Outros carros vistos recentemente no navegador (até 2 incluídos após o carro atual, sem vendidos e sem preço). */
+  alsoViewed?: readonly (HotLeadViewedCar | HotLeadCarInput)[] | null;
 };
 
 /** Formata a tag curta de origem da página no fim da mensagem (`[origem: ficha]`). */
@@ -577,11 +597,22 @@ export function buildWhatsAppCarMessage(input: WhatsAppCarMessageInput): string 
     absoluteFichaUrl = `${baseOrigin}/estoque`;
   }
 
-  return [
+  const baseMessage = [
     line,
     absoluteFichaUrl,
     formatWhatsAppPageOriginTag(input.pageOrigin),
   ].join("\n");
+
+  if (!input.alsoViewed || input.alsoViewed.length === 0) {
+    return baseMessage;
+  }
+
+  return withHotLeadAlsoViewed(baseMessage, input.alsoViewed, {
+    id,
+    slug: input.slug,
+    path: rawPath || undefined,
+    link: absoluteFichaUrl,
+  });
 }
 
 export function formatVehicleWhatsAppMessage(input: {
