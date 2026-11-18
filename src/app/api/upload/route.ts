@@ -9,7 +9,7 @@ import {
 } from "@/lib/image-variants";
 import { createPhotoMasterId, isPhotoMasterId } from "@/lib/photo-master";
 import { storeFallbackMaster } from "@/lib/photo-master-store";
-import { uploadR2Photo } from "@/lib/r2-photos";
+import { hasAnyR2Config, uploadR2Photo } from "@/lib/r2-photos";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
@@ -89,12 +89,7 @@ async function uploadPublicObject(
   buffer: Buffer,
   contentType: string,
 ) {
-  const hasAnyR2 = Boolean(
-    process.env.R2_ACCOUNT_ID ||
-      process.env.R2_BUCKET ||
-      process.env.R2_PUBLIC_URL ||
-      process.env.R2_API_TOKEN,
-  );
+  const hasAnyR2 = hasAnyR2Config();
   if (hasAnyR2 || !hasSupabaseServiceRole()) {
     const { url } = await uploadR2Photo(path, buffer, contentType);
     return url;
