@@ -16,6 +16,7 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import { formatNumberBR } from "@/lib/format";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
@@ -91,6 +92,14 @@ export default async function SobrePage() {
           title={publicSite.name}
           description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region}.`}
         />
+
+        <div className="mt-6 flex justify-center">
+          <SiteLeadHit contentName="Sobre">
+            <WhatsAppButton size="lg" className="w-full sm:w-auto" trackingLabel="sobre-topo">
+              Falar no WhatsApp
+            </WhatsAppButton>
+          </SiteLeadHit>
+        </div>
 
         <p className="mx-auto mt-6 max-w-3xl border border-white/20 bg-ink px-4 py-3 text-center text-sm leading-relaxed text-cream/80">
           <span className="font-semibold text-cream">Elias Netto</span>, dono e sócio-administrador
@@ -367,9 +376,11 @@ export default async function SobrePage() {
               <ButtonLink href="/estoque" size="lg">
                 Ver estoque completo
               </ButtonLink>
-              <WhatsAppButton size="lg" variant="outline" trackingLabel="sobre">
-                Falar com a {publicSite.name}
-              </WhatsAppButton>
+              <SiteLeadHit contentName="Sobre">
+                <WhatsAppButton size="lg" variant="outline" trackingLabel="sobre">
+                  Falar com a {publicSite.name}
+                </WhatsAppButton>
+              </SiteLeadHit>
             </ActionRow>
           </div>
         </div>

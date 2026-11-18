@@ -213,7 +213,7 @@ export function FavoritesList() {
           </button>
         </div>
       ) : null}
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-3">
         <p className="text-xs uppercase tracking-wider text-cream/75">
           {vehicles.length} {vehicles.length === 1 ? "veículo salvo" : "veículos salvos"}
           {missing > 0
@@ -222,20 +222,23 @@ export function FavoritesList() {
               : ` · ${missing} ${missing === 1 ? "indisponível agora" : "indisponíveis agora"}`
             : ""}
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            const previous = ids;
-            clear();
-            notify("Favoritos removidos deste aparelho.", {
-              duration: 10000,
-              action: { label: "Desfazer", onClick: () => restore(previous) },
-            });
-          }}
-          className="min-h-11 px-3 text-xs uppercase tracking-wider text-cream/80 underline-offset-4 transition hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          Limpar favoritos
-        </button>
+        <div className="flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
+          <TrackedFavoritesWhatsApp vehicles={ordered} className="w-full sm:w-auto" />
+          <button
+            type="button"
+            onClick={() => {
+              const previous = ids;
+              clear();
+              notify("Favoritos removidos deste aparelho.", {
+                duration: 10000,
+                action: { label: "Desfazer", onClick: () => restore(previous) },
+              });
+            }}
+            className="min-h-11 px-3 text-xs uppercase tracking-wider text-cream/80 underline-offset-4 transition hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            Limpar favoritos
+          </button>
+        </div>
       </div>
 
       <UnavailableFavorites ids={unavailable} remove={remove} />
@@ -257,23 +260,41 @@ export function FavoritesList() {
           Abre o WhatsApp com os veículos que você salvou — modelo e ano. A
           proposta de pagamento e a avaliação do seu usado seguem por lá.
         </p>
-        <span
-          className="contents"
-          onClickCapture={() => {
-            trackLead({
-              content_ids: ordered.map((vehicle) => vehicle.id),
-              content_name: "Favoritos",
-            });
-          }}
-        >
-          <FavoritesListWhatsApp vehicles={ordered} />
-        </span>
+        <TrackedFavoritesWhatsApp vehicles={ordered} className="mt-5 w-full sm:w-auto" />
       </div>
     </div>
   );
 }
 
-function FavoritesListWhatsApp({ vehicles }: { vehicles: VehicleCardData[] }) {
+function TrackedFavoritesWhatsApp({
+  vehicles,
+  className,
+}: {
+  vehicles: VehicleCardData[];
+  className?: string;
+}) {
+  return (
+    <span
+      className="contents"
+      onClickCapture={() => {
+        trackLead({
+          content_ids: vehicles.map((vehicle) => vehicle.id),
+          content_name: "Favoritos",
+        });
+      }}
+    >
+      <FavoritesListWhatsApp vehicles={vehicles} className={className} />
+    </span>
+  );
+}
+
+function FavoritesListWhatsApp({
+  vehicles,
+  className = "mt-5 w-full sm:w-auto",
+}: {
+  vehicles: VehicleCardData[];
+  className?: string;
+}) {
   const pack = favoritesListWhatsApp(
     vehicles.map((vehicle) => ({
       id: vehicle.id,
@@ -283,7 +304,7 @@ function FavoritesListWhatsApp({ vehicles }: { vehicles: VehicleCardData[] }) {
   );
   return (
     <WhatsAppButton
-      className="mt-5 w-full sm:w-auto"
+      className={className}
       size="lg"
       trackingLabel="favoritos-lista"
       campaign={pack.campaign}

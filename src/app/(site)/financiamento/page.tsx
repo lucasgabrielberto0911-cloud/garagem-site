@@ -15,13 +15,15 @@ import {
   WhatsAppButton,
 } from "@/components/site/ui";
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd } from "@/lib/seo";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Financiamento de seminovos | ${site.name}`,
-  description: `Financie em até 60x com bancos parceiros (sujeito à análise de crédito), parcele no cartão em até 18x e use seu veículo na troca. Atendimento pelo WhatsApp.`,
+  title: `Financiamento de seminovos em Linhares, Aracruz e Grande Vitória | ${site.name}`,
+  description:
+    "Financie em até 60x (sujeito à análise de crédito), cartão em até 18x e troca. Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp.",
   path: "/financiamento",
 });
 
@@ -130,9 +132,9 @@ export default function FinanciamentoPage() {
 
       <Container>
         <PageHeader
-          eyebrow="Financiamento"
-          title="Formas de pagar seu seminovo"
-          description="Atendimento pelo WhatsApp, sem compromisso. Condições, entrada e prazos finais dependem da análise de crédito."
+          eyebrow="Financiamento · Linhares, Aracruz e Grande Vitória"
+          title="Financiamento de seminovos em Linhares, Aracruz e Grande Vitória"
+          description="Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp, sem compromisso — condições, entrada e prazos finais dependem da análise de crédito."
         />
 
         {/* Opções de pagamento em grade de 3 colunas no desktop */}
@@ -162,21 +164,25 @@ export default function FinanciamentoPage() {
 
         {/* Ações principais logo abaixo das opções */}
         <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:mt-8">
-          <WhatsAppButton
-            message={WHATSAPP_MESSAGES.finance}
-            size="lg"
-            trackingLabel="financiamento"
-          >
-            Simular financiamento no WhatsApp
-          </WhatsAppButton>
-          <WhatsAppButton
-            message={WHATSAPP_MESSAGES.sell}
-            size="lg"
-            variant="outline"
-            trackingLabel="financiamento-troca"
-          >
-            Quero avaliar meu usado na troca
-          </WhatsAppButton>
+          <SiteLeadHit contentName="Financiamento">
+            <WhatsAppButton
+              message={WHATSAPP_MESSAGES.finance}
+              size="lg"
+              trackingLabel="financiamento"
+            >
+              Simular financiamento no WhatsApp
+            </WhatsAppButton>
+          </SiteLeadHit>
+          <SiteLeadHit contentName="Financiamento - Troca">
+            <WhatsAppButton
+              message={WHATSAPP_MESSAGES.sell}
+              size="lg"
+              variant="outline"
+              trackingLabel="financiamento-troca"
+            >
+              Quero avaliar meu usado na troca
+            </WhatsAppButton>
+          </SiteLeadHit>
           <ButtonLink href="/vender" size="lg" variant="outline">
             Preencher dados do meu usado
           </ButtonLink>
@@ -314,14 +320,16 @@ export default function FinanciamentoPage() {
               Conte no WhatsApp qual carro você gostou e se pretende dar entrada ou usar seu usado na troca. A equipe retorna com as opções dos bancos parceiros.
             </p>
             <div className="mt-5 flex flex-col gap-3">
-              <WhatsAppButton
-                message={WHATSAPP_MESSAGES.finance}
-                size="md"
-                className="w-full"
-                trackingLabel="financiamento-rodape"
-              >
-                Chamar no WhatsApp
-              </WhatsAppButton>
+              <SiteLeadHit contentName="Financiamento">
+                <WhatsAppButton
+                  message={WHATSAPP_MESSAGES.finance}
+                  size="md"
+                  className="w-full"
+                  trackingLabel="financiamento-rodape"
+                >
+                  Chamar no WhatsApp
+                </WhatsAppButton>
+              </SiteLeadHit>
               <Link
                 href="/estoque"
                 prefetch={false}

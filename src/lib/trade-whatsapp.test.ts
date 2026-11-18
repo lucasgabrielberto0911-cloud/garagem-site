@@ -10,11 +10,15 @@ import { FavoritesProvider } from "@/lib/favorites";
 import { trackTradeWhatsAppClick } from "@/lib/funnel-events";
 import { site } from "@/lib/site";
 import {
+  TRADE_FIELD_ERRORS,
   TRADE_ORIGIN_TAG,
+  TRADE_STEP_COUNT,
   buildTradeWhatsAppMessage,
   buildTradeWhatsAppUrl,
+  stepForTradeFieldError,
   toTradeInterestVehicle,
   validateTradeForm,
+  validateTradeStep,
 } from "@/lib/trade-whatsapp";
 import { DEFAULT_VEHICLE_CONDITIONS } from "@/lib/vehicle-conditions";
 
@@ -149,7 +153,49 @@ test("buildTradeWhatsAppUrl abre o número oficial da Garagem sem UTM mutável e
   assert.ok(text.endsWith("[origem: troca]"));
 });
 
-test("validateTradeForm exige os campos obrigatórios e aceita ano simples ou ano/modelo", () => {
+test("validateTradeForm e validateTradeStep explicam erros em português simples passo a passo", () => {
+  assert.equal(TRADE_STEP_COUNT, 5);
+
+  const step1Fail = validateTradeStep(1, { brandModel: " " });
+  assert.equal(step1Fail.ok, false);
+  if (!step1Fail.ok) {
+    assert.equal(step1Fail.errors.brandModel, TRADE_FIELD_ERRORS.brandModel);
+    assert.match(step1Fail.errors.brandModel ?? "", /qual é o seu carro/i);
+    assert.equal(step1Fail.errors.year, undefined);
+  }
+  assert.equal(validateTradeStep(1, { brandModel: "Onix" }).ok, true);
+
+  const step2Fail = validateTradeStep(2, { year: "20", km: "" });
+  assert.equal(step2Fail.ok, false);
+  if (!step2Fail.ok) {
+    assert.match(step2Fail.errors.year ?? "", /4 números/);
+    assert.match(step2Fail.errors.km ?? "", /quantos km/i);
+  }
+  assert.equal(
+    validateTradeStep(2, { year: "2019/2020", km: "65.000" }).ok,
+    true,
+  );
+
+  const step3Fail = validateTradeStep(3, { transmission: "" });
+  assert.equal(step3Fail.ok, false);
+  if (!step3Fail.ok) {
+    assert.match(step3Fail.errors.transmission ?? "", /Manual ou Automático/);
+  }
+  assert.equal(validateTradeStep(3, { transmission: "Automático" }).ok, true);
+
+  const step4Fail = validateTradeStep(4, { condition: "" });
+  assert.equal(step4Fail.ok, false);
+  if (!step4Fail.ok) {
+    assert.match(step4Fail.errors.condition ?? "", /como está o carro hoje/);
+  }
+  assert.equal(validateTradeStep(4, { condition: "bom" }).ok, true);
+
+  assert.equal(stepForTradeFieldError("brandModel"), 1);
+  assert.equal(stepForTradeFieldError("year"), 2);
+  assert.equal(stepForTradeFieldError("km"), 2);
+  assert.equal(stepForTradeFieldError("transmission"), 3);
+  assert.equal(stepForTradeFieldError("condition"), 4);
+
   const invalid = validateTradeForm({
     brandModel: "",
     year: "20",
@@ -184,28 +230,71 @@ test("validateTradeForm exige os campos obrigatórios e aceita ano simples ou an
   }
 });
 
-test("TradeForm renderiza sem dados pessoais, sem foto/parcela/simulador e mostra carro 4:3 com fundo desfocado", () => {
-  const emptyHtml = renderToStaticMarkup(createElement(TradeForm));
-  assert.match(emptyHtml, /Enviar pelo WhatsApp/);
-  assert.match(emptyHtml, /Marca \/ modelo/);
-  assert.match(emptyHtml, /Versão/);
-  assert.match(emptyHtml, /Quilometragem \(km\)/);
-  assert.match(emptyHtml, /Câmbio/);
-  assert.match(emptyHtml, /Manual/);
-  assert.match(emptyHtml, /Automático/);
-  assert.match(emptyHtml, /Estado geral/);
-  assert.match(emptyHtml, /Ótimo/);
-  assert.match(emptyHtml, /Bom/);
-  assert.match(emptyHtml, /Regular/);
-  assert.match(emptyHtml, /Observações curtas/);
-  assert.match(emptyHtml, /Carro de interesse/);
+test("TradeForm mostra um passo por vez com linguagem simples, opções grandes e botão Mandar pelo WhatsApp", () => {
+  const step1Html = renderToStaticMarkup(createElement(TradeForm));
+  assert.match(step1Html, /Passo 1 de 5/);
+  assert.match(step1Html, /Qual é o seu carro\?/);
+  assert.match(step1Html, /Continuar/);
+  assert.doesNotMatch(step1Html, /Marca \/ modelo/);
   assert.doesNotMatch(
-    emptyHtml,
-    /type="file"|name="name"|name="phone"|name="cpf"|name="plate"|parcela|simul/i,
+    step1Html,
+    /De que ano é o carro\?|Como é o câmbio do seu carro\?|Como está o seu carro hoje\?|Mandar pelo WhatsApp/,
   );
+
+  const step2Html = renderToStaticMarkup(
+    createElement(TradeForm, { initialStep: 2 }),
+  );
+  assert.match(step2Html, /Passo 2 de 5/);
+  assert.match(step2Html, /De que ano é o carro\?/);
+  assert.match(step2Html, /Quantos km ele já rodou\?/);
+  assert.match(step2Html, /inputMode="numeric"/);
+  assert.match(step2Html, /Voltar/);
+  assert.match(step2Html, /Continuar/);
+
+  const step3Html = renderToStaticMarkup(
+    createElement(TradeForm, { initialStep: 3 }),
+  );
+  assert.match(step3Html, /Passo 3 de 5/);
+  assert.match(step3Html, /Como é o câmbio do seu carro\?/);
+  assert.match(step3Html, /type="radio"/);
+  assert.match(step3Html, /min-h-\[76px\]/);
+  assert.match(step3Html, /Manual/);
+  assert.match(step3Html, /Automático/);
+  assert.doesNotMatch(step3Html, /<select/);
+
+  const step4Html = renderToStaticMarkup(
+    createElement(TradeForm, { initialStep: 4 }),
+  );
+  assert.match(step4Html, /Passo 4 de 5/);
+  assert.match(step4Html, /Como está o seu carro hoje\?/);
+  assert.match(step4Html, /type="radio"/);
+  assert.match(step4Html, /min-h-\[78px\]/);
+  assert.match(step4Html, /Ótimo/);
+  assert.match(step4Html, /Bom/);
+  assert.match(step4Html, /Regular/);
+  assert.doesNotMatch(step4Html, /<select/);
+
+  const step5Html = renderToStaticMarkup(
+    createElement(TradeForm, { initialStep: 5 }),
+  );
+  assert.match(step5Html, /Passo 5 de 5/);
+  assert.match(step5Html, /Confira e mande pelo WhatsApp/);
+  assert.match(step5Html, /Mandar pelo WhatsApp/);
+  assert.match(step5Html, /min-h-\[58px\]/);
+  assert.match(step5Html, /Gostou de algum carro nosso\?/);
+  assert.match(step5Html, /Quer contar mais algum detalhe\?/);
+  assert.match(step5Html, /Mudar/);
+
+  for (const html of [step1Html, step2Html, step3Html, step4Html, step5Html]) {
+    assert.doesNotMatch(
+      html,
+      /type="file"|name="name"|name="phone"|name="cpf"|name="plate"|parcela|simul/i,
+    );
+  }
 
   const withCarHtml = renderToStaticMarkup(
     createElement(TradeForm, {
+      initialStep: 5,
       interestVehicle: {
         id: "cm0000000000000000000003",
         slug: "jeep-compass-longitude-2022-cm0000000000000000000003",
@@ -225,6 +314,7 @@ test("TradeForm renderiza sem dados pessoais, sem foto/parcela/simulador e mostr
   assert.match(withCarHtml, /aspect-\[4\/3\]/);
   assert.match(withCarHtml, /blur-2xl/);
   assert.match(withCarHtml, /object-contain/);
+  assert.doesNotMatch(withCarHtml, /Gostou de algum carro nosso\?/);
 });
 
 test("trackTradeWhatsAppClick dispara só evento genérico sem dados de formulário nem escrita em banco", () => {
@@ -261,9 +351,10 @@ test("trackTradeWhatsAppClick dispara só evento genérico sem dados de formulá
   ]);
 });
 
-test("página /troca, sitemap e links discretos na ficha e na home seguem as regras do site", () => {
+test("página /troca garante texto >= 16px, alvos >= 44px e segue todas as regras do site", () => {
   const page = readSrc("app/(site)/troca/page.tsx");
   const form = readSrc("components/site/TradeForm.tsx");
+  const lib = readSrc("lib/trade-whatsapp.ts");
   const sitemap = readSrc("app/sitemap.ts");
   const ficha = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const home = readSrc("app/(catalog)/page.tsx");
@@ -271,6 +362,8 @@ test("página /troca, sitemap e links discretos na ficha e na home seguem as reg
   assert.match(page, /export const revalidate = 3600;/);
   assert.match(page, /buildPageMetadata/);
   assert.match(page, /path:\s*"\/troca"/);
+  assert.match(page, /data-clear-fab=""/);
+  assert.match(page, /clear-fab-screen/);
   assert.match(page, /Atendemos Linhares, Aracruz e Grande Vitória/);
   assert.match(page, /Combinamos o atendimento pelo WhatsApp/);
   assert.match(sitemap, /path:\s*"\/troca"/);
@@ -278,10 +371,19 @@ test("página /troca, sitemap e links discretos na ficha e na home seguem as reg
   for (const source of [page, form]) {
     assert.doesNotMatch(
       source,
-      /loja digital|loja física|pontos de venda|atendimento com hora marcada|Sua Garagem|parcela|simul|gold|#ffc72c|#ffd700/i,
+      /\btext-(?:xs|sm)\b|text-\[(?:1[0-5]|[0-9])px\]/,
+    );
+    assert.doesNotMatch(
+      source,
+      /loja digital|loja física|pontos de venda|atendimento com hora marcada|Sua Garagem|parcela|simul|consignado|marchas|\b\d+\s*cv\b|gold|yellow|brand-gradient|#ffc72c|#ffd700/i,
     );
     assert.doesNotMatch(source, /createSellLead|prisma\.|enqueueIntent|\/api\//);
   }
+
+  assert.doesNotMatch(
+    lib,
+    /loja digital|loja física|pontos de venda|atendimento com hora marcada|Sua Garagem|parcela|simul|consignado|marchas/i,
+  );
 
   assert.match(ficha, /Tem carro pra dar na troca\?/);
   assert.match(ficha, /\/troca\?carro=\$\{encodeURIComponent\(canonicalSlug\)\}/);
