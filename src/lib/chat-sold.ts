@@ -23,7 +23,7 @@ export function matchChatSoldVehicle(message: string, available: ChatVehicleReco
   // “Corolla XEi/Cross” não pode virar “Altis vendido” só porque cita Corolla.
   const model = fold(pool[0]!.model);
   const afterModel = asked.split(` ${model} `)[1]?.trim().split(" ")[0];
-  const requestWord = /^(?:ai|aqui|ainda|agora|tambem|disponivel|vendido|automatico|manual|cvt|flex|diesel|gasolina|turbo|no|na|em|de|do|da|para|pra|com|sem|que|quanto|qual|tem|ou|e|por|ate)$/;
+  const requestWord = /^(?:ai|aqui|ainda|agora|tambem|disponivel|vendido|automatico|manual|cvt|flex|diesel|gasolina|turbo|no|na|em|de|do|da|para|pra|com|sem|que|quanto|qual|tem|ou|e|por|ate|atende\w*|grande|vitoria|aracruz|linhares|serra|vila|velha|guarapari|cariacica|viana|cachoeiro|colatina|sao|mateus|sooretama)$/;
   if (afterModel && /^[a-z]{2,}$/.test(afterModel) && !requestWord.test(afterModel) &&
     !pool.some(vehicle => fold(vehicle.version ?? "").split(" ").includes(afterModel))) return undefined;
   const matches = pool.filter(vehicle =>

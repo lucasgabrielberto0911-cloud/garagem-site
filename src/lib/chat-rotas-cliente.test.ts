@@ -180,7 +180,10 @@ test("orçamento sem carro na faixa: diz o carro mais em conta e oferece ampliar
 
 test("cidade: área de atendimento, não modelo", async () => {
   const turn = await ask("boa noite, tem algum carro em Aracruz?");
-  assert.match(textoVisivelChat(turn.reply), /Combinamos o atendimento pelo WhatsApp.*visita/);
+  assert.match(
+    textoVisivelChat(turn.reply),
+    /Atendemos Linhares, Aracruz e Grande Vitória\. Combinamos o atendimento pelo WhatsApp\./,
+  );
   assert.doesNotMatch(textoVisivelChat(turn.reply), /não está na lista/);
 });
 

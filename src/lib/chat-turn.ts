@@ -29,6 +29,7 @@ import {
   isPowerQuery,
   isChatSelectionQuery,
   parseBodyStyleFilter,
+  parseFamilyIntent,
   vehicleBodyStyle,
   rankChatVehicles,
   parsePriceLimit,
@@ -579,6 +580,12 @@ async function runChatTurnInternal(input: {
     const result = finish(reply, false, { policy: "sold", plain: true, forcedVehicles: similar, cards: similar.length > 0 });
     return result;
   }
+  const earlyCityPolicy = mayCreateLead ? null : (directPolicy ?? chatPolicyShortcut(scopedMessage));
+  if (earlyCityPolicy === "city") {
+    const reply = chatCityReply(visitorMessage);
+    emit(reply);
+    return finish(reply, false, { policy: "city", cards: false });
+  }
   const mediaMessage = asksChatMedia(visitorMessage) ? visitorMessage : pendingChatMediaMessage(visitorMessage, input.historico, input.stock);
   if (!tradeTurn && !mayCreateLead && mediaMessage) {
     const candidates = resolveChatMediaVehicles(mediaMessage, input.stock, input.vehicleId, input.previousVehicleIds);
@@ -832,11 +839,6 @@ async function runChatTurnInternal(input: {
 
     return result;
   }
-  if (policy === "city") {
-    const reply = chatCityReply(visitorMessage);
-    emit(reply);
-    return finish(reply, false, { policy, cards: false });
-  }
   if (policy === "sell" || policy === "debts" || policy === "cash" || policy === "delivery" || policy === "consortium") {
     const reply = { sell: CHAT_SELL_REPLY, debts: CHAT_DEBTS_REPLY, cash: CHAT_CASH_REPLY, delivery: CHAT_DELIVERY_REPLY, consortium: CHAT_CONSORTIUM_REPLY }[policy];
     emit(reply);
@@ -934,9 +936,11 @@ async function runChatTurnInternal(input: {
   }
 
   const moreVehicles = asksForMoreChatVehicles(visitorMessage);
+  const familySearchWithoutSubject =
+    !activeVehicle && parseFamilyIntent(scopedMessage) && !isAnaphoricVehicleFollowUp(visitorMessage);
   const salesSearch = !skipShortcuts && !mayCreateLead && !humanAction && !namedComparison &&
     explicitModelUnits.length === 0 && !asksAboutEquipment(visitorMessage) &&
-    (moreVehicles || isChatSelectionQuery(scopedMessage) || hasChatStockFilter(scopedMessage))
+    (moreVehicles || isChatSelectionQuery(scopedMessage) || hasChatStockFilter(scopedMessage) || familySearchWithoutSubject)
     ? planChatSalesSearch(visitorMessage, scopedMessage, input.stock, shownIds)
     : null;
   if (salesSearch) {
@@ -1036,6 +1040,7 @@ async function runChatTurnInternal(input: {
       !asksToCompareModels(visitorMessage)) ||
     multipleCriteria ||
     isChatSelectionQuery(scopedMessage) ||
+    familySearchWithoutSubject ||
     roadUse ||
     // "tem Hyundai?": marca do estoque sem modelo vira busca da marca.
     (!mentionedPool && Boolean(mentionedStockBrand(scopedMessage, input.stock)) && !asksAboutEquipment(visitorMessage)) ||
