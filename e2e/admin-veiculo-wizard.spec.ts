@@ -188,7 +188,7 @@ test.describe("wizard nos tamanhos configurados", () => {
       await expect(preview).toBeVisible();
       await expect(preview).toContainText("59.900");
       await expect(preview).not.toContainText("Linhares");
-      await expect(preview.locator("img")).toHaveAttribute("src", /.+/);
+      await expect(preview.getByTestId("listing-preview-photo")).toHaveAttribute("src", /.+/);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await page.getByRole("button", { name: "Esconder prévia", exact: true }).click();
       await expect(preview).toBeHidden();
