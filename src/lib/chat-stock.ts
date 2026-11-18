@@ -8,6 +8,7 @@ import {
   typicalConsumptionRange,
 } from "@/lib/chat-consumption";
 import { shortVersion } from "@/lib/vehicle-display";
+import { DOSSIER_CHIP_LABELS } from "@/lib/vehicle-dossier";
 import { relatedVehicleScore } from "@/lib/related-vehicles";
 import { officialWarrantyDetail } from "@/lib/chat-warranty";
 import {
@@ -93,6 +94,9 @@ export const CHAT_VEHICLE_SELECT = {
   engine: true,
   doors: true,
   accessories: true,
+  hasSpareKey: true,
+  hasManual: true,
+  hasVideo: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -119,6 +123,9 @@ export type ChatVehicleRecord = {
   engine?: string | null;
   doors?: number | null;
   accessories?: string[];
+  hasSpareKey?: boolean | null;
+  hasManual?: boolean | null;
+  hasVideo?: boolean | null;
   /** Só uso interno (desempate): nunca vai para o prompt nem para a resposta. */
   consigned?: boolean;
   photos?: Array<{ url: string; thumbnailUrl?: string | null }>;
@@ -139,6 +146,9 @@ export function toChatStockLine(vehicle: ChatVehicleRecord): ChatStockLine {
     engine: vehicle.engine ?? null,
     doors: vehicle.doors ?? null,
     accessories: vehicle.accessories ?? [],
+    hasSpareKey: !!vehicle.hasSpareKey,
+    hasManual: !!vehicle.hasManual,
+    hasVideo: !!vehicle.hasVideo,
   };
 }
 
@@ -3683,6 +3693,39 @@ export const CHAT_CONTACT_REPLY = GREETING_TEMPLATES.contact;
 export const CHAT_KEYS_REPLY =
   `Manual e chave reserva variam de unidade para unidade: o consultor confere no carro que você escolher e te confirma no WhatsApp. ${CHAT_WHATSAPP_URL}`;
 
+export function formatChatKeysReply(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+  activeVehicle?: ChatVehicleRecord,
+): string {
+  const unit =
+    activeVehicle ??
+    (() => {
+      const pool = singleMentionedModelPool(stock, mensagem);
+      return pool?.length === 1 ? pool[0] : undefined;
+    })();
+  if (!unit) return CHAT_KEYS_REPLY;
+  const fromAccessories =
+    unit.accessories
+      ?.filter((item) => /chave|manual do|manual de|livro|revis/i.test(item))
+      .map((item) => item.trim())
+      .filter(Boolean) ?? [];
+  const accFolded = normalize(fromAccessories.join(" "));
+  const items = [...fromAccessories];
+  if (unit.hasSpareKey && !/\bchave\b/.test(accFolded)) {
+    items.push(DOSSIER_CHIP_LABELS.hasSpareKey);
+  }
+  if (unit.hasManual && !/\bmanual\b/.test(accFolded)) {
+    items.push(DOSSIER_CHIP_LABELS.hasManual);
+  }
+  if (items.length === 0) return CHAT_KEYS_REPLY;
+  const modelLabel =
+    unit.model.length <= 4
+      ? unit.model.toUpperCase()
+      : unit.model.charAt(0).toUpperCase() + unit.model.slice(1).toLowerCase();
+  return `Na ficha desse ${modelLabel} consta: ${items.join(", ")}. Qualquer outro detalhe, o consultor confere no carro e te confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+}
+
 export const CHAT_ZERO_REPLY = EMPTY_STOCK_REPLIES.zeroKm;
 
 /** Do estoque, os mais novos (carro, ou moto se a conversa for de moto). */
@@ -4048,7 +4091,7 @@ export function localGarageReply(
   if (policy === "warranty") return CHAT_WARRANTY_REPLY;
   if (policy === "docs") return CHAT_DOCS_REPLY;
   if (policy === "origin") return CHAT_ORIGIN_REPLY;
-  if (policy === "keys") return CHAT_KEYS_REPLY;
+  if (policy === "keys") return formatChatKeysReply(mensagem, stock, activeVehicle);
   if (policy === "social") return CHAT_SOCIAL_REPLY;
   if (policy === "pcd") return CHAT_PCD_REPLY;
   if (policy === "gear-extra") return CHAT_GEAR_EXTRA_REPLY;

@@ -18,17 +18,25 @@ import {
   IconTrash,
 } from "@/components/admin/icons";
 import { PhotoGrid } from "@/components/admin/PhotoGrid";
+import {
+  PhotoZipFailuresNotice,
+  type PhotoZipNoticeState,
+} from "@/components/admin/PhotoZipFailuresNotice";
 import { btn } from "@/components/admin/ui";
+import {
+  buildResilientPhotoZip,
+  createAdminPhotoFetchLoader,
+  formatPartialPhotoZipToast,
+} from "@/lib/admin-photo-zip";
 import type { NormalizedRect } from "@/lib/blur-rects";
 import { isFramedCardUrl, type CoverFrame } from "@/lib/cover-frame";
 import { downloadAttachment } from "@/lib/download-attachment";
-import { adminStorageJpgPath, archivePhotoFilename, archiveZipFilename } from "@/lib/photo-archive";
+import { adminStorageJpgPath, archivePhotoFilename } from "@/lib/photo-archive";
 import {
   photoUploadProgressLabel,
   summarizePhotoUploads,
   type PhotoUploadJobState,
 } from "@/lib/photo-upload-jobs";
-import { buildZipStore } from "@/lib/zip-store";
 import { coverSrc } from "@/lib/stock-query";
 
 const PlateBlurEditor = dynamic(
@@ -247,6 +255,7 @@ export function VehiclePhotoManager({
   const fileDragDepth = useRef(0);
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
   const [zipPending, setZipPending] = useState(false);
+  const [zipNotice, setZipNotice] = useState<PhotoZipNoticeState | null>(null);
   const [downloadId, setDownloadId] = useState<string | null>(null);
   const [actionsId, setActionsId] = useState<string | null>(null);
 
@@ -332,23 +341,61 @@ export function VehiclePhotoManager({
   async function downloadAllPhotos() {
     if (zipPending || photos.length === 0) return;
     setZipPending(true);
-    const vehicle = { brand: listing?.brand ?? "", model: listing?.model ?? "", year: listing?.year ?? new Date().getFullYear() };
+    setZipNotice(null);
+    const vehicle = {
+      brand: listing?.brand ?? "",
+      model: listing?.model ?? "",
+      year:
+        listing?.year && listing.year > 1900
+          ? listing.year
+          : new Date().getFullYear(),
+    };
     try {
-      const entries = [];
       // A ordem atual inclui fotos ainda não salvas e reordenações da edição.
-      for (const [index, photo] of photos.entries()) {
-        const name = archivePhotoFilename({ ...vehicle, index: index + 1, url: photo.url });
-        const response = await fetch(adminStorageJpgPath(photo.url, name));
-        if (!response.ok) throw new Error(`Não foi possível baixar a foto ${index + 1}. Tente de novo.`);
-        entries.push({ name, data: new Uint8Array(await response.arrayBuffer()) });
+      const result = await buildResilientPhotoZip({
+        vehicle,
+        photos,
+        loadPhoto: createAdminPhotoFetchLoader(fetch),
+        retries: 1,
+        timeoutMs: 12_000,
+      });
+
+      if (!result.ok) {
+        setZipNotice({
+          downloadedCount: 0,
+          totalCount: result.totalCount,
+          failures: result.failures,
+          errorMessage: result.error,
+        });
+        toast.error(result.error);
+        return;
       }
-      const url = URL.createObjectURL(new Blob([Uint8Array.from(buildZipStore(entries))], { type: "application/zip" }));
+
+      const url = URL.createObjectURL(
+        new Blob([Uint8Array.from(result.zip)], { type: "application/zip" }),
+      );
       try {
-        await downloadAttachment(url, archiveZipFilename(vehicle));
+        await downloadAttachment(url, result.zipFilename);
       } finally {
         URL.revokeObjectURL(url);
       }
-      toast.success("ZIP com todas as fotos em ordem baixado.");
+
+      if (result.failures.length > 0) {
+        setZipNotice({
+          downloadedCount: result.downloadedCount,
+          totalCount: result.totalCount,
+          failures: result.failures,
+        });
+        toast.warning(
+          formatPartialPhotoZipToast({
+            downloadedCount: result.downloadedCount,
+            totalCount: result.totalCount,
+            failures: result.failures,
+          }),
+        );
+      } else {
+        toast.success("ZIP com todas as fotos em ordem baixado.");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha no download.");
     } finally {
@@ -709,6 +756,11 @@ export function VehiclePhotoManager({
             <IconDownload className="h-4 w-4" />
             {zipPending ? "Montando ZIP…" : "Baixar todas as fotos em ordem (ZIP)"}
           </button>
+          <PhotoZipFailuresNotice
+            notice={zipNotice}
+            onDismiss={() => setZipNotice(null)}
+            className="mb-4"
+          />
           <CoverPhotoGuide photos={photos} disabled={inFlight || blurring || rotating || framing} onCover={makeCover} onFrame={() => setFramingOpen(true)} />
           <details className="mt-4 text-xs text-muted">
             <summary className="cursor-pointer py-1 touch-manipulation">

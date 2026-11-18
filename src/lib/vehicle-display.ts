@@ -17,6 +17,11 @@ import {
   site,
   type CustomerWhatsAppVehicleIntent,
 } from "@/lib/site";
+import {
+  withHotLeadAlsoViewed,
+  type HotLeadCarInput,
+  type HotLeadViewedCar,
+} from "@/lib/hot-lead";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { sanitizeAccessory } from "@/lib/vehicle-accessories";
 
@@ -412,6 +417,17 @@ export function buildVehicleTitle(brand: string, model: string, year?: number) {
   return formatVehicleLabel(brand, model, year);
 }
 
+/** Marca + modelo + versão curta sem ano nem preço (ex.: "Honda Civic EXL 2.0 FlexOne"). */
+export function buildVehicleShortName(input: {
+  brand: string;
+  model: string;
+  version?: string | null;
+}) {
+  const title = formatVehicleLabel(input.brand, input.model);
+  const version = shortVersion(input.version, input.model);
+  return collapseWhitespace(`${title}${version ? ` ${version}` : ""}`);
+}
+
 /** Marca + modelo + versão curta + ano, sem "XS XS" / "ALTIS ALTIS". */
 export function buildVehicleFullLabel(input: {
   brand: string;
@@ -458,6 +474,169 @@ export function formatCardVersion(
 
 export type VehicleWhatsAppIntent = CustomerWhatsAppVehicleIntent;
 
+export type WhatsAppCarPageOrigin =
+  | "ficha"
+  | "barra fixa"
+  | "card do estoque"
+  | "home"
+  | "favoritos"
+  | "chat"
+  | "vendidos";
+
+export type WhatsAppCarMessageInput = {
+  id?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  version?: string | null;
+  /** Fallback quando marca/modelo não vêm separados (ex.: contexto parcial). */
+  label?: string | null;
+  yearModel?: number | null;
+  /** Alias para compatibilidade com objetos que usam `year`. */
+  year?: number | null;
+  transmission?: string | null;
+  /** Preço à vista em R$ (nunca parcela). Omitido automaticamente quando vendido. */
+  price?: number | null;
+  status?: string | null;
+  sold?: boolean;
+  reserved?: boolean;
+  path?: string | null;
+  isMoto?: boolean;
+  category?: string | null;
+  intent?: VehicleWhatsAppIntent;
+  topic?: string | null;
+  /** Domínio base da URL absoluta; padrão `site.url` (https://www.suagaragem.net). */
+  origin?: string;
+  /** Origem curta da página exibida entre colchetes no fim (ex.: "card do estoque", "ficha", "home"). */
+  pageOrigin?: WhatsAppCarPageOrigin | (string & {}) | null;
+  /** Slug explícito do veículo atual (para não duplicar em `alsoViewed`). */
+  slug?: string | null;
+  /** Outros carros vistos recentemente no navegador (até 2 incluídos após o carro atual, sem vendidos e sem preço). */
+  alsoViewed?: readonly (HotLeadViewedCar | HotLeadCarInput)[] | null;
+};
+
+/** Formata a tag curta de origem da página no fim da mensagem (`[origem: ficha]`). */
+export function formatWhatsAppPageOriginTag(pageOrigin?: string | null): string {
+  const unwrapped = collapseWhitespace(pageOrigin ?? "")
+    .replace(/^\[?\s*origem\s*:\s*/i, "")
+    .replace(/\]+$/, "")
+    .replace(/[\[\]\r\n]+/g, " ")
+    .trim()
+    .slice(0, 40)
+    .trim();
+  const clean = unwrapped || "site";
+  return `[origem: ${clean}]`;
+}
+
+/**
+ * Helper centralizado para todas as mensagens pré-preenchidas do WhatsApp sobre um veículo.
+ * Inclui marca/modelo/versão, ano, preço à vista em R$ (exceto vendido), link absoluto da ficha
+ * em `https://www.suagaragem.net/...` e a origem curta da página entre colchetes no fim.
+ */
+export function buildWhatsAppCarMessage(input: WhatsAppCarMessageInput): string {
+  const normalizedStatus = (input.status ?? "").trim().toLowerCase();
+  const isSold = Boolean(input.sold) || normalizedStatus === "vendido";
+  const isReserved =
+    !isSold && (Boolean(input.reserved) || normalizedStatus === "reservado");
+  const isMoto =
+    input.isMoto ?? (input.category ?? "").trim().toLowerCase() === "moto";
+
+  const rawYear = input.yearModel ?? input.year ?? null;
+  const validYear =
+    typeof rawYear === "number" &&
+    Number.isInteger(rawYear) &&
+    rawYear >= 1900 &&
+    rawYear <= 2100
+      ? rawYear
+      : null;
+
+  const brand = collapseWhitespace(input.brand ?? "");
+  const model = collapseWhitespace(input.model ?? "");
+
+  let label = "";
+  if (brand || model) {
+    if (validYear !== null) {
+      label = collapseWhitespace(
+        buildVehicleFullLabel({
+          brand,
+          model,
+          version: input.version,
+          yearModel: validYear,
+        }),
+      );
+    } else {
+      const title = formatVehicleLabel(brand, model);
+      const ver = shortVersion(input.version, model);
+      label = collapseWhitespace(`${title}${ver ? ` ${ver}` : ""}`);
+    }
+  } else {
+    const baseLabel = collapseWhitespace(input.label ?? "");
+    label =
+      baseLabel && validYear && !baseLabel.includes(String(validYear))
+        ? `${baseLabel} ${validYear}`
+        : baseLabel;
+  }
+  const usableLabel = label && !/^\d{4}$/.test(label) ? label : "";
+
+  const price = input.price;
+  const priceLabel =
+    !isSold &&
+    typeof price === "number" &&
+    Number.isFinite(price) &&
+    price > 0
+      ? formatCurrencyBRL(price)
+      : "";
+
+  const line = formatCustomerVehicleWhatsAppText({
+    intent: input.intent ?? "interest",
+    label: usableLabel,
+    priceLabel,
+    isMoto,
+    sold: isSold,
+    reserved: isReserved,
+    topic: input.topic,
+  });
+
+  const baseOrigin =
+    (input.origin ?? site.url).trim().replace(/\/+$/, "") || site.url;
+  const rawPath = (input.path ?? "").trim();
+  const id = (input.id ?? "").trim();
+
+  let absoluteFichaUrl: string;
+  if (/^https?:\/\//i.test(rawPath)) {
+    absoluteFichaUrl = rawPath;
+  } else if (rawPath) {
+    absoluteFichaUrl = `${baseOrigin}${rawPath.startsWith("/") ? rawPath : `/${rawPath}`}`;
+  } else if (id && (brand || model)) {
+    const computedPath = vehiclePath({
+      id,
+      brand: brand || "veiculo",
+      model,
+      yearModel: validYear ?? 0,
+      version: input.version,
+    });
+    absoluteFichaUrl = `${baseOrigin}${computedPath}`;
+  } else {
+    absoluteFichaUrl = `${baseOrigin}/estoque`;
+  }
+
+  const baseMessage = [
+    line,
+    absoluteFichaUrl,
+    formatWhatsAppPageOriginTag(input.pageOrigin),
+  ].join("\n");
+
+  if (!input.alsoViewed || input.alsoViewed.length === 0) {
+    return baseMessage;
+  }
+
+  return withHotLeadAlsoViewed(baseMessage, input.alsoViewed, {
+    id,
+    slug: input.slug,
+    path: rawPath || undefined,
+    link: absoluteFichaUrl,
+  });
+}
+
 export function formatVehicleWhatsAppMessage(input: {
   brand: string;
   model: string;
@@ -473,12 +652,15 @@ export function formatVehicleWhatsAppMessage(input: {
   /** Ignorado: o pré-preenchido usa o wordmark “Garagem”. */
   siteName?: string;
   origin?: string;
+  pageOrigin?: WhatsAppCarPageOrigin | (string & {}) | null;
 }) {
   const label = collapseWhitespace(buildVehicleFullLabel(input));
   const usableLabel = label && !/^\d{4}$/.test(label) ? label : "";
+  const isSold = input.status === "vendido";
+  const isReserved = input.status === "reservado";
   const price = input.price;
   const priceLabel =
-    input.status !== "vendido" && typeof price === "number" && Number.isFinite(price) && price > 0
+    !isSold && typeof price === "number" && Number.isFinite(price) && price > 0
       ? formatCurrencyBRL(price)
       : "";
   const line = formatCustomerVehicleWhatsAppText({
@@ -486,7 +668,8 @@ export function formatVehicleWhatsAppMessage(input: {
     label: usableLabel,
     priceLabel,
     isMoto: input.isMoto,
-    sold: input.status === "vendido",
+    sold: isSold,
+    reserved: isReserved,
     topic: input.topic,
   });
 
@@ -495,6 +678,9 @@ export function formatVehicleWhatsAppMessage(input: {
   if (path) {
     const origin = (input.origin ?? site.url).replace(/\/$/, "");
     lines.push(`${origin}${path.startsWith("/") ? path : `/${path}`}`);
+  }
+  if (input.pageOrigin) {
+    lines.push(formatWhatsAppPageOriginTag(input.pageOrigin));
   }
   return lines.join("\n");
 }

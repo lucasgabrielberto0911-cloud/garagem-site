@@ -15,8 +15,12 @@ import {
 import {
   formatCardVersion,
   formatVehicleDisplay,
-  formatVehicleWhatsAppMessage,
 } from "@/lib/vehicle-display";
+import type { WhatsAppCampaign } from "@/lib/site";
+import {
+  buildWhatsAppCarMessage,
+  type WhatsAppCarPageOrigin,
+} from "@/lib/whatsapp-car-message";
 
 export type VehicleCardData = VehicleCardRecord;
 
@@ -24,6 +28,19 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   reservado: { label: "Reservado", className: "listing-card-badge--muted" },
   vendido: { label: "Vendido", className: "listing-card-badge--muted" },
 };
+
+function cardWhatsAppMeta(pageOrigin: WhatsAppCarPageOrigin): {
+  campaign: WhatsAppCampaign;
+  trackingLabel: string;
+} {
+  if (pageOrigin === "home") {
+    return { campaign: "home", trackingLabel: "home-card" };
+  }
+  if (pageOrigin === "favoritos") {
+    return { campaign: "favoritos", trackingLabel: "favoritos-card" };
+  }
+  return { campaign: "estoque", trackingLabel: "vehicle-card" };
+}
 
 /** Um único anúncio para estoque, home, favoritos e veículos parecidos. */
 export function VehicleCard({
@@ -33,6 +50,7 @@ export function VehicleCard({
   returnTo,
   showDestaque = false,
   hideInterest = false,
+  pageOrigin = "card do estoque",
 }: {
   vehicle: VehicleCardData;
   priority?: boolean;
@@ -41,6 +59,8 @@ export function VehicleCard({
   showDestaque?: boolean;
   /** Ficha: o card só abre o anúncio, sem a faixa "Tenho interesse". */
   hideInterest?: boolean;
+  /** Origem da página incluída na mensagem do WhatsApp e no tracking. */
+  pageOrigin?: WhatsAppCarPageOrigin;
   /** Compatibilidade com chamadas antigas: a foto agora é 4:3 em todas as listas. */
   largePhoto?: boolean;
 }) {
@@ -159,16 +179,21 @@ export function VehicleCard({
             showOnStockList
             vehicleId={vehicle.id}
             label={display.fullLabel}
-            message={formatVehicleWhatsAppMessage({
+            message={buildWhatsAppCarMessage({
               ...vehicle,
               path: display.path,
               isMoto: vehicle.category === "moto",
+              pageOrigin,
             })}
             value={vehicle.price}
             make={formatBrandName(vehicle.brand)}
             model={formatModelName(vehicle.model)}
+            version={vehicle.version}
+            status={vehicle.status}
             year={vehicle.yearModel}
             path={display.path}
+            pageOrigin={pageOrigin}
+            {...cardWhatsAppMeta(pageOrigin)}
           />
         ) : null}
       </div>

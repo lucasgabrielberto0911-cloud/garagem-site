@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { getServiceCity } from "./service-cities";
 import {
+  VEHICLE_SELLER_AREA_SERVED,
   hasPublishablePrice,
   localBusinessJsonLd,
   pageCanonicalPath,
   serviceCityJsonLd,
   vehicleAvailabilityUrl,
   vehicleJsonLd,
+  vehicleSchemaTransmission,
 } from "./seo";
 
 const hb20 = {
@@ -168,5 +170,82 @@ test("JSON-LD da home não duplica a UF no endereço do depoimento", () => {
   assert.deepEqual(
     data.review.map((item) => item.author.address.name),
     ["Linhares, ES", "Colatina, ES"],
+  );
+});
+
+test("vehicleSchemaTransmission aceita apenas Manual, Automático, CVT ou Xtronic sem marchas nem cv", () => {
+  assert.equal(vehicleSchemaTransmission("Manual 5 marchas 82cv", "1.0 Flex"), "Manual");
+  assert.equal(vehicleSchemaTransmission("Mecânico 6 marchas", null), "Manual");
+  assert.equal(vehicleSchemaTransmission("Automático 6 marchas 155cv", "LXR 2.0"), "Automático");
+  assert.equal(vehicleSchemaTransmission("AT6", null), "Automático");
+  assert.equal(vehicleSchemaTransmission("Automatizado Dualogic 5 marchas", null), "Automático");
+  assert.equal(vehicleSchemaTransmission("Semi-automático 4 marchas", null), "Automático");
+  assert.equal(vehicleSchemaTransmission("CVT 7 marchas simuladas 177cv", null), "CVT");
+  assert.equal(vehicleSchemaTransmission("CVT Xtronic 6 marchas 120cv", null), "Xtronic");
+  assert.equal(vehicleSchemaTransmission("Automático", "SL 2.0 X-Tronic"), "Xtronic");
+  assert.equal(vehicleSchemaTransmission("Manual", "1.6 MSI Automático"), "Automático");
+  assert.equal(vehicleSchemaTransmission("6 marchas 120cv", "1.6 Flex"), undefined);
+  assert.equal(vehicleSchemaTransmission("", null), undefined);
+});
+
+test("JSON-LD inclui seller AutoDealer com areaServed (Linhares, Aracruz e Grande Vitória) e disponibilidade reservado/vendido", () => {
+  const available = vehicleJsonLd(hb20);
+  const seller = available.offers.seller as {
+    "@type": string;
+    name: string;
+    areaServed: Array<{ "@type": string; name: string }>;
+  };
+  assert.equal(seller["@type"], "AutoDealer");
+  assert.equal(seller.name, "Garagem");
+  assert.deepEqual(
+    seller.areaServed.map((item) => item.name),
+    ["Linhares", "Aracruz", "Grande Vitória"],
+  );
+  assert.equal(VEHICLE_SELLER_AREA_SERVED.length, 3);
+
+  const reserved = vehicleJsonLd({ ...hb20, status: "reservado" });
+  assert.equal(reserved.offers.availability, "https://schema.org/OutOfStock");
+  assert.equal(reserved.offers.price, 64900);
+  assert.equal(reserved.offers.priceCurrency, "BRL");
+
+  const sold = vehicleJsonLd({ ...hb20, status: "vendido" });
+  assert.equal(sold.offers.availability, "https://schema.org/OutOfStock");
+  assert.equal("price" in sold.offers, false);
+});
+
+test("JSON-LD nunca expõe parcelas, placa, chassi, RENAVAM, marchas, cv nem termos antigos", () => {
+  const dirtyInput = {
+    ...hb20,
+    version: "Comfort 1.0",
+    engine: "1.0 12V 80cv 5 marchas",
+    transmission: "Manual 5 marchas 80cv",
+    plate: "XYZ-0000",
+    plateEnd: "0",
+    chassis: "9BWZZZ000VT000000",
+    renavam: "12345678900",
+    fipePrice: 67000,
+    locationCity: "serra",
+    photos: [{ url: "http://cdn.example/hb20-frente.jpg" }],
+    description: [
+      "Seminovo revisado e periciado.",
+      "Entrada de R$ 10.000 + 48x de R$ 1.290.",
+      "Parcelas a partir de R$ 990.",
+      "Placa XYZ0A00 e XYZ-0000.",
+      "Chassi 9BWZZZ000VT000000.",
+      "RENAVAM 12345678900.",
+      "Loja digital com atendimento com hora marcada.",
+    ].join("\n"),
+  };
+
+  const data = vehicleJsonLd(dirtyInput);
+  const serialized = JSON.stringify(data);
+
+  assert.equal(data.vehicleTransmission, "Manual");
+  assert.deepEqual(data.vehicleEngine, { "@type": "EngineSpecification", name: "1.0 12V" });
+  assert.deepEqual(data.image, ["https://cdn.example/hb20-frente.jpg"]);
+  assert.equal(data.description, "Seminovo revisado e periciado.");
+  assert.doesNotMatch(
+    serialized,
+    /XYZ-?0000|XYZ0A00|9BWZZZ000VT000000|12345678900|48x|1\.290|\b990\b|parcela|placa|chassi|renavam|80\s*cv|marchas|fipe|67000|serra|loja digital|hora marcada/i,
   );
 });

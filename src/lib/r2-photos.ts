@@ -244,6 +244,43 @@ export async function deleteR2Photos(
   await Promise.allSettled(validKeys.map((key) => deleteR2Photo(key, fetcher)));
 }
 
+export type DownloadR2PhotoOptions = {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  onFailureReason?: (reason: string) => void;
+};
+
+async function fetchWithTimeout(
+  fetcher: typeof fetch,
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  outerSignal?: AbortSignal,
+): Promise<Response> {
+  const controller = new AbortController();
+  const onOuterAbort = () => controller.abort(outerSignal?.reason);
+  if (outerSignal) {
+    if (outerSignal.aborted) {
+      controller.abort(outerSignal.reason);
+    } else {
+      outerSignal.addEventListener("abort", onOuterAbort, { once: true });
+    }
+  }
+  const timer = setTimeout(
+    () => controller.abort(new DOMException("Tempo esgotado", "TimeoutError")),
+    timeoutMs,
+  );
+  try {
+    return await fetcher(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+    outerSignal?.removeEventListener("abort", onOuterAbort);
+  }
+}
+
 /**
  * Baixa um objeto do Cloudflare R2 (por URL ou chave).
  * Tenta primeiro via URL pública direta (rápido e com cache).
@@ -252,14 +289,24 @@ export async function deleteR2Photos(
 export async function downloadR2Photo(
   keyOrUrl: string,
   fetcher: typeof fetch = fetch,
+  options?: DownloadR2PhotoOptions,
 ): Promise<Buffer | null> {
-  if (!keyOrUrl || typeof keyOrUrl !== "string") return null;
+  if (!keyOrUrl || typeof keyOrUrl !== "string") {
+    options?.onFailureReason?.("Endereço de foto inválido");
+    return null;
+  }
 
   const isUrl = /^https?:\/\//i.test(keyOrUrl);
   const key = isUrl ? r2KeyFromUrl(keyOrUrl) : keyOrUrl.replace(/^\/+/, "");
-  if (!key || key.includes("..") || key.includes("\\")) return null;
+  if (!key || key.includes("..") || key.includes("\\")) {
+    options?.onFailureReason?.("Endereço de foto inválido");
+    return null;
+  }
 
-  // 1. Tentativa via URL pública (com timeout de 20s)
+  const timeoutMs = Math.max(20, options?.timeoutMs ?? 10_000);
+  let lastReason = "Falha ao baixar do R2";
+
+  // 1. Tentativa via URL pública
   let publicUrl: string | null = null;
   if (isUrl && isR2PhotoUrl(keyOrUrl)) {
     publicUrl = keyOrUrl;
@@ -269,35 +316,67 @@ export async function downloadR2Photo(
     } catch {}
   }
 
-  if (publicUrl) {
+  if (publicUrl && !options?.signal?.aborted) {
     try {
-      const res = await fetcher(publicUrl, {
-        signal: AbortSignal.timeout(20_000),
-        redirect: "error",
-      });
+      const res = await fetchWithTimeout(
+        fetcher,
+        publicUrl,
+        { redirect: "error" },
+        timeoutMs,
+        options?.signal,
+      );
       if (res.ok) {
         return Buffer.from(await res.arrayBuffer());
       }
-    } catch {}
+      lastReason =
+        res.status === 404
+          ? "Foto não encontrada"
+          : `Erro HTTP ${res.status} no R2`;
+    } catch (error) {
+      const aborted =
+        options?.signal?.aborted ||
+        (error instanceof Error &&
+          (error.name === "AbortError" || error.name === "TimeoutError"));
+      lastReason = aborted ? "Tempo esgotado" : "Falha de conexão com o R2";
+    }
+  } else if (options?.signal?.aborted) {
+    options?.onFailureReason?.("Tempo esgotado");
+    return null;
   }
 
-  // 2. Fallback via API autenticada do Cloudflare
-  if (hasR2Config()) {
+  // 2. Fallback via API autenticada do Cloudflare (se o tempo total da tentativa não esgotou)
+  if (!options?.signal?.aborted && hasR2Config()) {
     try {
       const config = getR2Config();
       const endpoint = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/r2/buckets/${config.bucket}/objects/${encodeURI(key)}`;
-      const res = await fetcher(endpoint, {
-        headers: {
-          Authorization: `Bearer ${config.apiToken}`,
+      const res = await fetchWithTimeout(
+        fetcher,
+        endpoint,
+        {
+          headers: {
+            Authorization: `Bearer ${config.apiToken}`,
+          },
+          redirect: "error",
         },
-        signal: AbortSignal.timeout(20_000),
-        redirect: "error",
-      });
+        timeoutMs,
+        options?.signal,
+      );
       if (res.ok) {
         return Buffer.from(await res.arrayBuffer());
       }
-    } catch {}
+      lastReason =
+        res.status === 404
+          ? "Foto não encontrada"
+          : `Erro HTTP ${res.status} no R2`;
+    } catch (error) {
+      const aborted =
+        options?.signal?.aborted ||
+        (error instanceof Error &&
+          (error.name === "AbortError" || error.name === "TimeoutError"));
+      lastReason = aborted ? "Tempo esgotado" : "Falha de conexão com o R2";
+    }
   }
 
+  options?.onFailureReason?.(lastReason);
   return null;
 }

@@ -30,7 +30,6 @@ async function openChat(page: Page) {
   await page.goto("/estoque");
   if (page.viewportSize()!.width >= 1024) {
     await page.locator(".site-chat-launcher").click();
-    await page.getByRole("menuitem", { name: "Perguntar ao assistente", exact: true }).click();
   } else {
     await page.getByRole("button", { name: CHAT_HELP_LABEL, exact: true }).first().click();
   }

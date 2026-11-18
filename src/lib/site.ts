@@ -149,6 +149,7 @@ export function formatCustomerVehicleWhatsAppText(input: {
   priceLabel?: string | null;
   isMoto?: boolean;
   sold?: boolean;
+  reserved?: boolean;
   /** Assunto da dúvida (“motor, câmbio e porta-malas”), só no intent question. */
   topic?: string | null;
 }) {
@@ -159,6 +160,14 @@ export function formatCustomerVehicleWhatsAppText(input: {
     return label
       ? `Oi! Vi que ${article} ${label} já foi ${input.isMoto ? "vendida" : "vendido"} no site da ${WHATSAPP_BRAND} e quero ver opções parecidas no estoque.`
       : `Oi! Vi um anúncio já vendido no site da ${WHATSAPP_BRAND} e quero ver opções parecidas no estoque.`;
+  }
+  if (input.reserved) {
+    const reservedWord = input.isMoto ? "reservada" : "reservado";
+    if (!label) {
+      return `Oi! Vi um anúncio reservado no site da ${WHATSAPP_BRAND} e quero saber mais caso fique disponível ou ver opções parecidas.`;
+    }
+    const withPrice = priceLabel ? ` por ${priceLabel}` : "";
+    return `Oi! Vi ${article} ${label}${withPrice} (${reservedWord}) no site da ${WHATSAPP_BRAND} e quero saber mais caso fique disponível ou ver opções parecidas.`;
   }
   const seen = label
     ? priceLabel

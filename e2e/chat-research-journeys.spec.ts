@@ -4,7 +4,6 @@ import {readFileSync} from "node:fs";
 async function openChat(page:Page){
   if(page.viewportSize()!.width>=1024){
     await page.locator(".site-chat-launcher").click();
-    await page.getByRole("menuitem",{name:"Perguntar ao assistente",exact:true}).click();
   }else{
     await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
   }
