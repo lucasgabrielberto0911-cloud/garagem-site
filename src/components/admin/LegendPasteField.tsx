@@ -4,7 +4,7 @@ import { AdminAiReview } from "./AdminAiReview";
 import { useState } from "react";
 import { inputClass } from "./ui";
 import {
-  accessoryGroup, groupAccessories, LEGEND_FIELDS, legendText, parseLegend, fold,
+  accessoryGroup, groupAccessories, LEGEND_FIELDS, legendText, parseLegend, fold, sanitizeLegendText,
   type LegendData, type LegendField, type LegendParseResult,
 } from "@/lib/legend-parser";
 import { parseMoneyBR } from "@/lib/admin-money";
@@ -27,29 +27,39 @@ function sameValue(field: LegendField, a: string, b: string) {
   return fold(a.trim()) === fold(b.trim());
 }
 
+function sensitiveMessage(found: string[]) {
+  if (found.length === 0) return "";
+  return `Tiramos da legenda (${found.join(", ")}). Esses dados não aparecem no anúncio nem vão para a IA.`;
+}
+
 export function LegendPasteField({ description, accessories, data, identity, onChange, onRemoveDescription, onRemoveItem, onFieldChange }: Props) {
   const [text, setText] = useState(() => legendText(description, accessories, data));
   const [detected, setDetected] = useState<LegendData>({});
+  const [sensitive, setSensitive] = useState<string[]>([]);
+  function applyCleanText(raw: string) {
+    const sanitized = sanitizeLegendText(raw);
+    setText(sanitized.clean);
+    const parsed = parseLegend(sanitized.clean);
+    setDetected(parsed.data);
+    setSensitive(sanitized.found);
+    onChange({ ...parsed, sensitive: sanitized.found });
+  }
   function syncPreview(nextDescription: string, nextAccessories: string[], nextData = data) {
     setText(legendText(nextDescription, nextAccessories, nextData));
     setDetected({});
+    setSensitive([]);
   }
   return <div className="space-y-4">
     <label htmlFor="vehicle-legend" className="block text-sm font-semibold text-cream">Colar legenda</label>
-    <p className="text-xs text-muted">Cole a legenda inteira. Descrição, dados, preço, opcionais e facilidades são separados automaticamente. Dados preenchidos são preservados; confira divergências abaixo.</p>
+    <p className="text-sm text-muted">Cole a legenda inteira. Descrição, dados, preço, opcionais e facilidades são separados automaticamente. Não precisa colar placa, CPF, telefone, chassi nem RENAVAM: o que for pessoal sai do anúncio sozinho. Dados preenchidos são preservados; confira divergências abaixo.</p>
+    {sensitiveMessage(sensitive) && <p role="alert" className="text-sm text-cream">{sensitiveMessage(sensitive)}</p>}
     <textarea id="vehicle-legend" name="vehicle-legend" rows={16} value={text} className={`${inputClass} resize-y`}
       placeholder="Cole aqui a legenda completa do anúncio."
       onChange={event => {
-        setText(event.target.value);
-        const parsed = parseLegend(event.target.value);
-        setDetected(parsed.data);
-        onChange(parsed);
+        applyCleanText(event.target.value);
       }} />
     <AdminAiReview value={text} facts={identity ? { ...identity, description, accessories, data } : undefined} onApply={next => {
-      setText(next);
-      const parsed = parseLegend(next);
-      setDetected(parsed.data);
-      onChange(parsed);
+      applyCleanText(next);
     }} />
     <div aria-label="Prévia da legenda" className="space-y-4">
       {description && <section><h3 className="font-display font-semibold">Descrição</h3>

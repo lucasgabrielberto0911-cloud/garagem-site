@@ -5,6 +5,7 @@ import {
 } from "@/lib/admin-form-sections";
 import { stepForField } from "@/lib/admin-vehicle-form-validate";
 import { VehicleWizardNav } from "@/components/admin/VehicleWizardNav";
+import { btn } from "@/components/admin/ui";
 import { IdentitySection } from "./sections/IdentitySection";
 import { PriceStatusSection } from "./sections/PriceStatusSection";
 import { PhotosSection } from "./sections/PhotosSection";
@@ -83,8 +84,34 @@ export function CreateWizard({
     validate,
   } = form;
   const visible = SECTIONS_BY_STEP[step];
+  const legendStep = stepForField("description", "create") ?? 3;
+  function goToLegend() {
+    // Atalho sem validar a etapa atual: as fotos podem entrar depois e a
+    // validação completa acontece ao salvar.
+    changeStep(legendStep);
+    requestAnimationFrame(() => {
+      document.getElementById("vehicle-legend")?.focus({ preventScroll: true });
+    });
+  }
   return (
     <>
+      {step === 1 ? (
+        <div className="border border-white/10 bg-ink/50 p-4 sm:p-5">
+          <p className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+            Já tem a legenda pronta?
+          </p>
+          <p className="mt-1 text-base text-muted">
+            Cole a legenda agora para preencher os dados sozinha. Depois é só conferir e salvar.
+          </p>
+          <button
+            type="button"
+            onClick={goToLegend}
+            className={`${btn.primary} mt-3 w-full sm:w-auto`}
+          >
+            Colar legenda
+          </button>
+        </div>
+      ) : null}
       <div hidden={!visible.includes("fotos")}>
         <PhotosSection form={form} vehicle={vehicle} adminId={adminId} />
       </div>
