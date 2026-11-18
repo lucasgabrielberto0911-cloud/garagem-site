@@ -1,4 +1,4 @@
-import { findVehicleSpec, specMaxCv } from "@/lib/chat-specs";
+import { findVehicleSpec } from "@/lib/chat-specs";
 import { vehicleBodyStyle } from "@/lib/chat-prompt";
 import { compareChatStockPicks, rankLineName, type ChatVehicleRecord } from "@/lib/chat-stock";
 
@@ -26,10 +26,12 @@ export function neutralChatComparison(vehicles: ChatVehicleRecord[], message: st
     const consumptionRef = road ? spec?.estrada : spec?.cidade;
     const kml = ethanol ? consumptionRef?.etanol : consumptionRef?.gasolina ?? spec?.consumoMoto;
     if (consumption && kml != null) data.push(`${String(kml).replace(".", ",")} km/l (${vehicle.category === "moto" ? "referência aproximada" : `${ethanol ? "etanol" : "gasolina"}, ${road ? "estrada" : "cidade"}/Inmetro`})`);
-    const cv = spec ? (ethanol ? spec.cv.etanol : gasoline ? spec.cv.gasolina : specMaxCv(spec)) : null;
-    if (power && cv != null && cv > 0) data.push(`${cv.toLocaleString("pt-BR")} cv${ethanol ? " (etanol)" : gasoline ? " (gasolina)" : ""}`);
+    if (power && spec) {
+      const motor = spec.motor.split(",")[0]?.trim();
+      if (motor) data.push(`motor ${motor}`);
+    }
     const kgfm = spec ? (ethanol ? spec.torque.etanol : gasoline ? spec.torque.gasolina : spec.torque.etanol ?? spec.torque.gasolina) : null;
-    if (torque && kgfm != null) data.push(`${String(kgfm).replace(".", ",")} kgfm`);
+    if ((torque || power) && kgfm != null) data.push(`${String(kgfm).replace(".", ",")} kgfm`);
     if (space && spec?.portaMalas != null) data.push(`${spec.aprox ? "cerca de " : ""}${spec.portaMalas} L de porta-malas`);
     if (!data.length) data.push(`${vehicle.transmission}, ${vehicle.km.toLocaleString("pt-BR")} km`);
     return `• ${rankLineName(vehicle)} — ${data.join("; ")}`;

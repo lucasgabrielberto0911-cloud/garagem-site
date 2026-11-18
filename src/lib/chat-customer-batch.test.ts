@@ -33,7 +33,7 @@ test("bateria de 25 perguntas: comparação, mídia, vendidos, preço, pagamento
     ["Kicks ou HR-V, qual você indica?", /Os dois são ótimas escolhas/],
     ["Kicks, HR-V ou City?", /São ótimas escolhas/],
     ["Kicks ou HR-V, qual consome menos?", /km\/l/],
-    ["Kicks ou HR-V, qual é mais potente?", /cv/],
+    ["Kicks ou HR-V, qual é mais potente?", /motor.*kgfm/],
     ["Kicks ou HR-V, qual tem mais espaço?", /porta-malas/],
     ["tem o Pulse?", /já foi vendido/],
     ["e o Corolla Altis?", /já foi vendido/],

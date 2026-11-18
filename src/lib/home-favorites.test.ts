@@ -45,7 +45,8 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.doesNotMatch(readSrc("components/site/HeroSearch.tsx"), /pb-16/);
   const afterStock = page.slice(page.indexOf("Ver todos os veículos"));
   assert.doesNotMatch(afterStock, /<StatsBar/);
-  assert.match(hero, /Seminovos com procedência para todo o norte do ES\./);
+  assert.match(hero, /Seminovos com procedência\. Atendemos Linhares, Aracruz e Grande Vitória\./);
+  assert.match(hero, /Combinamos o atendimento pelo WhatsApp/);
   assert.doesNotMatch(hero, /publicSite\.region/);
   assert.match(page, /\(27\) 99633-0706|whatsappLabel/);
   assert.doesNotMatch(page, /99956/);

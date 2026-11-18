@@ -6,7 +6,6 @@ import {
 } from "@/lib/photo-archive-download";
 import { prisma } from "@/lib/prisma";
 import { isPublicPhotoSource } from "@/lib/public-photo-source";
-import { CONSIGNED_PROMO_BLOCKED_MESSAGE } from "@/lib/vehicle-promo-kit";
 import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
 
 export const runtime = "nodejs";
@@ -18,9 +17,8 @@ const noStoreHeaders = {
 };
 
 /**
- * Entrega same-origin da foto de capa para o Card de Story no painel admin.
- * Evita erro de CORS / canvas contaminado ao exportar PNG em 1080×1920 e
- * bloqueia veículos consignados também no servidor.
+ * Entrega same-origin da foto do veículo para o Kit de Divulgação no painel
+ * admin (próprios e consignados), evitando erro de CORS / canvas contaminado.
  */
 export async function GET(
   request: Request,
@@ -46,7 +44,6 @@ export async function GET(
   const vehicle = await prisma.vehicle.findFirst({
     where: { id: vehicleId, historical: false },
     select: {
-      consigned: true,
       photos: {
         orderBy: { order: "asc" },
         select: { url: true },
@@ -58,13 +55,6 @@ export async function GET(
     return NextResponse.json(
       { error: "Veículo não encontrado." },
       { status: 404, headers: noStoreHeaders },
-    );
-  }
-
-  if (vehicle.consigned) {
-    return NextResponse.json(
-      { error: CONSIGNED_PROMO_BLOCKED_MESSAGE },
-      { status: 403, headers: noStoreHeaders },
     );
   }
 

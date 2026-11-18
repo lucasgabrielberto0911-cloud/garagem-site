@@ -161,24 +161,24 @@ test("pergunta de potência responde o dado antes do card e WhatsApp oficial", a
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
   await expect(dialog).toHaveAttribute("aria-busy", "false");
   const answer = dialog.locator('[data-chat-latest="1"]');
-  await expect(answer).toContainText("142 cv no etanol e 138 cv na gasolina");
-  await expect(answer).not.toContainText(/qual é o mais potente|No estoque:|Achei/);
+  await expect(answer).toContainText("motor 2.0 16V (F4R)");
+  await expect(answer).not.toContainText(/qual é o mais potente|No estoque:|Achei|\bcv\b/i);
   await expect(answer.locator("[data-chat-vehicle]")).toHaveCount(1);
-  expect(await answer.evaluate(element => element.textContent!.indexOf("142 cv") < element.textContent!.indexOf("R$"))).toBe(true);
+  expect(await answer.evaluate(element => element.textContent!.indexOf("motor 2.0") < element.textContent!.indexOf("R$"))).toBe(true);
   await expect(answer.getByRole("link", { name: /^Tenho interesse/ })).toHaveAttribute("href", /^https:\/\/wa\.me\/5527996330706\?/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await dialog.getByRole("button", { name: "Nova conversa", exact: true }).click();
   await dialog.locator("textarea").fill("quantos cv tem a Duster ano 2014?");
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
   await expect(dialog).toHaveAttribute("aria-busy", "false");
-  await expect(dialog.locator('[data-chat-latest="1"]')).toContainText("142 cv no etanol e 138 cv na gasolina");
+  await expect(dialog.locator('[data-chat-latest="1"]')).toContainText("motor 2.0 16V (F4R)");
   await dialog.getByRole("button", { name: "Nova conversa", exact: true }).click();
   await dialog.locator("textarea").fill("quantos cv tem a Duster 1.6?");
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
   await expect(dialog).toHaveAttribute("aria-busy", "false");
   const mismatched = dialog.locator('[data-chat-latest="1"]');
-  // A versão pedida não existe no estoque: nada de reaproveitar a potência da 2.0.
-  await expect(mismatched).not.toContainText(/142 cv|138 cv/);
+  // A versão pedida não existe no estoque: nada de reaproveitar a ficha da 2.0.
+  await expect(mismatched).not.toContainText(/motor 2\.0 16V \(F4R\)|\bcv\b/i);
   await expect(mismatched.locator("[data-chat-vehicle]")).toHaveCount(0);
 });
 
@@ -240,12 +240,21 @@ test("sem consentimento, origem não fica na aba nem na mensagem", async ({ page
   expect(await page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBeNull();
 });
 
-test("home apresenta o norte do ES no título e nos metadados", async ({ page }) => {
+test("home apresenta Linhares, Aracruz e Grande Vitória no título, H1 e metadados", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Seminovos com procedência para todo o norte do ES.");
-  await expect(page).toHaveTitle("Garagem | Seminovos com procedência no norte do ES");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória.",
+  );
+  await expect(page).toHaveTitle("Garagem | Seminovos em Linhares, Aracruz e Grande Vitória");
   for (const seletor of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
-    await expect(page.locator(seletor)).toHaveAttribute("content", /Linhares, Colatina, São Mateus, Aracruz e Sooretama/);
+    await expect(page.locator(seletor)).toHaveAttribute(
+      "content",
+      /Atendemos Linhares, Aracruz e Grande Vitória · Combinamos o atendimento pelo WhatsApp/,
+    );
   }
+  await expect(page.locator('meta[name="keywords"]')).toHaveAttribute(
+    "content",
+    /Grande Vitória.*Vitória.*Vila Velha.*Serra.*Cariacica/,
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

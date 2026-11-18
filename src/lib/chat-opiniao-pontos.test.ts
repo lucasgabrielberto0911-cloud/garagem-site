@@ -15,10 +15,10 @@ test("Palio 1.0 (motor fraco) nunca cita cv nem potência e traz 4 a 6 pontos co
   assert.match(text, /km\/l/);
   assert.match(text, /85\.000 km/);
   assert.ok(points.length >= 4 && points.length <= 6, text);
-  for (const [, value] of points) assert.match(value, /\d|ar-condicionado|CVT|automático|baratas|peças/i);
+  for (const [, value] of points) assert.match(value, /\d|ar-condicionado|automático|manual|baratas|peças/i);
 });
 
 test("carro forte pode citar o motor", () => {
   const points = positivePoints(car("Civic", "EXL 2.0", "2.0", 2018, ["Multimídia"], "Automático"));
-  assert.ok(points.some(([label, value]) => label === "Motor" && /cv/.test(value)));
+  assert.ok(points.some(([label, value]) => label === "Motor" && /2\.0/.test(value) && !/cv/i.test(value)));
 });

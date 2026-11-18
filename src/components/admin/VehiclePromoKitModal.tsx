@@ -3,44 +3,76 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  CONSIGNED_PROMO_BLOCKED_MESSAGE,
-  PROMO_SERVICE_AREAS_TEXT,
-  STORY_CARD_HEIGHT,
-  STORY_CARD_WIDTH,
+  PROMO_ART_ORDER,
+  PROMO_ART_SPECS,
+  PROMO_LOGO_SRC,
   buildInstagramPromo,
+  buildPromoFileName,
+  buildPromoZipFileName,
   buildWhatsAppPromo,
-  canUseVehiclePromoKit,
-  renderStoryCard,
-  resolveStoryPhotoSrc,
+  buildZipArchive,
+  renderPromoArt,
+  resolvePromoPhotoSrc,
+  sanitizePromoText,
+  type PromoArtKind,
   type PromoVehicle,
 } from "@/lib/vehicle-promo-kit";
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
-import { site } from "@/lib/site";
-import { resolveTransmission } from "@/lib/vehicle-display";
-import { vehicleSlug } from "@/lib/vehicle-slug";
 import { IconCopy } from "@/components/admin/icons";
 
-function resolveStoryFontFamily(): string {
-  if (typeof window !== "undefined" && typeof document !== "undefined") {
-    const cssVar = window
-      .getComputedStyle(document.body)
-      .getPropertyValue("--font-display")
-      .trim();
-    if (cssVar) {
-      return `${cssVar}, "Sora", sans-serif`;
-    }
+let barlowFontLoadPromise: Promise<void> | null = null;
+
+function ensurePromoCanvasFonts(): Promise<void> {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return Promise.resolve();
   }
-  return '"Sora", sans-serif';
+  if (!barlowFontLoadPromise) {
+    barlowFontLoadPromise = (async () => {
+      try {
+        if (typeof FontFace !== "undefined" && document.fonts) {
+          const face = new FontFace(
+            "Barlow Condensed",
+            "url(/fonts/BarlowCondensed-ExtraBoldItalic.ttf)",
+            { style: "italic", weight: "800" },
+          );
+          const loaded = await face.load();
+          document.fonts.add(loaded);
+        }
+        await document.fonts?.ready;
+      } catch {
+        // Segue com fallback seguro se a fonte falhar
+      }
+    })();
+  }
+  return barlowFontLoadPromise;
 }
 
-function loadSameOriginPhoto(src: string): Promise<HTMLImageElement | undefined> {
-  if (!src) return Promise.resolve(undefined);
+function loadSameOriginImage(
+  src: string,
+): Promise<HTMLImageElement | undefined> {
+  if (!src || typeof Image === "undefined") return Promise.resolve(undefined);
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => resolve(undefined);
     img.src = src;
   });
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/png");
+  });
+}
+
+function triggerBlobDownload(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 export function VehiclePromoKitModal({
@@ -52,14 +84,19 @@ export function VehiclePromoKitModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<"whatsapp" | "instagram" | "card">("whatsapp");
-  const [copied, setCopied] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const feedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const storyCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const coverCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
+    if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && open) {
+      if (e.key === "Escape") {
         onClose();
       }
     }
@@ -67,345 +104,362 @@ export function VehiclePromoKitModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  const photoCount = vehicle?.photos?.length ?? 0;
+  const activePhotoIdx =
+    photoCount > 0 ? Math.min(selectedPhotoIdx, photoCount - 1) : 0;
+
+  useEffect(() => {
+    if (!open || !vehicle) return;
+    const currentVehicle: PromoVehicle = vehicle;
+    let cancelled = false;
+
+    async function drawAllCanvases() {
+      const photoSrc = resolvePromoPhotoSrc(currentVehicle, activePhotoIdx);
+      const [, photoImg, logoImg] = await Promise.all([
+        ensurePromoCanvasFonts(),
+        loadSameOriginImage(photoSrc),
+        loadSameOriginImage(PROMO_LOGO_SRC),
+      ]);
+      if (cancelled) return;
+
+      const refs: Record<PromoArtKind, HTMLCanvasElement | null> = {
+        feed: feedCanvasRef.current,
+        story: storyCanvasRef.current,
+        cover: coverCanvasRef.current,
+      };
+
+      for (const kind of PROMO_ART_ORDER) {
+        const canvas = refs[kind];
+        if (!canvas) continue;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) continue;
+        renderPromoArt(ctx, currentVehicle, kind, {
+          photoImg: photoImg ?? null,
+          logoImg: logoImg ?? null,
+        });
+      }
+    }
+
+    void drawAllCanvases();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, vehicle, activePhotoIdx]);
+
   if (!open || !vehicle) return null;
 
-  const allowed = canUseVehiclePromoKit(vehicle);
-
-  if (!allowed) {
-    return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-asphalt/80 p-4 backdrop-blur-sm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="promo-kit-title"
-        onClick={onClose}
-      >
-        <div
-          className="w-full max-w-md border border-white/20 bg-ink shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="h-1 bg-brand-gradient" aria-hidden="true" />
-          <div className="p-5 sm:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2
-                  id="promo-kit-title"
-                  className="font-display text-lg font-semibold text-cream"
-                >
-                  Kit de Divulgação
-                </h2>
-                <p className="mt-0.5 text-xs text-cream/80">
-                  {vehicle.brand} {vehicle.model} {vehicle.version ?? ""}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center text-cream/80 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
-                aria-label="Fechar"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div
-              role="alert"
-              data-testid="consigned-promo-modal-blocked"
-              className="mt-4 border border-white/15 bg-asphalt p-4 text-sm leading-relaxed text-cream/90"
-            >
-              {CONSIGNED_PROMO_BLOCKED_MESSAGE}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const isSold = vehicle.status === "vendido";
-  const whatsappText = buildWhatsAppPromo(vehicle);
-  const instagramText = buildInstagramPromo(vehicle);
-  const slug = vehicleSlug(vehicle);
-  const storyPhotoSrc = resolveStoryPhotoSrc(vehicle);
-  const normalizedTransmission = resolveTransmission(
-    vehicle.version,
-    vehicle.transmission,
-  );
-  const yearLabel =
-    vehicle.year === vehicle.yearModel
-      ? `${vehicle.year}`
-      : `${vehicle.year}/${vehicle.yearModel}`;
-  const previewSpecs = [
-    yearLabel,
-    `${formatNumberBR(vehicle.km)} km`,
-    normalizedTransmission,
+  const cleanHeading = [
+    sanitizePromoText(vehicle.brand),
+    sanitizePromoText(vehicle.model),
+    sanitizePromoText(vehicle.version),
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(" ");
 
-  async function copyToClipboard(text: string, label: string) {
+  const instagramText = buildInstagramPromo(vehicle);
+  const whatsappText = buildWhatsAppPromo(vehicle);
+
+  function getCanvasByKind(kind: PromoArtKind): HTMLCanvasElement | null {
+    if (kind === "feed") return feedCanvasRef.current;
+    if (kind === "story") return storyCanvasRef.current;
+    return coverCanvasRef.current;
+  }
+
+  async function handleDownloadSingle(kind: PromoArtKind) {
+    if (!vehicle) return;
+    setErrorMessage(null);
+    setBusyAction(kind);
     try {
-      await navigator.clipboard.writeText(text);
-      setCopied(label);
-      toast.success(`${label} copiado!`);
-      setTimeout(() => setCopied(null), 2500);
+      const canvas = getCanvasByKind(kind);
+      if (!canvas) {
+        throw new Error("Arte ainda não está pronta.");
+      }
+      const blob = await canvasToPngBlob(canvas);
+      if (!blob) {
+        throw new Error("Não foi possível gerar o arquivo PNG.");
+      }
+      const fileName = buildPromoFileName(vehicle, kind);
+      triggerBlobDownload(blob, fileName);
+      toast.success(`${PROMO_ART_SPECS[kind].shortLabel} baixado.`);
     } catch {
-      toast.error("Não foi possível copiar. Selecione o texto manualmente.");
+      const msg = "Não foi possível baixar a imagem agora. Tente novamente.";
+      setErrorMessage(msg);
+      toast.error(msg);
+    } finally {
+      setBusyAction(null);
     }
   }
 
-  async function downloadStoryCard() {
-    if (!vehicle || !canUseVehiclePromoKit(vehicle)) return;
-    const currentVehicle = vehicle;
-    const currentCanvas = canvasRef.current;
-    if (!currentCanvas) {
-      setDownloading(false);
-      return;
-    }
-
-    setDownloading(true);
-
+  async function handleDownloadAllZip() {
+    if (!vehicle) return;
+    setErrorMessage(null);
+    setBusyAction("zip");
     try {
-      const ctx = currentCanvas.getContext("2d");
-      if (!ctx) {
-        toast.error("Erro ao gerar a imagem.");
-        return;
-      }
-
-      if (typeof document !== "undefined" && document.fonts?.ready) {
-        try {
-          await document.fonts.ready;
-        } catch {
-          // Segue com a pilha Sora definida
+      const entries = [];
+      for (const kind of PROMO_ART_ORDER) {
+        const canvas = getCanvasByKind(kind);
+        if (!canvas) {
+          throw new Error("Arte não disponível.");
         }
+        const blob = await canvasToPngBlob(canvas);
+        if (!blob) {
+          throw new Error("Falha ao exportar PNG.");
+        }
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        entries.push({
+          name: buildPromoFileName(vehicle, kind),
+          data: bytes,
+        });
       }
-
-      const photoImg = await loadSameOriginPhoto(
-        resolveStoryPhotoSrc(currentVehicle),
-      );
-
-      currentCanvas.width = STORY_CARD_WIDTH;
-      currentCanvas.height = STORY_CARD_HEIGHT;
-
-      renderStoryCard(ctx, currentVehicle, {
-        photoImg,
-        fontFamily: resolveStoryFontFamily(),
+      const zipBytes = buildZipArchive(entries);
+      const zipBlob = new Blob([zipBytes.buffer as ArrayBuffer], {
+        type: "application/zip",
       });
-
-      const dataUrl = currentCanvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `divulgacao-${slug}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast.success("Card baixado com sucesso!");
+      triggerBlobDownload(zipBlob, buildPromoZipFileName(vehicle));
+      toast.success("Pacote ZIP com as 3 artes baixado.");
     } catch {
-      toast.error("Erro ao gerar a imagem.");
+      const msg = "Não foi possível gerar o pacote ZIP. Tente novamente.";
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
-      setDownloading(false);
+      setBusyAction(null);
+    }
+  }
+
+  async function handleCopyText(key: "instagram" | "whatsapp", value: string) {
+    setErrorMessage(null);
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedKey(key);
+      toast.success("Texto copiado.");
+      setTimeout(() => {
+        setCopiedKey((prev) => (prev === key ? null : prev));
+      }, 2500);
+    } catch {
+      const msg = "Não foi possível copiar automaticamente. Selecione o texto.";
+      setErrorMessage(msg);
+      toast.error(msg);
     }
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-asphalt/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-asphalt/85 p-3 sm:p-6 backdrop-blur-sm overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="promo-kit-title"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl border border-white/20 bg-ink shadow-2xl"
+        className="my-auto w-full max-w-5xl border border-white/20 bg-ink text-cream shadow-2xl max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="h-1 bg-brand-gradient" aria-hidden="true" />
-        <div className="p-5 sm:p-6">
-          <div className="flex items-start justify-between gap-3">
+        <div className="h-1.5 bg-brand" aria-hidden="true" />
+
+        <div className="p-4 sm:p-6 space-y-6">
+          {/* Cabeçalho */}
+          <div className="flex items-start justify-between gap-4 border-b border-white/15 pb-4">
             <div>
               <h2
                 id="promo-kit-title"
-                className="font-display text-lg font-semibold text-cream"
+                className="font-display text-xl sm:text-2xl font-bold text-cream"
               >
                 Kit de Divulgação
               </h2>
-              <p className="mt-0.5 text-xs text-cream/80">
-                {vehicle.brand} {vehicle.model} {vehicle.version ?? ""}
+              <p className="mt-1 font-body text-base text-cream/85">
+                {cleanHeading}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center text-cream/80 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
-              aria-label="Fechar"
+              className="inline-flex min-h-[48px] min-w-[48px] shrink-0 items-center justify-center border border-white/20 bg-asphalt px-3 font-display text-base font-semibold text-cream transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
             >
-              ✕
+              Fechar
             </button>
           </div>
 
-          <nav className="mt-4 flex border-b border-white/15 text-xs font-semibold uppercase tracking-wider">
-            <button
-              type="button"
-              onClick={() => setTab("whatsapp")}
-              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                tab === "whatsapp"
-                  ? "border-brand text-cream"
-                  : "border-transparent text-cream/80 hover:text-cream"
-              }`}
+          {errorMessage ? (
+            <div
+              role="alert"
+              className="border border-brand bg-asphalt p-4 font-body text-base text-cream"
             >
-              WhatsApp
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("instagram")}
-              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                tab === "instagram"
-                  ? "border-brand text-cream"
-                  : "border-transparent text-cream/80 hover:text-cream"
-              }`}
-            >
-              Instagram
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("card")}
-              className={`min-h-[44px] flex-1 border-b-2 px-3 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                tab === "card"
-                  ? "border-brand text-cream"
-                  : "border-transparent text-cream/80 hover:text-cream"
-              }`}
-            >
-              Card Status (PNG)
-            </button>
-          </nav>
+              {errorMessage}
+            </div>
+          ) : null}
 
-          <div className="mt-4">
-            {tab === "whatsapp" && (
-              <div className="space-y-3">
-                <p className="text-xs text-cream/80">
-                  Texto formatado com emojis e link para disparo ou status:
-                </p>
-                <textarea
-                  readOnly
-                  value={whatsappText}
-                  rows={8}
-                  className="w-full resize-none border border-white/20 bg-asphalt p-3 font-body text-xs text-cream outline-none focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/60"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(whatsappText, "Texto WhatsApp")}
-                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
-                >
-                  <IconCopy className="h-4 w-4" />
-                  {copied === "Texto WhatsApp"
-                    ? "Copiado!"
-                    : "Copiar texto do WhatsApp"}
-                </button>
+          {/* Seletor simples de foto quando o veículo tem mais de uma */}
+          {photoCount > 1 ? (
+            <div className="space-y-2">
+              <p className="font-display text-base font-semibold text-cream">
+                Foto usada nas artes:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {vehicle.photos?.slice(0, 8).map((_, idx) => {
+                  const active = idx === activePhotoIdx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedPhotoIdx(idx)}
+                      className={`min-h-[48px] min-w-[48px] border px-4 font-display text-base font-semibold transition touch-manipulation ${
+                        active
+                          ? "border-brand bg-brand text-white"
+                          : "border-white/20 bg-asphalt text-cream hover:border-white/40"
+                      }`}
+                    >
+                      Foto {idx + 1}
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            </div>
+          ) : null}
 
-            {tab === "instagram" && (
-              <div className="space-y-3">
-                <p className="text-xs text-cream/80">
-                  Legenda pronta para feed ou reels, com ficha e hashtags:
+          {/* Bloco 1: Imagens e download */}
+          <section className="space-y-4" aria-label="Artes prontas para baixar">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="font-display text-lg font-bold text-cream">
+                  1. Baixar imagens prontas
+                </h3>
+                <p className="font-body text-base text-cream/80">
+                  Feed (1080×1350), Story/Status (1080×1920) e Capa (1080×1080)
                 </p>
-                <textarea
-                  readOnly
-                  value={instagramText}
-                  rows={8}
-                  className="w-full resize-none border border-white/20 bg-asphalt p-3 font-body text-xs text-cream outline-none focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/60"
-                />
+              </div>
+              <button
+                type="button"
+                disabled={busyAction !== null}
+                onClick={() => void handleDownloadAllZip()}
+                className="inline-flex min-h-[52px] items-center justify-center bg-brand px-6 font-display text-base font-bold text-white transition hover:brightness-110 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white touch-manipulation"
+              >
+                {busyAction === "zip"
+                  ? "Preparando pacote..."
+                  : "Baixar tudo (ZIP)"}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {PROMO_ART_ORDER.map((kind) => {
+                const spec = PROMO_ART_SPECS[kind];
+                const canvasRef =
+                  kind === "feed"
+                    ? feedCanvasRef
+                    : kind === "story"
+                      ? storyCanvasRef
+                      : coverCanvasRef;
+                const buttonLabel =
+                  kind === "feed"
+                    ? "Baixar Feed"
+                    : kind === "story"
+                      ? "Baixar Story"
+                      : "Baixar Capa";
+
+                return (
+                  <div
+                    key={kind}
+                    className="flex flex-col justify-between border border-white/15 bg-asphalt p-4 space-y-3"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-display text-base font-bold text-cream">
+                          {spec.label}
+                        </span>
+                        <span className="border border-white/20 px-2 py-0.5 font-display text-base font-semibold text-cream/90">
+                          {spec.width}×{spec.height}
+                        </span>
+                      </div>
+                      <p className="mt-1 font-body text-base text-cream/75">
+                        {spec.helperText}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-center bg-ink/80 p-2 border border-white/10">
+                      <canvas
+                        ref={canvasRef}
+                        width={spec.width}
+                        height={spec.height}
+                        className="max-h-64 w-auto max-w-full object-contain"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={busyAction !== null}
+                      onClick={() => void handleDownloadSingle(kind)}
+                      className="inline-flex min-h-[48px] w-full items-center justify-center border border-brand bg-brand/95 px-4 font-display text-base font-bold text-white transition hover:bg-brand disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white touch-manipulation"
+                    >
+                      {busyAction === kind ? "Baixando..." : buttonLabel}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Bloco 2: Textos prontos */}
+          <section
+            className="space-y-4 border-t border-white/15 pt-5"
+            aria-label="Textos prontos para copiar"
+          >
+            <h3 className="font-display text-lg font-bold text-cream">
+              2. Copiar textos prontos
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {/* Legenda do Instagram */}
+              <div className="flex flex-col justify-between border border-white/15 bg-asphalt p-4 space-y-3">
+                <div className="space-y-2">
+                  <h4 className="font-display text-base font-bold text-cream">
+                    Legenda do Instagram
+                  </h4>
+                  <textarea
+                    readOnly
+                    rows={8}
+                    value={instagramText}
+                    aria-label="Legenda pronta para Instagram"
+                    className="w-full border border-white/15 bg-ink p-3 font-body text-base leading-relaxed text-cream focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                </div>
                 <button
                   type="button"
-                  onClick={() =>
-                    copyToClipboard(instagramText, "Legenda Instagram")
-                  }
-                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+                  onClick={() => void handleCopyText("instagram", instagramText)}
+                  className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 border border-white/25 bg-ink px-4 font-display text-base font-bold text-cream transition hover:border-brand hover:bg-brand hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
                 >
-                  <IconCopy className="h-4 w-4" />
-                  {copied === "Legenda Instagram"
-                    ? "Copiada!"
+                  <IconCopy className="h-5 w-5" />
+                  {copiedKey === "instagram"
+                    ? "Legenda copiada!"
                     : "Copiar legenda do Instagram"}
                 </button>
               </div>
-            )}
 
-            {tab === "card" && (
-              <div className="space-y-3">
-                <p className="text-xs text-cream/80">
-                  Card vertical de alta resolução (1080×1920) com foto 4:3 e
-                  fundo desfocado para Instagram Stories e WhatsApp Status:
-                </p>
-                <div className="flex justify-center border border-white/20 bg-asphalt p-4">
-                  <div className="relative flex aspect-[9/16] w-52 flex-col justify-between overflow-hidden rounded border border-white/25 bg-asphalt p-3 text-center shadow">
-                    <div>
-                      <div className="h-0.5 bg-brand-gradient" />
-                      <p className="mt-1.5 font-display text-xs font-bold tracking-widest text-cream">
-                        GARAGEM
-                      </p>
-                      <div className="relative mt-2 flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-ink text-xs text-cream/80">
-                        {storyPhotoSrc ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element -- rota local same-origin /api/fotos/story */}
-                            <img
-                              src={storyPhotoSrc}
-                              alt=""
-                              aria-hidden="true"
-                              className="absolute inset-0 h-full w-full scale-110 object-cover opacity-75 blur-md"
-                            />
-                            {/* eslint-disable-next-line @next/next/no-img-element -- rota local same-origin /api/fotos/story */}
-                            <img
-                              src={storyPhotoSrc}
-                              alt=""
-                              className="relative z-10 h-full w-full object-contain"
-                            />
-                          </>
-                        ) : (
-                          "Sem foto"
-                        )}
-                      </div>
-                      <p className="mt-2 truncate font-display text-xs font-bold text-cream">
-                        {vehicle.brand} {vehicle.model}
-                      </p>
-                      <p className="truncate font-display text-[10px] text-cream/80">
-                        {previewSpecs}
-                      </p>
-                      <div
-                        className={`mt-2 py-1 text-center font-display text-xs font-bold ${
-                          !isSold
-                            ? "bg-brand text-white"
-                            : "bg-white/10 text-cream/70"
-                        }`}
-                      >
-                        {!isSold ? formatCurrencyBRL(vehicle.price) : "VENDIDO"}
-                      </div>
-                    </div>
-
-                    <div className="space-y-0.5 pt-2">
-                      <p className="font-display text-[10px] font-semibold text-cream">
-                        WhatsApp {site.whatsappLabel}
-                      </p>
-                      <p className="font-display text-[9px] leading-tight text-cream/75">
-                        {PROMO_SERVICE_AREAS_TEXT}
-                      </p>
-                    </div>
-                  </div>
+              {/* Mensagem para WhatsApp / Status */}
+              <div className="flex flex-col justify-between border border-white/15 bg-asphalt p-4 space-y-3">
+                <div className="space-y-2">
+                  <h4 className="font-display text-base font-bold text-cream">
+                    Mensagem para WhatsApp e Status
+                  </h4>
+                  <textarea
+                    readOnly
+                    rows={8}
+                    value={whatsappText}
+                    aria-label="Mensagem pronta para WhatsApp"
+                    className="w-full border border-white/15 bg-ink p-3 font-body text-base leading-relaxed text-cream focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
                 </div>
-
-                <canvas ref={canvasRef} className="hidden" />
-
                 <button
                   type="button"
-                  onClick={() => void downloadStoryCard()}
-                  disabled={downloading}
-                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 bg-brand px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream disabled:opacity-60"
+                  onClick={() => void handleCopyText("whatsapp", whatsappText)}
+                  className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 border border-white/25 bg-ink px-4 font-display text-base font-bold text-cream transition hover:border-brand hover:bg-brand hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
                 >
-                  {downloading
-                    ? "Gerando imagem..."
-                    : "Baixar card para Status/Stories (PNG)"}
+                  <IconCopy className="h-5 w-5" />
+                  {copiedKey === "whatsapp"
+                    ? "Texto copiado!"
+                    : "Copiar texto do WhatsApp"}
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>

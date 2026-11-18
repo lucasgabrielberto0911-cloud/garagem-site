@@ -34,12 +34,19 @@ export type GearKind =
   | "automatizado"
   | "semi";
 
+/**
+ * Rótulo público de câmbio.
+ *
+ * Regra de negócio: o comprador vê apenas "Manual" ou "Automático".
+ * CVT, Automatizado e Semi-automático são tratados como Automático
+ * em cards, fichas, filtros e assistente.
+ */
 const GEAR_LABEL: Record<GearKind, string> = {
   automatico: "Automático",
   manual: "Manual",
-  cvt: "CVT",
-  automatizado: "Automatizado",
-  semi: "Semi-automático",
+  cvt: "Automático",
+  automatizado: "Automático",
+  semi: "Automático",
 };
 
 export function collapseWhitespace(value: string) {
@@ -94,20 +101,21 @@ export function inferGearFromText(value: string): GearKind | null {
   const text = foldToken(value);
   if (!text) return null;
   if (
-    /\bsemi[\s-]*automatico\b/.test(text) ||
-    /\bsemiautomatico\b/.test(text)
+    /\bsemi[\s-]*automatic[oa]\b/.test(text) ||
+    /\bsemiautomatic[oa]\b/.test(text)
   ) {
     return "semi";
   }
   if (
     /\bcvt\b/.test(text) ||
+    /\bxtronic\b/.test(text) ||
     /\be[- ]?cvt\b/.test(text) ||
     /\bi[- ]?cvt\b/.test(text)
   ) {
     return "cvt";
   }
   if (
-    /\bautomatizado\b/.test(text) ||
+    /\bautomatizad[oa]\b/.test(text) ||
     /\bdualogic\b/.test(text) ||
     /\bi[- ]?motion\b/.test(text) ||
     /\beasytronic\b/.test(text) ||
@@ -116,7 +124,7 @@ export function inferGearFromText(value: string): GearKind | null {
     return "automatizado";
   }
   if (
-    /\bautomatico\b/.test(text) ||
+    /\bautomatic[oa]\b/.test(text) ||
     /\bautomatic\b/.test(text) ||
     /(^|[\s/])aut\.(?=\s|$)/.test(text)
   ) {
@@ -150,7 +158,7 @@ function isManualFamily(kind: GearKind) {
 /**
  * Câmbio canônico para card, ficha, WhatsApp e JSON-LD.
  * Se a versão (FIPE) cita um câmbio e o campo aponta o oposto, a versão ganha.
- * CVT na versão é mais específico do que "Automático" no campo — não é conflito.
+ * Resultado final é sempre "Manual" ou "Automático" (regra de negócio).
  */
 export function resolveTransmission(
   version: string | null | undefined,
@@ -163,13 +171,8 @@ export function resolveTransmission(
   if (fromVersion && fromField && gearsConflict(version, fieldLabel)) {
     return GEAR_LABEL[fromVersion];
   }
-  if (fromVersion === "cvt") return GEAR_LABEL.cvt;
-  if (fromField === "cvt") return GEAR_LABEL.cvt;
-  if (fromVersion === "semi" && fromField !== "semi") return GEAR_LABEL.semi;
-  if (fromVersion === "automatizado" && fromField === "automatico") {
-    return GEAR_LABEL.automatizado;
-  }
-  return fieldLabel || (fromVersion ? GEAR_LABEL[fromVersion] : "");
+  if (fromVersion) return GEAR_LABEL[fromVersion];
+  return fieldLabel || "";
 }
 
 export function transmissionConflictAlert(
@@ -195,27 +198,49 @@ export function suggestedTransmission(
   return match ?? resolved;
 }
 
+const AUTOMATIC_STORED = [
+  "Automático",
+  "Automatico",
+  "Automática",
+  "Automatica",
+  "CVT",
+  "Xtronic",
+  "Automático CVT",
+  "Automatico CVT",
+  "Automatizado",
+  "Automatizada",
+  "Semi-automático",
+  "Semi-automatico",
+  "Semiautomático",
+  "Semiautomatico",
+  "Semi-automática",
+  "Semiautomática",
+  "Semi automático",
+  "Semi automatico",
+] as const;
+
 /**
  * Slug da query `transmission` no estoque.
- * Automático inclui CVT — nesta loja o Corolla CVT é o que o comprador
- * chama de automático. Manual, semi-automático e automatizado ficam de fora.
+ * Automático inclui CVT, Xtronic, Automatizado e Semi-automático — para o comprador
+ * tudo é automático. Manual fica de fora.
  */
 const TRANSMISSION_STORED: Record<GearKind, readonly string[]> = {
-  automatico: ["Automático", "Automatico", "Automática", "Automatica"],
+  automatico: AUTOMATIC_STORED,
   manual: ["Manual", "Mecânico", "Mecanico", "Mecânica", "Mecanica"],
-  cvt: ["CVT"],
-  automatizado: ["Automatizado"],
-  semi: [
-    "Semi-automático",
-    "Semi-automatico",
-    "Semiautomático",
-    "Semiautomatico",
-  ],
+  cvt: AUTOMATIC_STORED,
+  automatizado: AUTOMATIC_STORED,
+  semi: AUTOMATIC_STORED,
 };
 
+/**
+ * Tipo canônico do slug/rótulo de filtro.
+ * CVT, automatizado e semi → automatico (regra de negócio).
+ */
 function stockGearKind(value: string): GearKind | null {
   const inferred = inferGearFromText(value);
-  if (inferred) return inferred;
+  if (inferred) {
+    return isManualFamily(inferred) ? "manual" : "automatico";
+  }
   const exact = foldToken(value);
   if (exact === "automatica" || exact === "automatico" || exact === "automatic") {
     return "automatico";
@@ -226,7 +251,7 @@ function stockGearKind(value: string): GearKind | null {
     exact === "semiautomatico" ||
     exact === "semi automatico"
   ) {
-    return "semi";
+    return "automatico";
   }
   return null;
 }
@@ -247,11 +272,8 @@ export function transmissionFilterLabel(value?: string | null) {
   return formatTransmissionLabel(trimmed) || trimmed;
 }
 
-/** Grafias que o filtro encontra. Automático também pega CVT. */
+/** Grafias que o filtro encontra. Automático pega CVT, Automatizado e Semi. */
 function storedTransmissionValues(kind: GearKind) {
-  if (kind === "automatico") {
-    return [...TRANSMISSION_STORED.automatico, ...TRANSMISSION_STORED.cvt];
-  }
   return TRANSMISSION_STORED[kind];
 }
 
@@ -727,6 +749,51 @@ const COLOR_CANONICAL: Record<string, string> = {
   amarela: "Amarelo",
 };
 
+/** Modelos equivalentes no estoque que devem compartilhar um único rótulo/filtro. */
+const MODEL_CANONICAL: Record<string, string> = {
+  "fazer 250": "Fazer 250",
+  "fazer fz25": "Fazer 250",
+  "fazer fz-25": "Fazer 250",
+  "fazer fz 25": "Fazer 250",
+  fz25: "Fazer 250",
+  "fz-25": "Fazer 250",
+  "fz 25": "Fazer 250",
+};
+
+export function formatStockModelLabel(model: string | null | undefined) {
+  const trimmed = collapseWhitespace(model ?? "");
+  if (!trimmed) return "";
+  const key = foldToken(trimmed);
+  if (MODEL_CANONICAL[key]) return MODEL_CANONICAL[key];
+  return formatModelName(trimmed);
+}
+
+/** Valores gravados que devem cair no mesmo filtro de modelo. */
+export function modelFilterValues(selected: string) {
+  const trimmed = collapseWhitespace(selected);
+  if (!trimmed) return [];
+  const canonical = formatStockModelLabel(trimmed);
+  const aliases = Object.entries(MODEL_CANONICAL)
+    .filter(([, label]) => foldToken(label) === foldToken(canonical))
+    .map(([key]) => key);
+  const unique = new Set<string>([canonical, trimmed, ...aliases]);
+  return [...unique].filter(Boolean);
+}
+
+export function modelWhere(selected: string | null | undefined) {
+  const value = collapseWhitespace(selected ?? "");
+  if (!value) return {};
+  const values = modelFilterValues(value);
+  if (values.length <= 1) {
+    return { model: { equals: values[0] ?? value, mode: "insensitive" as const } };
+  }
+  return {
+    OR: values.map((item) => ({
+      model: { equals: item, mode: "insensitive" as const },
+    })),
+  };
+}
+
 export function colorKey(value: string) {
   return foldToken(value);
 }
@@ -736,6 +803,10 @@ export function formatColorLabel(color: string | null | undefined) {
   if (!trimmed) return "";
   const key = colorKey(trimmed);
   if (COLOR_CANONICAL[key]) return COLOR_CANONICAL[key];
+  const firstToken = key.split(/[\s/-]+/)[0];
+  if (firstToken && COLOR_CANONICAL[firstToken]) {
+    return COLOR_CANONICAL[firstToken];
+  }
   if (/\bgrafite\b/.test(key) || /\bcinza\b/.test(key)) return "Cinza";
   return formatModelName(applyPtAccents(trimmed));
 }
@@ -755,13 +826,24 @@ export function colorWhere(selected: string | null | undefined) {
   const value = collapseWhitespace(selected ?? "");
   if (!value) return {};
   const values = colorFilterValues(value);
-  if (values.length <= 1) {
-    return { color: { equals: values[0] ?? value, mode: "insensitive" as const } };
+  const conditions: Array<{
+    color: {
+      equals?: string;
+      startsWith?: string;
+      contains?: string;
+      mode: "insensitive";
+    };
+  }> = values.flatMap((item) => [
+    { color: { equals: item, mode: "insensitive" as const } },
+    { color: { startsWith: `${item} `, mode: "insensitive" as const } },
+    { color: { startsWith: `${item}-`, mode: "insensitive" as const } },
+    { color: { startsWith: `${item}/`, mode: "insensitive" as const } },
+  ]);
+  if (foldToken(formatColorLabel(value)) === "cinza") {
+    conditions.push({ color: { contains: "grafite", mode: "insensitive" as const } });
   }
   return {
-    OR: values.map((item) => ({
-      color: { equals: item, mode: "insensitive" as const },
-    })),
+    OR: conditions,
   };
 }
 

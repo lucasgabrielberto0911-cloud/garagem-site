@@ -89,3 +89,23 @@ export async function movePreparationToStockAction(form: FormData) {
     return back("Marque o carro como pronto antes de criar o anúncio.", true);
   redirect(`/admin/veiculos/novo?prep=${encodeURIComponent(id)}`);
 }
+
+/** Para item ainda em preparo: marca como pronto e abre o cadastro. */
+export async function markPreparationReadyAndMoveToStockAction(form: FormData) {
+  await requireAdmin();
+  const id = String(form.get("id") ?? "");
+  const item = await prisma.preparationVehicle.findUnique({
+    where: { id },
+    select: { ready: true },
+  });
+  if (!item) return back("Carro não encontrado.", true);
+  if (!item.ready) {
+    await prisma.preparationVehicle.update({
+      where: { id },
+      data: { ready: true },
+    });
+    revalidatePath("/admin/em-preparacao");
+    expireAdminData();
+  }
+  redirect(`/admin/veiculos/novo?prep=${encodeURIComponent(id)}`);
+}

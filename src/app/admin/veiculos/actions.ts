@@ -35,6 +35,8 @@ import {
   descriptionPriceSaveError,
   validateVehicleListing,
 } from "@/lib/admin-vehicle-validate";
+import { parseMoneyBR } from "@/lib/admin-money";
+import { QUICK_PRICE_MAX, QUICK_PRICE_MIN } from "@/lib/admin-quick-price";
 import {
   parseVehicleLocationCity,
 } from "@/lib/vehicle-location";
@@ -812,6 +814,75 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
       ? "Na home (destaque). A ordem é a do cadastro — mais recente primeiro."
       : "Destaque removido da home.",
   };
+}
+
+/**
+ * Edição rápida de preço na lista do admin: só preço à vista, sem parcela.
+ * Valida, salva e revalida a ficha/estoque como o resto do admin faz.
+ */
+export async function setVehiclePrice(id: string, priceRaw: string) {
+  const session = await requireAdmin();
+
+  const price = parseMoneyBR(priceRaw);
+  if (price == null || price < QUICK_PRICE_MIN || price > QUICK_PRICE_MAX) {
+    return { ok: false as const, message: "Digite o preço à vista, só números. Exemplo: 45.900,00." };
+  }
+
+  const current = await prisma.vehicle.findUnique({
+    where: { id },
+    select: { price: true, status: true, description: true },
+  });
+  if (!current) {
+    return { ok: false as const, message: "Veículo não encontrado." };
+  }
+  if (current.status === "vendido") {
+    return { ok: false as const, message: "Veículo vendido não muda de preço." };
+  }
+  const priceTextError = descriptionPriceSaveError({
+    description: current.description,
+    price,
+    status: current.status,
+  });
+  if (priceTextError) return { ok: false as const, message: priceTextError };
+  if (current.price === price) {
+    return { ok: true as const, message: "Preço continua o mesmo.", price };
+  }
+
+  let beforePrice = current.price;
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+      const locked = await tx.vehicle.findUnique({
+        where: { id },
+        select: { price: true, status: true },
+      });
+      if (!locked) throw new Error("PRICE_VEHICLE_NOT_FOUND");
+      if (locked.status === "vendido") throw new Error("PRICE_VEHICLE_SOLD");
+      beforePrice = locked.price;
+      if (locked.price === price) return;
+      await tx.vehicle.update({ where: { id }, data: { price } });
+      await recordAdminAudit(tx, session.adminId, id, "vehicle.price", {
+        price: { before: locked.price, after: price },
+      });
+    });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "PRICE_VEHICLE_SOLD") {
+      return { ok: false as const, message: "Veículo vendido não muda de preço." };
+    }
+    if (error instanceof Error && error.message === "PRICE_VEHICLE_NOT_FOUND") {
+      return { ok: false as const, message: "Veículo não encontrado." };
+    }
+    throw error;
+  }
+  if (beforePrice === price) {
+    return { ok: true as const, message: "Preço continua o mesmo.", price };
+  }
+  await recordVehiclePriceChange(id, beforePrice, price);
+
+  revalidatePath("/admin/veiculos");
+  revalidatePath(`/admin/veiculos/${id}`);
+  await revalidatePublicStock(id);
+  return { ok: true as const, message: "Preço atualizado.", price };
 }
 
 /**
