@@ -15,6 +15,7 @@ import {
   WhatsAppButton,
 } from "@/components/site/ui";
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd } from "@/lib/seo";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 
 export const revalidate = 3600;
@@ -162,21 +163,25 @@ export default function FinanciamentoPage() {
 
         {/* Ações principais logo abaixo das opções */}
         <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:mt-8">
-          <WhatsAppButton
-            message={WHATSAPP_MESSAGES.finance}
-            size="lg"
-            trackingLabel="financiamento"
-          >
-            Simular financiamento no WhatsApp
-          </WhatsAppButton>
-          <WhatsAppButton
-            message={WHATSAPP_MESSAGES.sell}
-            size="lg"
-            variant="outline"
-            trackingLabel="financiamento-troca"
-          >
-            Quero avaliar meu usado na troca
-          </WhatsAppButton>
+          <SiteLeadHit contentName="Financiamento">
+            <WhatsAppButton
+              message={WHATSAPP_MESSAGES.finance}
+              size="lg"
+              trackingLabel="financiamento"
+            >
+              Simular financiamento no WhatsApp
+            </WhatsAppButton>
+          </SiteLeadHit>
+          <SiteLeadHit contentName="Financiamento - Troca">
+            <WhatsAppButton
+              message={WHATSAPP_MESSAGES.sell}
+              size="lg"
+              variant="outline"
+              trackingLabel="financiamento-troca"
+            >
+              Quero avaliar meu usado na troca
+            </WhatsAppButton>
+          </SiteLeadHit>
           <ButtonLink href="/vender" size="lg" variant="outline">
             Preencher dados do meu usado
           </ButtonLink>
@@ -314,14 +319,16 @@ export default function FinanciamentoPage() {
               Conte no WhatsApp qual carro você gostou e se pretende dar entrada ou usar seu usado na troca. A equipe retorna com as opções dos bancos parceiros.
             </p>
             <div className="mt-5 flex flex-col gap-3">
-              <WhatsAppButton
-                message={WHATSAPP_MESSAGES.finance}
-                size="md"
-                className="w-full"
-                trackingLabel="financiamento-rodape"
-              >
-                Chamar no WhatsApp
-              </WhatsAppButton>
+              <SiteLeadHit contentName="Financiamento">
+                <WhatsAppButton
+                  message={WHATSAPP_MESSAGES.finance}
+                  size="md"
+                  className="w-full"
+                  trackingLabel="financiamento-rodape"
+                >
+                  Chamar no WhatsApp
+                </WhatsAppButton>
+              </SiteLeadHit>
               <Link
                 href="/estoque"
                 prefetch={false}
