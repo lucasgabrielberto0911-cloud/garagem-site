@@ -39,6 +39,7 @@ const STATIC_ROUTES: {
   { path: "/estoque", changeFrequency: "daily", priority: 0.9 },
   { path: "/pedido", changeFrequency: "monthly", priority: 0.4 },
   { path: "/vender", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/troca", changeFrequency: "monthly", priority: 0.75 },
   { path: "/como-funciona", changeFrequency: "monthly", priority: 0.6 },
   { path: "/financiamento", changeFrequency: "monthly", priority: 0.7 },
   { path: "/vendidos", changeFrequency: "weekly", priority: 0.6 },

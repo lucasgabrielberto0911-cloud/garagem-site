@@ -574,6 +574,15 @@ export default async function VehicleDetailPage({
                       variant="secondary"
                       className=""
                     />
+                    <p className="mt-2.5 text-sm">
+                      <Link
+                        href={`/troca?carro=${encodeURIComponent(canonicalSlug)}`}
+                        prefetch={false}
+                        className="inline-flex items-center text-cream/80 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand"
+                      >
+                        Tem carro pra dar na troca?
+                      </Link>
+                    </p>
                   </div>
 
                   {/* No celular o CSS sobe este bloco para logo abaixo do preço (sem Linhares/ES). */}

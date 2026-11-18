@@ -234,7 +234,7 @@ export default async function HomePage() {
           )}
         </div>
 
-        <div className="mt-5 max-sm:order-4">
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 max-sm:order-4">
           <Link
             href="/estoque"
             prefetch={false}
@@ -242,6 +242,13 @@ export default async function HomePage() {
           >
             Ver todos os veículos
             <IconArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/troca"
+            prefetch={false}
+            className="inline-flex min-h-11 items-center text-sm text-cream/80 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand"
+          >
+            Tem carro pra dar na troca?
           </Link>
         </div>
 
