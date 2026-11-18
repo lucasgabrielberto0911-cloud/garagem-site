@@ -55,7 +55,7 @@ test("cinco guias têm fontes oficiais, estoque real e WhatsApp", async ({ page,
     await page.goto(`/guias/${guide.slug}`);
     await expect(page.getByRole("heading", { name: guide.title, exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Ver estoque", exact: true }).first()).toHaveAttribute("href", "/estoque");
-    await expect(page.getByRole("link", { name: "Falar no WhatsApp", exact: true })).toHaveAttribute("href", /wa.me/);
+    await expect(page.locator("main").getByRole("link", { name: "Falar no WhatsApp", exact: true })).toHaveAttribute("href", /wa.me/);
     await expect(page.locator("article.listing-card")).toHaveCount(3);
     expect(xml).toContain(`/guias/${guide.slug}`);
     await noOverflow(page);
