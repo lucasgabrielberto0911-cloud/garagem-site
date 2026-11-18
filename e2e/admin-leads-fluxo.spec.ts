@@ -223,7 +223,7 @@ test("veículo: legenda inteira do Fastback publica 15 opcionais agrupados e per
   expect(vehicle.year).toBe(2023);
   expect(vehicle.yearModel).toBe(2024);
   expect(vehicle.engine).toBe("1.0 Turbo 200, até 130 cv");
-  expect(vehicle.transmission).toBe("Automático CVT com 7 marchas simuladas");
+  expect(vehicle.transmission).toBe("Automático");
   await expandirOpcionais(page);
   const equipamentos = page.locator("[data-accessory-chips]:visible");
   await expect(equipamentos.locator("[data-accessory-chip]")).toHaveCount(15);
