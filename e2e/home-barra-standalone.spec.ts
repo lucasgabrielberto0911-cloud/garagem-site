@@ -274,6 +274,9 @@ test("home desktop 1280x800: flutuante e aviso de cookies não cobrem Salvar dos
     const launcherBox = (await page.locator(".site-chat-launcher").boundingBox())!;
     const whatsappBox = (await page.locator("[data-support-whatsapp]").boundingBox())!;
     const consentBox = (await page.locator(".site-consent").boundingBox())!;
+    expect(whatsappBox.height).toBeGreaterThanOrEqual(44);
+    expect(whatsappBox.width).toBeGreaterThanOrEqual(44);
+    expect(launcherBox.height).toBeGreaterThanOrEqual(44);
     const overlaps = (
       a: { x: number; y: number; width: number; height: number },
       b: { x: number; y: number; width: number; height: number },

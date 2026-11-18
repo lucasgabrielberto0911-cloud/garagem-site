@@ -42,9 +42,9 @@ export function SiteSupportFloatContent({
         type="button"
         onClick={onOpenAssistant}
         aria-busy={busy}
-        className="site-chat-launcher group pointer-events-auto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-brand/50 bg-ink/95 px-3.5 py-1.5 font-display text-xs font-semibold tracking-wide text-white shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-brand hover:bg-brand-dark active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt touch-manipulation"
+        className="site-chat-launcher group pointer-events-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-brand/50 bg-ink/95 px-4 py-2 font-display text-base font-semibold leading-none text-white shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-brand hover:bg-brand-dark active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt touch-manipulation"
       >
-        <IconChat className="h-3.5 w-3.5 shrink-0 text-brand-light transition group-hover:text-white" />
+        <IconChat className="h-4 w-4 shrink-0 text-brand-light transition group-hover:text-white" />
         <span>Tirar dúvida rápida</span>
       </button>
 

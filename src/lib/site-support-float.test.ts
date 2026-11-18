@@ -90,23 +90,27 @@ test("SiteSupportFloat no desktop exibe botão verde direto do WhatsApp + pílul
   assert.match(html, /target="_blank"/);
   assert.match(html, /rel="noopener noreferrer"/);
 
-  // Pílula secundária discreta "Tirar dúvida rápida" no estilo vermelho do site
+  // Pílula secundária discreta "Tirar dúvida rápida" no estilo vermelho do site (alvo >= 44px e texto >= 16px)
   const buttonMatch = html.match(/<button[^>]*class="([^"]*)"[^>]*>[\s\S]*?<\/button>/);
   assert.ok(buttonMatch, "pílula do assistente deve existir");
   const buttonHtml = buttonMatch[0];
   const buttonClass = buttonMatch[1];
   assert.match(buttonHtml, /Tirar dúvida rápida/);
   assert.match(buttonClass, /\bsite-chat-launcher\b/);
+  assert.match(buttonClass, /\bmin-h-11\b/);
+  assert.match(buttonClass, /\btext-base\b/);
   assert.match(buttonClass, /\bfont-display\b/);
   assert.match(buttonClass, /\bborder-brand\/50\b/);
   assert.match(buttonClass, /\bhover:bg-brand-dark\b/);
   assert.match(buttonHtml, /\btext-brand-light\b/);
 
-  // Verde do WhatsApp (#25D366) só no botão do WhatsApp; nunca na pílula do assistente
+  // Verde do WhatsApp (#25D366) só no botão do WhatsApp (alvo 56x56 >= 44px); nunca na pílula do assistente
   assert.doesNotMatch(buttonHtml, /#25D366|emerald|green/i);
   const whatsappMatch = html.match(/<a[^>]*data-support-whatsapp=""[^>]*>/);
   assert.ok(whatsappMatch, "link do WhatsApp deve existir");
   assert.match(whatsappMatch[0], /bg-\[#25D366\]/);
+  assert.match(whatsappMatch[0], /\bh-14\b/);
+  assert.match(whatsappMatch[0], /\bw-14\b/);
 
   // Sem dourado/amarelo
   assert.doesNotMatch(html, /gold|amber|yellow|#FFC72C/i);
