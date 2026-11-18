@@ -49,6 +49,24 @@ export function absoluteUrl(path = "/") {
   return new URL(path, site.url).toString();
 }
 
+export function absoluteHttpsUrl(pathOrUrl = "/") {
+  const raw = absoluteUrl(pathOrUrl);
+  try {
+    const parsed = new URL(raw);
+    if (
+      parsed.protocol === "http:" &&
+      parsed.hostname !== "localhost" &&
+      parsed.hostname !== "127.0.0.1"
+    ) {
+      parsed.protocol = "https:";
+      return parsed.toString();
+    }
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 /** Canonical relativo — o metadataBase do root vira URL absoluta. */
 export function pageCanonicalPath(path: string) {
   if (!path || path === "/") return "/";
@@ -60,9 +78,115 @@ export function hasPublishablePrice(price: number) {
 }
 
 export function vehicleAvailabilityUrl(status: string) {
-  if (status === "vendido") return "https://schema.org/OutOfStock";
   if (status === "disponivel") return "https://schema.org/InStock";
-  return "https://schema.org/LimitedAvailability";
+  return "https://schema.org/OutOfStock";
+}
+
+export const VEHICLE_SELLER_AREA_SERVED = [
+  { "@type": "City", name: "Linhares" },
+  { "@type": "City", name: "Aracruz" },
+  { "@type": "AdministrativeArea", name: "Grande Vitória" },
+] as const;
+
+export type VehicleSchemaTransmission =
+  | "Manual"
+  | "Automático"
+  | "CVT"
+  | "Xtronic";
+
+function classifySchemaGear(value: string | null | undefined): VehicleSchemaTransmission | null {
+  const folded = (value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!folded) return null;
+  if (/\bx[-\s]?tronic\b/.test(folded)) return "Xtronic";
+  if (/\b(?:[ei][-\s]?)?cvt\b|\bmultidrive\b/.test(folded)) return "CVT";
+  if (
+    /\bmanual\b|\bmecanic[oa]\b|(?:^|[\s/])mec\.?(?=\s|$)|\bmt\d?\b/.test(folded)
+  ) {
+    return "Manual";
+  }
+  if (
+    /\bsemi[-\s]*automatic[oa]\b|\bsemiautomatic[oa]\b|\bautomatizad[oa]\b|\bdualogic\b|\bi[-\s]?motion\b|\beasytronic\b|\bgsr\b|\btwinlogic\b|\bpowershift\b|\btiptronic\b|\bs[-\s]?tronic\b|\bdsg\b|\bpdk\b|\bautomatic[oa]?\b|(?:^|[\s/])aut\.?(?=\s|$)|\bat\d?\b/.test(
+      folded,
+    )
+  ) {
+    return "Automático";
+  }
+  return null;
+}
+
+/**
+ * Câmbio limpo para schema.org (sem número de marchas e sem potência/cv):
+ * apenas 'Manual', 'Automático', 'CVT' ou 'Xtronic'.
+ */
+export function vehicleSchemaTransmission(
+  transmission?: string | null,
+  version?: string | null,
+): VehicleSchemaTransmission | undefined {
+  const fromVersion = classifySchemaGear(version);
+  const fromField = classifySchemaGear(transmission);
+  if (fromVersion && fromField) {
+    const manualConflict = (fromVersion === "Manual") !== (fromField === "Manual");
+    if (manualConflict) return fromVersion;
+    if (fromVersion === "Xtronic" || fromField === "Xtronic") return "Xtronic";
+    if (fromVersion === "CVT" || fromField === "CVT") return "CVT";
+    return fromField;
+  }
+  return fromField ?? fromVersion ?? undefined;
+}
+
+const JSONLD_FORBIDDEN_LINE =
+  /\b(?:parcelad[oa]s?|parcelas?|parcelamento|placa|chassis?|renavam|fipe|loja\s+digital|loja\s+f[ií]sica|pontos?\s+de\s+venda|atendimento\s+com\s+hora\s+marcada)\b|\b\d{1,3}\s*x\s*(?:de\s*|sem\s+juros|no\s+cart[aã]o|R\s*\$|\d)|\bentrada\s*(?:de\s*R?\$?\s*[\d.,]+\s*)?\+\s*\d{1,3}\s*x\b/i;
+
+const BRAZIL_PLATE_TOKEN =
+  /\b[A-Z]{3}[-\s]?(?:\d{4}|\d[A-Z]\d{2})\b/gi;
+
+const VIN_CHASSIS_TOKEN =
+  /\b(?=[A-HJ-NPR-Z0-9]*\d)(?=[A-HJ-NPR-Z0-9]*[A-HJ-NPR-Z])[A-HJ-NPR-Z0-9]{17}\b/gi;
+
+const RENAVAM_DIGITS_TOKEN = /\b\d{9,11}\b/g;
+
+export function sanitizeVehicleJsonLdDescription(
+  text: string | null | undefined,
+  sold: boolean,
+): string | null {
+  const base = publicVehicleDescription(text ?? null, sold);
+  if (!base) return null;
+  const cleanedSentences = base
+    .split(/\r?\n/)
+    .flatMap((line) => line.split(/(?<=[.!?])\s+/))
+    .map((segment) =>
+      segment
+        .replace(BRAZIL_PLATE_TOKEN, "")
+        .replace(VIN_CHASSIS_TOKEN, "")
+        .replace(RENAVAM_DIGITS_TOKEN, "")
+        .trim(),
+    )
+    .filter((segment) => segment.length > 0 && !JSONLD_FORBIDDEN_LINE.test(segment));
+  const joined = collapseWhitespace(cleanedSentences.join(" "))
+    .replace(/\s+([.,;!?])/g, "$1")
+    .replace(/^[.,;!?\s-]+|[.,;!?\s-]+$/g, (match) =>
+      /[.!?]$/.test(match.trim()) ? match.trim().slice(-1) : "",
+    )
+    .trim();
+  return joined || null;
+}
+
+function sanitizeEngineForJsonLd(engine: string | null | undefined): string | null {
+  if (!engine) return null;
+  const stripped = collapseWhitespace(
+    engine
+      .replace(BRAZIL_PLATE_TOKEN, "")
+      .replace(VIN_CHASSIS_TOKEN, "")
+      .replace(RENAVAM_DIGITS_TOKEN, "")
+      .replace(/\b\d+(?:[.,]\d+)?\s*(?:cv|hp|cavalos?)\b/gi, "")
+      .replace(/\b\d+\s*(?:marchas?|velocidades?)\b/gi, ""),
+  ).replace(/^[\s/.,()-]+|[\s/.,()-]+$/g, "");
+  if (!stripped || JSONLD_FORBIDDEN_LINE.test(stripped)) return null;
+  return stripped;
 }
 
 function parseHourRange(raw: string | undefined) {
@@ -358,13 +482,44 @@ export function vehicleJsonLd(vehicle: {
   const brand = formatBrandName(vehicle.brand);
   const model = formatModelName(vehicle.model);
   const display = formatVehicleDisplay(vehicle);
-  const name = display.fullLabel;
+  const name = collapseWhitespace(
+    display.fullLabel
+      .replace(BRAZIL_PLATE_TOKEN, "")
+      .replace(VIN_CHASSIS_TOKEN, "")
+      .replace(RENAVAM_DIGITS_TOKEN, ""),
+  );
   const path = display.path;
-  const priceOk = vehicle.status !== "vendido" && hasPublishablePrice(vehicle.price);
+  const sold = vehicle.status === "vendido";
+  const priceOk = !sold && hasPublishablePrice(vehicle.price);
   const availability = vehicleAvailabilityUrl(vehicle.status);
-  const rawDescription = publicVehicleDescription(vehicle.description, vehicle.status === "vendido")
-    || vehicleSeoDescription({ ...vehicle, version: display.version, year: vehicle.yearModel, sold: vehicle.status === "vendido" });
+  const sanitizedDescription = sanitizeVehicleJsonLdDescription(
+    vehicle.description,
+    sold,
+  );
+  const rawDescription =
+    sanitizedDescription ||
+    vehicleSeoDescription({
+      ...vehicle,
+      version: display.version,
+      year: vehicle.yearModel,
+      sold,
+    });
   const description = rawDescription ? collapseWhitespace(rawDescription) : null;
+  const schemaTransmission = vehicleSchemaTransmission(
+    vehicle.transmission,
+    vehicle.version,
+  );
+  const cleanEngine = sanitizeEngineForJsonLd(vehicle.engine);
+  const cleanVersion = vehicle.version?.trim()
+    ? collapseWhitespace(
+        vehicle.version
+          .replace(BRAZIL_PLATE_TOKEN, "")
+          .replace(VIN_CHASSIS_TOKEN, "")
+          .replace(RENAVAM_DIGITS_TOKEN, "")
+          .replace(/\b\d+(?:[.,]\d+)?\s*(?:cv|hp|cavalos?)\b/gi, "")
+          .replace(/\b\d+\s*(?:marchas?|velocidades?)\b/gi, ""),
+      )
+    : "";
 
   const seller = {
     "@type": "AutoDealer",
@@ -372,6 +527,7 @@ export function vehicleJsonLd(vehicle: {
     name: site.name,
     url: absoluteUrl("/"),
     telephone: `+${site.whatsappNumber}`,
+    areaServed: VEHICLE_SELLER_AREA_SERVED.map((area) => ({ ...area })),
     address: {
       "@type": "PostalAddress",
       addressLocality: vehicleLocationLabel(DEFAULT_VEHICLE_LOCATION_CITY),
@@ -393,7 +549,9 @@ export function vehicleJsonLd(vehicle: {
   const images = [
     ...new Set(
       vehicle.photos
-        .map((photo) => (photo.url ? absoluteUrl(publicVehiclePhotoSrc(photo.url)) : ""))
+        .map((photo) =>
+          photo.url ? absoluteHttpsUrl(publicVehiclePhotoSrc(photo.url)) : "",
+        )
         .filter(Boolean),
     ),
   ];
@@ -415,12 +573,14 @@ export function vehicleJsonLd(vehicle: {
     productionDate: String(vehicle.year),
     ...(display.color ? { color: display.color } : {}),
     ...(description ? { description } : {}),
-    ...(vehicle.version?.trim() ? { vehicleConfiguration: vehicle.version.trim() } : {}),
-    ...(vehicle.engine?.trim()
+    ...(cleanVersion && !JSONLD_FORBIDDEN_LINE.test(cleanVersion)
+      ? { vehicleConfiguration: cleanVersion }
+      : {}),
+    ...(cleanEngine
       ? {
           vehicleEngine: {
             "@type": "EngineSpecification",
-            name: vehicle.engine.trim(),
+            name: cleanEngine,
           },
         }
       : {}),
@@ -431,11 +591,11 @@ export function vehicleJsonLd(vehicle: {
     url: absoluteUrl(path),
     mileageFromOdometer: {
       "@type": "QuantitativeValue",
-      value: Number.isFinite(vehicle.km) ? Math.max(0, vehicle.km) : 0,
+      value: Number.isFinite(vehicle.km) ? Math.max(0, Math.round(vehicle.km)) : 0,
       unitCode: "KMT",
     },
-    fuelType: vehicle.fuel,
-    vehicleTransmission: display.transmission,
+    ...(vehicle.fuel?.trim() ? { fuelType: vehicle.fuel.trim() } : {}),
+    ...(schemaTransmission ? { vehicleTransmission: schemaTransmission } : {}),
     itemCondition: "https://schema.org/UsedCondition",
     offers,
   };

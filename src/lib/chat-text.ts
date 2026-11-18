@@ -13,7 +13,7 @@ import {
   site,
 } from "@/lib/site";
 import {
-  formatVehicleWhatsAppMessage,
+  buildWhatsAppCarMessage,
   shortVersion,
   type VehicleWhatsAppIntent,
 } from "@/lib/vehicle-display";
@@ -200,7 +200,8 @@ function chatVehicleWhatsAppText(
     vehicle.year &&
     path
   ) {
-    return formatVehicleWhatsAppMessage({
+    return buildWhatsAppCarMessage({
+      id: vehicle.id,
       brand: vehicle.brand,
       model: vehicle.model,
       version: vehicle.version,
@@ -210,6 +211,7 @@ function chatVehicleWhatsAppText(
       isMoto,
       intent,
       topic,
+      pageOrigin: "chat",
     });
   }
   if (intent === "question" || intent === "photos") {

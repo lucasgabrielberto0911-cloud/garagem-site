@@ -13,6 +13,10 @@ import {
 } from "@/components/admin/ActionSheet";
 import { VehiclePromoKitModal } from "@/components/admin/VehiclePromoKitModal";
 import {
+  CONSIGNED_PROMO_BLOCKED_MESSAGE,
+  canUseVehiclePromoKit,
+} from "@/lib/vehicle-promo-kit";
+import {
   IconCash,
   IconExternal,
   IconMore,
@@ -34,7 +38,9 @@ export function VehicleActionsMenu({
   form: Pick<
     VehicleFormModel,
     "photos" | "accessories" | "pendingAction" | "startTransition"
-  >;
+  > & {
+    consigned?: boolean;
+  };
   vehicle?: VehicleFormProps["vehicle"];
   mode: VehicleFormProps["mode"];
 }) {
@@ -46,6 +52,9 @@ export function VehicleActionsMenu({
   const [promoOpen, setPromoOpen] = useState(false);
 
   if (mode !== "edit" || !vehicle) return null;
+
+  const isConsigned = Boolean(vehicle.consigned || form.consigned);
+  const promoAllowed = canUseVehiclePromoKit({ consigned: isConsigned });
 
   function handleDelete() {
     if (!vehicle) return;
@@ -96,15 +105,25 @@ export function VehicleActionsMenu({
           hint="Abre a página pública em outra aba"
           onNavigate={() => setMoreOpen(false)}
         />
-        <ActionSheetButton
-          icon={<IconExternal className="h-4 w-4" />}
-          label="Kit de divulgação"
-          hint="WhatsApp, Instagram e card Status"
-          onClick={() => {
-            setMoreOpen(false);
-            setPromoOpen(true);
-          }}
-        />
+        {promoAllowed ? (
+          <ActionSheetButton
+            icon={<IconExternal className="h-4 w-4" />}
+            label="Kit de divulgação"
+            hint="WhatsApp, Instagram e card Status"
+            onClick={() => {
+              setMoreOpen(false);
+              setPromoOpen(true);
+            }}
+          />
+        ) : (
+          <div
+            role="note"
+            data-testid="consigned-promo-blocked"
+            className="border-y border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-relaxed text-cream/80"
+          >
+            {CONSIGNED_PROMO_BLOCKED_MESSAGE}
+          </div>
+        )}
         {vehicle.status !== "vendido" ? (
           <ActionSheetButton
             icon={<IconCash className="h-4 w-4" />}
@@ -183,10 +202,11 @@ export function VehicleActionsMenu({
               <VehiclePromoKitModal
                 vehicle={{
                   ...vehicle,
+                  consigned: isConsigned,
                   photos,
                   accessories,
                 }}
-                open={promoOpen}
+                open={promoAllowed && promoOpen}
                 onClose={() => setPromoOpen(false)}
               />
             </div>,

@@ -36,7 +36,7 @@ export const SERVICE_CITIES = [
       {
         question: "A Garagem atende quem está em Aracruz?",
         answer:
-          "Sim. Atendemos Aracruz e o litoral norte por WhatsApp e telefone: avaliação, fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
+          "Sim. Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp e telefone: avaliação, fotos, vídeos e orientação de documentação, todos os dias das 8h às 23h.",
       },
       {
         question: "Preciso ir a Vitória para ver o carro?",
@@ -70,7 +70,7 @@ export const SERVICE_CITIES = [
       {
         question: "A Garagem atende quem está em Vitória?",
         answer:
-          "Sim. Atendemos a capital e a Grande Vitória por WhatsApp e telefone, com fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
+          "Sim. Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp e telefone, com fotos, vídeos e orientação de documentação — todos os dias das 8h às 23h.",
       },
       {
         question: "Como funciona a compra de um seminovo à distância?",
@@ -85,19 +85,53 @@ export const SERVICE_CITIES = [
     ],
   },
   {
+    slug: "grande-vitoria",
+    name: "Grande Vitória",
+    metaDescription:
+      "Seminovos na Grande Vitória (Vitória, Vila Velha, Serra e Cariacica): ficha, fotos e preço no site da Garagem. Atendimento pelo WhatsApp das 8h às 23h.",
+    lead: "Em Vitória, Vila Velha, Serra, Cariacica ou Viana, você compara o seminovo no site da Garagem sem enfrentar trânsito na Terceira Ponte ou na BR-101. Combinamos o atendimento pelo WhatsApp, das 8h às 23h.",
+    paragraphs: [
+      "Atendemos Linhares, Aracruz e Grande Vitória com ficha, fotos, quilometragem e preço abertos em cada anúncio. Antes de sair de casa, peça no WhatsApp um vídeo detalhado do carro ou da moto que passou no seu filtro.",
+      "Combinamos o atendimento pelo WhatsApp todos os dias, das 8h às 23h, incluindo avaliação do seu usado na troca, orientação de financiamento e documentação. Visita, entrega ou retirada na Grande Vitória são combinadas quando a proposta estiver clara.",
+    ],
+    bullets: [
+      "Atendemos Linhares, Aracruz e Grande Vitória com estoque unificado no site",
+      "Ficha, fotos, km e vídeo no WhatsApp antes de cruzar a Terceira Ponte ou a BR-101",
+      "Avaliação do seu usado na troca e financiamento explicados na conversa",
+      `WhatsApp oficial ${PHONES[0].label} · todos os dias, 8h–23h`,
+    ],
+    faqs: [
+      {
+        question: "A Garagem atende toda a Grande Vitória?",
+        answer:
+          "Sim. Atendemos Linhares, Aracruz e Grande Vitória — incluindo Vitória, Vila Velha, Serra, Cariacica e Viana. Combinamos o atendimento pelo WhatsApp todos os dias, das 8h às 23h.",
+      },
+      {
+        question: "Como funciona a visita ou a entrega na Grande Vitória?",
+        answer:
+          "Você escolhe no site, recebe vídeo e tira dúvidas de troca ou financiamento na conversa. Combinamos o atendimento pelo WhatsApp, e a visita, entrega ou retirada é alinhada quando a proposta fizer sentido.",
+      },
+      {
+        question: "Posso dar meu carro ou moto na troca morando na Grande Vitória?",
+        answer:
+          "Pode. Envie marca, modelo, ano, km e fotos pela página Vender/Trocar ou pelo WhatsApp para uma avaliação gratuita e sem compromisso.",
+      },
+    ],
+  },
+  {
     slug: "linhares",
     name: "Linhares",
     metaDescription:
-      "Seminovos em Linhares/ES: escolha no site, peça o vídeo no WhatsApp e combine visita com hora marcada na cidade. Troca e financiamento, das 8h às 23h.",
-    lead: "No Centro, no Araçá ou no Interlagos, você escolhe o seminovo no site da Garagem e resolve o resto no WhatsApp: vídeo, dúvida de financiamento, troca e visita com hora marcada em Linhares.",
+      "Seminovos em Linhares/ES: escolha no site da Garagem, peça o vídeo e combine visita ou entrega pelo WhatsApp. Troca e financiamento, das 8h às 23h.",
+    lead: "No Centro, no Araçá ou no Interlagos, você escolhe o seminovo no site da Garagem. Combinamos o atendimento pelo WhatsApp: vídeo, dúvida de financiamento, troca e visita em Linhares.",
     paragraphs: [
       "Se o caminho passa pelo Rio Doce ou pela estrada, faz diferença decidir com o carro na tela. No anúncio estão a ficha, a quilometragem, as fotos e o preço. Se você pedir o vídeo, a gente mostra o que der para mostrar.",
-      "Você fala com a gente todos os dias, das 8h às 23h. Troca e documentação entram na mesma conversa, sem pressa. Não temos loja em Linhares: visita, entrega ou retirada a gente combina com a proposta já clara.",
+      "Atendemos Linhares, Aracruz e Grande Vitória todos os dias, das 8h às 23h. Combinamos o atendimento pelo WhatsApp: troca, documentação, visita, entrega ou retirada entram na mesma conversa, com a proposta já clara.",
     ],
     bullets: [
       "Ficha, km e preço no site, para você decidir ainda em Linhares",
       "Vídeo do carro antes de pegar a BR-101",
-      "Visita com hora marcada em Linhares, quando a proposta estiver clara",
+      "Visita, entrega ou retirada em Linhares combinadas pelo WhatsApp",
       `WhatsApp ${PHONES[0].label} — das 8h às 23h, todos os dias`,
     ],
     steps: [
@@ -110,8 +144,8 @@ export const SERVICE_CITIES = [
         text: "No WhatsApp, das 8h às 23h, a gente responde e manda o vídeo do carro que você escolheu.",
       },
       {
-        title: "Visita com hora marcada em Linhares",
-        text: "Quando a proposta estiver clara, combinamos um horário para você ver o carro pessoalmente, em Linhares.",
+        title: "Visita ou entrega combinada em Linhares",
+        text: "Quando a proposta estiver clara, combinamos pelo WhatsApp a visita ao veículo, entrega ou retirada em Linhares.",
       },
       {
         title: "Troca e financiamento na mesma conversa",
@@ -122,12 +156,12 @@ export const SERVICE_CITIES = [
       {
         question: "A Garagem atende quem está em Linhares?",
         answer:
-          "Sim. Atendemos Linhares e o norte do ES por WhatsApp e telefone: fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
+          "Sim. Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp e telefone: fotos, vídeos e orientação de documentação, todos os dias das 8h às 23h.",
       },
       {
-        question: "Consigo resolver quase tudo sem ir à loja?",
+        question: "Consigo resolver a escolha e a proposta pelo WhatsApp?",
         answer:
-          "Combinamos o atendimento pelo WhatsApp. A escolha, as dúvidas e a proposta acontecem no site e na conversa. Visita, entrega ou retirada só entram quando vocês combinam.",
+          "Sim. Combinamos o atendimento pelo WhatsApp: a escolha, as dúvidas e a proposta acontecem no site e na conversa. Visita, entrega ou retirada só entram quando combinarmos.",
       },
       {
         question: "Posso colocar meu veículo na troca?",
@@ -149,7 +183,7 @@ export const SERVICE_CITIES = [
     lead: "Em Laranjeiras, Barcelona, Carapina, Novo Horizonte ou perto do Civit, você começa pelo site. A Garagem mostra o seminovo com foto, ano, km e preço; o WhatsApp entra quando você quiser falar.",
     paragraphs: [
       "O dia na Serra passa na BR-101, no shopping, no colégio ou no corredor industrial. Dá para filtrar à noite, quando o trânsito já baixou: foto, ano, km e preço no anúncio. O vídeo do carro chega no WhatsApp, se você pedir.",
-      "A gente atende todos os dias, das 8h às 23h. Troca do usado, orientação de financiamento e documentação ficam na mesma conversa. Não tem ponto físico obrigatório: visita ou entrega só quando preço e condições já estiverem alinhados.",
+      "A gente atende todos os dias, das 8h às 23h. Troca do usado, orientação de financiamento e documentação ficam na mesma conversa. Combinamos o atendimento pelo WhatsApp: visita, entrega ou retirada só quando preço e condições já estiverem alinhados.",
     ],
     bullets: [
       "Foto, ano, km e preço para filtrar depois do trânsito da Serra",
@@ -164,9 +198,9 @@ export const SERVICE_CITIES = [
           "Sim. Atendemos Serra e a Grande Vitória por WhatsApp e telefone. Você vê o estoque no site, pede vídeo e tira dúvida de documentação — online, todos os dias das 8h às 23h.",
       },
       {
-        question: "Tem loja física na Serra?",
+        question: "Como funciona o atendimento na Serra?",
         answer:
-          "Atendemos Linhares, Aracruz e Grande Vitória, com a vitrine no site e o atendimento combinado pelo WhatsApp. Visita ao veículo, entrega ou retirada são combinadas quando o negócio avançar.",
+          "Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp, com a vitrine no site e visita ao veículo, entrega ou retirada combinadas quando o negócio avançar.",
       },
       {
         question: "Consigo colocar meu veículo na troca morando na Serra?",
@@ -183,7 +217,7 @@ export const SERVICE_CITIES = [
     lead: "Na Praia da Costa, em Itapoã, no Ibes ou no Coqueiral de Itaparica, você escolhe o seminovo sem cruzar a Terceira Ponte só para ler anúncio. A ficha está no site da Garagem; a conversa, no WhatsApp.",
     paragraphs: [
       "Compare no celular o que pesa na decisão: preço, câmbio, km e fotos. Se um carro fizer sentido, peça o vídeo. A gente responde todos os dias, das 8h às 23h, e você não precisa decidir na mesma hora.",
-      "Compra, venda e troca ficam nesse atendimento. Não temos loja na orla. Quando a proposta já estiver alinhada, a gente combina visita ou entrega e acompanha a documentação até a transferência.",
+      "Compra, venda e troca ficam nesse atendimento. Atendemos Linhares, Aracruz e Grande Vitória, e combinamos o atendimento pelo WhatsApp: quando a proposta já estiver alinhada, combinamos visita ou entrega e acompanhamos a documentação até a transferência.",
     ],
     bullets: [
       "Preço, câmbio e fotos para você comparar com calma",
@@ -198,7 +232,7 @@ export const SERVICE_CITIES = [
           "Sim. Atendemos Vila Velha e a orla da Grande Vitória por WhatsApp e telefone, com fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
       },
       {
-        question: "Vocês têm loja na Praia da Costa?",
+        question: "Como funciona o atendimento na Praia da Costa e em Vila Velha?",
         answer:
           "Atendemos Linhares, Aracruz e Grande Vitória. O estoque está no site e combinamos o atendimento pelo WhatsApp. Visita, entrega ou retirada são combinadas depois que você já viu o veículo com calma.",
       },
@@ -232,9 +266,9 @@ export const SERVICE_CITIES = [
           "Sim. Atendemos Guarapari e o litoral sul da Grande Vitória por WhatsApp e telefone, com fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
       },
       {
-        question: "Tem loja na Praia do Morro?",
+        question: "Como funciona a visita ou entrega em Guarapari?",
         answer:
-          "O estoque está no site e combinamos o atendimento pelo WhatsApp. Visita ou entrega são combinadas quando o negócio avançar.",
+          "Atendemos Linhares, Aracruz e Grande Vitória, além do litoral sul. O estoque está no site e combinamos o atendimento pelo WhatsApp: visita ou entrega são combinadas quando o negócio avançar.",
       },
       {
         question: "Posso colocar meu veículo na troca morando em Guarapari?",
@@ -251,7 +285,7 @@ export const SERVICE_CITIES = [
     lead: "Até a Grande Vitória são horas de estrada. No Centro, na Independência, no Recanto ou num distrito de Cachoeiro, você vê o seminovo no site da Garagem e tira a dúvida no WhatsApp antes de viajar.",
     paragraphs: [
       "Você já sabe a distância: comércio, mármore e muita BR-101. Por isso a ficha, a quilometragem, as fotos e o preço ficam no anúncio. Se você pedir o vídeo, a gente manda antes da viagem.",
-      "A gente atende todos os dias, das 8h às 23h. Troca e documentação ficam na mesma conversa, sem empurrar a decisão. Não temos loja em Cachoeiro: visita, entrega ou retirada a gente combina depois da proposta.",
+      "A gente atende todos os dias, das 8h às 23h. Troca e documentação ficam na mesma conversa, sem empurrar a decisão. Combinamos o atendimento pelo WhatsApp: visita, entrega ou retirada entram depois da proposta.",
     ],
     bullets: [
       "Ficha, fotos e preço para comparar antes da viagem",
@@ -285,7 +319,7 @@ export const SERVICE_CITIES = [
     lead: "Se você está no Centro, no São Silvano, na Honório Fraga ou perto do Rio Doce, dá para escolher o seminovo com calma. A ficha, as fotos e o preço estão no site da Garagem; no WhatsApp a gente combina o resto, sem pressão para fechar na hora.",
     paragraphs: [
       "Colatina fica longe da Grande Vitória, então vale ver o carro direito antes da estrada. No site você confere ficha, fotos e preço. Se quiser mais detalhe, peça um vídeo — do motor, do câmbio ou do ponto que você quiser olhar.",
-      "A gente atende todos os dias, das 8h às 23h. Troca e documentação entram nessa conversa. Não tem ponto físico obrigatório: o encontro a gente marca só depois que a proposta estiver clara.",
+      "A gente atende todos os dias, das 8h às 23h. Troca e documentação entram nessa conversa. Combinamos o atendimento pelo WhatsApp: visita, entrega ou retirada a gente marca só depois que a proposta estiver clara.",
     ],
     bullets: [
       "Estoque no site para você olhar à noite, com calma",
@@ -300,9 +334,9 @@ export const SERVICE_CITIES = [
           "Sim. Atendemos Colatina e o noroeste do ES por WhatsApp e telefone. Você vê o estoque no site, pede vídeo e tira dúvida de documentação — online, todos os dias das 8h às 23h.",
       },
       {
-        question: "Tem loja física em Colatina?",
+        question: "Como funciona a visita ou entrega em Colatina?",
         answer:
-          "A vitrine é o site e combinamos o atendimento pelo WhatsApp. Visita, entrega ou retirada são combinadas quando o negócio avançar.",
+          "Atendemos Linhares, Aracruz e Grande Vitória, além do noroeste do ES. A vitrine é o site e combinamos o atendimento pelo WhatsApp: visita, entrega ou retirada são combinadas quando o negócio avançar.",
       },
       {
         question: "Consigo colocar meu veículo na troca morando em Colatina?",
@@ -318,7 +352,7 @@ export const SERVICE_CITIES = [
       "Seminovos em Cariacica (ES): Campo Grande, Itacibá e Porto de Santana. Foto, km e preço no site da Garagem. Chame no WhatsApp das 8h às 23h.",
     lead: "Em Campo Grande, no Flexal, em Itacibá ou perto do porto, o seminovo está no site da Garagem. Você pode deixar a conversa do WhatsApp para o fim do expediente — a gente responde até as 23h.",
     paragraphs: [
-      "De Campo Grande ao porto, sobra pouco tempo para ir a uma loja. No anúncio tem foto, ano, km e preço — você começa por aí. O vídeo chega no WhatsApp quando você pedir.",
+      "De Campo Grande ao porto, sobra pouco tempo no dia a dia. No anúncio tem foto, ano, km e preço — você começa por aí. O vídeo chega no WhatsApp quando você pedir.",
       "Troca, orientação de financiamento e documentação entram na mesma conversa, todos os dias das 8h às 23h, sem pressão para decidir na hora. Visita ou entrega a gente combina quando a proposta já fizer sentido para você.",
     ],
     bullets: [
@@ -334,7 +368,7 @@ export const SERVICE_CITIES = [
           "Sim. Atendemos Cariacica e a Grande Vitória por WhatsApp e telefone, com fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
       },
       {
-        question: "Vocês têm loja em Campo Grande?",
+        question: "Como funciona o atendimento em Campo Grande e Cariacica?",
         answer:
           "Atendemos Linhares, Aracruz e Grande Vitória. O estoque está no site e combinamos o atendimento pelo WhatsApp. Visita, entrega ou retirada são combinadas depois que você já viu o veículo com calma.",
       },
@@ -353,7 +387,7 @@ export const SERVICE_CITIES = [
     lead: "Viana fica na BR-262, no meio do caminho. Se você mora no Centro, em Marcílio de Noronha ou no Universal, o seminovo está no site da Garagem — troca, dúvida ou visita a gente combina no WhatsApp.",
     paragraphs: [
       "Dá para comparar ficha, fotos e preço no celular, pedir o vídeo e conversar sem furar o expediente. Combinamos o atendimento pelo WhatsApp: tem gente atendendo, do primeiro recado até a documentação.",
-      "Compra, venda e troca ficam no mesmo canal, todos os dias das 8h às 23h. Não temos ponto físico em Viana. A visita ou a entrega só acontece quando a proposta já estiver alinhada.",
+      "Compra, venda e troca ficam no mesmo canal, todos os dias das 8h às 23h. Atendemos Linhares, Aracruz e Grande Vitória, incluindo Viana: a visita ou a entrega só acontece quando a proposta já estiver alinhada.",
     ],
     bullets: [
       "Ficha, fotos e preço no site, para decidir sem sair de Viana",

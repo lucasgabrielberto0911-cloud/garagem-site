@@ -77,5 +77,7 @@ test("PWA standalone, hero mobile e botões do assistente respeitam safe-area, d
   assert.match(supportFloat, /text-white/);
   assert.match(supportFloat, /site-chat-launcher/);
   assert.match(supportFloat, /Falar no WhatsApp/);
-  assert.match(supportFloat, /Perguntar ao assistente/);
+  assert.match(supportFloat, /Tirar dúvida rápida/);
+  assert.match(supportFloat, /SiteLeadHit/);
+  assert.doesNotMatch(supportFloat, /role="menu"/);
 });

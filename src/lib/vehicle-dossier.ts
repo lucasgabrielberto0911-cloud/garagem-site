@@ -4,7 +4,7 @@ import { publicInspectionNote } from "@/lib/vehicle-specs";
 export const DOSSIER_CHIP_LABELS = {
   hasSpareKey: "Chave reserva",
   hasManual: "Manual do proprietário",
-  hasVideo: "Vídeo sob pedido",
+  hasVideo: "Vídeo disponível",
 } as const;
 
 export type PublicDossierFlags = {

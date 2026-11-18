@@ -32,6 +32,7 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
       expect(text).toContain("Linhares/ES");
     }
     expect(description).toContain("seminovo");
+    expect(description).toContain("Combinamos o atendimento pelo WhatsApp.");
     titles.add(title);
     descriptions.add(description);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", origin + path);
@@ -39,6 +40,8 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     for (const selector of ['meta[property="og:image"]', 'meta[name="twitter:image"]']) {
       await expect(page.locator(selector)).toHaveAttribute("content", origin + publicVehiclePhotoSrc(car.photos[0].url));
     }
+    await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute("content", "1200");
+    await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute("content", "800");
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", origin + path);
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
     await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", title);
@@ -49,6 +52,8 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     const vehicle = schemas.find(schema => schema["@type"] === "Car");
     expect(vehicle.name).toBe(buildVehicleFullLabel(car));
     expect(vehicle.offers).toMatchObject({ "@type": "Offer", price: car.price, priceCurrency: "BRL", availability: "https://schema.org/InStock", url: origin + path });
+    expect(vehicle.offers.seller.areaServed.map((area: { name: string }) => area.name)).toEqual(["Linhares", "Aracruz", "Grande Vitória"]);
+    expect(["Manual", "Automático", "CVT", "Xtronic"]).toContain(vehicle.vehicleTransmission);
     expect(vehicle.mileageFromOdometer).toMatchObject({ value: car.km, unitCode: "KMT" });
     expect(vehicle.image[0]).toBe(origin + publicVehiclePhotoSrc(car.photos[0].url));
     expect(vehicle).not.toHaveProperty("aggregateRating");

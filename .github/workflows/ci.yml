@@ -67,7 +67,7 @@ jobs:
     if: needs.changes.outputs.run_full == 'true'
     # Playwright 1.57 não oferece WebKit para o Ubuntu 26.04.
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -105,16 +105,23 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}${{ matrix.shard == 1 && '-webkit' || '' }}
       - name: Playwright (download)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        run: |
+          if [ "${{ matrix.shard }}" = "1" ]; then
+            npx playwright install --with-deps chromium webkit
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: Playwright (deps)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-      - name: WebKit para a suíte de compatibilidade
-        if: matrix.shard == 1
-        run: npx playwright install --with-deps webkit
+        run: |
+          if [ "${{ matrix.shard }}" = "1" ]; then
+            npx playwright install-deps chromium webkit
+          else
+            npx playwright install-deps chromium
+          fi
       - name: Cache .next/cache
         uses: actions/cache@v4
         with:

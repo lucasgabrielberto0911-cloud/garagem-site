@@ -250,14 +250,14 @@ test("home desktop: assistente visível com animação respeitando prefers-reduc
     .evaluateAll((els) => els.filter((el) => el.getBoundingClientRect().top < 400).length);
   expect(visibleLogos).toBe(1);
 
-  // Botão flutuante único abre mini-menu com WhatsApp e Assistente
+  // Desktop: botão verde direto do WhatsApp + pílula discreta do assistente em 1 clique
   await expect(page.locator(".whatsapp-float")).toHaveCount(0);
+  await expect(page.getByRole("menu", { name: "Opções de atendimento" })).toHaveCount(0);
+  const supportWhatsApp = page.locator("[data-support-whatsapp]");
+  await expect(supportWhatsApp).toBeVisible();
+  await expect(supportWhatsApp).toHaveAttribute("href", /wa\.me/);
+  await expect(launcher).toHaveText("Tirar dúvida rápida");
   await launcher.click();
-  const floatMenu = page.getByRole("menu", { name: "Opções de atendimento" });
-  await expect(floatMenu).toBeVisible();
-  await expect(floatMenu.getByRole("menuitem", { name: "Falar no WhatsApp" })).toHaveAttribute("href", /wa\.me/);
-  await expect(floatMenu.getByRole("menuitem", { name: "Perguntar ao assistente" })).toBeVisible();
-  await floatMenu.getByRole("menuitem", { name: "Perguntar ao assistente" }).click();
   await expect(page.locator(".site-chat-panel")).toBeVisible();
   await page.getByRole("button", { name: "Fechar chat" }).click();
 });
@@ -272,14 +272,23 @@ test("home desktop 1280x800: flutuante e aviso de cookies não cobrem Salvar dos
     await interceptNonBrandImages(page);
     await page.goto(baseURL!);
     const launcherBox = (await page.locator(".site-chat-launcher").boundingBox())!;
+    const whatsappBox = (await page.locator("[data-support-whatsapp]").boundingBox())!;
     const consentBox = (await page.locator(".site-consent").boundingBox())!;
-    expect(consentBox.x + consentBox.width).toBeLessThan(launcherBox.x);
+    expect(whatsappBox.height).toBeGreaterThanOrEqual(44);
+    expect(whatsappBox.width).toBeGreaterThanOrEqual(44);
+    expect(launcherBox.height).toBeGreaterThanOrEqual(44);
+    const overlaps = (
+      a: { x: number; y: number; width: number; height: number },
+      b: { x: number; y: number; width: number; height: number },
+    ) => !(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y);
+    expect(consentBox.x + consentBox.width).toBeLessThan(whatsappBox.x);
+    expect(overlaps(consentBox, whatsappBox)).toBe(false);
+    expect(overlaps(consentBox, launcherBox)).toBe(false);
     const saveBoxes = await page
       .locator("article.listing-card .vehicle-card-favorite button")
       .evaluateAll((els) => els.map((el) => el.getBoundingClientRect()));
-    const overlaps = (a: { x: number; y: number; width: number; height: number }, b: DOMRect) =>
-      !(a.x + a.width <= b.left || b.right <= a.x || a.y + a.height <= b.top || b.bottom <= a.y);
     for (const save of saveBoxes) {
+      expect(overlaps(whatsappBox, save)).toBe(false);
       expect(overlaps(launcherBox, save)).toBe(false);
       expect(overlaps(consentBox, save)).toBe(false);
     }

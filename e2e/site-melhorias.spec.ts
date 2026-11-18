@@ -13,8 +13,9 @@ test("venda aceita mais de três fotos e permite adicionar outro lote", async ({
     json: { url: `private://documentos/vender/foto-${++uploads}.webp` },
   }));
   await page.goto("/vender");
-  await page.getByText("Complementar com placa, km ou fotos (opcional)", { exact: true }).click();
-  const upload = page.locator("[data-sell-photo-upload]");
+  const form = page.locator("#conteudo form").filter({ has: page.locator('[name="plate"]') });
+  await form.getByText("Complementar com placa, km ou fotos (opcional)", { exact: true }).click();
+  const upload = form.locator("[data-sell-photo-upload]");
   await upload.locator('input[type="file"]').setInputFiles(Array(5).fill("public/branding/placeholder-car.png"));
   await expect(upload.locator('[data-photo-phase="done"]')).toHaveCount(5);
   await expect(upload.locator('input[type="file"]')).toBeEnabled();
@@ -38,7 +39,6 @@ test("falha do chat fica junto ao campo com WhatsApp e mensagem preservada", asy
   await page.goto("/estoque");
   if (page.viewportSize()!.width >= 1024) {
     await page.locator(".site-chat-launcher").click();
-    await page.getByRole("menuitem", { name: "Perguntar ao assistente", exact: true }).click();
   } else {
     await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
   }
