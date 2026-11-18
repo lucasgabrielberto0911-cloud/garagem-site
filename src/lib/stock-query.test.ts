@@ -240,25 +240,10 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
   assert.equal(stockViewNeedsFetch({ sort: "destaques" }), false);
   assert.equal(stockViewNeedsFetch({}), false);
 
-  const filters = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "../components/site/StockFilters.tsx"),
-    "utf8",
-  );
-  const browse = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "../components/site/EstoqueBrowse.tsx"),
-    "utf8",
-  );
   const vehicles = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "../lib/vehicles.ts"),
     "utf8",
   );
-  assert.match(filters, /emptyLabel="Todos"/);
-  assert.match(filters, /desktop-modelo/);
-  assert.match(filters, /transmissionFilterParam/);
-  assert.match(filters, /desktop-cambio/);
-  assert.doesNotMatch(filters, /lg:overflow-y-auto/);
-  assert.match(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../components/site/StockSortSelect.tsx"), "utf8"), /destaques/);
-  assert.match(browse, /stockViewNeedsFetch/);
   assert.match(vehicles, /stockOrderBy\(filters\.sort\)/);
   assert.match(vehicles, /modelWhere\(filters\.model\)/);
   const where = vehicles.slice(
@@ -272,8 +257,6 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
   assert.equal(parseStockFilters({ transmission: "automatico" }).transmission, "automatico");
   assert.equal(stockViewNeedsFetch({ transmission: "automatico" }), true);
   assert.equal(stockViewNeedsFetch({ transmission: "manual" }), true);
-  assert.doesNotMatch(filters, /blindagem|Blindado|Consignado|Confirmado neste/i);
-  assert.doesNotMatch(browse, /99633|9\d{4}-\d{4}/);
 });
 
 test("modelo acompanha a marca escolhida", () => {

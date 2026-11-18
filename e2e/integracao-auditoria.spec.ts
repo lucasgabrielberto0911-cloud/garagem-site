@@ -59,7 +59,7 @@ test("convite iOS só registra exibição depois de uma decisão de cookies", as
   await expect(page.locator(".scroll-progress")).toBeAttached();
   await expect(page.locator("[data-install-coach]")).toHaveCount(0);
   expect(await page.evaluate(key => localStorage.getItem(key), INSTALL_SEEN_AT_KEY)).toBeNull();
-  await expect(page.locator(".site-chat-launcher")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pergunte ao assistente" })).toBeVisible();
   await page.getByRole("button", { name: "Só o essencial", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Consentimento de cookies" })).toBeHidden();
   await expect.poll(async () => {

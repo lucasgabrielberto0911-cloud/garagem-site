@@ -75,7 +75,7 @@ test("404 real, aliases 308 e vendido sem preço no HTML/JSON-LD", async ({ requ
 
 test("card, ficha, voltar, favoritos e WhatsApp oficial", async ({ page }, info) => {
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
-  await page.goto("/estoque?sort=menor-preco");
+  await page.goto("/estoque");
   const cards = page.locator("article.listing-card");
   await expect(cards).toHaveCount(3);
   await expect(cards.nth(0)).toBeVisible(); await expect(cards.nth(1)).toBeVisible();
@@ -101,7 +101,7 @@ test("card, ficha, voltar, favoritos e WhatsApp oficial", async ({ page }, info)
   expect(JSON.stringify(payload)).not.toContain("locationCity");
   await card.getByRole("button", { name: /^Salvar/ }).click();
   await card.locator("[data-stock-card]").click(); await expect(page).toHaveURL(new RegExp(civic.id));
-  await page.getByRole("link", { name: "Voltar aos resultados" }).click(); await expect(page).toHaveURL(/sort=menor-preco/);
+  await page.getByRole("link", { name: "Voltar aos resultados" }).click(); await expect(page).toHaveURL(/\/estoque(\?|$)/);
   const duster = page.locator("article.listing-card").filter({ has: page.getByRole("heading", { name: "Duster", exact: true }) });
   await duster.getByRole("button", { name: /^Salvar/ }).click();
   const hrv = page.locator("article.listing-card").filter({ has: page.getByRole("heading", { name: "HR-V", exact: true }) });
@@ -133,19 +133,6 @@ test("card, ficha, voltar, favoritos e WhatsApp oficial", async ({ page }, info)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const wa = page.getByRole("table").getByRole("link", { name: "Tenho interesse", exact: true });
   await expect(wa.first()).toHaveAttribute("href", /^https:\/\/wa\.me\/5527996330706\?/);
-});
-
-test("busca tolerante encontra o Civic e mantém ordenação", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
-  await page.goto("/estoque?sort=menor-preco");
-  const busca = page.getByRole("searchbox", { name: "Buscar por marca, modelo ou versão" });
-  await busca.fill("civc");
-  await busca.press("Enter");
-  await expect(page).toHaveURL(/q=civc/); await expect(page).toHaveURL(/sort=menor-preco/);
-  await page.getByRole("link", { name: /^Civic 1 veículo$/ }).click();
-  await expect(page).toHaveURL(/q=Civic/); await expect(page).toHaveURL(/sort=menor-preco/);
-  await expect(page.locator("article.listing-card")).toHaveCount(1);
-  await expect(page.locator("article.listing-card")).toContainText("Civic");
 });
 
 test("pergunta de potência responde o dado antes do card e WhatsApp oficial", async ({ page }) => {

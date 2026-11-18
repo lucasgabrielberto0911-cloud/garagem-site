@@ -88,11 +88,10 @@ test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", (
   const lightbox = readSrc("components/site/PhotoLightbox.tsx");
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
-  const filters = readSrc("components/site/StockFilters.tsx");
   const admin = readSrc("components/admin/VehiclePhotoManager.tsx");
   const bar = readSrc("components/site/VehicleMobileBar.tsx");
 
-  for (const file of [gallery, lightbox, page, dossier, filters]) {
+  for (const file of [gallery, lightbox, page, dossier]) {
     assert.doesNotMatch(file, /Baixar JPG/);
     assert.doesNotMatch(file, /publicPhotoJpgPath/);
     assert.doesNotMatch(file, /versão leve/);
@@ -111,8 +110,6 @@ test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", (
   assert.match(bar, /bg-brand/);
   assert.match(dossier, /STORE_INSPECTION_LABEL/);
   assert.match(dossier, /vistoria da loja/i);
-  assert.match(filters, /Com vistoria da loja/);
-  assert.doesNotMatch(filters, /Com laudo/);
   assert.match(admin, /Baixar JPG em alta qualidade/);
 });
 

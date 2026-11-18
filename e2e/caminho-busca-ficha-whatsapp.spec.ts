@@ -50,8 +50,8 @@ const test = base.extend<{ browserErrors: string[] }>({
   ],
 });
 
-test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
-  test("desktop: busca na home, abre ficha e valida botão WhatsApp oficial", async ({
+test.describe("Caminho lista -> página do carro -> botão WhatsApp", () => {
+  test("desktop: lista do estoque, abre ficha e valida botão WhatsApp oficial", async ({
     page,
   }, info) => {
     test.skip(
@@ -59,21 +59,8 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
       "Cenário exclusivo para desktop",
     );
 
-    // 1. Busca na home
-    await page.goto("/");
-    const searchInput = page
-      .locator(".hero-search")
-      .getByRole("searchbox", { name: "Buscar por marca ou modelo" });
-    await expect(searchInput).toBeVisible();
-    await searchInput.fill("Civic");
-
-    const searchButton = page
-      .locator(".hero-search")
-      .getByRole("button", { name: "Buscar", exact: true });
-    await searchButton.click();
-
-    // 2. Navegação para listagem e seleção do veículo
-    await expect(page).toHaveURL(/\/estoque\?q=Civic/);
+    // 1. Lista do estoque (sem busca: só a lista de carros)
+    await page.goto("/estoque");
     const cards = page.locator("article.listing-card");
     await expect(cards.first()).toBeVisible();
 
@@ -152,7 +139,7 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
     expect(await quickActions.count()).toBeGreaterThan(1);
   });
 
-  test("mobile: busca na home, abre ficha e valida botão WhatsApp na barra fixa", async ({
+  test("mobile: lista do estoque, abre ficha e valida botão WhatsApp na barra fixa", async ({
     page,
   }, info) => {
     test.skip(
@@ -160,21 +147,8 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
       "Cenário exclusivo para mobile",
     );
 
-    // 1. Busca na home
-    await page.goto("/");
-    const searchInput = page
-      .locator(".hero-search")
-      .getByRole("searchbox", { name: "Buscar por marca ou modelo" });
-    await expect(searchInput).toBeVisible();
-    await searchInput.fill("Civic");
-
-    const searchButton = page
-      .locator(".hero-search")
-      .getByRole("button", { name: "Buscar", exact: true });
-    await searchButton.click();
-
-    // 2. Navegação e seleção do carro na listagem
-    await expect(page).toHaveURL(/\/estoque\?q=Civic/);
+    // 1. Lista do estoque (sem busca: só a lista de carros)
+    await page.goto("/estoque");
     const civicCard = page.locator("article.listing-card").filter({
       has: page.getByRole("heading", { name: /Civic/i }),
     });
@@ -254,21 +228,14 @@ test.describe("Caminho busca -> página do carro -> botão WhatsApp", () => {
     expect(fitsViewport).toBe(true);
   });
 
-  test("busca direta no catálogo (/estoque) e abertura de ficha com CTA de contato", async ({
+  test("lista do catálogo (/estoque) e abertura de ficha com CTA de contato", async ({
     page,
     isMobile,
   }) => {
     await page.goto("/estoque");
 
-    // Campo de busca no catálogo
-    const searchInput = page.getByRole("searchbox", {
-      name: "Buscar por marca, modelo ou versão",
-    });
-    await expect(searchInput).toBeVisible();
-    await searchInput.fill("Duster");
-    await searchInput.press("Enter");
-
-    await expect(page).toHaveURL(/q=Duster/);
+    // Só a lista: sem campo de busca nem filtros
+    await expect(page.getByRole("searchbox")).toHaveCount(0);
 
     // Localiza e abre o card da Duster
     const dusterCard = page.locator("article.listing-card").filter({

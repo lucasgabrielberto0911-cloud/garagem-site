@@ -198,71 +198,59 @@ test("home 390x844 (normal e standalone): hero inteiro abaixo do header, barra i
     .toBe(true);
 });
 
-test("home desktop: assistente visível com animação respeitando prefers-reduced-motion", async ({
+test("home: três botões grandes no topo; assistente é um botão vermelho que abre o chat", async ({
   page,
 }) => {
-  test.skip(page.viewportSize()!.width < 1024, "launcher flutuante visível no desktop");
   await page.goto("/");
 
-  const launcher = page.locator(".site-chat-launcher");
-  await expect(launcher).toBeVisible();
-  const heroAssistant = page.getByRole("button", { name: "Pergunte ao assistente" });
-  await expect(heroAssistant).toBeVisible();
-  const heroPlaceholder = page.locator("[data-assistant-placeholder]");
-  await expect(heroPlaceholder).toBeVisible();
-  await expect(heroPlaceholder).toHaveAttribute("data-motion", "animated");
+  const whatsapp = page.locator(".hero-cta").getByRole("link", { name: "Falar no WhatsApp" });
+  const stock = page.locator(".hero-cta").getByRole("link", { name: "Ver estoque", exact: true });
+  const assistant = page.locator(".hero-cta").getByRole("button", { name: "Pergunte ao assistente" });
+  const boxes = [] as { x: number; y: number; width: number; height: number }[];
+  for (const button of [whatsapp, stock, assistant]) {
+    await expect(button).toBeVisible();
+    const box = (await button.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(56);
+    boxes.push(box);
+  }
+  if (page.viewportSize()!.width >= 1024) {
+    // Desktop: lado a lado, na mesma linha.
+    expect(Math.abs(boxes[0].y - boxes[1].y)).toBeLessThan(2);
+    expect(Math.abs(boxes[1].y - boxes[2].y)).toBeLessThan(2);
+  } else {
+    // Celular: empilhados e de largura total (mesma largura).
+    expect(boxes[0].y).toBeLessThan(boxes[1].y);
+    expect(boxes[1].y).toBeLessThan(boxes[2].y);
+    expect(Math.abs(boxes[0].width - boxes[2].width)).toBeLessThan(2);
+  }
 
-  const animNormal = await page.evaluate(() => ({
-    launcherAfter: getComputedStyle(document.querySelector(".site-chat-launcher")!, "::after").animationName,
-    caretAnim: getComputedStyle(document.querySelector(".assistant-placeholder-caret")!).animationName,
-  }));
-  expect(animNormal.launcherAfter).not.toBe("none");
-  expect(animNormal.caretAnim).not.toBe("none");
+  // Botão de verdade: fundo vermelho cheio, texto branco, sem sublinhado.
+  const style = await assistant.evaluate((el) => {
+    const css = getComputedStyle(el);
+    return { bg: css.backgroundColor, color: css.color, deco: css.textDecorationLine, radius: css.borderTopLeftRadius };
+  });
+  expect(style.bg).toBe("rgb(232, 24, 28)");
+  expect(style.color).toBe("rgb(255, 255, 255)");
+  expect(style.deco).toBe("none");
+  expect(parseFloat(style.radius)).toBeGreaterThan(0);
 
-  await expect(page.locator('label[for="home-assistant-input"]')).toHaveText(
-    "Pergunte qualquer coisa sobre nossos carros",
-  );
-  await expect(heroPlaceholder).toHaveText("Carros até R$ 60 mil", { timeout: 5000 });
+  // Nada de campo de pergunta, balão flutuante nem busca na home.
+  await expect(page.locator("#home-assistant-input")).toHaveCount(0);
+  await expect(page.locator(".site-chat-launcher")).toHaveCount(0);
+  await expect(page.locator(".hero-search")).toHaveCount(0);
 
-  const assistantInput = page.locator("#home-assistant-input");
-  await assistantInput.focus();
-  await expect(heroPlaceholder).toHaveAttribute("data-motion", "static");
-  await assistantInput.fill("Civic");
-  await expect(heroPlaceholder).toHaveCount(0);
-  await assistantInput.fill("");
-  await assistantInput.blur();
-  await expect(heroPlaceholder).toBeVisible();
-  await expect(heroPlaceholder).toHaveAttribute("data-motion", "animated");
+  if (page.viewportSize()!.width >= 1024) {
+    // Desktop: o botão verde flutuante do WhatsApp continua.
+    await expect(page.locator("[data-support-whatsapp]")).toBeVisible();
+    await expect(page.locator("[data-support-whatsapp]")).toHaveAttribute("href", /wa\.me/);
+  }
 
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(heroPlaceholder).toHaveAttribute("data-motion", "static");
-  await expect(heroPlaceholder).toHaveText("Qual o mais econômico?");
-  const animReduced = await page.evaluate(() => ({
-    launcherAfter: getComputedStyle(document.querySelector(".site-chat-launcher")!, "::after").animationName,
-    caretCount: document.querySelectorAll(".assistant-placeholder-caret").length,
-  }));
-  expect(animReduced.launcherAfter).toBe("none");
-  expect(animReduced.caretCount).toBe(0);
-
-  // Uma logo só visível no topo (sem repetição no hero)
-  const visibleLogos = await page
-    .locator('img[alt="Garagem"]:visible')
-    .evaluateAll((els) => els.filter((el) => el.getBoundingClientRect().top < 400).length);
-  expect(visibleLogos).toBe(1);
-
-  // Desktop: botão verde direto do WhatsApp + pílula discreta do assistente em 1 clique
-  await expect(page.locator(".whatsapp-float")).toHaveCount(0);
-  await expect(page.getByRole("menu", { name: "Opções de atendimento" })).toHaveCount(0);
-  const supportWhatsApp = page.locator("[data-support-whatsapp]");
-  await expect(supportWhatsApp).toBeVisible();
-  await expect(supportWhatsApp).toHaveAttribute("href", /wa\.me/);
-  await expect(launcher).toHaveText("Tirar dúvida rápida");
-  await launcher.click();
+  await assistant.click();
   await expect(page.locator(".site-chat-panel")).toBeVisible();
   await page.getByRole("button", { name: "Fechar chat" }).click();
 });
 
-test("home desktop 1280x800: flutuante e aviso de cookies não cobrem Salvar dos cards", async ({
+test("home desktop 1280x800: botão do WhatsApp e aviso de cookies não cobrem Salvar dos cards", async ({
   browser,
   baseURL,
 }) => {
@@ -271,25 +259,21 @@ test("home desktop 1280x800: flutuante e aviso de cookies não cobrem Salvar dos
     const page = await context.newPage();
     await interceptNonBrandImages(page);
     await page.goto(baseURL!);
-    const launcherBox = (await page.locator(".site-chat-launcher").boundingBox())!;
     const whatsappBox = (await page.locator("[data-support-whatsapp]").boundingBox())!;
     const consentBox = (await page.locator(".site-consent").boundingBox())!;
     expect(whatsappBox.height).toBeGreaterThanOrEqual(44);
     expect(whatsappBox.width).toBeGreaterThanOrEqual(44);
-    expect(launcherBox.height).toBeGreaterThanOrEqual(44);
     const overlaps = (
       a: { x: number; y: number; width: number; height: number },
       b: { x: number; y: number; width: number; height: number },
     ) => !(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y);
     expect(consentBox.x + consentBox.width).toBeLessThan(whatsappBox.x);
     expect(overlaps(consentBox, whatsappBox)).toBe(false);
-    expect(overlaps(consentBox, launcherBox)).toBe(false);
     const saveBoxes = await page
       .locator("article.listing-card .vehicle-card-favorite button")
       .evaluateAll((els) => els.map((el) => el.getBoundingClientRect()));
     for (const save of saveBoxes) {
       expect(overlaps(whatsappBox, save)).toBe(false);
-      expect(overlaps(launcherBox, save)).toBe(false);
       expect(overlaps(consentBox, save)).toBe(false);
     }
   } finally {
@@ -297,111 +281,32 @@ test("home desktop 1280x800: flutuante e aviso de cookies não cobrem Salvar dos
   }
 });
 
-test("estoque: 6 atalhos na ordem certa, Carroceria nos selects, painel 1280x800 <= 790 e gaveta sem duplicar preço", async ({
+test("estoque: só a lista de carros, sem filtros, e links antigos com filtro não quebram", async ({
   page,
 }) => {
-  const width = page.viewportSize()!.width;
   await page.goto("/estoque");
-  await page.evaluate(() => document.fonts.ready);
-
-  const expectedShortcuts = ["Até R$ 60 mil", "Automático", "Manual", "Carros", "Motos", "SUV"];
-
-  if (width >= 1024) {
-    await page.setViewportSize({ width: 1280, height: 800 });
-    const aside = page.locator("aside");
-    const filterCard = aside.locator("[data-pending]").first();
-    const shortcutsGroup = filterCard.getByRole("group", { name: "Atalhos" });
-    const labels = await shortcutsGroup.locator("button").allInnerTexts();
-    expect(labels.map((item) => item.trim())).toEqual(expectedShortcuts);
-
-    for (const label of expectedShortcuts) {
-      await expect(shortcutsGroup.getByRole("button", { name: label, exact: true })).toBeVisible();
-    }
-    await expect(shortcutsGroup.getByRole("button", { name: "Sedan", exact: true })).toHaveCount(0);
-    await expect(shortcutsGroup.getByRole("button", { name: "Até R$ 30 mil", exact: true })).toHaveCount(0);
-
-    const asideStyle = await aside.evaluate((el) => getComputedStyle(el).overflowY);
-    expect(asideStyle).not.toBe("auto");
-    expect(asideStyle).not.toBe("scroll");
-
-    const asideBox = (await aside.boundingBox())!;
-    const cardBox = (await filterCard.boundingBox())!;
-    const moreSummary = filterCard.locator("details > summary");
-    const summaryBox = (await moreSummary.boundingBox())!;
-
-    expect(asideBox.y + asideBox.height).toBeLessThanOrEqual(790);
-    expect(cardBox.y + cardBox.height).toBeLessThanOrEqual(790);
-    expect(summaryBox.y + summaryBox.height).toBeLessThanOrEqual(790);
-    expect(summaryBox.height).toBeLessThanOrEqual(44);
-
-    for (const fieldId of [
-      "#desktop-marca",
-      "#desktop-modelo",
-      "#desktop-tipo",
-      "#desktop-carroceria",
-      "#desktop-preco-min",
-      "#desktop-preco-max",
-      "#desktop-ano-min",
-      "#desktop-ano-max",
-      "#desktop-cambio",
-      "#desktop-km",
-    ]) {
-      const box = (await page.locator(fieldId).boundingBox())!;
-      expect(box.y + box.height).toBeLessThanOrEqual(790);
-    }
-
-    await page.locator("#desktop-carroceria").selectOption("sedan");
-    await expect(page).toHaveURL(/body=sedan/);
-    await expect(page.locator("article.listing-card")).toHaveCount(1);
-    await page.locator("#desktop-carroceria").selectOption("");
-
-    await shortcutsGroup.getByRole("button", { name: "Até R$ 60 mil", exact: true }).click();
-    await expect(page).toHaveURL(/maxPrice=60000/);
-    await expect(page.locator("article.listing-card")).toHaveCount(1);
-
-    await shortcutsGroup.getByRole("button", { name: "Manual", exact: true }).click();
-    await expect(page).toHaveURL(/transmission=manual/);
-  } else {
-    if (width >= 390) {
-      const navTop = (await page.locator("[data-mobile-bottom-nav]").boundingBox())!.y;
-      const firstCardBox = (await page.locator("article.listing-card").first().boundingBox())!;
-      expect(firstCardBox.y + firstCardBox.height).toBeLessThanOrEqual(navTop + 1);
-    }
-
-    const mobileBar = page.locator("[data-stock-filters]");
-    const shortcutsGroup = mobileBar.getByRole("group", { name: "Atalhos" });
-    const labels = await shortcutsGroup.locator("button").allInnerTexts();
-    expect(labels.map((item) => item.trim())).toEqual(expectedShortcuts);
-
-    for (const label of expectedShortcuts) {
-      const btn = shortcutsGroup.getByRole("button", { name: label, exact: true });
-      await expect(btn).toBeVisible();
-      expect(await btn.getAttribute("aria-hidden")).toBeNull();
-      expect(await btn.getAttribute("tabindex")).toBeNull();
-      const box = (await btn.boundingBox())!;
-      expect(box.height).toBeGreaterThanOrEqual(44);
-      expect(box.width).toBeGreaterThanOrEqual(44);
-    }
-
-    await page.getByRole("button", { name: "Carros", exact: true }).click();
-    await expect(page).toHaveURL(/category=carro/);
-    await page.locator('button[aria-controls="painel-filtros"]').click();
-    const drawer = page.getByRole("dialog", { name: "Filtrar veículos" });
-    await expect(drawer).toBeVisible();
-    await expect
-      .poll(async () => {
-        const box = (await drawer.boundingBox())!;
-        return box.y >= 0 && box.y + box.height <= page.viewportSize()!.height + 1;
-      })
-      .toBe(true);
-
-    await expect(drawer.getByText("Faixa de preço", { exact: true })).toHaveCount(0);
-    await expect(drawer.getByRole("button", { name: "Até R$ 30 mil" })).toHaveCount(0);
-    await expect(drawer.getByLabel("Preço mínimo", { exact: true })).toBeVisible();
-    await expect(drawer.getByLabel("Preço máximo", { exact: true })).toBeVisible();
-    await drawer.getByLabel("Carroceria", { exact: true }).selectOption("suv");
-    await drawer.getByRole("button", { name: /^Ver (\d+ )?veículos$/ }).click();
-    await expect(page).toHaveURL(/body=suv/);
-    await expect(page.locator("article.listing-card")).toHaveCount(2);
+  await expect(page.locator("article.listing-card").first()).toBeVisible();
+  for (const hidden of [
+    "[data-stock-filters]",
+    "#painel-filtros",
+    "#desktop-marca",
+    "#desktop-modelo",
+    "#desktop-cambio",
+    "#desktop-km",
+  ]) {
+    await expect(page.locator(hidden)).toHaveCount(0);
   }
+  await expect(page.getByRole("searchbox")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Filtros/ })).toHaveCount(0);
+
+  if (page.viewportSize()!.width < 1024 && page.viewportSize()!.width >= 390) {
+    const navTop = (await page.locator("[data-mobile-bottom-nav]").boundingBox())!.y;
+    const firstCardBox = (await page.locator("article.listing-card").first().boundingBox())!;
+    expect(firstCardBox.y).toBeLessThan(navTop);
+  }
+
+  const total = await page.locator("article.listing-card").count();
+  await page.goto("/estoque?brand=Marca-que-nao-existe&body=suv&maxPrice=1&q=xyz");
+  await expect(page.locator("article.listing-card")).toHaveCount(total);
+  await expect(page.locator("[data-stock-empty]")).toHaveCount(0);
 });

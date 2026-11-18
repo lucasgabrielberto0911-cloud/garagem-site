@@ -203,13 +203,12 @@ test("estoque abre o pedido em outra página; a ficha mantém o formulário", ()
 
   assert.doesNotMatch(browse, /MissingModelForm/);
   assert.match(browse, /WANTED_VEHICLE_BUTTON_LABEL/);
-  assert.match(browse, /wantedVehicleHref/);
+  assert.match(browse, /WANTED_VEHICLE_PATH/);
   assert.match(browse, /stockEmptyWhatsAppCta/);
-  assert.match(browse, /shown\.vehicles\.length === 0/);
   assert.match(copy, /Não achou seu próximo veículo\?/);
   const browseBody = browse.slice(browse.indexOf("export function EstoqueBrowse({"));
   const listAt = browseBody.indexOf("<StockInfiniteList");
-  const buttonAt = browseBody.indexOf("<NextVehicleLink");
+  const buttonAt = browseBody.indexOf("WANTED_VEHICLE_PATH}");
   assert.ok(listAt > 0 && buttonAt > listAt);
 
   assert.match(pedido, /<MissingModelForm/);

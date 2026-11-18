@@ -7,30 +7,6 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
 });
 
-test("chips de carroceria filtram o estoque e somem com a carroceria ao trocar para motos", async ({ page }) => {
-  await page.goto("/estoque");
-  const cards = page.locator("article.listing-card");
-  await expect(cards).not.toHaveCount(0);
-  // No celular a fileira rola e o chip pode ficar parcialmente fora da tela (aria-hidden, depende da fonte do runner):
-  // dispara o clique direto no botão em vez de procurar pelo papel.
-  await page.locator("button", { hasText: /^SUV$/ }).first().dispatchEvent("click");
-  await expect(page).toHaveURL(/body=suv/);
-  await expect(page).toHaveURL(/category=carro/);
-  await expect(cards.filter({ has: page.getByRole("heading", { name: "Civic", exact: true }) })).toHaveCount(0);
-  await expect(cards.filter({ has: page.getByRole("heading", { name: "HR-V", exact: true }) })).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Remover Carroceria: SUV", exact: true }).first()).toBeVisible();
-
-  // Chips fora da tela no celular ficam ocultos da árvore de acessibilidade: abre pela URL.
-  await page.goto("/estoque?category=carro&body=sedan");
-  await expect(cards.filter({ has: page.getByRole("heading", { name: "Civic", exact: true }) })).toHaveCount(1);
-  await expect(cards.filter({ has: page.getByRole("heading", { name: "HR-V", exact: true }) })).toHaveCount(0);
-
-  // No celular a fileira rola até o chip ativo e "Motos" pode estar fora da tela.
-  await page.locator("button", { hasText: /^Motos$/ }).first().dispatchEvent("click");
-  await expect(page).toHaveURL(/category=moto/);
-  await expect(page).not.toHaveURL(/body=/);
-});
-
 test("card do estoque: WhatsApp largo com 44 px e coração discreto sem texto", async ({ page }) => {
   await page.goto("/estoque");
   const card = page.locator("article.listing-card").first();
@@ -104,15 +80,22 @@ test("selos sem reticências e cards da mesma linha com a mesma largura e foto 4
   }
 });
 
-test("home no celular: WhatsApp, Ver estoque e números da loja logo no topo, sem assistente", async ({ page }) => {
+test("home no celular: três botões grandes empilhados logo no topo", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 640, "layout só do celular");
   await page.goto("/");
   const hero = page.locator(".hero-cta");
-  await expect(hero.getByRole("link", { name: "Falar no WhatsApp" })).toBeVisible();
-  await expect(hero.getByRole("link", { name: "Ver estoque" })).toBeVisible();
-  await expect(hero.getByRole("button", { name: "Pergunte ao assistente" })).toBeHidden();
-  const stats = page.locator(".hero-stats");
-  await expect(stats).toBeVisible();
-  const box = (await stats.boundingBox())!;
-  expect(box.y).toBeLessThan(page.viewportSize()!.height * 1.5);
+  const buttons = [
+    hero.getByRole("link", { name: "Falar no WhatsApp" }),
+    hero.getByRole("link", { name: "Ver estoque" }),
+    hero.getByRole("button", { name: "Pergunte ao assistente" }),
+  ];
+  let previousBottom = 0;
+  for (const button of buttons) {
+    await expect(button).toBeVisible();
+    const box = (await button.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(56);
+    expect(box.y).toBeGreaterThanOrEqual(previousBottom);
+    previousBottom = box.y + box.height;
+  }
+  expect(previousBottom).toBeLessThan(page.viewportSize()!.height);
 });

@@ -7,31 +7,28 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
 });
 
-test("busca vem antes dos cards, envia GET sem JavaScript e encontra o modelo", async ({ browser, baseURL, page }) => {
+test("home sem busca nem filtros: destaques logo abaixo do topo, sem JavaScript, e o card abre a ficha", async ({ browser, baseURL, page }) => {
   const context = await browser.newContext({ baseURL, javaScriptEnabled: false, viewport: page.viewportSize()! });
   try {
     await context.route("**/fotos/**", route => route.fulfill({ contentType: "image/png", path: "public/branding/placeholder-car.png" }));
     const home = await context.newPage();
     await home.goto("/");
-    const search = home.locator(".hero-search").getByRole("search");
-    const firstCard = home.locator("article.listing-card").first();
-    const searchBox = await search.boundingBox();
-    const cardBox = await firstCard.boundingBox();
-    expect(searchBox!.y + searchBox!.height).toBeLessThanOrEqual(cardBox!.y);
-    await search.getByRole("searchbox", { name: "Buscar por marca ou modelo" }).fill("Civic");
-    await Promise.all([
-      home.waitForURL(/\/estoque\?q=Civic/, { waitUntil: "commit" }),
-      search.getByRole("searchbox", { name: "Buscar por marca ou modelo" }).press("Enter", { noWaitAfter: true }),
-    ]);
+    await expect(home.getByRole("heading", { name: "Veículos em destaque" })).toBeVisible();
+    await expect(home.locator("article.listing-card").first()).toBeVisible();
   } finally {
     await context.close();
   }
   await page.goto("/");
-  await page.locator(".hero-search").getByRole("searchbox", { name: "Buscar por marca ou modelo" }).fill("Civic");
-  await page.locator(".hero-search").getByRole("button", { name: "Buscar", exact: true }).click();
-  await expect(page).toHaveURL(/\/estoque\?q=Civic/);
+  await expect(page.getByRole("searchbox")).toHaveCount(0);
+  await expect(page.locator(".hero-search")).toHaveCount(0);
+  await expect(page.getByText("Ex.: Civic")).toHaveCount(0);
+  const heroBottom = (await page.locator("section.hero-red-black").boundingBox())!;
+  const destaquesTop = (await page.locator("#destaques").boundingBox())!.y;
+  // O bloco sobe: começa colado no fim do topo, sem vão grande.
+  expect(destaquesTop - (heroBottom.y + heroBottom.height)).toBeLessThanOrEqual(2);
+  const heading = (await page.getByRole("heading", { name: "Veículos em destaque" }).boundingBox())!;
+  expect(heading.y - destaquesTop).toBeLessThanOrEqual(48);
   await expect(page.locator("article.listing-card")).not.toHaveCount(0);
-  await expect(page.locator("article.listing-card").first()).toContainText(/Civic/i);
   await expect(page.locator('article.listing-card a[href*="wa.me"]').first()).toBeVisible();
 });
 

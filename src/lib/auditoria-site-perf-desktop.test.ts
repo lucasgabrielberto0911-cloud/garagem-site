@@ -29,7 +29,6 @@ import {
   RECENT_VEHICLES_CACHE_TTL_MS,
   shouldFetchRecentVehicles,
 } from "./recently-viewed";
-import { kmFilterOptions } from "../components/site/StockFilterControls";
 import {
   GALLERY_HERO_SIZES,
   sanitizeFiltersForCategory,
@@ -155,7 +154,7 @@ test("Auditoria Site #19, #20, #21 e #22: TTL da fila offline, trava contra corr
   assert.match(elseBranch.slice(elseBranch.indexOf('label: "Abrir"')), /deleteIntent\(first\.id\)/);
 });
 
-test("Auditoria Site #02, #03, #04 e Fluxo #12, #15: erro de banco na Home, alvos de 44px no HeroSearch, cache em Vistos Recentemente e CookieConsent após conteúdo", () => {
+test("Auditoria Site #02, #03, #04 e Fluxo #12, #15: erro de banco na Home, cache em Vistos Recentemente e CookieConsent após conteúdo", () => {
   const fallback = attachQueryError([] as string[], "Banco indisponível");
   assert.equal(Array.isArray(fallback), true);
   assert.equal(fallback.length, 0);
@@ -165,10 +164,6 @@ test("Auditoria Site #02, #03, #04 e Fluxo #12, #15: erro de banco na Home, alvo
   const homeSrc = readSrc("app/(catalog)/page.tsx");
   assert.match(homeSrc, /featured\.error/);
   assert.match(homeSrc, /Não foi possível carregar os veículos em destaque agora/);
-
-  const heroSearchSrc = readSrc("components/site/HeroSearch.tsx");
-  assert.match(heroSearchSrc, /min-h-\[44px\]/);
-  assert.match(heroSearchSrc, /via-asphalt\/90/);
 
   const now = 1_700_000_000_000;
   assert.equal(shouldFetchRecentVehicles(null, "id1", now), true);
@@ -194,11 +189,7 @@ test("Auditoria Site #02, #03, #04 e Fluxo #12, #15: erro de banco na Home, alvo
   assert.ok(mainSlice.indexOf("{children}") < mainSlice.indexOf("<CookieConsent />"));
 });
 
-test("Auditoria Site #05, #06, #07, #08, #09, #48: filtros de estoque, histórico desktop, km customizado, troca carro/moto e consulta por IDs", () => {
-  const customKm = kmFilterOptions("35000");
-  assert.ok(customKm.some((opt) => opt.value === "35000" && opt.label === "Até 35.000 km"));
-  assert.equal(kmFilterOptions("50000").filter((opt) => opt.value === "50000").length, 1);
-
+test("Auditoria Site #05, #06, #07, #08, #09, #48: filtros por categoria, histórico desktop, troca carro/moto e consulta por IDs", () => {
   const models: StockModelOption[] = [
     { brand: "Honda", model: "Civic", categories: ["carro"] },
     { brand: "Yamaha", model: "Fazer 250", categories: ["moto"] },
@@ -219,13 +210,6 @@ test("Auditoria Site #05, #06, #07, #08, #09, #48: filtros de estoque, históric
   assert.equal(sanitizedMoto.model, "");
   assert.equal(sanitizedMoto.fuel, "");
   assert.equal(sanitizedMoto.accessory, "ABS");
-
-  const filtersSrc = readSrc("components/site/StockFilters.tsx");
-  assert.match(filtersSrc, /draftCount\?\.key === draftKey \? draftCount\.total : null/);
-  assert.match(filtersSrc, /options\?\.replace/);
-
-  const browseSrc = readSrc("components/site/EstoqueBrowse.tsx");
-  assert.match(browseSrc, /hasFetchedFilterResult/);
 
   const landingSrc = readSrc("components/site/StockLanding.tsx");
   assert.match(landingSrc, /getVehiclesByIds/);

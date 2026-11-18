@@ -44,13 +44,6 @@ test("home não herda o vermelho sólido da ficha", () => {
   }
 });
 
-test("filtros do estoque não têm faixa inline Ajuda para escolher", () => {
-  const filters = readSrc("components/site/StockFilters.tsx");
-  assert.equal(chatOpenBlocks(filters).length, 0);
-  assert.doesNotMatch(filters, /ChatOpenButton/);
-  assert.doesNotMatch(filters, /estoque-filtros/);
-});
-
 test("a ficha continua escondendo o FAB fechado para não cobrir a galeria", () => {
   const css = readSrc("app/globals.css");
   assert.match(

@@ -339,10 +339,9 @@ test("o bloco mostra foto, nome, ano, km e preço, e oferece contato se não hou
   assert.doesNotMatch(missingKm, /R\$/);
 });
 
-test("a ficha mantém âncoras, filtros e formulário; cidades exibem até seis veículos", () => {
+test("a ficha mantém âncoras e formulário; cidades exibem até seis veículos", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const similar = readSrc("components/site/SimilarVehicles.tsx");
-  const filters = readSrc("components/site/StockFilters.tsx");
   const form = readSrc("components/site/MissingModelForm.tsx");
   const sections = readSrc("lib/ficha-sections.ts");
   const vehicles = readSrc("lib/vehicles.ts");
@@ -364,9 +363,6 @@ test("a ficha mantém âncoras, filtros e formulário; cidades exibem até seis 
   assert.doesNotMatch(similar, /setTimeout|Equipamentos|Confirmado neste anúncio|99956/i);
   assert.doesNotMatch(page, /Confirmado neste anúncio|Equipamentos|99956/);
 
-  assert.match(filters, /label="Marca"/);
-  assert.match(filters, /label="Modelo"/);
-  assert.match(filters, /maxKm/);
   assert.match(form, /export function MissingModelForm/);
   assert.match(sections, /Fotos/);
   assert.match(sections, /Especificações/);
