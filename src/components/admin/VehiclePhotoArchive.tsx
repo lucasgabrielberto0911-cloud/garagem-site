@@ -3,8 +3,22 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { IconDownload, IconImage } from "@/components/admin/icons";
+import {
+  PhotoZipFailuresNotice,
+  type PhotoZipNoticeState,
+} from "@/components/admin/PhotoZipFailuresNotice";
 import { Card, btn } from "@/components/admin/ui";
-import { downloadAttachment } from "@/lib/download-attachment";
+import {
+  decodeZipCountsHeader,
+  decodeZipFailuresHeader,
+  formatPartialPhotoZipToast,
+  PHOTO_ZIP_COUNTS_HEADER,
+  PHOTO_ZIP_FAILURES_HEADER,
+} from "@/lib/admin-photo-zip";
+import {
+  downloadAttachment,
+  DownloadAttachmentError,
+} from "@/lib/download-attachment";
 
 export type ArchivePhotoItem = {
   id: string;
@@ -20,21 +34,61 @@ export function VehiclePhotoArchive({
   photos: ArchivePhotoItem[];
 }) {
   const [zipPending, setZipPending] = useState(false);
+  const [zipNotice, setZipNotice] = useState<PhotoZipNoticeState | null>(null);
   const [photoPending, setPhotoPending] = useState<string | null>(null);
   const zipHref = `/api/admin/veiculos/${vehicleId}/fotos`;
 
   async function handleZip() {
     if (zipPending || photos.length === 0) return;
     setZipPending(true);
+    setZipNotice(null);
     try {
-      await downloadAttachment(zipHref, "fotos.zip");
-      toast.success(
-        photos.length === 1
-          ? "JPG em alta baixado."
-          : `${photos.length} fotos em alta baixadas.`,
+      const response = await downloadAttachment(zipHref, "fotos.zip");
+      const failures = decodeZipFailuresHeader(
+        response.headers.get(PHOTO_ZIP_FAILURES_HEADER),
       );
+      const counts = decodeZipCountsHeader(
+        response.headers.get(PHOTO_ZIP_COUNTS_HEADER),
+      );
+
+      if (failures.length > 0) {
+        const totalCount = counts?.totalCount ?? photos.length;
+        const downloadedCount =
+          counts?.downloadedCount ??
+          Math.max(1, totalCount - failures.length);
+        setZipNotice({
+          downloadedCount,
+          totalCount,
+          failures,
+        });
+        toast.warning(
+          formatPartialPhotoZipToast({
+            downloadedCount,
+            totalCount,
+            failures,
+          }),
+        );
+      } else {
+        toast.success(
+          photos.length === 1
+            ? "JPG em alta baixado."
+            : `${photos.length} fotos em alta baixadas.`,
+        );
+      }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha no download.");
+      const message =
+        error instanceof Error ? error.message : "Falha no download.";
+      const failures =
+        error instanceof DownloadAttachmentError && error.failures
+          ? error.failures
+          : [];
+      setZipNotice({
+        downloadedCount: 0,
+        totalCount: photos.length,
+        failures,
+        errorMessage: message,
+      });
+      toast.error(message);
     } finally {
       setZipPending(false);
     }
@@ -98,6 +152,11 @@ export function VehiclePhotoArchive({
               ? "Montando ZIP…"
               : `Baixar ${photos.length} foto${photos.length === 1 ? "" : "s"} em alta`}
           </button>
+
+          <PhotoZipFailuresNotice
+            notice={zipNotice}
+            onDismiss={() => setZipNotice(null)}
+          />
 
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {photos.map((photo, index) => {

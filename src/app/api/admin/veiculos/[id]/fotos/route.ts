@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { attachmentHeaders, loadAdminJpeg } from "@/lib/photo-archive-download";
 import {
-  archivePhotoFilename,
-  archiveZipFilename,
-} from "@/lib/photo-archive";
+  buildResilientPhotoZip,
+  encodeZipFailuresHeader,
+  PHOTO_ZIP_COUNTS_HEADER,
+  PHOTO_ZIP_FAILURES_HEADER,
+} from "@/lib/admin-photo-zip";
+import { getSession } from "@/lib/auth";
+import {
+  attachmentHeaders,
+  loadAdminJpegDetailed,
+} from "@/lib/photo-archive-download";
 import { prisma } from "@/lib/prisma";
-import { buildZipStore } from "@/lib/zip-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +40,10 @@ export async function GET(
   });
 
   if (!vehicle) {
-    return NextResponse.json({ error: "Veículo não encontrado." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Veículo não encontrado." },
+      { status: 404 },
+    );
   }
 
   if (vehicle.photos.length === 0) {
@@ -46,46 +53,47 @@ export async function GET(
     );
   }
 
-  const entries: Array<{ name: string; data: Uint8Array }> = [];
-  const usedNames = new Set<string>();
-
-  for (const [index, photo] of vehicle.photos.entries()) {
-    const bytes = await loadAdminJpeg(photo.url);
-    if (!bytes) continue;
-
-    let name = archivePhotoFilename({
+  const result = await buildResilientPhotoZip({
+    vehicle: {
       brand: vehicle.brand,
       model: vehicle.model,
       year: vehicle.yearModel,
-      index: index + 1,
-      url: photo.url,
-    });
-    if (usedNames.has(name)) {
-      name = name.replace(/(\.[a-z0-9]+)$/i, `-${photo.id.slice(-6)}$1`);
-    }
-    usedNames.add(name);
-    entries.push({ name, data: bytes });
-  }
+    },
+    photos: vehicle.photos,
+    loadPhoto: ({ photo, signal }) =>
+      loadAdminJpegDetailed(photo.url, {
+        signal,
+        timeoutMs: 8_000,
+      }),
+    retries: 1,
+    timeoutMs: 8_500,
+    concurrency: 3,
+  });
 
-  if (entries.length === 0) {
+  if (!result.ok) {
     return NextResponse.json(
-      { error: "Não foi possível baixar as fotos do Storage." },
+      {
+        error: result.error,
+        failures: result.failures,
+      },
       { status: 502 },
     );
   }
 
-  const zip = buildZipStore(entries);
-  const filename = archiveZipFilename({
-    brand: vehicle.brand,
-    model: vehicle.model,
-    year: vehicle.yearModel,
-  });
+  const headers: Record<string, string> = {
+    ...attachmentHeaders(result.zipFilename, "application/zip"),
+    "Content-Length": String(result.zip.byteLength),
+    [PHOTO_ZIP_COUNTS_HEADER]: `${result.downloadedCount}/${result.totalCount}`,
+  };
 
-  return new NextResponse(Uint8Array.from(zip), {
+  if (result.failures.length > 0) {
+    headers[PHOTO_ZIP_FAILURES_HEADER] = encodeZipFailuresHeader(
+      result.failures,
+    );
+  }
+
+  return new NextResponse(Uint8Array.from(result.zip), {
     status: 200,
-    headers: {
-      ...attachmentHeaders(filename, "application/zip"),
-      "Content-Length": String(zip.byteLength),
-    },
+    headers,
   });
 }

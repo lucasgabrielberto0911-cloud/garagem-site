@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
+import { loadPhotoWithRetry } from "@/lib/admin-photo-zip";
 import { getSession } from "@/lib/auth";
-import { attachmentHeaders, loadAdminJpegSafely } from "@/lib/photo-archive-download";
 import { archivePhotoFilename } from "@/lib/photo-archive";
+import {
+  attachmentHeaders,
+  loadAdminJpegDetailed,
+} from "@/lib/photo-archive-download";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+function statusFromFailureReason(reason: string): number {
+  if (/n[aã]o\s+encontrad/i.test(reason)) return 404;
+  if (/tempo\s+esgotado/i.test(reason)) return 504;
+  return 502;
+}
 
 export async function GET(
   _request: Request,
@@ -41,11 +51,25 @@ export async function GET(
     return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
   }
 
-  const bytes = await loadAdminJpegSafely(photo.url);
-  if (!bytes) {
+  const outcome = await loadPhotoWithRetry(
+    (signal) =>
+      loadAdminJpegDetailed(photo.url, {
+        signal,
+        timeoutMs: 8_000,
+      }),
+    {
+      retries: 1,
+      timeoutMs: 8_500,
+    },
+  );
+
+  if (!outcome.ok) {
     return NextResponse.json(
-      { error: "Não foi possível baixar esta foto." },
-      { status: 502 },
+      {
+        error: `Não foi possível baixar esta foto (${outcome.reason}).`,
+        reason: outcome.reason,
+      },
+      { status: statusFromFailureReason(outcome.reason) },
     );
   }
 
@@ -57,11 +81,11 @@ export async function GET(
     url: photo.url,
   });
 
-  return new NextResponse(Buffer.from(bytes), {
+  return new NextResponse(Buffer.from(outcome.bytes), {
     status: 200,
     headers: {
       ...attachmentHeaders(filename, "image/jpeg"),
-      "Content-Length": String(bytes.byteLength),
+      "Content-Length": String(outcome.bytes.byteLength),
     },
   });
 }
