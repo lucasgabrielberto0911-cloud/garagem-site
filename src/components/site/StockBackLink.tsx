@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { readStockReturn } from "@/lib/stock-return";
 
@@ -17,20 +17,24 @@ function safeFromParam(raw: string | null) {
   return raw;
 }
 
-/** Volta aos filtros do estoque (query antiga `?from=` ou sessionStorage). */
+/** Volta aos filtros do estoque (query antiga `?from=` ou sessionStorage) sem bailout de SSR. */
 export function StockBackLink({
   fallbackHref,
   variant = "text",
 }: {
   fallbackHref?: string;
   variant?: "text" | "overlay";
-} = {}) {
-  const params = useSearchParams();
+}) {
+  const pathname = usePathname();
   const [href, setHref] = useState<string | null>(null);
 
   useEffect(() => {
-    setHref(safeFromParam(params.get("from")) ?? readStockReturn());
-  }, [params]);
+    const fromQuery =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("from")
+        : null;
+    setHref(safeFromParam(fromQuery) ?? readStockReturn());
+  }, [pathname]);
 
   const target = href ?? fallbackHref ?? null;
   if (!target) return null;

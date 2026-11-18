@@ -39,10 +39,14 @@ export function ChatNudge() {
   useEffect(() => {
     if (!vehicleId || alreadyShown()) return;
     const startedAt = Date.now();
+    let frameId = 0;
     const check = () => {
-      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
-      const scrolled = scrollable > 0 && window.scrollY / scrollable >= SCROLL_RATIO;
-      if (Date.now() - startedAt < AFTER_MS && !scrolled) return;
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < AFTER_MS) {
+        if (window.scrollY <= 0) return;
+        const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollable <= 0 || window.scrollY / scrollable < SCROLL_RATIO) return;
+      }
       if (otherPromptOpen()) return;
       try {
         sessionStorage.setItem(SESSION_KEY, "1");
@@ -52,13 +56,24 @@ export function ChatNudge() {
       setVisible(true);
       stop();
     };
-    const timer = window.setInterval(check, 2_000);
+    const onScroll = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        check();
+      });
+    };
+    const timer = window.setTimeout(check, AFTER_MS);
     const hide = () => setVisible(false);
     const stop = () => {
-      window.clearInterval(timer);
-      window.removeEventListener("scroll", check);
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+        frameId = 0;
+      }
+      window.clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
     };
-    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener(SITE_CHAT_OPEN_EVENT, hide);
     return () => {
       stop();

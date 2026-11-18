@@ -8,16 +8,10 @@ import { HeroSearch } from "@/components/site/HeroSearch";
 import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
 import { Testimonials } from "@/components/site/Testimonials";
 import { TrustBadges } from "@/components/site/TrustBadges";
-import dynamic from "next/dynamic";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
+import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles";
 import { SiteLeadHit } from "@/lib/funnel-events";
-
-const RecentlyViewedVehicles = dynamic(() =>
-  import("@/components/site/RecentlyViewedVehicles").then((mod) => mod.RecentlyViewedVehicles),
-);
-const WantedVehicleCta = dynamic(() =>
-  import("@/components/site/WantedVehicleCta").then((mod) => mod.WantedVehicleCta),
-);
+import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import {
   ActionRow,
   ButtonLink,

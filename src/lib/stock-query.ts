@@ -256,6 +256,29 @@ export function galleryLcpSrc(photo: GalleryPhoto) {
 }
 
 /**
+ * No celular (<= 639px), limita a primeira foto (LCP) a 800w para telas 3x
+ * (ex.: 390×3 = 1170px) não puxarem o arquivo de 1280w na abertura.
+ * Demais slides, desktop e lightbox continuam em 1280w (e masters no zoom).
+ */
+export function galleryLcpMobileSrcSet(photo: GalleryPhoto) {
+  const url = photo.url;
+  if (!url || isCardDerivative(url)) return undefined;
+  const directPreview = directGalleryPreviewSrc(url);
+  if (directPreview) {
+    return `${directPreview} ${HERO_NARROW_WIDTH}w`;
+  }
+  if (!canTransform(url)) return undefined;
+  const narrow = supabaseTransformSrc(
+    url,
+    HERO_NARROW_WIDTH,
+    undefined,
+    "contain",
+    HERO_NARROW_QUALITY,
+  );
+  return narrow === url ? undefined : `${narrow} ${HERO_NARROW_WIDTH}w`;
+}
+
+/**
  * 800px no celular 2x e no desktop 1x; o arquivo da galeria (1280) quando
  * a tela é maior. A miniatura 480 do card não entra: é outro recorte e
  * fica mole na foto grande.

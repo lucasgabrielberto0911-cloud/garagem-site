@@ -41,12 +41,24 @@ export function HeroSearch({
   };
 
   useEffect(() => {
-    checkScroll();
     const el = scrollRef.current;
     if (!el) return;
-    const handleResize = () => checkScroll();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    let frameId = 0;
+    const scheduleCheck = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        checkScroll();
+      });
+    };
+    scheduleCheck();
+    el.addEventListener("scroll", scheduleCheck, { passive: true });
+    window.addEventListener("resize", scheduleCheck, { passive: true });
+    return () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
+      el.removeEventListener("scroll", scheduleCheck);
+      window.removeEventListener("resize", scheduleCheck);
+    };
   }, [brands]);
 
   return (
@@ -112,7 +124,6 @@ export function HeroSearch({
 
         <div
           ref={scrollRef}
-          onScroll={checkScroll}
           className="chip-scroll hero-chips flex items-center gap-1.5 overflow-x-auto scrollbar-none px-4 py-0.5 sm:gap-2 sm:px-0 sm:py-0"
         >
           <span className="sr-only sm:not-sr-only sm:shrink-0 sm:font-display sm:text-xs sm:font-semibold sm:uppercase sm:tracking-wider sm:text-muted">

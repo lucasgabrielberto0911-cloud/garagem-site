@@ -27,7 +27,10 @@ function placeSectionIds(ids: readonly string[]) {
     const nodes = [
       ...document.querySelectorAll<HTMLElement>(`[data-ficha-section="${id}"]`),
     ];
-    const visible = nodes.find((node) => node.getClientRects().length > 0);
+    const visible =
+      nodes.length === 1
+        ? nodes[0]
+        : nodes.find((node) => node.getClientRects().length > 0);
     if (!visible) continue;
     for (const node of nodes) {
       if (node === visible) node.id = id;
@@ -76,18 +79,49 @@ function scrollToSection(id: string) {
 export function FichaSectionAnchors({ hasDetails }: { hasDetails: boolean }) {
   useEffect(() => {
     const ids: string[] = fichaSectionLinks(hasDetails).map((section) => section.id);
-    placeSectionIds(ids);
+    let frameId = 0;
+    let idleId = 0;
+    let timerId = 0;
+
+    const schedulePlace = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        placeSectionIds(ids);
+      });
+    };
 
     const hash = window.location.hash.replace(/^#/, "");
-    if (ids.includes(hash)) scrollToSection(hash);
+    if (ids.includes(hash)) {
+      placeSectionIds(ids);
+      scrollToSection(hash);
+    } else if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(() => placeSectionIds(ids), { timeout: 1500 });
+    } else {
+      timerId = window.setTimeout(() => placeSectionIds(ids), 250);
+    }
+
+    const onHashChange = () => {
+      const nextHash = window.location.hash.replace(/^#/, "");
+      if (ids.includes(nextHash)) {
+        placeSectionIds(ids);
+        scrollToSection(nextHash);
+      }
+    };
 
     const media = window.matchMedia("(min-width: 1024px)");
-    const onMode = () => placeSectionIds(ids);
-    window.addEventListener("resize", onMode);
-    media.addEventListener("change", onMode);
+    window.addEventListener("resize", schedulePlace, { passive: true });
+    window.addEventListener("hashchange", onHashChange);
+    media.addEventListener("change", schedulePlace);
     return () => {
-      window.removeEventListener("resize", onMode);
-      media.removeEventListener("change", onMode);
+      if (frameId) window.cancelAnimationFrame(frameId);
+      if (idleId && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timerId) window.clearTimeout(timerId);
+      window.removeEventListener("resize", schedulePlace);
+      window.removeEventListener("hashchange", onHashChange);
+      media.removeEventListener("change", schedulePlace);
     };
   }, [hasDetails]);
 

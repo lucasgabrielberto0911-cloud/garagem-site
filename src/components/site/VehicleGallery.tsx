@@ -6,6 +6,7 @@ import { VEHICLE_PLACEHOLDER, VehicleImage } from "@/components/VehicleImage";
 import { vehiclePhotoAlt } from "@/lib/format";
 import {
   GALLERY_HERO_SIZES,
+  galleryLcpMobileSrcSet,
   galleryLcpSrc,
   galleryPreviewSrc,
   galleryPreviewSrcSet,
@@ -113,7 +114,6 @@ export function VehicleGallery({
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller || total < 2) return;
-    scrollerWidthRef.current = scroller.clientWidth;
 
     function onScroll() {
       const el = scrollerRef.current;
@@ -142,15 +142,17 @@ export function VehicleGallery({
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller || total < 2) return;
-    let lastWidth = scroller.clientWidth;
-    scrollerWidthRef.current = lastWidth;
-    const realign = () => {
+    let lastWidth = 0;
+    const realign = (entries?: ResizeObserverEntry[] | Event) => {
       const el = scrollerRef.current;
       if (!el) return;
-      const width = el.clientWidth;
+      const observedWidth = Array.isArray(entries) ? entries[0]?.contentRect.width : undefined;
+      const width = observedWidth && observedWidth > 0 ? observedWidth : el.clientWidth;
       scrollerWidthRef.current = width;
       if (width <= 0 || width === lastWidth) return;
+      const hadPreviousWidth = lastWidth > 0;
       lastWidth = width;
+      if (!hadPreviousWidth && activeRef.current === 0) return;
       el.scrollTo({
         left: activeRef.current * width,
         behavior: "auto",
@@ -158,8 +160,9 @@ export function VehicleGallery({
     };
     const observer =
       typeof ResizeObserver !== "undefined" ? new ResizeObserver(realign) : null;
-    observer?.observe(scroller);
-    window.addEventListener("resize", realign);
+    if (observer) observer.observe(scroller);
+    else realign();
+    window.addEventListener("resize", realign, { passive: true });
     return () => {
       observer?.disconnect();
       window.removeEventListener("resize", realign);
@@ -169,11 +172,12 @@ export function VehicleGallery({
   const goTo = useCallback((index: number) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
+    const width = scrollerWidthRef.current || scroller.clientWidth;
     const next = Math.min(Math.max(index, 0), Math.max(total - 1, 0));
     targetScrollIndexRef.current = { index: next, until: Date.now() + 600 };
     activeRef.current = next;
     scroller.scrollTo({
-      left: next * scroller.clientWidth,
+      left: next * width,
       behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
     setActive(next);
@@ -245,6 +249,7 @@ export function VehicleGallery({
               isFirstSlide || index === active || neighborsReady || active > 0;
             const slideSrc = isFirstSlide ? galleryLcpSrc(photo) : galleryPreviewSrc(photo);
             const slideSrcSet = galleryPreviewSrcSet(photo);
+            const slideMobileSrcSet = isFirstSlide ? galleryLcpMobileSrcSet(photo) : undefined;
             const isReady = decodedUrls.has(slideSrc);
             const isFailed = failedUrls.has(slideSrc);
             const thumbSrc = galleryThumbSrc(photo);
@@ -295,6 +300,7 @@ export function VehicleGallery({
                           fill
                           sizes={GALLERY_HERO_SIZES}
                           srcSet={slideSrcSet}
+                          mobileSrcSet={slideMobileSrcSet}
                           priority={isFirstSlide}
                           skipPreload={isFirstSlide}
                           eager
@@ -334,6 +340,7 @@ export function VehicleGallery({
                           fill
                           sizes={GALLERY_HERO_SIZES}
                           srcSet={slideSrcSet}
+                          mobileSrcSet={slideMobileSrcSet}
                           recoverable
                           priority={index === 0}
                           eager
