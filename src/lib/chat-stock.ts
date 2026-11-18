@@ -428,15 +428,20 @@ export function cheapPriceCap(stock: ChatVehicleRecord[]): number | null {
   return cap;
 }
 
+const MODEL_MODIFIER_PREFIX = /^(?:grand|gran|new|novo|nova)$/;
+
 function modelMatchNeedles(model: string) {
   const full = normalize(model);
   const compact = compactAlnum(model);
-  const first = full.split(" ").find((token) => /[a-z]/.test(token) && (token.length >= 3 || token === "ka" || token === "cg"));
+  const words = full.split(" ").filter(Boolean);
+  const first = words.find((token) => /[a-z]/.test(token) && (token.length >= 3 || token === "ka" || token === "cg"));
   const needles = [full];
   if (compact.length >= 3) {
     needles.push(compact);
   }
-  if (first && first !== full) needles.push(first);
+  if (first && first !== full && !(words.length > 1 && MODEL_MODIFIER_PREFIX.test(first))) {
+    needles.push(first);
+  }
   return [...new Set(needles.filter((item) => item.length >= 3 || item === "ka" || item === "cg"))];
 }
 
@@ -458,6 +463,10 @@ function messageMentionsModel(mensagem: string, model: string) {
   }
   const compactModel = compactAlnum(model);
   if (compactModel.length >= 4) {
+    const words = normalize(model).split(" ").filter(Boolean);
+    const first = compactAlnum(model.split(/[\s./-]+/)[0] ?? "");
+    const allowFirstPrefixEdit =
+      first.length >= 4 && !(words.length > 1 && MODEL_MODIFIER_PREFIX.test(first));
     for (const token of compactMsg
       ? normalize(mensagem).split(" ").flatMap((part) => {
           const compact = compactAlnum(part);
@@ -465,8 +474,7 @@ function messageMentionsModel(mensagem: string, model: string) {
         })
       : []) {
       if (isEditDistanceAtMostOne(token, compactModel)) return true;
-      const first = compactAlnum(model.split(/[\s./-]+/)[0] ?? "");
-      if (first.length >= 4 && isEditDistanceAtMostOne(token, first)) return true;
+      if (allowFirstPrefixEdit && isEditDistanceAtMostOne(token, first)) return true;
     }
   }
   return false;
@@ -2802,10 +2810,10 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(entre|disponiveis|valores|precos|modelos|superior|partir|quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automaticos?|automaticas?|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|novos|novas|recente|recentes|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(entre|disponiveis|valores|precos|modelos|superior|partir|quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automaticos?|automaticas?|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|grande|grandes|amplo|ampla|amplos|amplas|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|novos|novas|recente|recentes|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
-  /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
+  /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|grande|grandes|amplo|ampla|amplos|amplas|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
 
 const PROFILE_SEEK_NOISE =
   /^(meu|minha|meus|minhas|sua|esposa|filha|mulher|namorada|mae|aprendendo|aprender|dirigir|tirou|carteira|cnh|habilitacao|entregador|entregadores|motoboy|ifood|trabalhar|trabalho|entrega|entregas)$/;
@@ -3870,8 +3878,11 @@ export const CHAT_DELIVERY_REPLY =
 export const CHAT_CONSORTIUM_REPLY =
   `Carta de consórcio o consultor confirma no WhatsApp se dá pra usar no seu caso. Na loja: financiamento em até 60 vezes, cartão em até 18 vezes, à vista e troca. ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_CITY_REPLY =
+  `Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp. ${CHAT_WHATSAPP_URL}`;
+
 export function chatCityReply(_mensagem: string) {
-  return CHAT_ADDRESS_REPLY;
+  return CHAT_CITY_REPLY;
 }
 
 export const CHAT_DOCS_REPLY =
@@ -3934,10 +3945,21 @@ export function chatPolicyShortcut(
   const folded = normalize(mensagem);
   if (/\b(troca|trocar)\b/.test(folded) && !/marchas?|volante|paddle|borboleta/.test(folded)) return "troca";
   if (/\b(financi\w*|juros|parcelas?|simular)\b/.test(folded) && !/\b(cartao|18x|consumo|potencia|cvs?|mais forte)\b/.test(folded)) return "finance";
-  // "Tem carro em Aracruz?" / "atendem Vitória?": área de atendimento, não modelo.
-  if (/\b(?:em|de|pra|para|na|no)\s+(?:aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/.test(folded) &&
-    /\b(tem|atende\w*|entrega\w*|voces|vcs|carros?|motos?|loja)\b/.test(folded) &&
-    parsePriceLimit(mensagem) == null && !parseTransmissionFilter(mensagem) && !parseBodyStyleFilter(mensagem)) {
+  // "Tem carro em Aracruz?" / "atendem Vitória?" / "atendem Grande Vitória?": área de atendimento, não modelo.
+  const serviceRegion =
+    /\b(?:(?:em|de|pra|para|na|no)\s+|atende\w*\s+(?:a\s+|na\s+|em\s+)?)(?:grande vitoria|aracruz|vitoria|serra|vila velha|guarapari|cariacica|viana|linhares)\b/;
+  const asksServiceArea =
+    /\b(?:quais (?:cidades|regioes)|qual (?:cidade|regiao)|em que (?:cidades?|regiao)|onde)\s+(?:voces\s+|vcs\s+|a garagem\s+|a loja\s+)?atende\w*\b|\b(?:voces|vcs|a garagem|a loja)\s+atende\w*\s+(?:em\s+)?(?:quais\s+(?:cidades|regioes)|qual\s+(?:cidade|regiao)|onde)\b/;
+  if (
+    (asksServiceArea.test(folded) ||
+      (serviceRegion.test(folded) &&
+        /\b(tem|atende\w*|entrega\w*|voces|vcs|carros?|motos?|loja)\b/.test(folded))) &&
+    !/\bfrete\b/.test(folded) &&
+    !/\b(?:cidade|localizacao) (?:do|da|desse|dessa|deste|desta) (?:carro|moto|veiculo|unidade)\b/.test(folded) &&
+    parsePriceLimit(mensagem) == null &&
+    !parseTransmissionFilter(mensagem) &&
+    !parseBodyStyleFilter(mensagem)
+  ) {
     return "city";
   }
   // Consórcio: a loja não tem regra publicada; o consultor confirma (nada de "aceita" ou "não aceita").

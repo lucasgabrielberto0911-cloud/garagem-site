@@ -4,10 +4,6 @@ import { ActionSheetButton, ActionSheetLink } from "@/components/admin/ActionShe
 import { IconCash, IconCheck, IconClipboard, IconCopy, IconExternal, IconPencil, IconStar, IconTrash } from "@/components/admin/icons";
 import { ADMIN_CARD_OVERFLOW_ACTIONS, adminCardOverflowStatuses, adminCardShowsSoldAction, type AdminCardOverflowAction } from "@/lib/admin-list";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
-import {
-  CONSIGNED_PROMO_BLOCKED_MESSAGE,
-  canUseVehiclePromoKit,
-} from "@/lib/vehicle-promo-kit";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { VehicleRow } from "@/components/admin/VehiclesTable";
 
@@ -52,22 +48,12 @@ export function SheetActions({
         onNavigate={close}
       />
       {onPromo ? (
-        canUseVehiclePromoKit(vehicle) ? (
-          <ActionSheetButton
-            icon={<IconExternal className="h-4 w-4" />}
-            label="Kit de divulgação"
-            hint="WhatsApp, Instagram e card Status"
-            onClick={run(onPromo)}
-          />
-        ) : (
-          <div
-            role="note"
-            data-testid="consigned-promo-blocked"
-            className="border-y border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-relaxed text-cream/80"
-          >
-            {CONSIGNED_PROMO_BLOCKED_MESSAGE}
-          </div>
-        )
+        <ActionSheetButton
+          icon={<IconExternal className="h-4 w-4" />}
+          label="Kit de divulgação"
+          hint="Feed, Story, Capa e textos prontos"
+          onClick={run(onPromo)}
+        />
       ) : null}
       {beforeDelete.map((action) => (
         <OverflowAction
@@ -95,7 +81,7 @@ export function SheetActions({
         <>
           <ActionSheetButton
             icon={<IconCheck className="h-4 w-4" />}
-            label="Marcar como vendida (simples)"
+            label="Marcar como vendido"
             hint="Sem comprador, preço ou registro de faturamento"
             disabled={busy}
             onClick={run(onMarkSoldSimple)}

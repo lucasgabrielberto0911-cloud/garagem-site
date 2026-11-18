@@ -51,9 +51,12 @@ import {
   deleteVehicle,
   duplicateVehicle,
   setVehicleFeatured,
+  setVehiclePrice,
   setVehicleStatus,
   setVehiclesStatus,
 } from "@/app/admin/veiculos/actions";
+import { moneyInput } from "@/lib/admin-money";
+import { SIMPLE_SOLD_LABEL, quickPriceError } from "@/lib/admin-quick-price";
 
 export type VehicleRow = AdminVehicleListItem;
 
@@ -694,6 +697,36 @@ export function VehiclesTable({
     );
   }
 
+  function saveQuickPrice(vehicle: VehicleRow, raw: string) {
+    const localError = quickPriceError({ raw, status: vehicle.status });
+    if (localError) {
+      toast.error(localError);
+      return Promise.resolve(false);
+    }
+    setBusyId(vehicle.id);
+    return setVehiclePrice(vehicle.id, raw).then((result) => {
+      if (!result.ok) {
+        toast.error(result.message);
+        return false;
+      }
+      if (typeof result.price === "number") {
+        setItems((current) =>
+          current.map((item) =>
+            item.id === vehicle.id ? { ...item, price: result.price } : item,
+          ),
+        );
+      }
+      toast.success(result.message);
+      router.refresh();
+      return true;
+    }).catch(() => {
+      toast.error("Não foi possível salvar o preço.");
+      return false;
+    }).finally(() => {
+      setBusyId(null);
+    });
+  }
+
   function duplicate(
     vehicle: VehicleRow,
     options?: { replaceDraft?: boolean },
@@ -1245,6 +1278,7 @@ export function VehiclesTable({
                   onToggleSelect={() => toggleSelected(vehicle.id)}
                   onMarkSold={() => setSoldTarget(vehicle)}
                   onMarkSoldSimple={() => setSimpleSoldTarget(vehicle)}
+                  onSavePrice={(raw) => saveQuickPrice(vehicle, raw)}
                   onMore={() => setActionsTarget(vehicle)}
                 />
               ))}
@@ -1383,13 +1417,13 @@ export function VehiclesTable({
 
       <ConfirmDialog
         open={simpleSoldTarget !== null}
-        title="Marcar como vendida (simples)"
+        title={SIMPLE_SOLD_LABEL}
         description={
           simpleSoldTarget
             ? `Marcar ${simpleSoldTarget.brand} ${simpleSoldTarget.model} como vendido sem registrar comprador, preço ou faturamento?`
             : undefined
         }
-        confirmLabel="Marcar como vendida (simples)"
+        confirmLabel={SIMPLE_SOLD_LABEL}
         danger
         loading={busyId === simpleSoldTarget?.id}
         onCancel={() => setSimpleSoldTarget(null)}
@@ -1492,6 +1526,7 @@ function VehicleAdminCard({
   onToggleSelect,
   onMarkSold,
   onMarkSoldSimple,
+  onSavePrice,
   onMore,
 }: {
   vehicle: VehicleRow;
@@ -1501,11 +1536,40 @@ function VehicleAdminCard({
   onToggleSelect: () => void;
   onMarkSold: () => void;
   onMarkSoldSimple: () => void;
+  onSavePrice: (raw: string) => Promise<boolean>;
   onMore: () => void;
 }) {
   const finance = vehicleFinance(vehicle);
   const title = `${vehicle.brand} ${vehicle.model}`;
   const missingPrice = !(vehicle.price > 0);
+  const canEditPrice = vehicle.status !== "vendido";
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceDraft, setPriceDraft] = useState("");
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [savingPrice, setSavingPrice] = useState(false);
+
+  function openPriceEditor() {
+    setPriceDraft(moneyInput(vehicle.price > 0 ? vehicle.price : null));
+    setPriceError(null);
+    setEditingPrice(true);
+  }
+
+  async function submitPrice(event?: { preventDefault?: () => void }) {
+    event?.preventDefault?.();
+    const error = quickPriceError({ raw: priceDraft, status: vehicle.status });
+    if (error) {
+      setPriceError(error);
+      return;
+    }
+    setPriceError(null);
+    setSavingPrice(true);
+    try {
+      const ok = await onSavePrice(priceDraft);
+      if (ok) setEditingPrice(false);
+    } finally {
+      setSavingPrice(false);
+    }
+  }
   const meta = adminCardMetaLine(vehicle);
   const missing = publishMissingLine(vehicle);
   const showSold = adminCardShowsSoldAction(vehicle.status);
@@ -1590,6 +1654,18 @@ function VehicleAdminCard({
           </span>
         </Link>
       </div>
+      {canEditPrice && !editingPrice ? (
+        <div className="px-3 pb-3">
+          <button
+            type="button"
+            onClick={openPriceEditor}
+            disabled={busy}
+            className="inline-flex min-h-[44px] items-center px-2 text-base font-medium text-cream underline underline-offset-4 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+          >
+            Alterar preço
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-1 border-t border-white/15 px-1.5 py-1">
         <Link
@@ -1607,9 +1683,9 @@ function VehicleAdminCard({
               onClick={onMarkSoldSimple}
               disabled={busy}
               className={MARK_SOLD_SIMPLE_BTN}
-              aria-label="Marcar como vendida (simples)"
+              aria-label={SIMPLE_SOLD_LABEL}
             >
-              Marcar como vendida (simples)
+              {SIMPLE_SOLD_LABEL}
             </button>
             <button
               type="button"
@@ -1625,7 +1701,7 @@ function VehicleAdminCard({
         <button
           type="button"
           onClick={onMore}
-          disabled={busy}
+          disabled={busy || savingPrice}
           aria-label={`Mais ações: ${title}`}
           aria-haspopup="dialog"
           className="ml-auto inline-flex h-11 w-11 items-center justify-center text-cream/80 transition touch-manipulation outline-none hover:bg-white/5 hover:text-cream focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
@@ -1633,6 +1709,60 @@ function VehicleAdminCard({
           <IconMore className="h-5 w-5" />
         </button>
       </div>
+      {canEditPrice && editingPrice ? (
+        <form
+          onSubmit={(event) => void submitPrice(event)}
+          className="space-y-2 border-t border-white/15 bg-white/[0.03] px-3 py-3"
+        >
+          <label
+            htmlFor={`quick-price-${vehicle.id}`}
+            className="block text-base font-medium text-cream"
+          >
+            Preço à vista (R$)
+          </label>
+          <input
+            id={`quick-price-${vehicle.id}`}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            value={priceDraft}
+            onChange={(event) => {
+              setPriceDraft(event.target.value);
+              if (priceError) setPriceError(null);
+            }}
+            placeholder="Ex.: 45.900,00"
+            disabled={busy || savingPrice}
+            aria-invalid={priceError ? true : undefined}
+            aria-describedby={priceError ? `quick-price-error-${vehicle.id}` : undefined}
+            className="h-11 w-full max-w-[16rem] border border-white/25 bg-ink px-3 text-base text-cream outline-none placeholder:text-cream/40 focus:border-brand focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+          />
+          {priceError ? (
+            <p id={`quick-price-error-${vehicle.id}`} role="alert" className="text-base leading-relaxed text-red-300">
+              {priceError}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={busy || savingPrice}
+              className="inline-flex min-h-[44px] items-center justify-center bg-brand px-4 font-display text-base font-semibold text-white transition touch-manipulation outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white disabled:opacity-60"
+            >
+              {savingPrice ? "Salvando…" : "Salvar preço"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingPrice(false);
+                setPriceError(null);
+              }}
+              disabled={busy || savingPrice}
+              className="inline-flex min-h-[44px] items-center justify-center border border-white/25 px-4 text-base text-cream transition touch-manipulation outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      ) : null}
     </li>
   );
 }

@@ -1,24 +1,44 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import Module, { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
-  CONSIGNED_PROMO_BLOCKED_MESSAGE,
+  COVER_CARD_HEIGHT,
+  COVER_CARD_WIDTH,
+  COVER_PHOTO_BOX,
+  FEED_CARD_HEIGHT,
+  FEED_CARD_WIDTH,
+  FEED_PHOTO_BOX,
   PROMO_APPOINTMENT_TEXT,
+  PROMO_ART_ORDER,
+  PROMO_ART_SPECS,
+  PROMO_BRAND_RED,
+  PROMO_DOMAIN_TEXT,
+  PROMO_LOGO_SRC,
   PROMO_SERVICE_AREAS_TEXT,
+  PROMO_TRADE_FINANCE_TEXT,
   STORY_CARD_HEIGHT,
   STORY_CARD_WIDTH,
   STORY_PHOTO_BOX,
   buildInstagramPromo,
+  buildPromoFileName,
+  buildPromoZipFileName,
   buildWhatsAppPromo,
+  buildZipArchive,
   canUseVehiclePromoKit,
-  computeStoryPhotoLayout,
-  renderStoryCard,
-  resolveStoryPhotoSrc,
+  computePerfectCircleSeal,
+  computePhotoBox4x3Layout,
+  computeProportionalPlacement,
+  crc32,
+  renderPromoArt,
+  resolvePromoPhotoSrc,
+  resolvePromoTransmission,
+  sanitizePromoText,
+  type PromoCanvasContext2D,
   type PromoVehicle,
-  type StoryCanvasContext2D,
 } from "./vehicle-promo-kit";
 import { site } from "./site";
 import { VehiclePromoKitModal } from "@/components/admin/VehiclePromoKitModal";
@@ -39,6 +59,9 @@ const mockVehicle: PromoVehicle = {
   price: 119900,
   status: "disponivel",
   consigned: false,
+  plate: "RBA1E23",
+  chassis: "9BRBL3HE1M0123456",
+  renavam: "01234567890",
   accessories: ["Ar-condicionado", "Direção elétrica", "Câmera de ré"],
   photos: [{ url: "https://pub-revisao123.r2.dev/corolla-capa.webp" }],
 };
@@ -66,8 +89,13 @@ function makeMockVehicleRow(overrides: Partial<VehicleRow> = {}): VehicleRow {
     updatedAt: new Date("2026-10-02T12:00:00Z"),
     transmission: mockVehicle.transmission ?? "Automático",
     color: mockVehicle.color ?? null,
-    plate: null,
-    photos: [{ url: "https://pub-revisao123.r2.dev/corolla-capa.webp", thumbnailUrl: null }],
+    plate: "RBA1E23",
+    photos: [
+      {
+        url: "https://pub-revisao123.r2.dev/corolla-capa.webp",
+        thumbnailUrl: null,
+      },
+    ],
     sale: null,
     costsTotal: 0,
     photoCount: 1,
@@ -76,8 +104,20 @@ function makeMockVehicleRow(overrides: Partial<VehicleRow> = {}): VehicleRow {
 }
 
 function createMockCanvasContext() {
-  const texts: Array<{ text: string; font: string; y: number }> = [];
-  const rects: Array<{ x: number; y: number; w: number; h: number; fill: unknown }> = [];
+  const texts: Array<{
+    text: string;
+    font: string;
+    x: number;
+    y: number;
+    fill: unknown;
+  }> = [];
+  const rects: Array<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    fill: unknown;
+  }> = [];
   const draws: Array<{
     dx: number;
     dy: number;
@@ -85,23 +125,33 @@ function createMockCanvasContext() {
     dh: number;
     filter: string;
   }> = [];
+  const arcs: Array<{ x: number; y: number; radius: number }> = [];
+  const fillsUsed: string[] = [];
   const fontsUsed: string[] = [];
   const filterStack: string[] = [];
 
-  const ctx: StoryCanvasContext2D = {
+  const ctx: PromoCanvasContext2D = {
     fillStyle: "#000000",
+    strokeStyle: "#000000",
+    lineWidth: 1,
     font: "",
     textAlign: "left",
     filter: "none",
     fillRect(x, y, w, h) {
+      if (typeof this.fillStyle === "string") fillsUsed.push(this.fillStyle);
       rects.push({ x, y, w, h, fill: this.fillStyle });
     },
-    fillText(text, _x, y) {
+    strokeRect() {},
+    fillText(text, x, y) {
+      if (typeof this.fillStyle === "string") fillsUsed.push(this.fillStyle);
       fontsUsed.push(this.font);
-      texts.push({ text, font: this.font, y });
+      texts.push({ text, font: this.font, x, y, fill: this.fillStyle });
     },
-    createLinearGradient() {
-      return { addColorStop() {} } as CanvasGradient;
+    measureText(text) {
+      const sizeMatch = /(\d+)px/.exec(this.font);
+      const px = sizeMatch ? Number(sizeMatch[1]) : 24;
+      const factor = this.font.includes("Barlow Condensed") ? 0.46 : 0.58;
+      return { width: text.length * px * factor };
     },
     save() {
       filterStack.push(this.filter ?? "none");
@@ -110,211 +160,316 @@ function createMockCanvasContext() {
       this.filter = filterStack.pop() ?? "none";
     },
     beginPath() {},
+    moveTo() {},
+    lineTo() {},
+    closePath() {},
+    fill() {
+      if (typeof this.fillStyle === "string") fillsUsed.push(this.fillStyle);
+    },
+    stroke() {},
     rect() {},
     clip() {},
+    arc(x, y, radius) {
+      arcs.push({ x, y, radius });
+    },
     drawImage(_img, dx, dy, dw, dh) {
       draws.push({ dx, dy, dw, dh, filter: this.filter ?? "none" });
     },
   };
 
-  return { ctx, texts, rects, draws, fontsUsed };
+  return { ctx, texts, rects, draws, arcs, fillsUsed, fontsUsed };
 }
 
-test("buildWhatsAppPromo: carro disponível inclui preço, câmbio normalizado, WhatsApp da config e regiões atendidas", () => {
-  const text = buildWhatsAppPromo({
-    ...mockVehicle,
-    transmission: "automatico",
-  });
-  assert.match(text, /🚗 \*Toyota Corolla XEi 2.0\*/);
-  assert.match(text, /2021\/2022/);
-  assert.match(text, /42\.000 km/);
-  assert.match(text, /Câmbio: Automático · Flex/);
-  assert.match(text, /Cor: Prata/);
-  assert.match(text, /Destaques: Ar-condicionado · Direção elétrica · Câmera de ré/);
-  assert.match(text, /R\$\s*119\.900/);
-  assert.ok(text.includes(site.whatsappLabel));
-  assert.ok(text.includes(PROMO_SERVICE_AREAS_TEXT));
-  assert.doesNotMatch(text, /Sua Garagem/);
-  assert.doesNotMatch(
-    text,
-    /loja digital|loja física|pontos de venda|atendimento com hora marcada/i,
-  );
+test("resolvePromoTransmission e sanitizePromoText: câmbio só Manual ou Automático e bloqueio total de placa, chassi, RENAVAM, cv/marchas e consignado", () => {
+  assert.equal(resolvePromoTransmission("XEi 2.0", "CVT"), "Automático");
+  assert.equal(resolvePromoTransmission("1.8 Dualogic", "Automatizado"), "Automático");
+  assert.equal(resolvePromoTransmission("1.0 Semi-automático", ""), "Automático");
+  assert.equal(resolvePromoTransmission("EX 1.5 Manual", "Automático"), "Manual");
+  assert.equal(resolvePromoTransmission("1.0", "Mecânico"), "Manual");
+  assert.equal(resolvePromoTransmission("", ""), "");
+
+  const dirty =
+    "XEi 2.0 177cv 7 marchas Consignado Placa RBA1E23 ABC-1234 Chassi 9BRBL3HE1M0123456 Renavam 01234567890";
+  const cleaned = sanitizePromoText(dirty);
+  assert.equal(cleaned, "XEi 2.0");
+  assert.doesNotMatch(cleaned, /RBA1E23|ABC-1234|9BRBL3HE1M0123456|01234567890/);
+  assert.doesNotMatch(cleaned, /cv\b|marchas?|consignad/i);
 });
 
-test("buildWhatsAppPromo: carro vendido NUNCA mostra preço", () => {
-  const soldVehicle = { ...mockVehicle, status: "vendido" };
-  const text = buildWhatsAppPromo(soldVehicle);
-  assert.match(text, /🏷️ Veículo vendido/);
-  assert.doesNotMatch(text, /119\.900/);
-  assert.doesNotMatch(text, /💰 Valor:/);
-});
-
-test("buildInstagramPromo: gera legenda com WhatsApp da config, regiões atendidas, hashtags regionais e respeita vendido", () => {
+test("buildInstagramPromo: gera legenda pronta com #garagem #<modelo> #linhares #vitoria #aracruz, sem parcela, sem dados sensíveis e sem preço quando vendido", () => {
   const text = buildInstagramPromo({
     ...mockVehicle,
-    version: "EX 1.5 Manual",
-    transmission: "Automático",
+    model: "HR-V",
+    version: "EXL 1.8 140cv 7 marchas CVT",
+    transmission: "CVT",
+    consigned: true,
+    accessories: ["Bancos em couro", "Placa RBA1E23", "Multimídia"],
   });
-  assert.match(text, /Toyota Corolla EX 1\.5 Manual — 2021\/2022/);
-  assert.match(text, /🏷️ R\$\s*119\.900/);
-  assert.match(text, /• Câmbio Manual/);
-  assert.ok(text.includes(site.whatsappLabel));
+
+  assert.match(text, /Toyota HR-V EXL 1\.8 — 2021\/2022/);
+  assert.match(text, /💰 R\$\s*119\.900 à vista/);
+  assert.match(text, /• Ano: 2021\/2022/);
+  assert.match(text, /• KM: 42\.000 km/);
+  assert.match(text, /• Câmbio: Automático/);
+  assert.match(text, /Aceitamos troca e financiamos em até 60x\./);
   assert.ok(text.includes(PROMO_SERVICE_AREAS_TEXT));
   assert.ok(text.includes(PROMO_APPOINTMENT_TEXT));
-  assert.match(text, /#linhares #aracruz #grandevitoria/);
-  assert.match(text, /#toyota #corolla/);
-  assert.match(text, /Garagem/);
+  assert.ok(text.includes(PROMO_DOMAIN_TEXT));
+  assert.match(text, /#garagem #hrv #linhares #vitoria #aracruz/);
+
+  // Regras proibidas
+  assert.doesNotMatch(text, /RBA1E23|9BRBL3HE1M0123456|01234567890/);
+  assert.doesNotMatch(text, /140cv|7 marchas|consignad/i);
+  assert.doesNotMatch(text, /parcela|entrada\s*\+/i);
   assert.doesNotMatch(text, /Sua Garagem/);
   assert.doesNotMatch(
     text,
     /loja digital|loja física|pontos de venda|atendimento com hora marcada/i,
   );
 
+  // Carro vendido nunca exibe valor
   const soldText = buildInstagramPromo({ ...mockVehicle, status: "vendido" });
-  assert.match(soldText, /🏷️ Vendido/);
+  assert.match(soldText, /Veículo vendido/);
   assert.doesNotMatch(soldText, /119\.900/);
 });
 
-test("vehicle-promo-kit: bloqueia veículos consignados em todas as funções da lib", () => {
-  assert.equal(canUseVehiclePromoKit(mockVehicle), true);
-  assert.equal(canUseVehiclePromoKit({ consigned: false }), true);
-  assert.equal(canUseVehiclePromoKit({ consigned: undefined }), true);
-  assert.equal(canUseVehiclePromoKit({ consigned: true }), false);
-  assert.equal(canUseVehiclePromoKit(null), false);
+test("buildWhatsAppPromo: inclui link canônico da ficha, câmbio Manual/Automático, atendimento regional e respeita vendido e consignado", () => {
+  const text = buildWhatsAppPromo({
+    ...mockVehicle,
+    consigned: true,
+    transmission: "cvt",
+  });
 
-  const consignedVehicle: PromoVehicle = { ...mockVehicle, consigned: true };
-  assert.throws(
-    () => buildWhatsAppPromo(consignedVehicle),
-    new RegExp(CONSIGNED_PROMO_BLOCKED_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  assert.match(text, /🚗 \*Toyota Corolla XEi 2\.0\*/);
+  assert.match(text, /📅 Ano: 2021\/2022/);
+  assert.match(text, /🛣️ KM: 42\.000 km/);
+  assert.match(text, /⚙️ Câmbio: Automático/);
+  assert.match(text, /💰 À vista: \*R\$\s*119\.900\*/);
+  assert.match(text, /Aceitamos troca · Financiamos em até 60x/);
+  assert.ok(text.includes(PROMO_SERVICE_AREAS_TEXT));
+  assert.ok(text.includes(PROMO_APPOINTMENT_TEXT));
+  assert.match(
+    text,
+    /https:\/\/www\.suagaragem\.net\/estoque\/toyota-corolla-xei-2-0-2022-cmshv22g9000fl204fk6qz9l2/,
   );
-  assert.throws(
-    () => buildInstagramPromo(consignedVehicle),
-    new RegExp(CONSIGNED_PROMO_BLOCKED_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  assert.doesNotMatch(text, /RBA1E23|9BRBL3HE1M0123456|01234567890|consignad/i);
+  assert.doesNotMatch(
+    text,
+    /loja digital|loja física|pontos de venda|atendimento com hora marcada|Sua Garagem/i,
   );
-  assert.equal(resolveStoryPhotoSrc(consignedVehicle), "");
 
-  const { ctx } = createMockCanvasContext();
-  assert.throws(
-    () => renderStoryCard(ctx, consignedVehicle),
-    new RegExp(CONSIGNED_PROMO_BLOCKED_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-  );
+  const soldText = buildWhatsAppPromo({ ...mockVehicle, status: "vendido" });
+  assert.match(soldText, /Veículo vendido/);
+  assert.doesNotMatch(soldText, /119\.900/);
 });
 
-test("resolveStoryPhotoSrc: converte URLs externas de foto para rota local same-origin /api/fotos/...", () => {
-  const r2Src = resolveStoryPhotoSrc(mockVehicle);
+test("layout e geometria das 3 artes: FEED 1080x1350, STORY 1080x1920 e CAPA 1080x1080 com quadros 4:3, fundo desfocado sem barras pretas e safe zones", () => {
+  assert.equal(FEED_CARD_WIDTH, 1080);
+  assert.equal(FEED_CARD_HEIGHT, 1350);
+  assert.equal(STORY_CARD_WIDTH, 1080);
+  assert.equal(STORY_CARD_HEIGHT, 1920);
+  assert.equal(COVER_CARD_WIDTH, 1080);
+  assert.equal(COVER_CARD_HEIGHT, 1080);
+
+  // Quadro da foto é estritamente 4:3 nas três artes
+  assert.equal(FEED_PHOTO_BOX.width / FEED_PHOTO_BOX.height, 4 / 3);
+  assert.equal(STORY_PHOTO_BOX.width / STORY_PHOTO_BOX.height, 4 / 3);
+  assert.equal(COVER_PHOTO_BOX.width / COVER_PHOTO_BOX.height, 4 / 3);
+
+  // Enquadramento 4:3 com foto vertical 9:16: fundo desfocado cobrindo 100% + frente contain sem filtro
+  const portrait = computePhotoBox4x3Layout(720, 1280, FEED_PHOTO_BOX);
+  assert.equal(portrait.needsBlurredBackdrop, true);
+  assert.ok(portrait.backdrop.width >= FEED_PHOTO_BOX.width);
+  assert.ok(portrait.backdrop.height >= FEED_PHOTO_BOX.height);
+  assert.equal(Math.round(portrait.foreground.height), 720);
+  assert.equal(Math.round(portrait.foreground.width), 405);
+
+  // Foto nativa 4:3 (1440x1080): sem camada extra de blur
+  const native4x3 = computePhotoBox4x3Layout(1440, 1080, COVER_PHOTO_BOX);
+  assert.equal(native4x3.needsBlurredBackdrop, false);
+  assert.equal(Math.round(native4x3.foreground.width), 760);
+  assert.equal(Math.round(native4x3.foreground.height), 570);
+
+  // Logo proporcional nunca distorce o aspect ratio real (887x160)
+  const logoPlaced = computeProportionalPlacement(887, 160, {
+    x: 60,
+    y: 30,
+    width: 330,
+    height: 64,
+  });
+  assert.ok(Math.abs(logoPlaced.width / logoPlaced.height - 887 / 160) < 0.001);
+
+  // Selo circular é sempre um círculo perfeito (width === height, radius === diameter / 2)
+  const seal = computePerfectCircleSeal(540, 280, 120);
+  assert.equal(seal.width, 120);
+  assert.equal(seal.height, 120);
+  assert.equal(seal.radius, 60);
+  assert.equal(seal.innerBox.width, seal.innerBox.height);
+});
+
+test("renderPromoArt: desenha Feed, Story e Capa com Barlow Condensed itálica, Sora/Inter, vermelho do logo (nunca dourado), foto sem alterar cor e suporte a consignado e vendido", () => {
+  const root = process.cwd();
+  assert.equal(
+    existsSync(join(root, "public/fonts/BarlowCondensed-ExtraBoldItalic.ttf")),
+    true,
+  );
+  assert.equal(
+    existsSync(join(root, "public/fonts/BarlowCondensed-OFL.txt")),
+    true,
+  );
+  assert.equal(existsSync(join(root, "public", PROMO_LOGO_SRC)), true);
+
+  for (const kind of PROMO_ART_ORDER) {
+    const spec = PROMO_ART_SPECS[kind];
+    const mock = createMockCanvasContext();
+
+    renderPromoArt(
+      mock.ctx,
+      {
+        ...mockVehicle,
+        consigned: true,
+        version: "XEi 2.0 177cv CVT",
+        transmission: "CVT",
+      },
+      kind,
+      {
+        photoImg: { complete: true, naturalWidth: 720, naturalHeight: 1280 },
+        logoImg: { complete: true, naturalWidth: 887, naturalHeight: 160 },
+      },
+    );
+
+    // Fundo da dimensão exata da arte
+    assert.ok(
+      mock.rects.some(
+        (r) => r.x === 0 && r.y === 0 && r.w === spec.width && r.h === spec.height,
+      ),
+    );
+
+    // 1 drawImage para o logo + 2 drawImages para a foto (fundo blur + frente sem filtro)
+    assert.equal(mock.draws.length, 3);
+    assert.equal(mock.draws[0].filter, "none"); // logo real sem filtro
+    assert.match(mock.draws[1].filter, /blur\(/); // fundo 4:3 desfocado
+    assert.equal(mock.draws[2].filter, "none"); // foto principal sem alterar cor!
+
+    // Vermelho do logo usado como destaque principal e ZERO dourado/amarelo
+    assert.ok(mock.fillsUsed.includes(PROMO_BRAND_RED));
+    for (const color of mock.fillsUsed) {
+      assert.doesNotMatch(color, /#FFC72C|#FFD700|#FF8A00|gold/i);
+    }
+
+    // Fontes: Barlow Condensed itálica nos títulos + Sora + Inter de apoio
+    assert.ok(
+      mock.fontsUsed.some((f) => /italic\s+800\s+\d+px\s+"Barlow Condensed"/.test(f)),
+    );
+    assert.ok(mock.fontsUsed.some((f) => f.includes('"Sora"')));
+    assert.ok(mock.fontsUsed.some((f) => f.includes('"Inter"')));
+
+    // Textos obrigatórios e segurança de dados
+    const allText = mock.texts.map((t) => t.text).join("\n");
+    assert.match(allText, /TOYOTA/);
+    assert.match(allText, /COROLLA/);
+    assert.match(allText, /2021\/2022/);
+    assert.match(allText, /42\.000 km/);
+    assert.match(allText, /Automático/);
+    assert.doesNotMatch(allText, /\bCVT\b|\b177cv\b|RBA1E23|9BRBL3HE1M0123456|consignad/i);
+    assert.match(allText, /R\$\s*119\.900/);
+    assert.ok(allText.includes(PROMO_TRADE_FINANCE_TEXT));
+    assert.ok(allText.includes(PROMO_SERVICE_AREAS_TEXT));
+    assert.ok(allText.includes(PROMO_DOMAIN_TEXT));
+    assert.ok(allText.includes(site.whatsappLabel));
+
+    // Safe zone vertical estrita no Story (240..1660)
+    if (kind === "story") {
+      for (const item of mock.texts) {
+        assert.ok(
+          item.y >= spec.safeArea.top && item.y <= spec.safeArea.bottom,
+          `Texto "${item.text}" fora da zona segura do Story (y=${item.y})`,
+        );
+      }
+    }
+
+    // Carro vendido na arte nunca desenha preço
+    const soldMock = createMockCanvasContext();
+    renderPromoArt(soldMock.ctx, { ...mockVehicle, status: "vendido" }, kind);
+    const soldText = soldMock.texts.map((t) => t.text).join("\n");
+    assert.match(soldText, /VENDIDO/);
+    assert.doesNotMatch(soldText, /119\.900|PREÇO À VISTA/);
+  }
+
+  // Se o logo for quadrado 1:1 num box quadrado, usa selo circular perfeito (arc)
+  const sealMock = createMockCanvasContext();
+  const squareLogo = { complete: true, naturalWidth: 1024, naturalHeight: 1024 };
+  renderPromoArt(sealMock.ctx, mockVehicle, "feed", { logoImg: squareLogo });
+  assert.equal(sealMock.draws[0].filter, "none");
+});
+
+test("buildZipArchive e nomes de arquivo: gera pacote ZIP válido com CRC-32 exato e os 3 arquivos PNG", () => {
+  assert.equal(canUseVehiclePromoKit(mockVehicle), true);
+  assert.equal(canUseVehiclePromoKit({ ...mockVehicle, consigned: true }), true);
+  assert.equal(canUseVehiclePromoKit(null), false);
+
+  const feedName = buildPromoFileName(mockVehicle, "feed");
+  const storyName = buildPromoFileName(mockVehicle, "story");
+  const coverName = buildPromoFileName(mockVehicle, "cover");
+  const zipName = buildPromoZipFileName(mockVehicle);
+
+  assert.match(feedName, /-feed-1080x1350\.png$/);
+  assert.match(storyName, /-story-1080x1920\.png$/);
+  assert.match(coverName, /-capa-1080x1080\.png$/);
+  assert.match(zipName, /^kit-divulgacao-.*\.zip$/);
+
+  const samplePng = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.equal(crc32(new TextEncoder().encode("123456789")), 0xcbf43926);
+
+  const zipBytes = buildZipArchive([
+    { name: feedName, data: samplePng },
+    { name: storyName, data: samplePng },
+    { name: coverName, data: samplePng },
+  ]);
+
+  const view = new DataView(zipBytes.buffer);
+  // Assinatura Local File Header (PK\x03\x04)
+  assert.equal(view.getUint32(0, true), 0x04034b50);
+  // Assinatura End of Central Directory nos últimos 22 bytes (PK\x05\x06)
+  const eocdOffset = zipBytes.length - 22;
+  assert.equal(view.getUint32(eocdOffset, true), 0x06054b50);
+  assert.equal(view.getUint16(eocdOffset + 8, true), 3); // 3 arquivos no ZIP
+
+  const zipAscii = new TextDecoder().decode(zipBytes);
+  assert.ok(zipAscii.includes(feedName));
+  assert.ok(zipAscii.includes(storyName));
+  assert.ok(zipAscii.includes(coverName));
+});
+
+test("resolvePromoPhotoSrc, modal e menus: funciona para consignados, alvos >= 44px, fonte >= 16px e sem crossOrigin externo", () => {
+  const consignedVehicle: PromoVehicle = { ...mockVehicle, consigned: true };
+
+  const r2Src = resolvePromoPhotoSrc(consignedVehicle);
   assert.match(r2Src, /^\/api\/fotos\/story\//);
   assert.ok(r2Src.includes(encodeURIComponent(mockVehicle.id)));
 
-  const localSrc = resolveStoryPhotoSrc({
-    ...mockVehicle,
+  const localSrc = resolvePromoPhotoSrc({
+    ...consignedVehicle,
     photos: [{ url: "/branding/placeholder-car.png" }],
   });
   assert.equal(localSrc, "/branding/placeholder-car.png");
 
-  const emptySrc = resolveStoryPhotoSrc({ ...mockVehicle, photos: [] });
-  assert.equal(emptySrc, "");
-});
-
-test("computeStoryPhotoLayout e renderStoryCard: quadro 4:3 (960x720) com fundo desfocado, fonte Sora, câmbio normalizado e rodapé regional", () => {
-  assert.equal(STORY_CARD_WIDTH, 1080);
-  assert.equal(STORY_CARD_HEIGHT, 1920);
-  assert.equal(STORY_PHOTO_BOX.width, 960);
-  assert.equal(STORY_PHOTO_BOX.height, 720);
-  assert.equal(STORY_PHOTO_BOX.width / STORY_PHOTO_BOX.height, 4 / 3);
-
-  // Imagem vertical (9:16) exige fundo desfocado cobrindo 960x720 e frente contain sem cortar
-  const portrait = computeStoryPhotoLayout(720, 1280);
-  assert.equal(portrait.needsBlurredBackdrop, true);
-  assert.ok(portrait.backdrop.width >= 960);
-  assert.ok(portrait.backdrop.height >= 720);
-  assert.equal(Math.round(portrait.foreground.height), 720);
-  assert.equal(Math.round(portrait.foreground.width), 405);
-
-  // Imagem já 4:3 (1200x900) não precisa de camada extra desfocada
-  const exact4x3 = computeStoryPhotoLayout(1200, 900);
-  assert.equal(exact4x3.needsBlurredBackdrop, false);
-  assert.equal(Math.round(exact4x3.foreground.width), 960);
-  assert.equal(Math.round(exact4x3.foreground.height), 720);
-
-  // Renderização completa no canvas com foto fora de proporção e câmbio a normalizar
-  const { ctx, texts, rects, draws, fontsUsed } = createMockCanvasContext();
-  renderStoryCard(
-    ctx,
-    {
-      ...mockVehicle,
-      version: "LX 1.5 Manual",
-      transmission: "Automático",
-    },
-    {
-      photoImg: { complete: true, naturalWidth: 720, naturalHeight: 1280 },
-    },
-  );
-
-  // Base 4:3 960x720 (e nunca mais 960x880)
-  assert.ok(
-    rects.some(
-      (r) =>
-        r.x === STORY_PHOTO_BOX.x &&
-        r.y === STORY_PHOTO_BOX.y &&
-        r.w === 960 &&
-        r.h === 720,
-    ),
-  );
-  assert.equal(rects.some((r) => r.w === 960 && r.h === 880), false);
-
-  // Duas camadas de imagem: 1ª desfocada cobrindo tudo, 2ª nítida inteira
-  assert.equal(draws.length, 2);
-  assert.match(draws[0].filter, /blur\(/);
-  assert.equal(draws[1].filter, "none");
-
-  // Todas as fontes do card usam Sora
-  assert.ok(fontsUsed.length > 0);
-  for (const font of fontsUsed) {
-    assert.match(font, /Sora/);
-  }
-
-  // Câmbio normalizado via resolveTransmission + WhatsApp da config + regiões atendidas
-  const renderedText = texts.map((item) => item.text).join("\n");
-  assert.match(renderedText, /Manual/);
-  assert.doesNotMatch(renderedText, /Automático/);
-  assert.ok(renderedText.includes(`WhatsApp ${site.whatsappLabel}`));
-  assert.ok(renderedText.includes(PROMO_SERVICE_AREAS_TEXT));
-  assert.ok(renderedText.includes(PROMO_APPOINTMENT_TEXT));
-
-  // Carro vendido no card nunca desenha o preço
-  const soldCanvas = createMockCanvasContext();
-  renderStoryCard(soldCanvas.ctx, { ...mockVehicle, status: "vendido" });
-  const soldRendered = soldCanvas.texts.map((item) => item.text).join("\n");
-  assert.match(soldRendered, /VENDIDO/);
-  assert.doesNotMatch(soldRendered, /119\.900/);
-});
-
-test("VehiclePromoKitModal: botão fechar tem alvo >= 44x44px, sem crossOrigin externo, aguarda Sora e bloqueia consignado com mensagem clara", () => {
-  const htmlOwn = renderToStaticMarkup(
+  const htmlConsignedModal = renderToStaticMarkup(
     createElement(VehiclePromoKitModal, {
-      vehicle: mockVehicle,
+      vehicle: consignedVehicle,
       open: true,
       onClose: () => {},
     }),
   );
-  assert.match(htmlOwn, /<button\b[^>]*aria-label="Fechar"/);
-  assert.match(
-    htmlOwn,
-    /class="[^"]*\bh-11\b[^"]*\bw-11\b[^"]*"[^>]*aria-label="Fechar"/,
-  );
-  assert.match(htmlOwn, /Copiar texto do WhatsApp/);
-
-  const htmlConsigned = renderToStaticMarkup(
-    createElement(VehiclePromoKitModal, {
-      vehicle: { ...mockVehicle, consigned: true },
-      open: true,
-      onClose: () => {},
-    }),
-  );
-  assert.match(htmlConsigned, /data-testid="consigned-promo-modal-blocked"/);
-  assert.ok(htmlConsigned.includes(CONSIGNED_PROMO_BLOCKED_MESSAGE));
-  assert.doesNotMatch(htmlConsigned, /Copiar texto do WhatsApp/);
-  assert.doesNotMatch(htmlConsigned, /Baixar card para Status\/Stories/);
+  assert.match(htmlConsignedModal, /Baixar tudo \(ZIP\)/);
+  assert.match(htmlConsignedModal, /Baixar Feed/);
+  assert.match(htmlConsignedModal, /Baixar Story/);
+  assert.match(htmlConsignedModal, /Baixar Capa/);
+  assert.match(htmlConsignedModal, /Copiar legenda do Instagram/);
+  assert.match(htmlConsignedModal, /Copiar texto do WhatsApp/);
+  assert.doesNotMatch(htmlConsignedModal, /consigned-promo-modal-blocked/);
+  assert.doesNotMatch(htmlConsignedModal, /\btext-xs\b|\btext-sm\b/);
+  assert.doesNotMatch(htmlConsignedModal, /bg-brand-gradient/);
 
   const modalSource = readFileSync(
     new URL("../components/admin/VehiclePromoKitModal.tsx", import.meta.url),
@@ -322,28 +477,10 @@ test("VehiclePromoKitModal: botão fechar tem alvo >= 44x44px, sem crossOrigin e
   );
   assert.doesNotMatch(modalSource, /crossOrigin\s*=\s*["']anonymous["']/);
   assert.match(modalSource, /document\.fonts\?\.ready/);
-});
 
-test("SheetActions e VehicleActionsMenu: ocultam Kit de divulgação e mostram aviso claro quando vehicle.consigned === true", () => {
+  // SheetActions e VehicleActionsMenu liberam Kit de divulgação também em consignado
   const noop = () => {};
-  const ownHtml = renderToStaticMarkup(
-    createElement(SheetActions, {
-      vehicle: makeMockVehicleRow({ consigned: false }),
-      busy: false,
-      close: noop,
-      onStatus: noop,
-      onFeatured: noop,
-      onDuplicate: noop,
-      onMarkSold: noop,
-      onMarkSoldSimple: noop,
-      onDelete: noop,
-      onPromo: noop,
-    }),
-  );
-  assert.match(ownHtml, /Kit de divulgação/);
-  assert.doesNotMatch(ownHtml, /data-testid="consigned-promo-blocked"/);
-
-  const consignedHtml = renderToStaticMarkup(
+  const consignedSheetHtml = renderToStaticMarkup(
     createElement(SheetActions, {
       vehicle: makeMockVehicleRow({ consigned: true }),
       busy: false,
@@ -357,9 +494,8 @@ test("SheetActions e VehicleActionsMenu: ocultam Kit de divulgação e mostram a
       onPromo: noop,
     }),
   );
-  assert.doesNotMatch(consignedHtml, />Kit de divulgação</);
-  assert.match(consignedHtml, /data-testid="consigned-promo-blocked"/);
-  assert.ok(consignedHtml.includes(CONSIGNED_PROMO_BLOCKED_MESSAGE));
+  assert.match(consignedSheetHtml, /Kit de divulgação/);
+  assert.doesNotMatch(consignedSheetHtml, /consigned-promo-blocked/);
 
   const actionsMenuSource = readFileSync(
     new URL(
@@ -368,15 +504,13 @@ test("SheetActions e VehicleActionsMenu: ocultam Kit de divulgação e mostram a
     ),
     "utf8",
   );
-  assert.match(actionsMenuSource, /canUseVehiclePromoKit/);
-  assert.match(actionsMenuSource, /CONSIGNED_PROMO_BLOCKED_MESSAGE/);
-  assert.match(actionsMenuSource, /data-testid="consigned-promo-blocked"/);
+  assert.doesNotMatch(actionsMenuSource, /consigned-promo-blocked/);
+  assert.match(actionsMenuSource, /Kit de divulgação/);
 });
 
-test("GET /api/fotos/story/[vehicleId]: exige sessão admin, bloqueia consignado (403), rejeita URL externa arbitrária (400) e entrega imagem inline same-origin (200)", async () => {
+test("GET /api/fotos/story/[vehicleId]: exige sessão admin (401), bloqueia SSRF (400) e serve foto same-origin para estoque próprio e consignado (200)", async () => {
   let sessionActive = true;
-  let dbVehicle: { consigned: boolean; photos: Array<{ url: string }> } | null = {
-    consigned: false,
+  const dbVehicle: { photos: Array<{ url: string }> } | null = {
     photos: [{ url: "https://pub-revisao123.r2.dev/corolla-capa.webp" }],
   };
 
@@ -430,26 +564,8 @@ test("GET /api/fotos/story/[vehicleId]: exige sessão admin, bloqueia consignado
   );
   assert.equal(unauthRes.status, 401);
 
-  // 2. Consignado -> 403 com mensagem clara
+  // 2. URL externa arbitrária fora do acervo -> 400 (anti-SSRF)
   sessionActive = true;
-  dbVehicle = {
-    consigned: true,
-    photos: [{ url: "https://pub-revisao123.r2.dev/corolla-capa.webp" }],
-  };
-  const consignedRes = await GET(
-    new Request(`https://site.test/api/fotos/story/${mockVehicle.id}`),
-    { params },
-  );
-  assert.equal(consignedRes.status, 403);
-  assert.deepEqual(await consignedRes.json(), {
-    error: CONSIGNED_PROMO_BLOCKED_MESSAGE,
-  });
-
-  // 3. URL externa arbitrária fora do acervo -> 400 (anti-SSRF)
-  dbVehicle = {
-    consigned: false,
-    photos: [{ url: "https://pub-revisao123.r2.dev/corolla-capa.webp" }],
-  };
   const ssrfRes = await GET(
     new Request(
       `https://site.test/api/fotos/story/${mockVehicle.id}?url=${encodeURIComponent("https://evil.example.com/x.jpg")}`,
@@ -458,7 +574,7 @@ test("GET /api/fotos/story/[vehicleId]: exige sessão admin, bloqueia consignado
   );
   assert.equal(ssrfRes.status, 400);
 
-  // 4. Estoque próprio válido -> 200 inline same-origin
+  // 3. Próprio ou consignado válido -> 200 inline same-origin
   const okRes = await GET(
     new Request(`https://site.test/api/fotos/story/${mockVehicle.id}`),
     { params },

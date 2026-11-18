@@ -428,6 +428,13 @@ export function wantsExpertAnswer(ctx: ExpertContext) {
   }
   if (named.length > 0) return true;
   if (/\b(manual ou automatico|automatico ou manual)\b/.test(fold(ctx.mensagem))) return false;
+  if (
+    topics.every((topic) => topic === "portamalas") &&
+    /\bporta\s*malas\s+(?:grandes?|amplos?|espacosos?|bom|bons)\b/.test(fold(ctx.mensagem)) &&
+    expertSubject(ctx).source === "none"
+  ) {
+    return false;
+  }
   return !isListRequest(ctx.mensagem);
 }
 
