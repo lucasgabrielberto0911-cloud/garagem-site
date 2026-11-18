@@ -106,7 +106,7 @@ export default async function HomePage() {
               <p className="hidden font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light sm:block">
                 Garagem · Combinamos o atendimento pelo WhatsApp
               </p>
-              <h1 className="font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-2 sm:text-3xl sm:leading-[1.12] lg:text-[2.125rem]">
+              <h1 className="font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-2 sm:text-3xl sm:leading-[1.12]">
                 Seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória.
               </h1>
               <ul className="mt-3 flex max-w-lg flex-col gap-2 border-l-2 border-brand/60 pl-3 text-sm leading-snug text-cream sm:gap-1.5 sm:border-0 sm:pl-0 sm:text-base">
