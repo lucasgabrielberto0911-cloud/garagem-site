@@ -8,12 +8,15 @@ import { focusFormFeedback, useFormViewport } from "@/lib/form-feedback";
 import { createWantedLead } from "@/app/(site)/estoque/wanted-actions";
 import { formatNumberBR, formatPhoneBR } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import {
+  buildWantedOrderWhatsAppMessage,
   parseWantedLeadForm,
   WANTED_LEAD_SUCCESS,
   type WantedLeadPage,
 } from "@/lib/wanted-lead";
 import { HoneypotWebsiteField } from "@/components/site/HoneypotWebsiteField";
+import { WhatsAppButton } from "@/components/site/ui";
 
 const inputClass =
   "w-full min-h-[48px] border border-white/25 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-cream/60 focus:border-brand focus-visible:ring-2 focus-visible:ring-brand";
@@ -75,6 +78,10 @@ export function MissingModelForm({
     return () => window.cancelAnimationFrame(frame);
   }, [isPending, focusTarget]);
   const [sent, setSent] = useState(false);
+  const [sentOrder, setSentOrder] = useState<{
+    model: string;
+    priceMax: number | null;
+  } | null>(null);
   const receiptRef = useRef<HTMLElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   useFormViewport(formRef);
@@ -122,6 +129,7 @@ export function MissingModelForm({
       if (rememberDraft) draft.clear();
       setErrors({});
       setFormError("");
+      setSentOrder(null);
       setSent(true);
       return;
     }
@@ -143,6 +151,11 @@ export function MissingModelForm({
             content_name: "Não encontrou o modelo",
           });
           notifySuccess(result.message);
+          setSentOrder(
+            parsed.lead
+              ? { model: parsed.lead.model, priceMax: parsed.lead.priceMax }
+              : null,
+          );
           setSent(true);
           return;
         }
@@ -173,23 +186,36 @@ export function MissingModelForm({
         <TitleTag id={`${idPrefix}-recebido`} className="font-display text-xl font-bold text-cream">
           Pedido recebido
         </TitleTag>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
+        <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-cream/85">
           {WANTED_LEAD_SUCCESS}
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            setPhone("");
-            setPriceMax(digitsToGrouped(initialPriceMax));
-            setErrors({});
-            setFormError("");
-            setSent(false);
-            focusField("phone");
-          }}
-          className="mt-6 min-h-[48px] border border-white/20 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5"
-        >
-          Enviar outro pedido
-        </button>
+        <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+          <SiteLeadHit contentName="Não encontrou o modelo">
+            <WhatsAppButton
+              message={buildWantedOrderWhatsAppMessage(sentOrder?.model, sentOrder?.priceMax)}
+              size="lg"
+              trackingLabel="pedido-recebido"
+              className="w-full sm:w-auto"
+            >
+              Falar no WhatsApp agora
+            </WhatsAppButton>
+          </SiteLeadHit>
+          <button
+            type="button"
+            onClick={() => {
+              setPhone("");
+              setPriceMax(digitsToGrouped(initialPriceMax));
+              setErrors({});
+              setFormError("");
+              setSentOrder(null);
+              setSent(false);
+              focusField("phone");
+            }}
+            className="min-h-[48px] border border-white/20 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            Enviar outro pedido
+          </button>
+        </div>
       </section>
     );
   }
