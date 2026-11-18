@@ -70,10 +70,10 @@ export function FavoritesList() {
       .then((data) => {
         if (!active) return;
         if (!Array.isArray(data.vehicles)) throw new Error("Resposta inválida de favoritos");
-        // A API é autoritativa: ausente = estoque próprio; `false` = consignado.
+        // A API é autoritativa e sempre envia `catalog`; só `true` entra no catálogo.
         const next = (data.vehicles as VehicleCardData[]).map((vehicle) => ({
           ...vehicle,
-          catalog: vehicle.catalog !== false,
+          catalog: vehicle.catalog === true,
         }));
         setResult({ key, vehicles: next, status: "fresh", refreshing: false });
         writeFavoriteSnapshots(next.map((vehicle) => ({

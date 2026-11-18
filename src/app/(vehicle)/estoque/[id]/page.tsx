@@ -230,6 +230,8 @@ export default async function VehicleDetailPage({
   const updatedLabel = vehicle.updatedAt
     ? formatUpdatedAt(vehicle.updatedAt)
     : "";
+  // Catálogo Meta: só disponível do estoque próprio (nem vendido, reservado ou consignado).
+  const inCatalog = !sold && vehicle.status === "disponivel" && vehicle.catalog === true;
   const auto = catalogPixelAutoFields(vehicle);
   const autoHit = {
     stateOfVehicle: auto.state_of_vehicle,
@@ -261,7 +263,7 @@ export default async function VehicleDetailPage({
         make={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
-        catalog={vehicle.status === "disponivel"}
+        catalog={inCatalog}
         {...autoHit}
       />
       <VehicleChatContext
@@ -277,6 +279,7 @@ export default async function VehicleDetailPage({
           category: vehicle.category,
           status: vehicle.status,
           sold: sold,
+          catalog: inCatalog,
         }}
       />
       <JsonLd data={vehicleJsonLd(vehicle)} />
@@ -483,6 +486,7 @@ export default async function VehicleDetailPage({
                     make={formatBrandName(vehicle.brand)}
                     model={formatModelName(vehicle.model)}
                     year={vehicle.yearModel}
+                    catalog={inCatalog}
                     className="ml-auto hidden lg:flex"
                   />
                 ) : null}
@@ -559,6 +563,9 @@ export default async function VehicleDetailPage({
                       model={formatModelName(vehicle.model)}
                       year={vehicle.yearModel}
                       {...autoHit}
+                      catalog={inCatalog}
+                      status={vehicle.status}
+                      sold={sold}
                     >
                       <WhatsAppButton
                         size="lg"
@@ -591,6 +598,9 @@ export default async function VehicleDetailPage({
                       model={formatModelName(vehicle.model)}
                       year={vehicle.yearModel}
                       {...autoHit}
+                      catalog={inCatalog}
+                      status={vehicle.status}
+                      sold={sold}
                       video={whatsapp.video}
                       finance={whatsapp.finance}
                       trade={whatsapp.trade}
@@ -664,6 +674,9 @@ export default async function VehicleDetailPage({
                     model={formatModelName(vehicle.model)}
                     year={vehicle.yearModel}
                     {...autoHit}
+                    catalog={inCatalog}
+                    status={vehicle.status}
+                    sold={sold}
                   >
                     <WhatsAppButton
                       size="md"
@@ -690,6 +703,8 @@ export default async function VehicleDetailPage({
           fullLabel={fullLabel}
           path={path}
           sold={sold}
+          catalog={inCatalog}
+          status={vehicle.status}
           price={sold ? 0 : vehicle.price}
           yearModel={vehicle.yearModel}
           make={formatBrandName(vehicle.brand)}
@@ -794,6 +809,7 @@ export default async function VehicleDetailPage({
         bodyStyle={autoHit.bodyStyle}
         fuelType={autoHit.fuelType}
         postalCode={autoHit.postalCode}
+        catalog={inCatalog}
         sold={sold}
         category={vehicle.category}
         soldHref="#mesma-faixa"

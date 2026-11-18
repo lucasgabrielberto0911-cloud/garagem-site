@@ -173,7 +173,7 @@ export function chatCardWhatsAppVehicle(vehicle: {
     path: vehicle.href,
     category: vehicle.category,
     ...(vehicle.sold ? { sold: true } : {}),
-    ...(vehicle.catalog === false ? { catalog: false } : {}),
+    ...(typeof vehicle.catalog === "boolean" ? { catalog: vehicle.catalog } : {}),
   };
 }
 
@@ -522,7 +522,7 @@ export function chatWhatsAppCta(
             price: item.price != null && item.price > 0 ? item.price : undefined,
             path: item.href,
             category: item.category,
-            ...(item.catalog === false ? { catalog: false } : {}),
+            ...(typeof item.catalog === "boolean" ? { catalog: item.catalog } : {}),
           }))
       : [];
   const multiSubjectVehicles =

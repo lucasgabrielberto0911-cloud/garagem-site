@@ -79,7 +79,7 @@ export function readVehicleCards(raw: unknown): ChatVehicleCard[] {
       km: Number(row.km) || 0,
       price: row.sold === true ? 0 : Number(row.price) || 0,
       ...(row.sold === true ? { sold: true } : {}),
-      ...(row.catalog === false ? { catalog: false } : {}),
+      ...(typeof row.catalog === "boolean" ? { catalog: row.catalog } : {}),
       color: row.color ? String(row.color) : null,
       transmission: row.transmission ? String(row.transmission) : null,
       category: row.category ? String(row.category) : undefined,

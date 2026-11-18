@@ -92,6 +92,7 @@ test("catalogParamsFromChatVehicle monta params de catálogo", () => {
     model: "HB20",
     year: 2024,
     price: 80000,
+    catalog: true,
   });
   assert.deepEqual(params.content_ids, [CUID]);
   assert.equal(params.value, 80000);
@@ -136,7 +137,10 @@ const CUID_OWN_2 = "cmt0ewzpg0000lc0493fl02h8";
 const CUID_CONSIGNED = "cmt0ewzpg0000lc0493fl02h9";
 
 test("isCatalogVehicle aceita apenas estoque próprio disponível", () => {
-  assert.equal(isCatalogVehicle({ id: CUID, status: "disponivel" }), true);
+  assert.equal(isCatalogVehicle({ id: CUID, status: "disponivel", catalog: true }), true);
+  // Snapshot antigo sem `catalog` não é catálogo.
+  assert.equal(isCatalogVehicle({ id: CUID, status: "disponivel" }), false);
+  assert.equal(isCatalogVehicle({ id: CUID, status: "reservado", catalog: true }), false);
   assert.equal(isCatalogVehicle({ id: CUID, catalog: true }), true);
   assert.equal(isCatalogVehicle({ id: CUID_CONSIGNED, consigned: true }), false);
   assert.equal(isCatalogVehicle({ id: CUID_CONSIGNED, catalog: false }), false);
@@ -264,7 +268,7 @@ test("trackVehiclesWhatsAppLead envia só IDs do catálogo nos Favoritos e cai p
     trackVehiclesWhatsAppLead(
       [
         { id: CUID, price: 70000, status: "disponivel", catalog: true },
-        { id: CUID_OWN_2, price: 85000, status: "disponivel" },
+        { id: CUID_OWN_2, price: 85000, status: "disponivel", catalog: true },
         { id: CUID_CONSIGNED, price: 125000, status: "disponivel", catalog: false },
         { id: "cmt0ewzpg0000lc0493fl02hr", price: 60000, status: "reservado" },
       ],
@@ -557,4 +561,28 @@ test("Favoritos, Comparador e SiteChat usam os helpers de catálogo nos CTAs de 
 
   const chat = readFileSync("src/components/site/SiteChat.tsx", "utf8");
   assert.match(chat, /<ChatWhatsAppButton[\s\S]*vehicle=\{cta\.vehicle !== undefined \? cta\.vehicle : ctaVehicle\}/);
+});
+
+test("trackVehicleLeadHit: reservado, vendido ou sem catalog=true nunca mandam content_ids nem AddToCart", () => {
+  const spy = installTrackingSpy();
+  try {
+    const base = { contentId: CUID, contentName: "Hyundai HB20 2024", value: 82900 };
+    for (const extra of [
+      { catalog: true, status: "reservado" },
+      { catalog: true, status: "vendido" },
+      { catalog: true, sold: true },
+      { catalog: true, consigned: true },
+      {},
+    ]) {
+      spy.fbqCalls.length = 0;
+      trackVehicleLeadHit({ ...base, ...extra });
+      assert.deepEqual(spy.fbqCalls.map((call) => call[1]), ["Lead"]);
+      assert.deepEqual(
+        (spy.fbqCalls[0]?.[2] as { content_ids: string[] }).content_ids,
+        [],
+      );
+    }
+  } finally {
+    spy.restore();
+  }
 });

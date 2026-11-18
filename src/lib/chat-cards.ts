@@ -360,7 +360,7 @@ export function toChatVehicleCard(vehicle: ChatVehicleRecord): ChatVehicleCard {
     transmission: vehicle.transmission?.trim() || null,
     category: vehicle.category ?? "carro",
     photo: coverSrc(vehicle.photos ?? []) ?? null,
-    ...(vehicle.consigned ? { catalog: false } : {}),
+    catalog: !vehicle.consigned,
   };
 }
 

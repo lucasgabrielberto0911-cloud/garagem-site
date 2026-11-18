@@ -81,7 +81,7 @@ export function VehicleCard({
     status: vehicle.status,
     featured: vehicle.featured,
     color: vehicle.color,
-    catalog: vehicle.catalog,
+    catalog: vehicle.catalog === true,
     updatedAt:
       vehicle.updatedAt instanceof Date
         ? vehicle.updatedAt.toISOString()
@@ -159,6 +159,7 @@ export function VehicleCard({
           model={formatModelName(vehicle.model)}
           year={vehicle.yearModel}
           snapshot={favoriteSnapshot}
+          catalog={vehicle.status === "disponivel" && vehicle.catalog === true}
           appearance="ghost"
           size="sm"
           showLabel
@@ -170,7 +171,7 @@ export function VehicleCard({
           <VehicleCardWhatsApp
             showOnStockList
             vehicleId={vehicle.id}
-            catalog={vehicle.status === "disponivel" && vehicle.catalog !== false}
+            catalog={vehicle.status === "disponivel" && vehicle.catalog === true}
             label={display.fullLabel}
             message={buildWhatsAppCarMessage({
               ...vehicle,

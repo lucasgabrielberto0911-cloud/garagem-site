@@ -19,6 +19,7 @@ export function FavoriteButton({
   model,
   year,
   snapshot,
+  catalog = false,
   variant = "icon",
   size = "md",
   appearance = "ghost",
@@ -32,6 +33,8 @@ export function FavoriteButton({
   model?: string;
   year?: number;
   snapshot?: FavoriteSnapshot;
+  /** `true` só para disponível do estoque próprio; senão não envia `content_ids`. */
+  catalog?: boolean;
   variant?: "icon" | "full";
   size?: "sm" | "md";
   /** `ghost`: ícone pequeno, alvo de 44px, sem caixa — para o card do estoque. */
@@ -61,7 +64,7 @@ export function FavoriteButton({
         void enqueueIntent({ type: "favorite", vehicleId, added });
         trackPwaEvent("PwaOfflineQueued", { kind: "favorite" });
       }
-      if (added) {
+      if (added && catalog) {
         trackAddToWishlist({
           content_ids: [vehicleId],
           content_name: label,

@@ -172,6 +172,8 @@ export type PublicVehicleDetail = {
   locationCity?: string | null;
   createdAt: Date;
   updatedAt?: Date;
+  /** `true` só para disponível do estoque próprio (nunca consignado). */
+  catalog?: boolean;
   photos: Array<{ id: string; url: string; thumbnailUrl?: string | null }>;
 };
 
@@ -227,6 +229,24 @@ async function findCardVehicles(
   args: Omit<Parameters<typeof prisma.vehicle.findMany>[0], "select">,
 ): Promise<VehicleCardRecord[]> {
   return queryPublicVehicleCards(args);
+}
+
+/** Preenche `catalog` sem expor `consigned`: true só para disponível e não consignado. */
+async function withDetailCatalogFlag(
+  vehicle: PublicVehicleDetail | null,
+): Promise<PublicVehicleDetail | null> {
+  if (!vehicle) return null;
+  if (vehicle.status !== "disponivel") return { ...vehicle, catalog: false };
+  try {
+    const row = await prisma.vehicle.findFirst({
+      where: { id: vehicle.id },
+      select: { consigned: true },
+    });
+    return { ...vehicle, catalog: row?.consigned !== true };
+  } catch (error) {
+    if (!isMissingColumnError(error, "consigned")) throw error;
+    return { ...vehicle, catalog: true };
+  }
 }
 
 async function findDetailVehicle(
@@ -426,7 +446,7 @@ export const getVehicleById = cache((id: string) =>
 );
 
 const loadVehicleDetailCached = unstable_cache(
-  async (id: string) => findDetailVehicle(id),
+  async (id: string) => withDetailCatalogFlag(await findDetailVehicle(id)),
   ["vehicle-detail-v7"],
   PUBLIC_CACHE,
 );

@@ -356,7 +356,8 @@ export function isCatalogVehicle(
   vehicle?: CatalogVehicleCandidate | null,
 ): boolean {
   if (!vehicle?.id?.trim()) return false;
-  if (vehicle.sold || vehicle.consigned || vehicle.catalog === false) return false;
+  // Só `catalog === true` entra: ausente (snapshot antigo) não é catálogo.
+  if (vehicle.sold || vehicle.consigned || vehicle.catalog !== true) return false;
   if (vehicle.status && vehicle.status !== "disponivel") return false;
   return true;
 }
@@ -667,6 +668,9 @@ export type VehicleHitProps = {
   /** `false` quando fora do catálogo da Meta (ex.: consignado ou reservado). */
   catalog?: boolean;
   consigned?: boolean;
+  /** Vendido ou reservado nunca entram em `content_ids`. */
+  status?: string;
+  sold?: boolean;
   stateOfVehicle?: string;
   exteriorColor?: string;
   transmission?: string;
@@ -709,7 +713,7 @@ function catalogParams({
 }
 
 export function VehicleViewContent({
-  catalog = true,
+  catalog = false,
   ...props
 }: VehicleHitProps) {
   const {
@@ -788,6 +792,8 @@ export function trackVehicleLeadHit(props: VehicleHitProps) {
       id: props.contentId,
       catalog: props.catalog,
       consigned: props.consigned,
+      status: props.status,
+      sold: props.sold,
     })
   ) {
     trackLead({

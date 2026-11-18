@@ -377,7 +377,7 @@ function ChatVehicleMini({
           <span>{vehicle.year} · {vehicle.km.toLocaleString("pt-BR")} km ·</span>{" "}
           <span className="whitespace-nowrap font-display text-[13px] font-bold text-brand-light">{chatVehiclePrice(vehicle)}</span>
         </p>
-        <VehicleCardWhatsApp variant="chat-compact" vehicleId={vehicle.id} catalog={!vehicle.sold && vehicle.catalog !== false} label={label} message={whatsappMessage} value={vehicle.sold ? 0 : vehicle.price} make={vehicle.brand} model={vehicle.model} year={vehicle.year} path={vehicle.href} showOnStockList trackingLabel="chat-card" campaign="chat" />
+        <VehicleCardWhatsApp variant="chat-compact" vehicleId={vehicle.id} catalog={!vehicle.sold && vehicle.catalog === true} label={label} message={whatsappMessage} value={vehicle.sold ? 0 : vehicle.price} make={vehicle.brand} model={vehicle.model} year={vehicle.year} path={vehicle.href} showOnStockList trackingLabel="chat-card" campaign="chat" />
       </div>
       <IconArrowRight className="pointer-events-none h-4 w-4 shrink-0 text-cream/40 max-[419px]:hidden" />
     </article>

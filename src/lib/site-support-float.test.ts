@@ -214,6 +214,7 @@ test("clique no WhatsApp flutuante dispara SiteLeadHit fora da ficha, catálogo 
         model: "Civic",
         year: 2020,
         price: 89900,
+        catalog: true,
       }),
     };
     const tree = SiteSupportFloatContent({
