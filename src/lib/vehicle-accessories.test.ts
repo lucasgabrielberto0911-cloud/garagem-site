@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { accessoryFilterVariants, normalizeAccessories, sanitizeAccessory } from "./vehicle-accessories";
+import {
+  accessoryFilterVariants,
+  CAR_TRANSMISSIONS,
+  getTransmissions,
+  MOTO_TRANSMISSIONS,
+  normalizeAccessories,
+  sanitizeAccessory,
+} from "./vehicle-accessories";
 
 test("sanitizeAccessory trunca em palavras inteiras e fecha parênteses", () => {
   assert.equal(
@@ -98,4 +105,11 @@ test("accessoryFilterVariants gera equivalentes crus e com prefixo de grupo", ()
   const generic = accessoryFilterVariants("Bancos de couro");
   assert.ok(generic.includes("Bancos de couro"));
   assert.ok(generic.includes("Conforto: Bancos de couro"));
+});
+
+test("opções de câmbio no admin oferecem apenas Manual e Automático", () => {
+  assert.deepEqual(CAR_TRANSMISSIONS, ["Manual", "Automático"]);
+  assert.deepEqual(MOTO_TRANSMISSIONS, ["Manual", "Automático"]);
+  assert.deepEqual(getTransmissions("carro"), ["Manual", "Automático"]);
+  assert.deepEqual(getTransmissions("moto"), ["Manual", "Automático"]);
 });

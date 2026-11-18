@@ -79,10 +79,9 @@ for (const vehicle of stock) {
   cases.push({ vehicle, question: isMoto(vehicle) ? "qual o câmbio dela?" : "qual o câmbio dele?", check: reply => {
     const t = fold(vehicle.transmission);
     const r = fold(reply);
+    if (/\d+\s+marchas/.test(r)) return "citou número de marchas";
     if (t === "manual") return /\bmanual\b/.test(r) && !/automatic|\bcvt\b/.test(r) ? null : "câmbio não bate com Manual";
-    if (t.startsWith("semi")) return /semi/.test(r) ? null : "câmbio não bate com Semi-automático";
-    if (t === "cvt") return /\bcvt\b/.test(r) && !/conversor de torque/.test(r) ? null : "câmbio não bate com CVT";
-    return /automatic|\bcvt\b/.test(r) && !/cambio manual\b/.test(r) ? null : "câmbio não bate com Automático";
+    return /automatic/.test(r) && !/cambio manual\b|\bcvt\b|semiautomatic/.test(r) ? null : "câmbio não bate com Automático";
   } });
 }
 

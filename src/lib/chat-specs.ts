@@ -83,7 +83,7 @@ export const CHAT_SPEC_BASE_NOTE =
 export const VEHICLE_SPECS: VehicleSpec[] = [
   {
     id: "honda-city-1.5-cvt",
-    nome: "Honda City 1.5 automático (CVT)",
+    nome: "Honda City 1.5 automático",
     curto: "City 1.5",
     artigo: "o",
     brand: "honda",
@@ -196,7 +196,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
   },
   {
     id: "honda-hrv-1.8-cvt",
-    nome: "Honda HR-V 1.8 automático (CVT)",
+    nome: "Honda HR-V 1.8 automático",
     curto: "HR-V 1.8",
     artigo: "o",
     brand: "honda",
@@ -225,7 +225,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
   },
   {
     id: "honda-civic-2.0-at5",
-    nome: "Honda Civic 2.0 automático de 5 marchas",
+    nome: "Honda Civic 2.0 automático",
     curto: "Civic 2.0",
     artigo: "o",
     brand: "honda",
@@ -256,7 +256,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
   },
   {
     id: "honda-civic-2.0-cvt",
-    nome: "Honda Civic 2.0 automático (CVT)",
+    nome: "Honda Civic 2.0 automático",
     curto: "Civic 2.0",
     artigo: "o",
     brand: "honda",
@@ -397,7 +397,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
   },
   {
     id: "toyota-corolla-altis-2.0",
-    nome: "Toyota Corolla Altis 2.0 automático (CVT)",
+    nome: "Toyota Corolla Altis 2.0 automático",
     curto: "Corolla 2.0",
     artigo: "o",
     brand: "toyota",
@@ -513,7 +513,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
   },
   {
     id: "nissan-kicks-1.6-cvt",
-    nome: "Nissan Kicks 1.6 automático (CVT)",
+    nome: "Nissan Kicks 1.6 automático",
     curto: "Kicks 1.6",
     artigo: "o",
     brand: "nissan",
@@ -540,7 +540,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
   },
   {
     id: "mitsubishi-lancer-2.0-cvt",
-    nome: "Mitsubishi Lancer 2.0 automático (CVT)",
+    nome: "Mitsubishi Lancer 2.0 automático",
     curto: "Lancer 2.0",
     artigo: "o",
     brand: "mitsubishi",
@@ -721,6 +721,34 @@ function fuelPair(pair: FuelPair | undefined, unit: string) {
   return null;
 }
 
+/**
+ * Remove menções a cv e número de marchas do texto de câmbio.
+ *
+ * Regra de negócio: o assistente nunca cita cv nem número de marchas.
+ * "CVT (variação contínua, sem marchas fixas); no modo manual simula 7 marchas"
+ * → "automático"
+ * "automático convencional (conversor de torque) de 6 marchas"
+ * → "automático convencional (conversor de torque)"
+ * "manual de 5 marchas" → "manual"
+ */
+export function stripCvAndMarchas(cambio: string) {
+  return cambio
+    .replace(/\bCVT\b/gi, "automático")
+    .replace(/\bautomatizad[oa]\b/gi, "automático")
+    .replace(/\bsemi-?autom[aá]tic[oa]\b/gi, "automático")
+    .replace(/(?:,\s*)?(?:at[eé]\s+|cerca de\s+|com\s+)?\b\d+(?:[.,]\d+)?\s*(?:cv|cavalos)\b/gi, "")
+    .replace(/\bde\s+\d+\s+marchas?\b/gi, "")
+    .replace(/\bsimula\s+\d+\s+marchas?\b/gi, "")
+    .replace(/\b\d+\s+marchas?\s+simuladas?\b/gi, "")
+    .replace(/\bsem\s+marchas?\s+fixas?\b/gi, "")
+    .replace(/;\s*no\s+modo\s+manual\s*;?/gi, "")
+    .replace(/\(varia[çc][ãa]o\s+cont[íi]nua,?\s*\)/gi, "")
+    .replace(/\(\s*\)/g, "")
+    .replace(/;\s*$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 /** "128 cv no etanol e 122 cv na gasolina", para frases de outros módulos. */
 export function specPowerText(spec: VehicleSpec) {
   return fuelPair(spec.cv, "cv");
@@ -770,14 +798,11 @@ export function formatSpecForPrompt(spec: VehicleSpec, forLabel?: string) {
   const years = spec.anos[0] === spec.anos[1] ? `${spec.anos[0]}` : `${spec.anos[0]}–${spec.anos[1]}`;
   lines.push(`- ${forLabel ?? spec.nome} (ficha do modelo, anos ${years})${spec.aprox ? " [alguns números aproximados]" : ""}`);
   lines.push(`  Motor: ${spec.motor}`);
-  const power = fuelPair(spec.cv, "cv");
   const torque = fuelPair(spec.torque, "kgfm");
-  if (power || torque) {
-    lines.push(
-      `  Potência: ${power ?? "sem dado"}${torque ? `; torque: ${torque}${spec.torqueRpm ? `, a ${spec.torqueRpm}` : ""}` : ""}`,
-    );
+  if (torque) {
+    lines.push(`  Torque: ${torque}${spec.torqueRpm ? `, a ${spec.torqueRpm}` : ""}`);
   }
-  lines.push(`  Câmbio: ${spec.cambio}`);
+  lines.push(`  Câmbio: ${stripCvAndMarchas(spec.cambio)}`);
   const perf: string[] = [];
   if (spec.zeroACem) perf.push(`0 a 100 km/h: cerca de ${num(spec.zeroACem)} s`);
   if (spec.vmax) perf.push(`velocidade máxima: cerca de ${num(spec.vmax)} km/h`);
@@ -809,18 +834,16 @@ export function formatSpecForPrompt(spec: VehicleSpec, forLabel?: string) {
   if (spec.peso) body.push(`peso: ${num(spec.peso)} kg`);
   if (body.length) lines.push(`  ${body.join("; ")}`);
   lines.push(`  Equipamentos da base genérica (exigem confirmação da versão e ano exatos): ${spec.seguranca}`);
-  lines.push(`  Manutenção típica do modelo: ${spec.manutencao}`);
+  lines.push(`  Manutenção típica do modelo: ${stripCvAndMarchas(spec.manutencao)}`);
   return lines.join("\n");
 }
 
 /** Uma linha por modelo, para quando muitas fichas entram no mesmo prompt. */
 export function formatSpecCompact(spec: VehicleSpec, forLabel?: string) {
   const bits: string[] = [];
-  const power = fuelPair(spec.cv, "cv");
-  if (power) bits.push(`potência ${power}`);
   const torque = fuelPair(spec.torque, "kgfm");
   if (torque) bits.push(`torque ${torque}`);
-  bits.push(`câmbio ${spec.cambio}`);
+  bits.push(`câmbio ${stripCvAndMarchas(spec.cambio)}`);
   if (spec.zeroACem) bits.push(`0–100 ~${num(spec.zeroACem)} s`);
   if (spec.cidade || spec.estrada) {
     bits.push(
@@ -945,9 +968,7 @@ function subjectName(entry: NamedSpec) {
 }
 
 function powerSentence(entry: NamedSpec) {
-  const power = fuelPair(entry.spec.cv, "cv");
-  if (!power) return null;
-  return `${capital(subjectName(entry))} tem cerca de ${power}.`;
+  return `${capital(subjectName(entry))} usa motor ${entry.spec.motor}.`;
 }
 
 function torqueSentence(entry: NamedSpec) {
@@ -963,15 +984,8 @@ function accelerationSentence(entry: NamedSpec) {
   return `${capital(subjectName(entry))} faz o 0 a 100 km/h em cerca de ${num(entry.spec.zeroACem)} segundos${top}.`;
 }
 
-function gearSentence(entry: NamedSpec, wantsGears: boolean) {
-  const { spec } = entry;
-  if (wantsGears && spec.marchas && /CVT/.test(spec.cambio)) {
-    return `${capital(subjectName(entry))} usa câmbio CVT, que não tem marchas fixas; no modo manual ele simula ${spec.marchas} marchas.`;
-  }
-  if (wantsGears && spec.marchas) {
-    return `${capital(subjectName(entry))} tem câmbio ${spec.cambio}.`;
-  }
-  return `${capital(subjectName(entry))} tem câmbio ${spec.cambio}.`;
+function gearSentence(entry: NamedSpec, _wantsGears?: boolean) {
+  return `${capital(subjectName(entry))} tem câmbio ${stripCvAndMarchas(entry.spec.cambio)}.`;
 }
 
 function trunkSentence(entry: NamedSpec) {
@@ -1020,7 +1034,7 @@ function safetySentence(entry: NamedSpec) {
 
 function maintenanceSentence(entry: NamedSpec) {
   const de = entry.spec.artigo === "o" ? "do" : "da";
-  return `Sobre a manutenção ${de} ${entry.nome}: ${entry.spec.manutencao}. Isso vale para o modelo; o estado desta unidade o consultor avalia com você.`;
+  return `Sobre a manutenção ${de} ${entry.nome}: ${stripCvAndMarchas(entry.spec.manutencao)}. Isso vale para o modelo; o estado desta unidade o consultor avalia com você.`;
 }
 
 function dimensionsSentence(entry: NamedSpec) {
@@ -1035,7 +1049,7 @@ function engineSentence(entry: NamedSpec) {
 }
 
 function sheetSentence(entry: NamedSpec) {
-  return [engineSentence(entry), powerSentence(entry), torqueSentence(entry), gearSentence(entry, false), trunkSentence(entry)]
+  return [engineSentence(entry), torqueSentence(entry), gearSentence(entry, false), trunkSentence(entry)]
     .filter(Boolean)
     .join(" ");
 }
@@ -1089,7 +1103,7 @@ function buildSpecReply(
     const names = entries.map(entry => entry.nome).join(" e o ");
     const values = [...new Set(entries.map(entry => entry.spec.zeroACem!))].sort((a, b) => a - b).map(num);
     const time = values.length === 1 ? values[0] : `${values[0]} a ${values.at(-1)}`;
-    return `O ${names} ficam perto de ${time} segundos no 0 a 100 km/h, como referência das versões. O câmbio é ${entries.map(entry => `${entry.spec.cambio} no ${entry.nome}`).join(" e ")}. Na prática, combustível e condições do teste mudam o resultado.`;
+    return `O ${names} ficam perto de ${time} segundos no 0 a 100 km/h, como referência das versões. O câmbio é ${entries.map(entry => `${stripCvAndMarchas(entry.spec.cambio)} no ${entry.nome}`).join(" e ")}. Na prática, combustível e condições do teste mudam o resultado.`;
   }
   const wantsGears = /\bmarchas?\b/.test(FOLD(message));
   const sentences: string[] = [];
@@ -1103,9 +1117,9 @@ function buildSpecReply(
     sentences.push(parts.join(" "));
   }
   const text = sentences.join(" ");
-  // Câmbio e porta-malas são fixos do modelo; o aviso de variação só vale para número que muda.
+  // Motor, câmbio e porta-malas são fixos do modelo; o aviso de variação só vale para número que muda.
   const needsHint = asked.some((topic) =>
-    ["potencia", "torque", "consumo", "autonomia", "aceleracao", "ficha"].includes(topic),
+    ["torque", "consumo", "autonomia", "aceleracao", "ficha"].includes(topic),
   );
   return needsHint ? `${text} ${CLOSING}` : text;
 }
@@ -1187,20 +1201,23 @@ function maxTorque(spec: VehicleSpec) {
  * não tem mais torque (ex.: HB20 1.6 aspirado × HB20S turbo), a resposta diz que depende, e por quê.
  * `ranked` já vem ordenado por potência. Devolve null quando um mesmo carro lidera os dois critérios.
  */
+function shortSpecMotor(spec: VehicleSpec) {
+  return spec.motor.split(",")[0]?.trim() ?? spec.motor;
+}
+
 export function powerTorqueReply(ranked: NamedSpec[]): string | null {
   if (ranked.length < 2) return null;
   const power = ranked[0]!;
   const byTorque = [...ranked].sort((a, b) => maxTorque(b.spec) - maxTorque(a.spec));
   const torquer = byTorque[0]!;
   if (torquer === power || maxTorque(torquer.spec) <= maxTorque(power.spec)) return null;
-  // Curto pro leigo: quem leva em cada critério + uma linha por carro com cv e torque.
   const lead =
     `Depende do que você chama de forte: em potência leva ${power.spec.artigo} ${power.nome}; ` +
     `na força ao pisar (torque, retomada) leva ${torquer.spec.artigo} ${torquer.nome}.`;
   const rows = ranked.slice(0, 3).map((entry) => ({
     name: entry.nome,
     vehicle: entry.vehicle,
-    value: `${num(bestCv(entry.spec))} cv · ${num(maxTorque(entry.spec))} kgfm`,
+    value: `motor ${shortSpecMotor(entry.spec)} · ${num(maxTorque(entry.spec))} kgfm`,
   }));
   return specRankList(lead, rows);
 }
@@ -1228,7 +1245,9 @@ export function rankingSpecReply(criterion: SpecCriterion, entries: NamedSpec[])
     switch (criterion) {
       case "potencia": {
         const cv = bestCv(spec);
-        return cv ? `${num(cv)} cv` : null;
+        if (!cv) return null;
+        const torque = maxTorque(spec);
+        return `motor ${shortSpecMotor(spec)}${torque ? ` · ${num(torque)} kgfm` : ""}`;
       }
       case "torque": {
         const torque = maxTorque(spec);

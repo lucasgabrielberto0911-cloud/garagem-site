@@ -46,8 +46,10 @@ test("três modelos: uma frase, três linhas e três cards, sem herdar orçament
   assert.match(textoVisivelChat(result.reply), /^São ótimas escolhas/);
 });
 
-test("potência, consumo e espaço usam valores da ficha, sem inferir pela cilindrada", () => {
-  assert.match(neutralChatComparison(stock.slice(0, 2), "mais forte"), /\d+ cv/);
+test("potência, consumo e espaço usam valores da ficha sem expor cv nem inferir pela cilindrada", () => {
+  const strong = neutralChatComparison(stock.slice(0, 2), "mais forte");
+  assert.match(strong, /motor.*kgfm/);
+  assert.doesNotMatch(strong, /\bcv\b/i);
   assert.match(neutralChatComparison(stock.slice(0, 2), "consumo"), /km\/l/);
   assert.match(neutralChatComparison(stock.slice(0, 2), "espaço"), /L de porta-malas/);
   assert.doesNotMatch(neutralChatComparison([unit("a", "Modelo A", "", 2020), unit("b", "Modelo B", "", 2021)], "consumo"), /km\/l|gasta menos/);

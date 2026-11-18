@@ -695,8 +695,9 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
   );
   assert.ok(result.vehicles.every(vehicle => /automático/i.test(vehicle.transmission ?? "") && vehicle.price <= 109_000));
   assert.doesNotMatch(textoVisivelChat(result.reply), /eu olho o motor maior antes do preço/);
-  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Lancer 2014 — [^\n]*160 cv/);
-  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2014 — [^\n]*155 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Lancer 2014 — [^\n]*motor 2,0/i);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2014 — [^\n]*motor 2,0/i);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /\bcv\b/i);
   assert.ok(!result.vehicles.some(v => v.id === corolla.id));
   assert.equal(result.vehicles.find(v => /Lancer/i.test(v.model))?.km, 80000);
   assert.equal(result.vehicles.find(v => /Lancer/i.test(v.model))?.price, 62900);
@@ -836,8 +837,9 @@ test("2.0 mais barato não manda começar pelo 1.0", async () => {
     [lancer.id, civic.id],
   );
   assert.doesNotMatch(textoVisivelChat(result.reply), /HB20/);
-  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Lancer 2014 — [^\n]*160 cv/);
-  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2015 — [^\n]*155 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Lancer 2014 — [^\n]*motor 2,0/i);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2015 — [^\n]*motor 2,0/i);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /\bcv\b/i);
   assert.doesNotMatch(textoVisivelChat(result.reply), /No estoque:|Achei \d/);
   assert.doesNotMatch(
     result.reply,
