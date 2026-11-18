@@ -41,7 +41,11 @@ export function FavoritesList() {
     const controller = new AbortController();
     let active = true;
     const timeout = window.setTimeout(() => controller.abort(), 15000);
-    const cached = snapshotsForIds(key.split(",")) as VehicleCardData[];
+    // Snapshot antigo sem `catalog` não é catálogo: só entra no Meta com true explícito.
+    const cached = snapshotsForIds(key.split(",")).map((vehicle) => ({
+      ...vehicle,
+      catalog: vehicle.catalog === true,
+    })) as VehicleCardData[];
 
     setResult((current) => {
       if (current.key === key && current.status !== "loading") {
@@ -66,7 +70,11 @@ export function FavoritesList() {
       .then((data) => {
         if (!active) return;
         if (!Array.isArray(data.vehicles)) throw new Error("Resposta inválida de favoritos");
-        const next = data.vehicles as VehicleCardData[];
+        // A API é autoritativa: ausente = estoque próprio; `false` = consignado.
+        const next = (data.vehicles as VehicleCardData[]).map((vehicle) => ({
+          ...vehicle,
+          catalog: vehicle.catalog !== false,
+        }));
         setResult({ key, vehicles: next, status: "fresh", refreshing: false });
         writeFavoriteSnapshots(next.map((vehicle) => ({
           ...vehicle,

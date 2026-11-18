@@ -130,7 +130,7 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
                     make={vehicle.brand}
                     model={vehicle.model}
                     year={vehicle.yearModel}
-                    catalog={isCatalogVehicle(vehicle)}
+                    catalog={isCatalogVehicle({ ...vehicle, catalog: vehicle.catalog === true })}
                   >
                   <WhatsAppButton message={buildWhatsAppCarMessage({
                     ...vehicle,

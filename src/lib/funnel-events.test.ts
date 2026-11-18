@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { toChatVehicleCard } from "./chat-cards";
 import { readVehicleCards } from "./chat-history";
+import { chatVehicleCatalogFlag } from "./chat-vehicle-context";
 import { chatWhatsAppCta, resolveChatWhatsAppVehicle } from "./chat-text";
 import { prisma } from "./prisma";
 import { queryPublicVehicleCards } from "./public-vehicle-cards";
@@ -143,6 +144,54 @@ test("isCatalogVehicle aceita apenas estoque próprio disponível", () => {
   assert.equal(isCatalogVehicle({ id: CUID, status: "vendido" }), false);
   assert.equal(isCatalogVehicle({ id: CUID, sold: true }), false);
   assert.equal(isCatalogVehicle({ id: "  " }), false);
+});
+
+test("contexto da ficha sem catalog=true não entra no catálogo do Meta", () => {
+  const base = {
+    id: CUID,
+    label: "Hyundai HB20 2024",
+    brand: "Hyundai",
+    model: "HB20",
+    status: "disponivel",
+  };
+
+  assert.equal(chatVehicleCatalogFlag(base), false);
+  assert.equal(chatVehicleCatalogFlag({ ...base, catalog: false }), false);
+  assert.equal(chatVehicleCatalogFlag({ ...base, catalog: true }), true);
+  assert.equal(
+    chatVehicleCatalogFlag({ ...base, status: "reservado", catalog: true }),
+    false,
+  );
+  assert.equal(
+    chatVehicleCatalogFlag({ ...base, sold: true, catalog: true }),
+    false,
+  );
+  assert.equal(chatVehicleCatalogFlag(null), false);
+
+  assert.deepEqual(
+    catalogParamsFromChatVehicle({ ...base, catalog: false }).content_ids,
+    [],
+  );
+
+  const spy = installTrackingSpy();
+  try {
+    trackVehicleLeadHit({
+      contentId: CUID,
+      contentName: base.label,
+      value: 82900,
+      catalog: false,
+    });
+    assert.deepEqual(
+      spy.fbqCalls.map((call) => call[1]),
+      ["Lead"],
+    );
+    assert.deepEqual(
+      (spy.fbqCalls[0]?.[2] as { content_ids: string[] }).content_ids,
+      [],
+    );
+  } finally {
+    spy.restore();
+  }
 });
 
 test("trackVehicleLeadHit dispara Lead e AddToCart para veículo do catálogo e omite content_ids em consignado", () => {
@@ -501,7 +550,7 @@ test("queryPublicVehicleCards marca catalog=false em consignado sem expor o camp
 
 test("Favoritos, Comparador e SiteChat usam os helpers de catálogo nos CTAs de WhatsApp", () => {
   const comparison = readFileSync("src/components/site/FavoritesComparison.tsx", "utf8");
-  assert.match(comparison, /<VehicleLeadHit[\s\S]*catalog=\{isCatalogVehicle\(vehicle\)\}[\s\S]*<WhatsAppButton/);
+  assert.match(comparison, /<VehicleLeadHit[\s\S]*catalog=\{isCatalogVehicle\(\{ \.\.\.vehicle, catalog: vehicle\.catalog === true \}\)\}[\s\S]*<WhatsAppButton/);
 
   const favorites = readFileSync("src/components/site/FavoritesList.tsx", "utf8");
   assert.match(favorites, /trackVehiclesWhatsAppLead\(ordered,\s*"Favoritos"\)/);

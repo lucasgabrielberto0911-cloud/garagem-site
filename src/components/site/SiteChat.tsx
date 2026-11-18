@@ -88,6 +88,7 @@ import {
   whatsappUrl,
 } from "@/lib/site";
 import {
+  chatVehicleCatalogFlag,
   getChatVehicleContext,
   subscribeChatVehicleContext,
   type ChatVehicleContext,
@@ -465,6 +466,7 @@ function ChatText({
           path: vehicleContext.path,
           category: vehicleContext.category,
           sold: vehicleContext.sold,
+          catalog: chatVehicleCatalogFlag(vehicleContext),
         }
       : null,
     vehicles,
@@ -1190,8 +1192,14 @@ export function SiteChat() {
       (message) =>
         message.role === "assistant" && (message.vehicles?.length ?? 0) > 0,
     )?.vehicles;
+  const pageCatalogContext = vehicleContext
+    ? {
+        ...vehicleContext,
+        catalog: chatVehicleCatalogFlag(vehicleContext),
+      }
+    : null;
   const headerLeadVehicle = resolveChatWhatsAppVehicle(
-    vehicleContext,
+    pageCatalogContext,
     lastChatCards ?? [],
   );
   const headerLeadVehicles =

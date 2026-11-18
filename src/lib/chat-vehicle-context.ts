@@ -10,7 +10,21 @@ export type ChatVehicleContext = {
   category?: string;
   status?: string;
   sold?: boolean;
+  /** `true` só quando a unidade entra no catálogo da Meta (estoque próprio disponível). */
+  catalog?: boolean;
 };
+
+/**
+ * Contexto da ficha só entra no catálogo da Meta com `catalog === true`.
+ * Contexto/snapshot antigo sem o campo (inclusive consignado) fica fora.
+ */
+export function chatVehicleCatalogFlag(
+  vehicle: ChatVehicleContext | null | undefined,
+): boolean {
+  if (!vehicle?.id.trim() || vehicle.sold) return false;
+  if (vehicle.status && vehicle.status !== "disponivel") return false;
+  return vehicle.catalog === true;
+}
 
 let currentContext: ChatVehicleContext | null = null;
 const listeners = new Set<(ctx: ChatVehicleContext | null) => void>();
