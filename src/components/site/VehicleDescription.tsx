@@ -126,15 +126,17 @@ const TOP_KEYS = new Set(["km", "ano", "cor"]);
 const PURE_KM =
   /^(?:com\s+|apenas\s+|so\s+)?(?:km\s*:?\s*)?\d[\d.,\s]*(?:mil\s*)?(?:km|quilometros)(?:\s*rodados?)?(?:\s*originais?)?$/;
 const PURE_YEAR = /^(?:(?:ano|modelo)(?:\s*\/\s*modelo)?\s*:?\s*)?(?:19|20)\d{2}(?:\s*\/\s*(?:19|20)\d{2})?$/;
+const PURE_GEAR = /^(?:(?:cambio|transmissao)\s+)?(?:automatic[oa]|manual|mecanic[oa])$/;
 
 type SpecContext = { known: Map<string, string[]> };
 
-/** Linha que só repete cor, ano ou km ("🛣️ 98.000 km", "2012/2013", "Branco"). */
+/** Linha que só repete cor, ano, km ou câmbio básico ("🛣️ 98.000 km", "2012/2013", "Branco", "⚙️ Câmbio Automático"). */
 function isBareTopFact(text: string, ctx: SpecContext) {
   const line = normalizeSpec(splitFactLine(text)?.text ?? text).replace(/[.!;,]+$/, "").trim();
   if (!line || line.length > 40) return false;
   if (ctx.known.has("km") && PURE_KM.test(line)) return true;
   if (ctx.known.has("ano") && PURE_YEAR.test(line)) return true;
+  if (ctx.known.has("cambio") && PURE_GEAR.test(line)) return true;
   const colors = ctx.known.get("cor");
   if (colors?.length) {
     const bare = line.replace(/^cor\s*:?\s*/, "");

@@ -191,4 +191,21 @@ test("toSoldVehicleShowcaseItem omite preço e gera mensagem de veículo vendido
   const text = new URL(item.whatsappHref).searchParams.get("text") ?? "";
   assert.match(text, /vendido/i);
   assert.equal(text.includes("R$"), false);
+
+  const cvtSold = toSoldVehicleShowcaseItem({
+    id: "cmwfn7t5q000jov81e761x7az",
+    category: "carro",
+    brand: "nissan",
+    model: "versa",
+    version: "1.6 SL Xtronic CVT",
+    year: 2019,
+    yearModel: 2020,
+    km: 61000,
+    transmission: "CVT",
+    fuel: "Flex",
+    updatedAt: "2026-10-20T10:00:00Z",
+    photos: [],
+  });
+  assert.equal(cvtSold.transmission, "Automático");
+  assert.equal(cvtSold.version, "1.6 SL Xtronic CVT");
 });

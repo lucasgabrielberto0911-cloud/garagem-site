@@ -234,7 +234,7 @@ test("o card completo tem um link para a ficha e uma ação separada para o What
   const html = renderCard();
   const linkTag = html.match(/<a[^>]*data-stock-card[^>]*>/)?.[0];
   assert.ok(linkTag);
-  assert.match(linkTag, /aria-label="Honda HR-V 2016"/);
+  assert.doesNotMatch(linkTag, /aria-label=/);
   const main = html.match(/<a[^>]*data-stock-card[^>]*>([\s\S]*?)<\/a>/)?.[1];
   assert.ok(main);
   assert.match(main, /<img[^>]*alt=""/);
