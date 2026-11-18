@@ -1,7 +1,7 @@
 import { publicVehicleDescription } from "@/lib/public-vehicle-description";
 import type { Metadata } from "next";
-import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import Link from "next/link";
+import { RememberHotLeadVehicle } from "@/components/site/RememberHotLeadVehicle";
 import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -34,8 +34,8 @@ import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { MissingModelDisclosure } from "@/components/site/MissingModelDisclosure";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { JsonLd } from "@/components/JsonLd";
-import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
-import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
+import { buildVehicleFichaMetadata } from "@/lib/vehicle-seo";
+import { formatCurrencyBRL, formatBrandName, formatModelName } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
 import {
   buildVehiclePublicSpecs,
@@ -51,11 +51,12 @@ import { getPublicSite } from "@/lib/site-settings";
 import { priceBandHref } from "@/lib/related-vehicles";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
+  buildVehicleShortName,
+  buildWhatsAppCarMessage,
   collapseDuplicateAccessories,
   collapseWhitespace,
   formatUpdatedAt,
   formatVehicleDisplay,
-  formatVehicleWhatsAppMessage,
 } from "@/lib/vehicle-display";
 import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
@@ -64,6 +65,7 @@ import { soldFichaNavLinks } from "@/lib/sold-ficha-nav";
 import { getVehicleConditions } from "@/lib/site-content";
 import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
+import { publicDossierChips } from "@/lib/vehicle-dossier";
 import { publicVehicleSeals } from "@/lib/vehicle-seals";
 import {
   getPublicVehicleStaticParams,
@@ -94,62 +96,7 @@ export async function generateMetadata({
     return { title: `Veículo não encontrado | ${site.name}` };
   }
 
-  const sold = vehicle.status === "vendido";
-  const display = formatVehicleDisplay(vehicle);
-  const label = display.fullLabel;
-  const title = vehicleSeoTitle({
-    brand: vehicle.brand,
-    model: vehicle.model,
-    version: vehicle.version,
-    yearModel: vehicle.yearModel,
-    price: vehicle.price,
-    sold,
-    siteName: site.name,
-  });
-  const description = vehicleSeoDescription({
-    brand: vehicle.brand,
-    model: vehicle.model,
-    version: display.version,
-    year: vehicle.yearModel,
-    price: vehicle.price,
-    km: vehicle.km,
-    transmission: display.transmission,
-    sold,
-    siteName: site.name,
-  });
-  const rawCover = vehicle.photos[0]?.url;
-  const cover = rawCover ? absoluteUrl(publicVehiclePhotoSrc(rawCover)) : null;
-  const path = vehiclePath(vehicle);
-
-  return {
-    title,
-    description,
-    alternates: { canonical: path },
-    robots: sold ? { index: false, follow: true } : undefined,
-    openGraph: {
-      type: "website",
-      siteName: site.name,
-      title,
-      description,
-      url: absoluteUrl(path),
-      images: cover
-        ? [vehicleOpenGraphImage({ url: cover, alt: label })]
-        : [
-            {
-              url: absoluteUrl("/og.png"),
-              width: 1200,
-              height: 630,
-              alt: title,
-            },
-          ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [{ url: cover ?? absoluteUrl("/og.png"), alt: label }],
-    },
-  };
+  return buildVehicleFichaMetadata(vehicle);
 }
 
 export default async function VehicleDetailPage({
@@ -190,41 +137,54 @@ export default async function VehicleDetailPage({
   ];
   const accessories = collapseDuplicateAccessories(vehicle.accessories);
   const whatsapp = {
-    interest: formatVehicleWhatsAppMessage({
+    interest: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "interest",
+      pageOrigin: "ficha",
     }),
-    video: formatVehicleWhatsAppMessage({
+    mobileBar: buildWhatsAppCarMessage({
+      ...vehicle,
+      path,
+      isMoto,
+      intent: "interest",
+      pageOrigin: "barra fixa",
+    }),
+    video: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "video",
+      pageOrigin: "ficha",
     }),
-    finance: formatVehicleWhatsAppMessage({
+    finance: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "finance",
+      pageOrigin: "ficha",
     }),
-    visit: formatVehicleWhatsAppMessage({
+    visit: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "visit",
+      pageOrigin: "ficha",
     }),
-    trade: formatVehicleWhatsAppMessage({
+    trade: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "trade",
+      pageOrigin: "ficha",
     }),
-    sameBand: formatVehicleWhatsAppMessage({
+    sameBand: buildWhatsAppCarMessage({
       ...vehicle,
       path,
       isMoto,
       intent: "similar",
+      pageOrigin: "ficha",
     }),
   };
   const soldNavLinks = soldFichaNavLinks(vehicle);
@@ -240,6 +200,7 @@ export default async function VehicleDetailPage({
   ]);
   const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
   const seals = sold ? [] : publicVehicleSeals({ verified, accessories });
+  const dossierChips = sold ? [] : publicDossierChips(vehicle);
 
   const specs = buildVehiclePublicSpecs({
     category: vehicle.category,
@@ -285,6 +246,13 @@ export default async function VehicleDetailPage({
       className="pb-sticky-bar-safe lg:pb-10"
     >
       {!sold ? <RememberRecentVehicle id={vehicle.id} /> : null}
+      <RememberHotLeadVehicle
+        slug={canonicalSlug}
+        name={buildVehicleShortName(vehicle)}
+        year={vehicle.yearModel}
+        link={absoluteUrl(path)}
+        sold={sold}
+      />
       <VehicleViewContent
         contentId={vehicle.id}
         contentName={fullLabel}
@@ -307,6 +275,7 @@ export default async function VehicleDetailPage({
           price: sold ? undefined : vehicle.price,
           path,
           category: vehicle.category,
+          status: vehicle.status,
           sold: sold,
         }}
       />
@@ -549,7 +518,10 @@ export default async function VehicleDetailPage({
 
               <VehicleInspectionBadge inspection={sold ? null : vehicle.inspection} />
               {!sold ? (
-                <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} />
+                <VehicleSeals
+                  seals={seals.filter((seal) => seal.id !== "opcionais")}
+                  chips={dossierChips}
+                />
               ) : null}
 
               {sold ? (
@@ -570,6 +542,7 @@ export default async function VehicleDetailPage({
                     content={fichaTrack.content}
                     vehicleId={vehicle.id}
                     slug={canonicalSlug}
+                    pageOrigin="ficha"
                     message={whatsapp.interest}
                   >
                     Pedir parecido no WhatsApp
@@ -595,6 +568,7 @@ export default async function VehicleDetailPage({
                         content={fichaTrack.content}
                         vehicleId={vehicle.id}
                         slug={canonicalSlug}
+                        pageOrigin="ficha"
                         message={whatsapp.interest}
                       >
                         Falar no WhatsApp
@@ -621,9 +595,19 @@ export default async function VehicleDetailPage({
                       finance={whatsapp.finance}
                       trade={whatsapp.trade}
                       visit={whatsapp.visit}
+                      hasVideo={!!vehicle.hasVideo}
                       variant="secondary"
                       className=""
                     />
+                    <p className="mt-2.5 text-sm">
+                      <Link
+                        href={`/troca?carro=${encodeURIComponent(canonicalSlug)}`}
+                        prefetch={false}
+                        className="inline-flex items-center text-cream/80 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand"
+                      >
+                        Tem carro pra dar na troca?
+                      </Link>
+                    </p>
                   </div>
 
                   {/* No celular o CSS sobe este bloco para logo abaixo do preço (sem Linhares/ES). */}
@@ -689,6 +673,7 @@ export default async function VehicleDetailPage({
                       content={fichaTrack.content}
                       vehicleId={vehicle.id}
                       slug={canonicalSlug}
+                      pageOrigin="ficha"
                       message={whatsapp.interest}
                     >
                       Tirar dúvidas no WhatsApp
@@ -739,6 +724,7 @@ export default async function VehicleDetailPage({
                   finance: whatsapp.finance,
                   trade: whatsapp.trade,
                   visit: whatsapp.visit,
+                  hasVideo: !!vehicle.hasVideo,
                 }
           }
         />
@@ -795,9 +781,11 @@ export default async function VehicleDetailPage({
         vehicleSlug={canonicalSlug}
         vehiclePath={path}
         contentName={fullLabel}
-        message={whatsapp.interest}
+        message={whatsapp.mobileBar}
         brand={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
+        version={vehicle.version}
+        status={vehicle.status}
         year={vehicle.yearModel}
         price={sold ? 0 : vehicle.price}
         stateOfVehicle={autoHit.stateOfVehicle}

@@ -113,7 +113,33 @@ export function formatVehicleLabel(
   return year != null ? `${label} ${year}` : label;
 }
 
-/** Meta description da ficha, sem cortar os dados que identificam o carro. */
+function cleanSeoTransmission(transmission: string) {
+  const folded = (transmission ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!folded) return "";
+  if (/\bx[-\s]?tronic\b/.test(folded)) return "Xtronic";
+  if (/\b(?:[ei][-\s]?)?cvt\b|\bmultidrive\b/.test(folded)) return "CVT";
+  if (/\bmanual\b|\bmecanic[oa]\b|(?:^|[\s/])mec\.?(?=\s|$)|\bmt\d?\b/.test(folded)) {
+    return "Manual";
+  }
+  if (
+    /\bsemi[-\s]*automatic[oa]\b|\bsemiautomatic[oa]\b|\bautomatizad[oa]\b|\bdualogic\b|\bi[-\s]?motion\b|\beasytronic\b|\bgsr\b|\bpowershift\b|\btiptronic\b|\bs[-\s]?tronic\b|\bdsg\b|\bautomatic[oa]?\b|(?:^|[\s/])aut\.?(?=\s|$)|\bat\d?\b/.test(
+      folded,
+    )
+  ) {
+    return "Automático";
+  }
+  return transmission
+    .replace(/\b\d+(?:[.,]\d+)?\s*(?:cv|hp|cavalos?)\b/gi, "")
+    .replace(/\b\d+\s*(?:marchas?|velocidades?)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Meta description da ficha, curta e vendedora, com km, câmbio e atendimento pelo WhatsApp. */
 export function vehicleSeoDescription(input: {
   brand: string;
   model: string;
@@ -125,25 +151,44 @@ export function vehicleSeoDescription(input: {
   sold?: boolean;
   siteName?: string;
 }) {
-  const separator = input.version && /(?:^|\s)\d{1,2}$/.test(input.version) ? " · " : " ";
+  const cleanVersion = (input.version ?? "").replace(/\s+/g, " ").trim();
+  const separator = cleanVersion && /(?:^|\s)\d{1,2}$/.test(cleanVersion) ? " · " : " ";
   const label = [
     formatVehicleLabel(input.brand, input.model),
-    input.version ? `${input.version}${separator}${input.year}` : input.year,
+    cleanVersion ? `${cleanVersion}${separator}${input.year}` : input.year,
   ]
     .filter(Boolean)
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
   const siteName = input.siteName ?? "Garagem";
+  const cta = "Combinamos o atendimento pelo WhatsApp.";
   if (input.sold) {
-    return `${label} (vendido), seminovo em Linhares/ES na ${siteName}. Veja veículos similares disponíveis e fale pelo WhatsApp.`;
+    const soldCandidates = [
+      `${label} (vendido), seminovo em Linhares/ES na ${siteName}. Veja similares disponíveis. ${cta}`,
+      `${label} (vendido), seminovo Linhares/ES (${siteName}): similares disponíveis. ${cta}`,
+    ];
+    return soldCandidates.find((candidate) => candidate.length <= 160) ?? soldCandidates[soldCandidates.length - 1];
   }
   const price = Number.isFinite(input.price) && input.price > 0
-    ? ` por ${formatCurrencyBRL(input.price)}` : "";
-  const base = `${label}, seminovo em Linhares/ES${price} na ${siteName}.`;
-  const details = ` ${formatNumberBR(input.km)} km, câmbio ${input.transmission}.`;
-  const cta = " Confira fotos e fale pelo WhatsApp.";
-  return `${base}${base.length + details.length + cta.length <= 160 ? details : ""}${cta}`;
+    ? ` por ${formatCurrencyBRL(input.price)}`
+    : "";
+  const kmLabel = Number.isFinite(input.km) && input.km >= 0
+    ? `${formatNumberBR(Math.max(0, Math.round(input.km)))} km`
+    : "";
+  const gear = cleanSeoTransmission(input.transmission);
+  const fullSpecs = [kmLabel, gear ? `câmbio ${gear}` : ""].filter(Boolean).join(", ");
+  const compactSpecs = [kmLabel, gear].filter(Boolean).join(", ");
+  const fullSpecSuffix = fullSpecs ? `: ${fullSpecs}.` : ".";
+  const compactSpecSuffix = compactSpecs ? `: ${compactSpecs}.` : ".";
+
+  const candidates = [
+    `${label}${price}, seminovo em Linhares/ES na ${siteName}${fullSpecSuffix} ${cta}`,
+    `${label}${price}, seminovo Linhares/ES na ${siteName}${fullSpecSuffix} ${cta}`,
+    `${label}${price}, seminovo Linhares/ES (${siteName})${compactSpecSuffix} ${cta}`,
+    `${formatVehicleLabel(input.brand, input.model, input.year)}${price}, seminovo Linhares/ES (${siteName})${compactSpecSuffix} ${cta}`,
+  ];
+  return candidates.find((candidate) => candidate.length <= 160) ?? candidates[candidates.length - 1];
 }
 
 /** Alt text de foto na ficha: "Marca Modelo Ano - foto N de T". */

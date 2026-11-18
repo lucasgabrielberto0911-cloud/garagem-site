@@ -4,6 +4,7 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FaqExplorer } from "@/components/site/FaqExplorer";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getPublishedFaq } from "@/lib/site-content";
@@ -49,13 +50,15 @@ export default async function FaqPage() {
           </p>
           <div className="mt-5 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <ChatOpenButton source="faq" variant="outline" />
-            <WhatsAppButton
-              size="lg"
-              trackingLabel="faq"
-              message={WHATSAPP_MESSAGES.general}
-            >
-              Falar com a {site.name}
-            </WhatsAppButton>
+            <SiteLeadHit contentName="FAQ">
+              <WhatsAppButton
+                size="lg"
+                trackingLabel="faq"
+                message={WHATSAPP_MESSAGES.general}
+              >
+                Falar com a {site.name}
+              </WhatsAppButton>
+            </SiteLeadHit>
           </div>
         </div>
 

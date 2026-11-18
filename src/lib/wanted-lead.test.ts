@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { PHONES } from "@/lib/site";
 import {
+  buildWantedOrderWhatsAppMessage,
   emailFromLeadNotes,
   maxPriceFromLeadNotes,
   parseWantedLeadForm,
@@ -179,7 +180,13 @@ test("o formulário público tem quatro campos ordenados e aviso de privacidade 
   assert.match(source, /Não foi possível enviar agora/);
   assert.match(source, /setFormError\(result\.message\)/);
   assert.doesNotMatch(source, /notifyError/);
-  assert.doesNotMatch(source, /WhatsAppButton|wa\.me|99633|setTimeout|Confirmado neste anúncio/);
+  assert.doesNotMatch(source, /wa\.me|99633|setTimeout|Confirmado neste anúncio/);
+  const sentBlock = source.slice(source.indexOf("if (sent)"), source.indexOf("return (\n    <section"));
+  assert.match(sentBlock, /<SiteLeadHit contentName="Não encontrou o modelo">/);
+  assert.match(sentBlock, /<WhatsAppButton/);
+  assert.match(sentBlock, /Falar no WhatsApp agora/);
+  assert.match(sentBlock, /Enviar outro pedido/);
+  assert.ok(sentBlock.indexOf("<WhatsAppButton") < sentBlock.indexOf("Enviar outro pedido"));
   const track = source.match(/trackLead\(\{[^}]*\}\)/)?.[0] ?? "";
   assert.match(track, /content_name: "Não encontrou o modelo"/);
   assert.doesNotMatch(track, /search_string/);
@@ -228,4 +235,17 @@ test("sem a autorização marcada o pedido não é aceito", () => {
   const parsed = parseWantedLeadForm(form({ ...valid, consent: "" }));
   assert.equal(parsed.ok, false);
   if (!parsed.ok) assert.ok(parsed.fieldErrors.consent);
+});
+
+test("mensagem de WhatsApp após Pedido recebido leva modelo e teto opcionais", () => {
+  const withCeiling = buildWantedOrderWhatsAppMessage("Corolla automático", 80000);
+  assert.match(withCeiling, /Corolla automático/);
+  assert.match(withCeiling, /até R\$\s*80\.000/);
+
+  const withoutCeiling = buildWantedOrderWhatsAppMessage("Honda Civic", null);
+  assert.match(withoutCeiling, /Honda Civic/);
+  assert.doesNotMatch(withoutCeiling, /até R\$/);
+
+  const fallback = buildWantedOrderWhatsAppMessage("", null);
+  assert.match(fallback, /pedido de carro no site da Garagem/);
 });

@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { CityDirectory } from "@/components/site/CityDirectory";
+import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
 import {
   CITIES_DIRECTORY_PATH,
   SERVICE_CITIES,
@@ -27,6 +28,45 @@ test("rodapé troca a lista de cidades por um único link Ver cidades", () => {
   assert.doesNotMatch(footer, /SERVICE_CITIES/);
   assert.doesNotMatch(footer, /Todas as cidades/);
   assert.doesNotMatch(footer, /Seminovos em \{/);
+  for (const href of [
+    "/seminovos/linhares",
+    "/seminovos/aracruz",
+    "/seminovos/grande-vitoria",
+  ]) {
+    assert.ok(footer.includes(href), `rodapé deve linkar ${href}`);
+  }
+  assert.match(footer, /Atendemos Linhares, Aracruz e Grande Vitória/);
+  assert.match(footer, /Combinamos o atendimento pelo WhatsApp/);
+});
+
+test("SeoInternalLinks conecta Linhares, Aracruz, Grande Vitória, Vitória e financiamento", () => {
+  const html = renderToStaticMarkup(createElement(SeoInternalLinks));
+  for (const href of [
+    "/seminovos/linhares",
+    "/seminovos/aracruz",
+    "/seminovos/grande-vitoria",
+    "/seminovos/vitoria",
+    "/seminovos/serra",
+    "/seminovos/vila-velha",
+    "/seminovos/colatina",
+    "/financiamento",
+  ]) {
+    assert.match(html, new RegExp(`href="${href}"`), href);
+  }
+});
+
+test("hubs /seminovos e /cidades têm WhatsAppButton com SiteLeadHit e copy regional limpa", () => {
+  for (const rel of ["app/(site)/seminovos/page.tsx", "app/(site)/cidades/page.tsx"]) {
+    const src = readSrc(rel);
+    assert.match(src, /<SiteLeadHit\b[^>]*>[\s\S]*?<WhatsAppButton\b/, rel);
+    assert.match(src, /Atendemos Linhares, Aracruz e Grande Vitória/, rel);
+    assert.match(src, /combinamos o atendimento pelo WhatsApp/i, rel);
+    assert.doesNotMatch(
+      src,
+      /loja física|loja digital|pontos de venda|ponto de venda|ponto físico|hora marcada/i,
+      rel,
+    );
+  }
 });
 
 test("página de cidades só lista botões para as páginas que já existem", () => {

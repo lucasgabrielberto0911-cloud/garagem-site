@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useHotLeadViewedCars } from "@/components/site/RememberHotLeadVehicle";
+import { applyHotLeadAlsoViewed } from "@/lib/hot-lead";
 import { trackWhatsAppClick, type VehicleFunnelRef } from "@/lib/meta-pixel";
 import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 
@@ -12,21 +14,28 @@ export function TrackedWhatsAppLink({
   ariaLabel,
   vehicleId,
   slug,
+  pageOrigin,
 }: {
   href: string;
   trackingLabel: string;
   className?: string;
-  children: ReactNode;
+  children?: ReactNode;
   ariaLabel?: string;
   vehicleId?: string;
   slug?: string;
+  pageOrigin?: string;
 }) {
-  const funnel: VehicleFunnelRef | undefined = vehicleId
-    ? { vehicleId, slug }
-    : undefined;
+  const isFicha = pageOrigin === "ficha";
+  const viewedCars = useHotLeadViewedCars(isFicha);
+  const resolvedHref =
+    isFicha && viewedCars.length > 0
+      ? applyHotLeadAlsoViewed(href, viewedCars, { id: vehicleId, slug })
+      : href;
+  const funnel: VehicleFunnelRef | undefined =
+    vehicleId || pageOrigin ? { vehicleId, slug, pageOrigin } : undefined;
   return (
     <a
-      href={href}
+      href={resolvedHref}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={ariaLabel}

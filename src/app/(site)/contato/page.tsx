@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { JsonLd } from "@/components/JsonLd";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import {
   PHONES,
@@ -112,14 +113,16 @@ export default async function ContatoPage() {
               </div>
 
               <div className="mt-3">
-                <WhatsAppButton
-                  size="lg"
-                  className="w-full"
-                  trackingLabel="contato"
-                  message={WHATSAPP_MESSAGES.general}
-                >
-                  Chamar no WhatsApp
-                </WhatsAppButton>
+                <SiteLeadHit contentName="Contato">
+                  <WhatsAppButton
+                    size="lg"
+                    className="w-full"
+                    trackingLabel="contato"
+                    message={WHATSAPP_MESSAGES.general}
+                  >
+                    Chamar no WhatsApp
+                  </WhatsAppButton>
+                </SiteLeadHit>
               </div>
             </div>
           </section>

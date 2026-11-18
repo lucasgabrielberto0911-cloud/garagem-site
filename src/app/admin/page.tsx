@@ -26,6 +26,7 @@ import {
 } from "@/components/admin/ui";
 import { IconQuote } from "@/components/site/icons";
 import { getSession } from "@/lib/auth";
+import { PARKED_MIN_DAYS } from "@/lib/admin-parados";
 import { getDashboardData, STALE_DAYS } from "@/lib/admin-stats";
 import {
   buildDashboardAlerts,
@@ -194,6 +195,14 @@ async function DashboardContent() {
       }
       tone={alerts.noFeatured ? "warning" : "default"}
       href="/admin/veiculos?tab=destaques"
+    />,
+    <StatCard
+      key="parked"
+      label="Carros parados"
+      value={data.pendingCounts ? data.pendingCounts.parkedOver30 : "—"}
+      hint={`Disponíveis há mais de ${PARKED_MIN_DAYS} dias`}
+      tone={(data.pendingCounts?.parkedOver30 ?? 0) > 0 ? "brand" : "default"}
+      href="/admin/parados"
     />,
   ];
 
@@ -471,12 +480,20 @@ async function DashboardContent() {
         className="hidden sm:block"
         title="Últimos veículos cadastrados"
         action={
-          <Link
-            href="/admin/veiculos"
-            className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            Gerenciar
-          </Link>
+          <div className="flex gap-3">
+            <Link
+              href="/admin/parados"
+              className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              Carros parados
+            </Link>
+            <Link
+              href="/admin/veiculos"
+              className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              Gerenciar
+            </Link>
+          </div>
         }
       >
         {data.failures.includes("recentVehicles") ? (

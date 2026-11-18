@@ -25,23 +25,36 @@ function isMasterPath(path: string) {
 
 export async function downloadPrivateMaster(
   path: string,
+  options?: { timeoutMs?: number },
 ): Promise<Uint8Array | null> {
   if (!isMasterPath(path)) return null;
   const fixture = await e2ePhotoFixture();
   if (fixture) return fixture;
+
+  const timeoutMs = Math.max(500, options?.timeoutMs ?? 8_000);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
   try {
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.storage
+    const downloadPromise = supabase.storage
       .from(VEHICLE_DOCS_BUCKET)
       .download(path);
-    if (error || !data) return null;
-    const bytes = new Uint8Array(await data.arrayBuffer());
+    const timeoutPromise = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), timeoutMs);
+    });
+
+    const result = await Promise.race([downloadPromise, timeoutPromise]);
+    if (!result || result.error || !result.data) return null;
+
+    const bytes = new Uint8Array(await result.data.arrayBuffer());
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_MASTER_BYTES)
       return null;
     return bytes;
   } catch (error) {
     console.warn("[photo-master] download:", error);
     return null;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
 }
 

@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { vehiclePhotoAlt, vehicleSeoDescription } from "./format";
-import { VEHICLE_SEO_TITLE_MAX, vehicleOpenGraphImage, vehicleSeoTitle } from "./vehicle-seo";
+import {
+  VEHICLE_SEO_TITLE_MAX,
+  buildVehicleFichaMetadata,
+  vehicleOpenGraphImage,
+  vehicleSeoTitle,
+} from "./vehicle-seo";
 
 const civic = {
   brand: "Honda",
@@ -103,4 +108,84 @@ test("descrição SEO separa o ano com ponto médio quando a versão termina em 
   assert.match(vehicleSeoDescription({ ...civic, version: "Sport Pack 3" }), /Sport Pack 3 · 2015/);
   assert.match(vehicleSeoDescription({ ...civic, version: "Tech Road 2" }), /Tech Road 2 · 2015/);
   assert.doesNotMatch(vehicleSeoDescription(civic), /LXR · 2015/);
+});
+
+test("descrição SEO inclui km, câmbio limpo e Combinamos o atendimento pelo WhatsApp até em versões longas", () => {
+  const civicDesc = vehicleSeoDescription({ ...civic, transmission: "Automático 5 marchas 155cv" });
+  assert.match(civicDesc, /106\.000 km/);
+  assert.match(civicDesc, /Automático/);
+  assert.match(civicDesc, /Combinamos o atendimento pelo WhatsApp\./);
+  assert.doesNotMatch(civicDesc, /marchas|155cv|loja digital|loja física|pontos de venda|hora marcada/i);
+  assert.ok(civicDesc.length <= 160, civicDesc);
+
+  const dusterDesc = vehicleSeoDescription({
+    brand: "Renault",
+    model: "Duster",
+    version: "Dynamique 2.0 Tech Road 2",
+    year: 2014,
+    price: 54900,
+    km: 101000,
+    transmission: "Automático",
+  });
+  assert.match(dusterDesc, /Renault Duster Dynamique 2\.0 Tech Road 2 · 2014/);
+  assert.match(dusterDesc, /101\.000 km/);
+  assert.match(dusterDesc, /Automático/);
+  assert.match(dusterDesc, /Combinamos o atendimento pelo WhatsApp\./);
+  assert.ok(dusterDesc.length <= 160, `${dusterDesc} (${dusterDesc.length})`);
+});
+
+test("buildVehicleFichaMetadata define canonical, og:image e twitter:image HTTPS absolutos com dimensões e fallback 1200x630", () => {
+  const sample = {
+    id: "cmtestficha00000000000001",
+    brand: "Honda",
+    model: "Civic",
+    version: "LXR 2.0",
+    yearModel: 2015,
+    price: 74900,
+    km: 106000,
+    transmission: "Automático",
+    color: "Prata",
+    status: "disponivel",
+    photos: [{ url: "http://cdn.example/civic-capa.jpg" }],
+  };
+
+  const meta = buildVehicleFichaMetadata(sample);
+  assert.match(String(meta.title), /Honda Civic LXR 2015 por R\$\s*74\.900/);
+  assert.match(String(meta.description), /106\.000 km/);
+  assert.match(String(meta.description), /Combinamos o atendimento pelo WhatsApp\./);
+  assert.ok(String(meta.alternates?.canonical).startsWith("/estoque/honda-civic-"));
+  assert.equal(meta.robots, undefined);
+
+  const ogImages = meta.openGraph?.images as Array<{
+    url: string;
+    width: number;
+    height: number;
+    type: string;
+    alt: string;
+  }>;
+  assert.equal(ogImages.length, 1);
+  assert.equal(ogImages[0].url, "https://cdn.example/civic-capa.jpg");
+  assert.equal(ogImages[0].width, 1200);
+  assert.equal(ogImages[0].height, 800);
+  assert.equal(ogImages[0].type, "image/jpeg");
+
+  const twitterImages = meta.twitter?.images as Array<{ url: string; alt: string }>;
+  assert.equal(twitterImages[0].url, "https://cdn.example/civic-capa.jpg");
+
+  const withoutPhotos = buildVehicleFichaMetadata({ ...sample, photos: [] });
+  const fallbackImages = withoutPhotos.openGraph?.images as Array<{
+    url: string;
+    width: number;
+    height: number;
+    type: string;
+  }>;
+  assert.equal(fallbackImages[0].url, "https://www.suagaragem.net/og.png");
+  assert.equal(fallbackImages[0].width, 1200);
+  assert.equal(fallbackImages[0].height, 630);
+  assert.equal(fallbackImages[0].type, "image/png");
+
+  const soldMeta = buildVehicleFichaMetadata({ ...sample, status: "vendido" });
+  assert.deepEqual(soldMeta.robots, { index: false, follow: true });
+  assert.doesNotMatch(String(soldMeta.title), /R\$|74\.900/);
+  assert.doesNotMatch(String(soldMeta.description), /R\$|74\.900/);
 });
