@@ -8,6 +8,7 @@ export type ChatVehicleContext = {
   price?: number;
   path?: string;
   category?: string;
+  status?: string;
   sold?: boolean;
 };
 

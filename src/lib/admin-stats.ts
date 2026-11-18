@@ -20,6 +20,7 @@ import {
   googleReviewsReady,
 } from "@/lib/google-reviews";
 import { daysInStock, staleCutoffDate } from "@/lib/stock-quality";
+import { PARKED_MIN_DAYS, parkedCutoffDate } from "@/lib/admin-parados";
 import {
   computeMonthlySalesGoal,
   computeSalesLeaderboard,
@@ -74,6 +75,7 @@ async function loadDashboardData() {
   const failures: string[] = [];
   const monthStart = startOfMonth();
   const staleBefore = staleCutoffDate();
+  const parkedBefore = parkedCutoffDate(PARKED_MIN_DAYS);
 
   // Consultas isoladas: se uma tabela ainda não existir, o dashboard não cai inteiro.
   const safe = async <T>(label: string, fn: () => Promise<T>, fallback: T) => {
@@ -206,10 +208,11 @@ async function loadDashboardData() {
     safe(
       "pendingCounts",
       async () => {
-        const [counts] = await prisma.$queryRaw<Array<{ withoutPhotos: number; stale: number; missingSales: number }>>`
+        const [counts] = await prisma.$queryRaw<Array<{ withoutPhotos: number; stale: number; parkedOver30: number; missingSales: number }>>`
           SELECT count(*) FILTER (WHERE status IN ('disponivel', 'reservado')
             AND NOT EXISTS (SELECT 1 FROM "Photo" p WHERE p."vehicleId" = v.id))::int AS "withoutPhotos",
             count(*) FILTER (WHERE status = 'disponivel' AND "createdAt" < ${staleBefore})::int AS stale,
+            count(*) FILTER (WHERE status = 'disponivel' AND "createdAt" <= ${parkedBefore})::int AS "parkedOver30",
             count(*) FILTER (WHERE status = 'vendido'
             AND NOT EXISTS (SELECT 1 FROM "Sale" s WHERE s."vehicleId" = v.id))::int AS "missingSales"
           FROM "Vehicle" v WHERE historical = false
@@ -219,6 +222,7 @@ async function loadDashboardData() {
       null as {
         withoutPhotos: number;
         stale: number;
+        parkedOver30: number;
         missingSales: number;
       } | null,
     ),
@@ -519,7 +523,7 @@ async function loadDashboardData() {
  */
 const getDashboardDataForDay = unstable_cache(
   async (_day: string) => loadDashboardData(),
-  ["admin-dashboard-v5"],
+  ["admin-dashboard-v6"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG] },
 );
 

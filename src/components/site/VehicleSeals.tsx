@@ -1,20 +1,28 @@
-import type { VehicleSeal } from "@/lib/vehicle-seals";
+import { dossierChipsToSeals, type VehicleSeal } from "@/lib/vehicle-seals";
 
 /**
- * Selos da ficha (procedência, revisões, opcionais). Chips pequenos e neutros,
- * com um traço vermelho da loja. Sem selo, não renderiza.
+ * Selos da ficha (procedência, revisões, opcionais e dossiê). Chips pequenos e
+ * neutros, com um traço vermelho da loja. Sem selo, não renderiza.
  */
 export function VehicleSeals({
   seals,
+  chips = [],
   className = "",
   optionalsHref,
 }: {
   seals: readonly VehicleSeal[];
+  /** Chips de dossiê já filtrados (`publicDossierChips`: chave reserva, manual, vídeo). */
+  chips?: readonly string[];
   className?: string;
   /** Quando existe, o selo de opcionais vira âncora para a lista. */
   optionalsHref?: string;
 }) {
-  if (seals.length === 0) return null;
+  const existingIds = new Set(seals.map((seal) => seal.id));
+  const extraSeals = dossierChipsToSeals(chips).filter(
+    (seal) => !existingIds.has(seal.id),
+  );
+  const allSeals = [...seals, ...extraSeals];
+  if (allSeals.length === 0) return null;
 
   return (
     <ul
@@ -22,7 +30,7 @@ export function VehicleSeals({
       data-vehicle-seals=""
       className={`flex flex-wrap gap-1.5 ${className}`}
     >
-      {seals.map((seal) => (
+      {allSeals.map((seal) => (
         <li
           key={seal.id}
           data-vehicle-seal={seal.id}

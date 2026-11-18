@@ -158,6 +158,9 @@ export type ChatStockLine = {
   engine?: string | null;
   doors?: number | null;
   accessories?: string[];
+  hasSpareKey?: boolean;
+  hasManual?: boolean;
+  hasVideo?: boolean;
 };
 
 export function formatChatPrice(value: number) {
@@ -245,7 +248,12 @@ function stockLineLabel(
         { omitLabel: engineAlreadyInName(vehicle) || Boolean(vehicle.engine) },
       )}`
     : "";
-  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}${engine}${doors}${extras}${consumption}`;
+  const dossierBits: string[] = [];
+  if (vehicle.hasSpareKey) dossierBits.push("chave reserva");
+  if (vehicle.hasManual) dossierBits.push("manual do proprietário");
+  if (vehicle.hasVideo) dossierBits.push("vídeo disponível");
+  const dossier = dossierBits.length > 0 ? ` · ${dossierBits.join(", ")}` : "";
+  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}${engine}${doors}${extras}${consumption}${dossier}`;
 }
 
 export function formatStockForPrompt(

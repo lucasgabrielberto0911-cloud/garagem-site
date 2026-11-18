@@ -63,6 +63,7 @@ export function SimilarVehicles({
             content={whatsapp.content}
             vehicleId={whatsapp.vehicleId}
             slug={whatsapp.slug}
+            pageOrigin="ficha"
             message={whatsapp.message}
             variant="outline"
             className="w-full sm:w-auto"

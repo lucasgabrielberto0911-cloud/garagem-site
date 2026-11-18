@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { matchWhatsApp, wantedStockMatch, type MatchLead, type MatchVehicle } from "./wanted-stock-match";
+import {
+  matchPreparationWhatsApp,
+  matchWhatsApp,
+  wantedPreparationMatch,
+  wantedStockMatch,
+  type MatchLead,
+  type MatchPreparationVehicle,
+  type MatchVehicle,
+} from "./wanted-stock-match";
+import { buildWantedStockMatches } from "./wanted-stock-match-store";
 import { WANTED_LEAD_SOURCE } from "./leads";
 
 const lead: MatchLead = { id: "lead", name: "Cliente Teste", phone: "27912345678", vehicleInfo: "Honda Civic", notes: null, status: "novo", source: WANTED_LEAD_SOURCE };
@@ -36,4 +45,53 @@ test("WhatsApp abre para o cliente, com fatos e ficha reais, sem enviar sozinho"
   assert.equal(matchWhatsApp({ ...lead, phone: "+1 555 123 4567" }, car), null);
   assert.doesNotMatch(decodeURIComponent(matchWhatsApp(lead, { ...car, price: 0 })!), /por R\$/);
   assert.equal(wantedStockMatch({ ...lead, notes: "Preço: até R$ 65.000" }, { ...car, price: 0 }), null);
+});
+
+const prepCar: MatchPreparationVehicle = {
+  id: "cmt0ewzpg0001lc0493fl02h8",
+  brand: "Honda",
+  model: "Civic",
+  color: "Prata",
+  year: 2016,
+  km: 85000,
+  ready: false,
+  posted: false,
+};
+
+test("cruza encomendas com veículos em preparação e gera WhatsApp sem preço nem ficha", () => {
+  assert.deepEqual(wantedPreparationMatch(lead, prepCar), ["Modelo"]);
+  assert.deepEqual(
+    wantedPreparationMatch({ ...lead, notes: "Ano: 2015 a 2017\nKm: até 90.000\nPreço: até R$ 70.000" }, prepCar),
+    ["Modelo", "Ano", "Km"],
+  );
+  assert.equal(wantedPreparationMatch({ ...lead, notes: "Ano: a partir de 2018" }, prepCar), null);
+  assert.equal(wantedPreparationMatch({ ...lead, notes: "Km: até 70.000" }, prepCar), null);
+  assert.equal(wantedPreparationMatch({ ...lead, notes: "Ano: 2015 a 2017" }, { ...prepCar, year: null }), null);
+  assert.equal(wantedPreparationMatch({ ...lead, status: "fechado" }, prepCar), null);
+
+  const href = matchPreparationWhatsApp(lead, prepCar);
+  assert.ok(href?.startsWith("https://wa.me/5527912345678?text="));
+  const text = decodeURIComponent(href!);
+  assert.match(text, /em preparação/);
+  assert.match(text, /Honda Civic Prata 2016/);
+  assert.doesNotMatch(text, /R\$|\/estoque\//);
+});
+
+test("buildWantedStockMatches combina estoque disponível e veículos em preparação respeitando dispensados", () => {
+  const matches = buildWantedStockMatches([lead], [car], [prepCar], new Set());
+  assert.equal(matches.length, 2);
+  assert.equal(matches[0].vehicleId, car.id);
+  assert.ok(matches[0].vehicleHref);
+  assert.equal(matches[1].vehicleId, prepCar.id);
+  assert.equal(matches[1].vehicleHref, undefined);
+  assert.match(matches[1].detail, /^Em preparação · Honda · Civic · Prata · 2016 · Em preparo$/);
+
+  const afterDismiss = buildWantedStockMatches(
+    [lead],
+    [car],
+    [prepCar],
+    new Set([`${lead.id}:${prepCar.id}`]),
+  );
+  assert.equal(afterDismiss.length, 1);
+  assert.equal(afterDismiss[0].vehicleId, car.id);
 });

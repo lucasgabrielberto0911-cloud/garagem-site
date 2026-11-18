@@ -21,7 +21,13 @@ import {
   rankChatVehicles,
   stockSelectHasForbiddenField,
 } from "./chat-prompt";
-import { CHAT_VEHICLE_SELECT } from "./chat-stock";
+import {
+  CHAT_VEHICLE_SELECT,
+  formatChatKeysReply,
+  toChatStockLine,
+  type ChatVehicleRecord,
+} from "./chat-stock";
+import { runChatTurn } from "./chat-turn";
 
 test("saudação de ping ajuda a escolher sem jargão de 60x", () => {
   assert.match(CHAT_PING_REPLY, /estoque/);
@@ -513,4 +519,147 @@ test("formato multicarros tem limite, wire e dados verificáveis sem exemplo do 
   assert.match(CHAT_SYSTEM_PROMPT, /• \*\*\[Marca Modelo Ano\]/);
   assert.match(CHAT_SYSTEM_PROMPT, /use apenas carros e dados da lista do contexto/);
   assert.doesNotMatch(CHAT_SYSTEM_PROMPT, /Marca Modelo ano · km · R\$ preço/);
+});
+
+test("dossiê (chave reserva, manual, vídeo) aparece na linha do estoque para o assistente", () => {
+  const withAll = formatStockForPrompt(
+    [
+      {
+        brand: "Fiat",
+        model: "Argo",
+        version: "Drive 1.0",
+        year: 2023,
+        km: 25000,
+        price: 72900,
+        color: "Branco",
+        transmission: "Manual",
+        fuel: "Flex",
+        hasSpareKey: true,
+        hasManual: true,
+        hasVideo: true,
+      },
+    ],
+  );
+  assert.match(withAll, /chave reserva/);
+  assert.match(withAll, /manual do proprietário/);
+  assert.match(withAll, /vídeo disponível/);
+
+  const withNone = formatStockForPrompt(
+    [
+      {
+        brand: "Fiat",
+        model: "Argo",
+        version: "Drive 1.0",
+        year: 2023,
+        km: 25000,
+        price: 72900,
+        color: "Branco",
+        transmission: "Manual",
+        fuel: "Flex",
+      },
+    ],
+  );
+  assert.doesNotMatch(withNone, /chave reserva/);
+  assert.doesNotMatch(withNone, /manual do proprietário/);
+  assert.doesNotMatch(withNone, /vídeo disponível/);
+
+  const partial = formatStockForPrompt(
+    [
+      {
+        brand: "Fiat",
+        model: "Argo",
+        version: "Drive 1.0",
+        year: 2023,
+        km: 25000,
+        price: 72900,
+        color: "Branco",
+        transmission: "Manual",
+        fuel: "Flex",
+        hasSpareKey: false,
+        hasManual: true,
+        hasVideo: false,
+      },
+    ],
+  );
+  assert.doesNotMatch(partial, /chave reserva/);
+  assert.match(partial, /manual do proprietário/);
+  assert.doesNotMatch(partial, /vídeo disponível/);
+});
+
+test("assistente confirma na hora chave reserva, manual do proprietário e vídeo disponível", async () => {
+  const fit: ChatVehicleRecord = {
+    id: "fit-dossie",
+    brand: "Honda",
+    model: "Fit",
+    version: "EX 1.5",
+    yearModel: 2020,
+    km: 42000,
+    price: 78900,
+    color: "Prata",
+    transmission: "Automático",
+    fuel: "Flex",
+    hasSpareKey: true,
+    hasManual: true,
+    hasVideo: true,
+  };
+  const polo: ChatVehicleRecord = {
+    id: "polo-sem-dossie",
+    brand: "Volkswagen",
+    model: "Polo",
+    version: "MSI 1.6",
+    yearModel: 2019,
+    km: 58000,
+    price: 64900,
+    color: "Branco",
+    transmission: "Manual",
+    fuel: "Flex",
+    hasSpareKey: false,
+    hasManual: false,
+    hasVideo: false,
+  };
+
+  const stockLine = toChatStockLine(fit);
+  assert.equal(stockLine.hasSpareKey, true);
+  assert.equal(stockLine.hasManual, true);
+  assert.equal(stockLine.hasVideo, true);
+
+  const keysReply = formatChatKeysReply("tem chave reserva e manual?", [fit, polo], fit);
+  assert.match(keysReply, /consta: Chave reserva, Manual do proprietário/);
+
+  const unknownKeys = formatChatKeysReply("tem chave reserva?", [fit, polo], polo);
+  assert.match(unknownKeys, /Manual e chave reserva variam de unidade para unidade/);
+
+  const noModel = async () => {
+    throw new Error("Não deve chamar o modelo para atalho determinístico");
+  };
+
+  const turnKeys = await runChatTurn({
+    mensagem: "o Fit tem chave reserva e manual do proprietário?",
+    historico: [],
+    stock: [fit, polo],
+    readIntent: async () => null,
+    generate: noModel,
+  });
+  assert.match(turnKeys.reply, /consta: Chave reserva, Manual do proprietário/);
+
+  const turnVideoAvailable = await runChatTurn({
+    mensagem: "tem vídeo dele?",
+    historico: [],
+    stock: [fit, polo],
+    vehicleId: fit.id,
+    readIntent: async () => null,
+    generate: noModel,
+  });
+  assert.match(turnVideoAvailable.reply, /vídeo disponível deste anúncio/);
+
+  const turnVideoPlain = await runChatTurn({
+    mensagem: "tem vídeo dele?",
+    historico: [],
+    stock: [fit, polo],
+    vehicleId: polo.id,
+    readIntent: async () => null,
+    generate: noModel,
+  });
+  assert.doesNotMatch(turnVideoPlain.reply, /vídeo disponível deste anúncio/);
+  assert.match(turnVideoPlain.reply, /O consultor manda um vídeo do Polo 2019 pelo WhatsApp/);
 });

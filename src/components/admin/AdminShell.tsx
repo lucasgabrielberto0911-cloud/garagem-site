@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   IconCalendar,
   IconCash,
+  IconClock,
   IconDashboard,
   IconExternal,
   IconInbox,
@@ -72,6 +73,13 @@ const NAV: NavItem[] = [
     group: "Estoque",
     Icon: IconCar,
     match: (pathname) => pathname.startsWith("/admin/em-preparacao"),
+  },
+  {
+    href: "/admin/parados",
+    label: "Carros parados",
+    group: "Estoque",
+    Icon: IconClock,
+    match: (pathname) => pathname.startsWith("/admin/parados"),
   },
   {
     href: "/admin/agenda",

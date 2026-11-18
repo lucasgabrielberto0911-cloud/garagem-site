@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
-import { Container } from "@/components/site/ui";
+import { Container, WhatsAppButton } from "@/components/site/ui";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import {
   IconClock,
   IconInstagram,
@@ -61,8 +62,8 @@ export async function SiteFooter() {
             </p>
             <p className="mt-2 max-w-sm text-sm leading-relaxed text-cream/75">
               Atendemos Linhares, Aracruz e Grande Vitória · todos os dias, das
-              8h às 23h. Combinamos o atendimento, visita, entrega ou retirada
-              pelo WhatsApp.
+              8h às 23h. Combinamos o atendimento pelo WhatsApp, incluindo
+              visita, entrega ou retirada.
             </p>
             <a
               href={site.instagramUrl}
@@ -125,10 +126,27 @@ export async function SiteFooter() {
             <h2 className="mt-8 font-display text-sm font-semibold uppercase tracking-wider text-cream">
               Cidades
             </h2>
+            <ul className="mt-3 space-y-1">
+              {[
+                { href: "/seminovos/linhares", label: "Linhares" },
+                { href: "/seminovos/aracruz", label: "Aracruz" },
+                { href: "/seminovos/grande-vitoria", label: "Grande Vitória" },
+              ].map((region) => (
+                <li key={region.href}>
+                  <Link
+                    href={region.href}
+                    prefetch={false}
+                    className="inline-flex min-h-[44px] items-center text-sm text-muted transition hover:text-cream"
+                  >
+                    {region.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
             <Link
               href={CITIES_DIRECTORY_PATH}
               prefetch={false}
-              className="mt-4 inline-flex min-h-11 items-center justify-center border border-white/15 px-4 text-sm text-cream transition hover:border-brand"
+              className="mt-3 inline-flex min-h-11 items-center justify-center border border-white/15 px-4 text-sm text-cream transition hover:border-brand"
             >
               Ver cidades
             </Link>
@@ -210,6 +228,15 @@ export async function SiteFooter() {
               ))}
             </ul>
           </nav>
+          <SiteLeadHit contentName="Rodapé">
+            <WhatsAppButton
+              size="md"
+              className="w-full"
+              trackingLabel="footer"
+            >
+              Falar no WhatsApp
+            </WhatsAppButton>
+          </SiteLeadHit>
           {PHONES.map((phone, index) => (
             <a
               key={phone.digits}
