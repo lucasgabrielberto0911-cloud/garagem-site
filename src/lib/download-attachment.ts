@@ -1,5 +1,17 @@
 "use client";
 
+import type { PhotoZipFailure } from "@/lib/admin-photo-zip";
+
+export class DownloadAttachmentError extends Error {
+  failures?: PhotoZipFailure[];
+
+  constructor(message: string, failures?: PhotoZipFailure[]) {
+    super(message);
+    this.name = "DownloadAttachmentError";
+    this.failures = failures;
+  }
+}
+
 function filenameFromDisposition(header: string | null, fallback: string) {
   if (!header) return fallback;
   const match = header.match(/filename="([^"]+)"/i);
@@ -7,22 +19,35 @@ function filenameFromDisposition(header: string | null, fallback: string) {
 }
 
 /** Baixa a resposta como arquivo, usando o nome do Content-Disposition. */
-export async function downloadAttachment(href: string, fallbackName: string) {
-  const response = await fetch(href, { credentials: "same-origin" });
+export async function downloadAttachment(
+  href: string,
+  fallbackName: string,
+): Promise<{ filename: string; headers: Headers }> {
+  const response = await fetch(
+    href,
+    href.startsWith("blob:") ? undefined : { credentials: "same-origin" },
+  );
   if (!response.ok) {
     let message = "Não foi possível baixar.";
+    let failures: PhotoZipFailure[] | undefined;
     try {
-      const data = (await response.json()) as { error?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        failures?: PhotoZipFailure[];
+      };
       if (data.error) message = data.error;
+      if (Array.isArray(data.failures)) failures = data.failures;
     } catch {
       // resposta binária ou vazia
     }
-    throw new Error(message);
+    throw new DownloadAttachmentError(message, failures);
   }
 
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (fallbackName.endsWith(".zip") && (bytes[0] !== 0x50 || bytes[1] !== 0x4b)) {
-    throw new Error("O arquivo baixado não é um ZIP válido. Tente de novo.");
+    throw new DownloadAttachmentError(
+      "O arquivo baixado não é um ZIP válido. Tente de novo.",
+    );
   }
 
   const type = fallbackName.endsWith(".zip")
@@ -41,4 +66,6 @@ export async function downloadAttachment(href: string, fallbackName: string) {
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 2_000);
+
+  return { filename: name, headers: response.headers };
 }
