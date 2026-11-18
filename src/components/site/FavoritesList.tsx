@@ -12,7 +12,7 @@ import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { snapshotsForIds, writeFavoriteSnapshots } from "@/lib/offline-queue";
 import { formatVehicleLabel } from "@/lib/format";
-import { trackVehiclesWhatsAppLead } from "@/lib/meta-pixel";
+import { trackVehiclesWhatsAppLead } from "@/lib/funnel-events";
 import { notify } from "@/lib/notify";
 import { favoritesListWhatsApp, WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";

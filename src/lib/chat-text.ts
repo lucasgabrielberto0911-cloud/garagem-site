@@ -30,6 +30,8 @@ export type ChatWhatsAppCta = {
   trackingLabel?: string;
   /** Veículo específico associado ao CTA (para `AddToCart`/`Lead` fora da ficha). */
   vehicle?: ChatWhatsAppVehicle | null;
+  /** Múltiplos veículos disponíveis recomendados no handoff do CTA. */
+  vehicles?: ChatWhatsAppVehicle[];
 };
 
 const URL_RE = /https?:\/\/[^\s]+/g;
@@ -255,6 +257,7 @@ function chatWhatsAppTrack(vehicle?: ChatWhatsAppVehicle | null) {
 }
 
 export type ChatHandoffVehicle = {
+  id?: string;
   brand?: string;
   model?: string;
   version?: string | null;
@@ -265,6 +268,8 @@ export type ChatHandoffVehicle = {
   /** Câmbio e preço da unidade: sem eles o recorte da sessão não vai para o WhatsApp. */
   transmission?: string | null;
   price?: number | null;
+  sold?: boolean;
+  catalog?: boolean;
 };
 
 export type ChatHandoffContext = {
@@ -489,6 +494,39 @@ export function chatWhatsAppCta(
       vehicle: null,
     };
   }
+  const isWaitlistReply =
+    /nao esta na lista|nao tem anuncio|nessa combinacao|quando chegar/.test(
+      folded,
+    );
+  const handoffVehicles = opts.handoff?.vehicles?.filter(
+    (item) => item.model || item.label || item.brand,
+  );
+  const handoffReady =
+    (handoffVehicles?.length ?? 0) > 0 &&
+    (opts.handoff?.priceLimit != null ||
+      opts.handoff?.transmission != null ||
+      (handoffVehicles?.length ?? 0) > 1);
+  const handoffLeadVehicles: ChatWhatsAppVehicle[] =
+    !isWaitlistReply && (handoffVehicles?.length ?? 0) > 0
+      ? (handoffVehicles ?? [])
+          .filter((item) => Boolean(item.id) && !item.sold)
+          .map((item) => ({
+            id: item.id,
+            label: handoffVehicleLabel(item) || item.model || item.brand || "Veículo",
+            brand: item.brand,
+            model: item.model,
+            version: item.version,
+            year: item.year,
+            price: item.price != null && item.price > 0 ? item.price : undefined,
+            path: item.href,
+            category: item.category,
+            ...(item.catalog === false ? { catalog: false } : {}),
+          }))
+      : [];
+  const multiSubjectVehicles =
+    !subject && handoffLeadVehicles.length > 0
+      ? { vehicles: handoffLeadVehicles }
+      : {};
   if (wants("finance", /financi|parcela|60x|simul|cartao|18 vez/)) {
     return {
       href: whatsappUrl(
@@ -500,6 +538,7 @@ export function chatWhatsAppCta(
       label: "Falar sobre financiamento",
       benefit: "O consultor explica as condições no seu caso",
       vehicle: subject,
+      ...multiSubjectVehicles,
     };
   }
   if (wants("trade", /\btroca\b/)) {
@@ -513,6 +552,7 @@ export function chatWhatsAppCta(
       label: "Avaliar minha troca",
       benefit: "Valor da troca com fotos, pelo WhatsApp",
       vehicle: subject,
+      ...multiSubjectVehicles,
     };
   }
   if (userIntent === "visit") {
@@ -526,6 +566,7 @@ export function chatWhatsAppCta(
       label: "Agendar visita",
       benefit: "Consultor combina dia e local",
       vehicle: subject,
+      ...multiSubjectVehicles,
     };
   }
   if (userIntent === "photos" || userIntent === "video") {
@@ -540,13 +581,10 @@ export function chatWhatsAppCta(
       benefit: "O consultor manda pelo WhatsApp",
       ...(userIntent === "video" ? { trackingLabel: "chat-video" } : {}),
       vehicle: subject,
+      ...multiSubjectVehicles,
     };
   }
-  if (
-    /nao esta na lista|nao tem anuncio|nessa combinacao|quando chegar/.test(
-      folded,
-    )
-  ) {
+  if (isWaitlistReply) {
     return {
       href: waitlistHref,
       label: "Avisar quando chegar",
@@ -554,14 +592,6 @@ export function chatWhatsAppCta(
       vehicle: null,
     };
   }
-  const handoffVehicles = opts.handoff?.vehicles?.filter(
-    (item) => item.model || item.label || item.brand,
-  );
-  const handoffReady =
-    (handoffVehicles?.length ?? 0) > 0 &&
-    (opts.handoff?.priceLimit != null ||
-      opts.handoff?.transmission != null ||
-      (handoffVehicles?.length ?? 0) > 1);
   if (userIntent === "question" && vehicle) {
     const name = (vehicle.model || vehicle.label || "").trim();
     return {
@@ -592,6 +622,9 @@ export function chatWhatsAppCta(
     label: "Chamar consultor",
     benefit: "Confirma o modelo · das 8h às 23h",
     vehicle: vehicle ?? null,
+    ...(handoffReady && !vehicle && handoffLeadVehicles.length > 0
+      ? { vehicles: handoffLeadVehicles }
+      : {}),
   };
 }
 

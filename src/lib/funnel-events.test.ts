@@ -364,6 +364,85 @@ test("assistente fora da ficha propaga veículo resolvido para AddToCart/Lead e 
       (spy.fbqCalls[0]?.[2] as { content_ids: string[] }).content_ids,
       [],
     );
+    spy.fbqCalls.length = 0;
+    spy.gtagCalls.length = 0;
+    const ownCard2 = toChatVehicleCard({
+      id: CUID_OWN_2,
+      brand: "Chevrolet",
+      model: "Onix",
+      version: "LTZ 1.0 Turbo",
+      yearModel: 2023,
+      km: 24000,
+      price: 89900,
+      transmission: "Automático",
+      fuel: "Flex",
+      color: "Preto",
+      category: "carro",
+    });
+    const multiCta = chatWhatsAppCta(
+      "Separei essas opções automáticas para você.",
+      null,
+      {
+        force: true,
+        userText: "texto livre digitado pelo visitante quero automatico",
+        handoff: {
+          vehicles: [ownCard, ownCard2, consignedCard].map((card) => ({
+            id: card.id,
+            brand: card.brand,
+            model: card.model,
+            version: card.version,
+            year: card.year,
+            label: card.title,
+            category: card.category,
+            href: card.href,
+            transmission: card.transmission,
+            price: card.price,
+            sold: card.sold,
+            catalog: card.catalog,
+          })),
+          transmission: "automatico",
+        },
+      },
+    );
+    assert.equal(multiCta?.vehicle, null);
+    assert.equal(multiCta?.vehicles?.length, 3);
+    trackVehiclesWhatsAppLead(multiCta!.vehicles!, "Assistente");
+    assert.deepEqual(
+      spy.fbqCalls.map((call) => call[1]),
+      ["Lead", "AddToCart"],
+    );
+    const multiPayload = spy.fbqCalls[1]?.[2] as {
+      content_ids: string[];
+      value: number;
+      currency: string;
+    };
+    assert.deepEqual(multiPayload.content_ids, [CUID, CUID_OWN_2]);
+    assert.equal(multiPayload.value, 82900 + 89900);
+    assert.equal(multiPayload.currency, "BRL");
+    assert.doesNotMatch(JSON.stringify(spy.fbqCalls), new RegExp(CUID_CONSIGNED));
+    assert.doesNotMatch(JSON.stringify(spy.fbqCalls), /texto livre digitado/);
+    assert.doesNotMatch(JSON.stringify(spy.gtagCalls), /texto livre digitado/);
+
+    const soldWithAlternatives = chatWhatsAppCta(
+      "Esse modelo já foi vendido. Veja alternativas abaixo.",
+      null,
+      {
+        force: true,
+        userText: "tem grand siena?",
+        handoff: {
+          vehicles: [ownCard, ownCard2].map((card) => ({
+            id: card.id,
+            brand: card.brand,
+            model: card.model,
+            year: card.year,
+            href: card.href,
+            price: card.price,
+          })),
+        },
+      },
+    );
+    assert.equal(soldWithAlternatives?.vehicle, null);
+    assert.equal(soldWithAlternatives?.vehicles, undefined);
   } finally {
     spy.restore();
   }
