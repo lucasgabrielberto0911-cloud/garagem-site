@@ -104,10 +104,10 @@ export default async function HomePage() {
           <div className="flex flex-col gap-3.5 sm:gap-5 lg:contents">
             <div className="hero-text min-w-0 max-w-2xl lg:col-start-1 lg:row-start-1">
               <p className="hidden font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light sm:block">
-                Garagem · Atendimento pelo WhatsApp
+                Garagem · Combinamos o atendimento pelo WhatsApp
               </p>
-              <h1 className="font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-2 sm:text-3xl sm:leading-[1.12] lg:text-[2.125rem]">
-                Seminovos com procedência para todo o norte do ES.
+              <h1 className="font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-2 sm:text-3xl sm:leading-[1.12]">
+                Seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória.
               </h1>
               <ul className="mt-3 flex max-w-lg flex-col gap-2 border-l-2 border-brand/60 pl-3 text-sm leading-snug text-cream sm:gap-1.5 sm:border-0 sm:pl-0 sm:text-base">
                 <li>A gente revisa cada veículo, e ele sai com garantia.</li>

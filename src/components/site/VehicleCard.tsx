@@ -12,10 +12,7 @@ import {
   coverMobileSrcSet,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
-import {
-  formatCardVersion,
-  formatVehicleDisplay,
-} from "@/lib/vehicle-display";
+import { formatVehicleDisplay } from "@/lib/vehicle-display";
 import type { WhatsAppCampaign } from "@/lib/site";
 import {
   buildWhatsAppCarMessage,
@@ -69,7 +66,7 @@ export function VehicleCard({
   const cover = coverSrc(vehicle.photos);
   const badge = STATUS_BADGE[vehicle.status];
   const facts = new Map(card.facts.map((fact) => [fact.label, fact]));
-  const version = formatCardVersion(vehicle.version, vehicle.model);
+  const version = card.version;
   const favoriteSnapshot = {
     id: vehicle.id,
     category: vehicle.category,
