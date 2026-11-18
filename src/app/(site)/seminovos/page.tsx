@@ -7,8 +7,10 @@ import {
   ButtonLink,
   Container,
   PageHeader,
+  WhatsAppButton,
 } from "@/components/site/ui";
-import { site } from "@/lib/site";
+import { SiteLeadHit } from "@/lib/funnel-events";
+import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import {
   CITIES_DIRECTORY_PATH,
   breadcrumbJsonLd,
@@ -23,7 +25,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = buildPageMetadata({
   title: `Seminovos no Espírito Santo | ${site.name}`,
   description:
-    "Encontre carros e motos seminovos no Espírito Santo. Veja os destaques da Garagem, consulte fotos e detalhes dos anúncios e negocie sua compra ou troca pelo WhatsApp.",
+    "Encontre carros e motos seminovos no Espírito Santo. Atendemos Linhares, Aracruz e Grande Vitória e combinamos o atendimento pelo WhatsApp sobre compra ou troca.",
   path: "/seminovos",
 });
 
@@ -50,9 +52,9 @@ export default async function SeminovosHubPage() {
 
       <Container>
         <PageHeader
-          eyebrow={`${site.state} · atendimento pelo WhatsApp`}
+          eyebrow={`${site.state} · Linhares, Aracruz e Grande Vitória`}
           title="Seminovos no Espírito Santo"
-          description="Encontre seu próximo carro ou moto na Garagem. Explore os destaques, confira fotos e detalhes de cada anúncio e converse com a equipe sobre compra ou troca."
+          description="Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp: explore os destaques, confira fotos e detalhes de cada anúncio e converse sobre compra ou troca."
         />
 
         <nav aria-label="Você está aqui" className="mt-4 text-xs text-cream/75">
@@ -113,8 +115,18 @@ export default async function SeminovosHubPage() {
         </section>
 
         <div className="mt-12">
-          <ActionRow>
-            <ButtonLink href="/estoque">Ver estoque</ButtonLink>
+          <ActionRow className="sm:flex-wrap">
+            <SiteLeadHit contentName="Seminovos ES">
+              <WhatsAppButton
+                trackingLabel="seminovos"
+                message={WHATSAPP_MESSAGES.help}
+              >
+                Falar no WhatsApp
+              </WhatsAppButton>
+            </SiteLeadHit>
+            <ButtonLink href="/estoque" variant="outline">
+              Ver estoque
+            </ButtonLink>
             <ButtonLink href="/vender" variant="outline">
               Quero vender ou trocar
             </ButtonLink>

@@ -21,8 +21,9 @@ import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Financiamento de seminovos | ${site.name}`,
-  description: `Financie em até 60x com bancos parceiros (sujeito à análise de crédito), parcele no cartão em até 18x e use seu veículo na troca. Atendimento pelo WhatsApp.`,
+  title: `Financiamento de seminovos em Linhares, Aracruz e Grande Vitória | ${site.name}`,
+  description:
+    "Financie em até 60x (sujeito à análise de crédito), cartão em até 18x e troca. Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp.",
   path: "/financiamento",
 });
 
@@ -131,9 +132,9 @@ export default function FinanciamentoPage() {
 
       <Container>
         <PageHeader
-          eyebrow="Financiamento"
-          title="Formas de pagar seu seminovo"
-          description="Atendimento pelo WhatsApp, sem compromisso. Condições, entrada e prazos finais dependem da análise de crédito."
+          eyebrow="Financiamento · Linhares, Aracruz e Grande Vitória"
+          title="Financiamento de seminovos em Linhares, Aracruz e Grande Vitória"
+          description="Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp, sem compromisso — condições, entrada e prazos finais dependem da análise de crédito."
         />
 
         {/* Opções de pagamento em grade de 3 colunas no desktop */}
