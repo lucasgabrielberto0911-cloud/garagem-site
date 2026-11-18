@@ -488,9 +488,9 @@ export default async function VehicleDetailPage({
             ) : null}
           </div>
 
-          <aside className="ficha-aside order-2 min-w-0">
-            {/* Sem sticky: o card rola junto com a página (um scroll só).
-                O resumo do topo (com o único h1 visível) serve celular e desktop. */}
+          <aside className="ficha-aside order-2 min-w-0 lg:sticky lg:top-24 lg:self-start">
+            {/* Desktop (lg:): card acompanha a leitura da coluna esquerda (um scroll só na página).
+                No celular fica estático no topo (com o único h1 visível) e a barra fixa vai no rodapé. */}
             <div className="pb-3 pt-3 lg:border lg:border-white/20 lg:bg-ink lg:p-5 xl:p-6">
               <div className="ficha-mobile-sheet flex flex-col gap-2.5 lg:gap-4">
               <div className="hidden flex-wrap items-center gap-2 lg:flex">
