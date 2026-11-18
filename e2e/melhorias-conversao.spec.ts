@@ -40,7 +40,7 @@ test("home mantém depoimentos, FAQ e região sem selo Google", async ({ page })
   await expect(page.getByRole("heading", { name: "Quem compra, indica" })).toBeVisible();
   await expect(page.locator("blockquote").first()).toBeAttached();
   await expect(page.locator("details").first()).toBeAttached();
-  await expect(page.getByRole("heading", { name: "Atendemos Linhares, Aracruz e Grande Vitória" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Atendemos Linhares, Aracruz e Grande Vitória", exact: true })).toBeVisible();
   await expect(page.getByText(/avaliaç(?:ão|ões) no Google/)).toHaveCount(0);
   const schemas = await page.locator('script[type="application/ld+json"]').evaluateAll(scripts =>
     scripts.map(script => JSON.parse(script.textContent || "{}")),
