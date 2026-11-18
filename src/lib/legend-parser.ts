@@ -8,7 +8,47 @@ export const LEGEND_FIELDS = {
 } as const;
 export type LegendField = keyof typeof LEGEND_FIELDS;
 export type LegendData = Partial<Record<LegendField, string>>;
-export type LegendParseResult = { description: string; accessories: string[]; data: LegendData };
+export type LegendParseResult = { description: string; accessories: string[]; data: LegendData; sensitive: string[] };
+
+/**
+ * Dados que nunca podem ir para o anúncio nem para a IA: placa, chassi,
+ * RENAVAM, CPF e telefone. A legenda colada pode trazer esses dados no meio
+ * do texto — eles são descartados antes de gravar em qualquer campo público.
+ */
+const SENSITIVE_LINE_WORD = /\b(placa|chassi|renavam|cpf|cnh|rg|telefone|whatsapp|zap)\b/i;
+const SENSITIVE_PLATE = /\b[A-Z]{3}-?\d[A-Z0-9]\d{2}\b|\b[A-Z]{3}-\d{4}\b/i;
+const SENSITIVE_VIN = /\b[A-HJ-NPR-Z0-9]{17}\b/i;
+const SENSITIVE_CPF = /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b|\b\d{11}\b/;
+const SENSITIVE_PHONE = /\(?\d{2}\)?[\s.-]?\d{4,5}[\s.-]?\d{4}/;
+
+function sensitiveLabel(word: string): string {
+  const key = fold(word);
+  if (key === "whatsapp" || key === "zap" || key === "telefone") return "telefone";
+  if (key === "cpf") return "CPF";
+  if (key === "renavam") return "RENAVAM";
+  if (key === "chassi") return "chassi";
+  if (key === "placa") return "placa";
+  return word.toUpperCase();
+}
+
+/** Remove linhas com dados pessoais/identificadores e diz o que foi tirado. */
+export function sanitizeLegendText(text: string): { clean: string; found: string[] } {
+  const found = new Set<string>();
+  const kept: string[] = [];
+  for (const raw of text.split(/\r\n|[\r\n]/)) {
+    const labeled = raw.match(SENSITIVE_LINE_WORD);
+    if (labeled) {
+      found.add(sensitiveLabel(labeled[1]));
+      continue;
+    }
+    if (SENSITIVE_PLATE.test(raw)) { found.add("placa"); continue; }
+    if (SENSITIVE_VIN.test(raw)) { found.add("chassi"); continue; }
+    if (SENSITIVE_CPF.test(raw)) { found.add("CPF"); continue; }
+    if (SENSITIVE_PHONE.test(raw)) { found.add("telefone"); continue; }
+    kept.push(raw);
+  }
+  return { clean: kept.join("\n"), found: [...found] };
+}
 export const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export function accessoryGroup(item: string): { group: LegendGroup; text: string } {
@@ -32,11 +72,12 @@ export function legendAccessoriesError(items: string[]) {
 
 /** Cada linha marcada é um item inteiro, sem gerar também presets da mesma frase. */
 export function parseLegend(text: string): LegendParseResult {
-  const result: LegendParseResult = { description: "", accessories: [], data: {} };
+  const sanitized = sanitizeLegendText(text);
+  const result: LegendParseResult = { description: "", accessories: [], data: {}, sensitive: sanitized.found };
   const description: string[] = [];
   const seen = new Set<string>();
   let group: LegendGroup = "Outros opcionais";
-  for (const raw of text.split(/\r\n|[\r\n]/)) {
+  for (const raw of sanitized.clean.split(/\r\n|[\r\n]/)) {
     const line = raw.replace(/^[\s\p{P}\p{S}\uFE0F]+/u, "").trim();
     if (!line) continue;
     const key = fold(line);
