@@ -50,7 +50,7 @@ export function IdentitySection({
   return (
     <WizardSection {...sectionProps("identificacao")}>
       <div className="mb-5">
-        <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+        <span className="mb-1.5 block text-sm uppercase tracking-wider text-muted">
           Tipo do anúncio
         </span>
         <div className="flex gap-2" role="group" aria-label="Tipo do anúncio">

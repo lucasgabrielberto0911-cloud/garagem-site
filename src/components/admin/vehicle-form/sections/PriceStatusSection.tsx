@@ -91,7 +91,7 @@ export function PriceStatusSection({
           </select>
         </Field>
         <FipePriceLine form={form} />
-        <p className="col-span-2 -mt-2 text-xs leading-relaxed text-muted">
+        <p className="col-span-2 -mt-2 text-sm leading-relaxed text-muted">
           {alreadySold
             ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
             : "Para vender, use “Iniciar venda”. O estoque muda ao concluir o contrato."}

@@ -95,7 +95,7 @@ export function SpecsSection({
   );
   const origin = (
     <>
-      <h3 className="mb-3 mt-6 border-t border-white/10 pt-5 font-display text-xs font-semibold uppercase tracking-wider text-muted">
+      <h3 className="mb-3 mt-6 border-t border-white/10 pt-5 font-display text-sm font-semibold uppercase tracking-wider text-muted">
         Procedência e garantia
       </h3>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

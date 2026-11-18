@@ -39,7 +39,7 @@ export function PhotosSection({
 
       action={
         photos.length > 0 ? (
-          <span className="text-xs text-muted">
+          <span className="text-sm text-muted">
             Arraste para reordenar · 1ª = capa
           </span>
         ) : null
@@ -65,7 +65,7 @@ export function PhotosSection({
         />
         Já temos vídeo deste veículo
       </label>
-      <p className="mt-2 text-xs leading-relaxed text-muted">
+      <p className="mt-2 text-sm leading-relaxed text-muted">
         Não publica o vídeo no site. O visitante continua pedindo pelo WhatsApp.
         A marcação fica só neste cadastro.
       </p>
