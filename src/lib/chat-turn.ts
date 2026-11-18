@@ -567,12 +567,6 @@ async function runChatTurnInternal(input: {
       return result;
     }
   }
-  const earlyCityPolicy = mayCreateLead ? null : (directPolicy ?? chatPolicyShortcut(scopedMessage));
-  if (earlyCityPolicy === "city") {
-    const reply = chatCityReply(visitorMessage);
-    emit(reply);
-    return finish(reply, false, { policy: "city", cards: false });
-  }
   const soldVehicle = !tradeTurn
     ? matchChatSoldVehicle(visitorMessage, input.stock, input.soldStock ?? [], input.vehicleId)
     : undefined;
@@ -584,6 +578,12 @@ async function runChatTurnInternal(input: {
     emit(reply);
     const result = finish(reply, false, { policy: "sold", plain: true, forcedVehicles: similar, cards: similar.length > 0 });
     return result;
+  }
+  const earlyCityPolicy = mayCreateLead ? null : (directPolicy ?? chatPolicyShortcut(scopedMessage));
+  if (earlyCityPolicy === "city") {
+    const reply = chatCityReply(visitorMessage);
+    emit(reply);
+    return finish(reply, false, { policy: "city", cards: false });
   }
   const mediaMessage = asksChatMedia(visitorMessage) ? visitorMessage : pendingChatMediaMessage(visitorMessage, input.historico, input.stock);
   if (!tradeTurn && !mayCreateLead && mediaMessage) {
@@ -837,11 +837,6 @@ async function runChatTurnInternal(input: {
     const result = finish(CHAT_ZERO_REPLY, false, { policy, forcedVehicles: newest, cards: newest.length > 0 });
 
     return result;
-  }
-  if (policy === "city") {
-    const reply = chatCityReply(visitorMessage);
-    emit(reply);
-    return finish(reply, false, { policy, cards: false });
   }
   if (policy === "sell" || policy === "debts" || policy === "cash" || policy === "delivery" || policy === "consortium") {
     const reply = { sell: CHAT_SELL_REPLY, debts: CHAT_DEBTS_REPLY, cash: CHAT_CASH_REPLY, delivery: CHAT_DELIVERY_REPLY, consortium: CHAT_CONSORTIUM_REPLY }[policy];

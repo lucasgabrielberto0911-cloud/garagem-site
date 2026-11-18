@@ -1,4 +1,4 @@
-import { chatPolicyShortcut, singleMentionedModelPool, type ChatVehicleRecord } from "@/lib/chat-stock";
+import { singleMentionedModelPool, type ChatVehicleRecord } from "@/lib/chat-stock";
 import { parsePriceLimit, vehicleBodyStyle } from "@/lib/chat-prompt";
 import { isAnaphoricVehicleFollowUp, chatCtaIntent } from "@/lib/chat-text";
 import { formatModelName } from "@/lib/format";
@@ -10,7 +10,6 @@ export type ChatSoldVehicle = Pick<ChatVehicleRecord, "id" | "brand" | "model" |
 const fold = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
 export function matchChatSoldVehicle(message: string, available: ChatVehicleRecord[], sold: ChatSoldVehicle[], vehicleId?: string) {
-  if (chatPolicyShortcut(message) === "city") return undefined;
   const pool = singleMentionedModelPool([...available, ...sold], message);
   const onlyMedia = ["photos", "video"].includes(chatCtaIntent(message) ?? "") &&
     fold(message).split(" ").every(word => /^(?:tem|manda|mandar|envia|enviar|quero|me|mais|fotos?|videos?|um|uma|por|favor|pode|mostrar|ver|do|da|de|carro|moto|veiculo)$/.test(word));
@@ -24,7 +23,7 @@ export function matchChatSoldVehicle(message: string, available: ChatVehicleReco
   // “Corolla XEi/Cross” não pode virar “Altis vendido” só porque cita Corolla.
   const model = fold(pool[0]!.model);
   const afterModel = asked.split(` ${model} `)[1]?.trim().split(" ")[0];
-  const requestWord = /^(?:ai|aqui|ainda|agora|tambem|disponivel|vendido|automatico|manual|cvt|flex|diesel|gasolina|turbo|no|na|em|de|do|da|para|pra|com|sem|que|quanto|qual|tem|ou|e|por|ate)$/;
+  const requestWord = /^(?:ai|aqui|ainda|agora|tambem|disponivel|vendido|automatico|manual|cvt|flex|diesel|gasolina|turbo|no|na|em|de|do|da|para|pra|com|sem|que|quanto|qual|tem|ou|e|por|ate|atende\w*|grande|vitoria|aracruz|linhares|serra|vila|velha|guarapari|cariacica|viana|cachoeiro|colatina|sao|mateus|sooretama)$/;
   if (afterModel && /^[a-z]{2,}$/.test(afterModel) && !requestWord.test(afterModel) &&
     !pool.some(vehicle => fold(vehicle.version ?? "").split(" ").includes(afterModel))) return undefined;
   const matches = pool.filter(vehicle =>

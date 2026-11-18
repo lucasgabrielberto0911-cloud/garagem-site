@@ -3944,7 +3944,7 @@ export function chatPolicyShortcut(
   if (/\b(financi\w*|juros|parcelas?|simular)\b/.test(folded) && !/\b(cartao|18x|consumo|potencia|cvs?|mais forte)\b/.test(folded)) return "finance";
   // "Tem carro em Aracruz?" / "atendem Vitória?" / "atendem Grande Vitória?": área de atendimento, não modelo.
   const serviceRegion =
-    /\b(?:(?:em|de|pra|para|na|no)\s+|atende\w*\s+(?:a\s+|na\s+|em\s+)?)(?:grande vitoria|aracruz|vitoria|serra|vila velha|guarapari|cariacica|viana|colatina|cachoeiro|linhares|sao mateus|sooretama)\b/;
+    /\b(?:(?:em|de|pra|para|na|no)\s+|atende\w*\s+(?:a\s+|na\s+|em\s+)?)(?:grande vitoria|aracruz|vitoria|serra|vila velha|guarapari|cariacica|viana|linhares)\b/;
   const asksServiceArea =
     /\b(?:quais (?:cidades|regioes)|qual (?:cidade|regiao)|em que (?:cidades?|regiao)|onde)\s+(?:voces\s+|vcs\s+|a garagem\s+|a loja\s+)?atende\w*\b|\b(?:voces|vcs|a garagem|a loja)\s+atende\w*\s+(?:em\s+)?(?:quais\s+(?:cidades|regioes)|qual\s+(?:cidade|regiao)|onde)\b/;
   if (

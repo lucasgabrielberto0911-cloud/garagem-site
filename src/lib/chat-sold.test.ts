@@ -133,3 +133,20 @@ test("Grande Vitória, carro grande e porta-malas grande não citam Grand Siena 
   assert.match(grandSienaTurn.reply, /Grand Siena .*já foi vendido/);
   assert.doesNotMatch(grandSienaTurn.reply, /R\$/);
 });
+
+test("modelo vendido citado com cidade informa a venda, não a área de atendimento", async () => {
+  for (const question of ["tem o Grand Siena em Vitória?", "Grand Siena, atendem Aracruz?"]) {
+    assert.equal(matchChatSoldVehicle(question, stock, sold)?.id, "vendido-grand-siena", question);
+    const result = await runChatTurn({
+      mensagem: question,
+      historico: [],
+      stock,
+      soldStock: sold,
+      readIntent: async () => null,
+      generate: noModel,
+    });
+    assert.equal(result.meta?.policy, "sold", question);
+    assert.match(result.reply, /Grand Siena .*já foi vendido/, question);
+    assert.doesNotMatch(result.reply, /Atendemos Linhares/, question);
+  }
+});
