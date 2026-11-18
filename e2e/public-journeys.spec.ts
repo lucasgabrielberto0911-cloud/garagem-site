@@ -241,12 +241,21 @@ test("sem consentimento, origem não fica na aba nem na mensagem", async ({ page
   expect(await page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBeNull();
 });
 
-test("home apresenta o norte do ES no título e nos metadados", async ({ page }) => {
+test("home apresenta Linhares, Aracruz e Grande Vitória no título, H1 e metadados", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Seminovos com procedência para todo o norte do ES.");
-  await expect(page).toHaveTitle("Garagem | Seminovos com procedência no norte do ES");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória.",
+  );
+  await expect(page).toHaveTitle("Garagem | Seminovos em Linhares, Aracruz e Grande Vitória");
   for (const seletor of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
-    await expect(page.locator(seletor)).toHaveAttribute("content", /Linhares, Colatina, São Mateus, Aracruz e Sooretama/);
+    await expect(page.locator(seletor)).toHaveAttribute(
+      "content",
+      /Atendemos Linhares, Aracruz e Grande Vitória · Combinamos o atendimento pelo WhatsApp/,
+    );
   }
+  await expect(page.locator('meta[name="keywords"]')).toHaveAttribute(
+    "content",
+    /Grande Vitória.*Vitória.*Vila Velha.*Serra.*Cariacica/,
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

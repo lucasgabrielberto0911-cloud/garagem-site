@@ -22,12 +22,27 @@ test("região de busca local tem um ponto só e é Linhares/ES", () => {
   assert.equal(SEO_LOCAL_LOCATION, "Linhares/ES");
 });
 
-test("título da home foca no norte do ES e cabe na busca", () => {
+const FORBIDDEN_TERMS = [
+  /loja digital/i,
+  /loja física/i,
+  /pontos de venda/i,
+  /atendimento com hora marcada/i,
+  /Sua Garagem/,
+];
+
+test("título da home inclui Linhares, Aracruz e Grande Vitória e cabe na busca", () => {
   assert.equal(
     HOME_SEO_TITLE,
-    "Garagem | Seminovos com procedência no norte do ES",
+    "Garagem | Seminovos em Linhares, Aracruz e Grande Vitória",
   );
   assert.ok(HOME_SEO_TITLE.length <= 60, HOME_SEO_TITLE);
+  for (const regiao of ["Linhares", "Aracruz", "Grande Vitória"]) {
+    assert.ok(HOME_SEO_TITLE.includes(regiao), regiao);
+  }
+  assert.doesNotMatch(HOME_SEO_TITLE, /norte do ES/i);
+  for (const pattern of FORBIDDEN_TERMS) {
+    assert.doesNotMatch(HOME_SEO_TITLE, pattern);
+  }
 });
 
 test("título do estoque termina em | Garagem uma vez só", () => {
@@ -42,18 +57,59 @@ test("home usa SEO regional e estoque mantém a região local centralizada", () 
   const estoque = readSrc("app/(catalog)/estoque/page.tsx");
 
   for (const source of [home, estoque]) {
-
     assert.doesNotMatch(source, /Linhares\/ES/);
     assert.doesNotMatch(source, /Sua Garagem/);
   }
   assert.match(home, /title: HOME_SEO_TITLE/);
   assert.match(home, /description: HOME_SEO_DESCRIPTION/);
   assert.match(estoque, /SEO_LOCAL_LOCATION/);
-  for (const cidade of ["Linhares", "Colatina", "São Mateus", "Aracruz", "Sooretama"]) {
-    assert.ok(HOME_SEO_DESCRIPTION.includes(cidade));
+  assert.ok(HOME_SEO_DESCRIPTION.length <= 160, HOME_SEO_DESCRIPTION);
+  assert.match(
+    HOME_SEO_DESCRIPTION,
+    /Atendemos Linhares, Aracruz e Grande Vitória · Combinamos o atendimento pelo WhatsApp/,
+  );
+  for (const pattern of FORBIDDEN_TERMS) {
+    assert.doesNotMatch(HOME_SEO_DESCRIPTION, pattern);
   }
   assert.match(estoque, /title: ESTOQUE_SEO_TITLE/);
   assert.doesNotMatch(estoque, /title: `Estoque \|/);
+});
+
+test("hero da home, /links e keywords destacam Linhares, Aracruz e Grande Vitória", () => {
+  const home = readSrc("app/(catalog)/page.tsx");
+  const hero = home.slice(home.indexOf("hero-red-black"), home.indexOf('id="destaques"'));
+  const links = readSrc("app/links/page.tsx");
+  const layout = readSrc("app/layout.tsx");
+
+  assert.match(hero, /<h1[^>]*>\s*Seminovos com procedência\. Atendemos Linhares, Aracruz e Grande Vitória\.\s*<\/h1>/);
+  assert.match(hero, /Combinamos o atendimento pelo WhatsApp/);
+  assert.doesNotMatch(hero, /todo o norte do ES/i);
+
+  assert.match(
+    links,
+    /Atendemos Linhares, Aracruz e Grande Vitória · Combinamos o atendimento pelo WhatsApp/,
+  );
+  assert.doesNotMatch(links, /no norte do ES/i);
+
+  const keywordsBlock = /keywords:\s*\[([\s\S]*?)\]/.exec(layout)?.[1] ?? "";
+  assert.ok(keywordsBlock.length > 0, "bloco keywords presente em layout.tsx");
+  for (const keyword of [
+    "Grande Vitória",
+    "Vitória",
+    "Vila Velha",
+    "Serra",
+    "Cariacica",
+    "Linhares",
+    "Aracruz",
+  ]) {
+    assert.match(keywordsBlock, new RegExp(`"${keyword}"`), keyword);
+  }
+
+  for (const text of [hero, links]) {
+    for (const pattern of FORBIDDEN_TERMS) {
+      assert.doesNotMatch(text, pattern);
+    }
+  }
 });
 
 test("intro do /estoque fica visível no celular, só compacta", () => {
