@@ -213,7 +213,8 @@ test("prompt só fala de consumo quando perguntam e nunca o da unidade usada", (
   assert.match(CHAT_SYSTEM_PROMPT, /nunca garante o consumo de uma unidade usada/);
   // Dado de fábrica do modelo pode; afirmação sobre a unidade, não.
   assert.match(CHAT_SYSTEM_PROMPT, /sem afirmar nada sobre o estado, o histórico ou os equipamentos da unidade/);
-  assert.match(CHAT_SYSTEM_PROMPT, /cv e torque só com número das FICHAS TÉCNICAS/);
+  assert.match(CHAT_SYSTEM_PROMPT, /torque só com número das FICHAS TÉCNICAS/);
+  assert.match(CHAT_SYSTEM_PROMPT, /NUNCA cite cv, cavalos nem número de marchas/);
 });
 
 test("prompt com activeVehicle injeta contexto e regra de desambiguação", () => {

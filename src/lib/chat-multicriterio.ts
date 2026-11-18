@@ -78,10 +78,10 @@ export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string)
           `Motor ${motor}${turbo} pra acompanhar seus trajetos.`,
           `Com motor ${motor}${turbo}, é uma opção pro dia a dia.`,
         ] : [
-          `Motor ${motor}${turbo} com ${cv} cv, dá fôlego na estrada.`,
-          `${motor}${turbo} com ${cv} cv, anda bem com a família a bordo.`,
-          `São ${cv} cv no motor ${motor}${turbo}, pra acompanhar suas viagens.`,
-          `Com ${cv} cv, o motor ${motor}${turbo} dá fôlego pros seus trajetos.`,
+          `Motor ${motor}${turbo}, dá fôlego na estrada.`,
+          `O motor ${motor}${turbo} anda bem com a família a bordo.`,
+          `Motor ${motor}${turbo}, pra acompanhar suas viagens.`,
+          `Com motor ${motor}${turbo}, dá fôlego pros seus trajetos.`,
         ]));
       }
     }

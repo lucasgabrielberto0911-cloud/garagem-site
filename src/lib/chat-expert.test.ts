@@ -46,7 +46,7 @@ test("Lucas 1: quantos cv tem o hb20 1.6? responde o cv primeiro, sem prefixo ro
   });
   assert.equal(
     result.reply,
-    "O HB20 1.6 tem cerca de 128 cv no etanol e 122 cv na gasolina. São números de referência dessa versão; podem variar um pouco na prática.\n\nQual outro detalhe você quer conhecer?",
+    "O HB20 1.6 usa motor 1.6 16V Gamma, 4 cilindros, aspirado, flex.\n\nQual outro detalhe você quer conhecer?",
   );
   assert.equal(result.meta?.policy, "spec-direct");
   assert.doesNotMatch(result.reply, robotic);
@@ -77,19 +77,20 @@ test("Lucas 2: qual o mais forte? depois dos HB20 usa as fichas dos carros mostr
       return { text: reply, functionCall: null, model: "gemini-3.5-flash-lite", calls: 1 };
     },
   });
-  assert.match(result.reply, /^Dos três, em potência pura o HB20 1\.6 leva, com cerca de 128 cv no etanol/);
-  assert.doesNotMatch(result.reply, /120 cv/);
+  assert.match(result.reply, /^Dos três, em potência pura o HB20 1\.6 leva\./);
+  assert.doesNotMatch(result.reply, /\bcv\b/i);
   assert.match(result.reply, /No estoque inteiro.*Civic/);
   assert.equal(result.meta?.policy, "expert");
   assert.equal(result.meta?.model, "gemini-3.5-flash-lite");
   assert.equal(thinking, "minimal", "raciocínio mínimo também nas perguntas técnicas");
-  // O prompt leva as três fichas e as regras do modo especialista; nada de lista do estoque pedida.
+  // O prompt leva as três fichas e as regras do modo especialista; nada de cv nem lista do estoque pedida.
   assert.match(prompt, /MODO ESPECIALISTA/);
   assert.match(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);
   assert.match(prompt, /HB20 1\.6.*\n\s+Motor: 1\.6 16V Gamma/);
-  assert.match(prompt, /128 cv no etanol e 122 cv na gasolina/);
-  assert.match(prompt, /120 cv, tanto no etanol quanto na gasolina; torque: 17,5 kgfm/);
-  assert.match(prompt, /80 cv no etanol e 75 cv na gasolina/);
+  assert.match(prompt, /Torque: 16,5 kgfm no etanol e 16 kgfm na gasolina/);
+  assert.match(prompt, /Torque: 17,5 kgfm, tanto no etanol quanto na gasolina/);
+  assert.match(prompt, /Torque: 10,2 kgfm no etanol e 9,4 kgfm na gasolina/);
+  assert.doesNotMatch(prompt, /\d+\s*cv\b/i);
   assert.match(prompt, /NUNCA afirme nada sobre a UNIDADE do estoque/);
   // "Qual o mais forte?": o prompt leva a resposta-base com potência E torque juntos.
   assert.match(prompt, /Para “qual o mais forte\?”: olhe potência E torque juntos/);
@@ -122,7 +123,8 @@ test("0 a 100 do Civic responde os dois Civic do estoque, cada um com o seu ano"
   const result = await runChatTurn({ mensagem: "0 a 100 do Civic", historico: [], stock, generate: noModel });
   assert.equal(result.meta?.policy, "spec-direct");
   assert.match(result.reply, /Civic 2\.0 2015 e o Civic 2\.0 2020 ficam perto de 10,9 segundos/);
-  assert.match(result.reply, /5 marchas.*2015.*CVT.*2020/);
+  assert.match(result.reply, /automático convencional.*2015.*automático.*2020/);
+  assert.doesNotMatch(result.reply, /\d+\s+marchas|CVT/i);
   assert.doesNotMatch(result.reply, /R\$|74\.900|126\.900/);
   assert.deepEqual(result.vehicles.map((vehicle) => vehicle.id).sort(), ["civic15", "civic20"]);
 });
@@ -135,13 +137,16 @@ test("consumo e autonomia do Kicks: Inmetro e tanque × consumo", async () => {
   assert.deepEqual(result.vehicles.map((vehicle) => vehicle.id), ["kicks"]);
 });
 
-test("quantas marchas tem o Corolla / o City", async () => {
+test("quantas marchas tem o Corolla / o City responde câmbio sem número de marchas", async () => {
   const corollaReply = await runChatTurn({ mensagem: "quantas marchas tem o Corolla", historico: [], stock, generate: noModel });
-  assert.match(corollaReply.reply, /Corolla 2\.0 usa câmbio CVT, que não tem marchas fixas; no modo manual ele simula 7 marchas/);
+  assert.match(corollaReply.reply, /Corolla 2\.0 tem câmbio automático\./);
+  assert.doesNotMatch(corollaReply.reply, /CVT|\d+\s+marchas/i);
   const cityReply = await runChatTurn({ mensagem: "e quantas marchas tem o City?", historico: [], stock, generate: noModel });
-  assert.match(cityReply.reply, /City 1\.5 usa câmbio CVT.*simula 7 marchas/);
+  assert.match(cityReply.reply, /City 1\.5 tem câmbio automático/);
+  assert.doesNotMatch(cityReply.reply, /CVT|\d+\s+marchas/i);
   const viaAnaphora = await runChatTurn({ mensagem: "quantas marchas ele tem?", historico: [], stock, vehicleId: "hb16", generate: noModel });
-  assert.match(viaAnaphora.reply, /automático convencional \(conversor de torque\) de 4 marchas/);
+  assert.match(viaAnaphora.reply, /automático convencional \(conversor de torque\)/);
+  assert.doesNotMatch(viaAnaphora.reply, /\d+\s+marchas/i);
   assert.equal(viaAnaphora.vehicles.length, 0, "o carro da tela não vira card repetido");
 });
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { runChatTurn } from "./chat-turn";
 import { chatPolicyShortcut, pickComparedModelVehicles, seeksMissingNamedModel, type ChatVehicleRecord } from "./chat-stock";
-import { findVehicleSpec, specMaxCv } from "./chat-specs";
+import { findVehicleSpec } from "./chat-specs";
 
 const stock: ChatVehicleRecord[] = [
   {
@@ -256,11 +256,7 @@ for (const message of ["civic ou lancer, qual anda mais?", "biz 125 ou biz 110i 
     const units = pickComparedModelVehicles(stock, message);
     assert.equal(units.length, 2);
     const result = await ask(message);
-    for (const unit of units) {
-      const cv = specMaxCv(findVehicleSpec(unit)!);
-      if (cv >= 90) assert.ok(result.reply.includes(`${cv.toLocaleString("pt-BR")} cv`));
-      else assert.doesNotMatch(result.reply, /\bcv\b/);
-    }
+    assert.doesNotMatch(result.reply, /\bcv\b|cavalos/i);
     assert.match(result.reply, /ótimas escolhas/);
     assert.equal(result.vehicles.length, 2);
   });

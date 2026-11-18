@@ -162,24 +162,24 @@ test("pergunta de potência responde o dado antes do card e WhatsApp oficial", a
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
   await expect(dialog).toHaveAttribute("aria-busy", "false");
   const answer = dialog.locator('[data-chat-latest="1"]');
-  await expect(answer).toContainText("142 cv no etanol e 138 cv na gasolina");
-  await expect(answer).not.toContainText(/qual é o mais potente|No estoque:|Achei/);
+  await expect(answer).toContainText("motor 2.0 16V (F4R)");
+  await expect(answer).not.toContainText(/qual é o mais potente|No estoque:|Achei|\bcv\b/i);
   await expect(answer.locator("[data-chat-vehicle]")).toHaveCount(1);
-  expect(await answer.evaluate(element => element.textContent!.indexOf("142 cv") < element.textContent!.indexOf("R$"))).toBe(true);
+  expect(await answer.evaluate(element => element.textContent!.indexOf("motor 2.0") < element.textContent!.indexOf("R$"))).toBe(true);
   await expect(answer.getByRole("link", { name: /^Tenho interesse/ })).toHaveAttribute("href", /^https:\/\/wa\.me\/5527996330706\?/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await dialog.getByRole("button", { name: "Nova conversa", exact: true }).click();
   await dialog.locator("textarea").fill("quantos cv tem a Duster ano 2014?");
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
   await expect(dialog).toHaveAttribute("aria-busy", "false");
-  await expect(dialog.locator('[data-chat-latest="1"]')).toContainText("142 cv no etanol e 138 cv na gasolina");
+  await expect(dialog.locator('[data-chat-latest="1"]')).toContainText("motor 2.0 16V (F4R)");
   await dialog.getByRole("button", { name: "Nova conversa", exact: true }).click();
   await dialog.locator("textarea").fill("quantos cv tem a Duster 1.6?");
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
   await expect(dialog).toHaveAttribute("aria-busy", "false");
   const mismatched = dialog.locator('[data-chat-latest="1"]');
-  // A versão pedida não existe no estoque: nada de reaproveitar a potência da 2.0.
-  await expect(mismatched).not.toContainText(/142 cv|138 cv/);
+  // A versão pedida não existe no estoque: nada de reaproveitar a ficha da 2.0.
+  await expect(mismatched).not.toContainText(/motor 2\.0 16V \(F4R\)|\bcv\b/i);
   await expect(mismatched.locator("[data-chat-vehicle]")).toHaveCount(0);
 });
 

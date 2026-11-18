@@ -1,5 +1,6 @@
 import { chatCriteria, chatPickLimit, chatBlockName, formatChatCarBlocks } from "./chat-multicriterio";
 import { vehiclePath } from "@/lib/vehicle-slug";
+import { resolveTransmission } from "@/lib/vehicle-display";
 import { findVehicleSpec, specMaxCv } from "@/lib/chat-specs";
 import { article as opinionArticle, opinionName, opinionReply, planOpinionTurn } from "@/lib/chat-opinion";
 import {
@@ -1105,7 +1106,7 @@ async function runChatTurnInternal(input: {
       const years: string[] = visitorMessage.match(/\b(?:19|20)\d{2}\b/g) ?? [];
       const byYear = years.length ? explicitModelUnits.filter(vehicle => years.includes(String(vehicle.yearModel))) : [];
       const picks = (byYear.length ? byYear : explicitModelUnits).slice(0, 3);
-      const reply = `Temos o modelo no estoque, com estas configurações:\n${picks.map(vehicle => `• ${rankLineName(vehicle)} — ${vehicle.transmission}`).join("\n")}`;
+      const reply = `Temos o modelo no estoque, com estas configurações:\n${picks.map(vehicle => `• ${rankLineName(vehicle)} — ${resolveTransmission(vehicle.version, vehicle.transmission) || vehicle.transmission}`).join("\n")}`;
       emit(reply);
       return finish(reply, false, { policy: "inventory-named", plain: true, forcedVehicles: picks });
     }
@@ -1622,17 +1623,18 @@ export function formatChatResult(result: ChatTurnResult, input: Parameters<typeo
           return nums.some(n => realKmL.some(real => Math.abs(n - real) < 0.2));
         });
       let reason = validSentences.join(" ").trim();
-      if (isOneLiter) {
-        reason = reason
-          .replace(/(?:,\s*)?(?:com\s+|de\s+)?(?:cerca de |aproximadamente |em torno de |perto de )?\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cv|cavalos)(?:\s+de pot[eê]ncia)?(?:\s*[·•–—]\s*)?/gi, "")
-          .replace(/^[·•–—]\s*/, "")
-          .trim();
-        if (/^\d+(?:[.,]\d+)?\s*kgfm\b/i.test(reason) && !/torque/i.test(reason)) {
-          reason = `${reason} de torque`;
-        }
+      reason = reason
+        .replace(/(?:,\s*)?(?:com\s+|de\s+)?(?:cerca de |aproximadamente |em torno de |perto de )?\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cv|cavalos)(?:\s+de pot[eê]ncia)?(?:\s+n[oa]s?\s+(?:etanol|gasolina|[aá]lcool))?(?:\s+e\s+(?:cerca de |aproximadamente |em torno de |perto de )?\d+(?:[.,]\d+)?\s*(?:cv|cavalos)(?:\s+n[oa]s?\s+(?:etanol|gasolina|[aá]lcool))?)?(?:\s*[·•–—]\s*)?/gi, "")
+        .replace(/\bde\s+\d+\s+marchas?(?:\s+simuladas?)?\b/gi, "")
+        .replace(/\bcom\s+\d+\s+marchas?(?:\s+simuladas?)?\b/gi, "")
+        .replace(/^[·•–—]\s*/, "")
+        .trim();
+      if (/^\d+(?:[.,]\d+)?\s*kgfm\b/i.test(reason) && !/torque/i.test(reason)) {
+        reason = `${reason} de torque`;
       }
       const unsafe =
-        (/\bcv\b|cavalos|pot[eê]ncia/i.test(reason) && (!spec || isOneLiter)) ||
+        /\bcv\b|cavalos|\b\d+\s*marchas?\b/i.test(reason) ||
+        (/pot[eê]ncia/i.test(reason) && (!spec || isOneLiter)) ||
         (/km\/l/i.test(reason) && !/gasolina|etanol/i.test(reason)) ||
         mentionsLocation(reason) ||
         /simulador|simula[cç][aã]o|parcel|taxa|juros|vale conhecer|equilibrando|leva vantagem|ganha|vence|é melhor/i.test(reason) ||
@@ -1713,62 +1715,35 @@ export function formatChatResult(result: ChatTurnResult, input: Parameters<typeo
   return result;
 }
 
-/** Não divulga potência baixa nem de motor 1.0, inclusive nos atalhos técnicos. */
-function sanitizePower(text: string, vehicles: ChatVehicleRecord[]): string {
-  const hidden = vehicles.filter(vehicle => {
-    if (/\b1[.,]0\b/.test(vehicle.engine ?? vehicle.version ?? "")) return true;
-    const spec = findVehicleSpec(vehicle);
-    return (spec != null && (specMaxCv(spec) < 90 || /\b1[.,]0\b/.test(spec.motor))) ||
-           (vehicle.category === "moto" && (!spec || specMaxCv(spec) < 90));
-  });
-  if (!hidden.length) return text;
-  if (hidden.length === vehicles.length) {
-    let out = text.replace(
-      /(?:cerca de |aproximadamente |em torno de )?\d+(?:[.,]\d+)?\s*cv(?:\s+no (?:etanol|gasolina))?(?:\s+e\s+\d+(?:[.,]\d+)?\s*cv(?:\s+na (?:gasolina|etanol))?)?/gi,
-      "motor adequado ao dia a dia",
-    );
-    out = out.replace(
-      /(?:,\s*)?(?:com\s+|de\s+)?(?:cerca de |aproximadamente |em torno de |perto de )?\b\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cv|cavalos)(?:\s+de pot[eê]ncia)?/gi,
-      "",
-    );
-    out = out.replace(/\bpot[eê]ncia de (?:cerca de |aproximadamente |em torno de )?\d+(?:[.,]\d+)?\s*(?:cv|cavalos)\b/gi, "");
-    out = out.replace(/\b\d+(?:[.,]\d+)?\s*cavalos\b/gi, "motor adequado ao dia a dia");
-    return out.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,])/g, "$1").trim();
-  }
-
-  let out = text.split("\n").map(line => {
-    const refersToHidden = hidden.some(h => line.includes(vehiclePath(h)) || line.includes(chatBlockName(h)));
-    if (refersToHidden) {
-      let cleaned = line.replace(
-        /(?:,\s*)?(?:com\s+|de\s+)?(?:cerca de |aproximadamente |em torno de |perto de )?\b\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cv|cavalos)(?:\s+de pot[eê]ncia)?(?:\s*[·•–—]\s*)?/gi,
-        "",
-      );
-      cleaned = cleaned.replace(/—\s*[·•–—]\s*/g, "— ");
-      return cleaned.replace(/[ \t]{2,}/g, " ").trim();
-    }
-    return line;
-  }).join("\n");
-
-  for (const h of hidden) {
-    const spec = findVehicleSpec(h);
-    const cvValues = spec ? [specMaxCv(spec), ...Object.values(spec.cv)] : [];
-    for (const val of cvValues) {
-      const valStr = String(val).replace(".", "[.,]");
-      const numRe = new RegExp(`(?:cerca de |aproximadamente |em torno de |perto de )?${valStr}\\s*(?:cv|cavalos)(?: de pot[eê]ncia)?`, "gi");
-      out = out.replace(numRe, "");
-    }
-    const modelToken = h.model.length >= 3 ? h.model.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
-    if (modelToken) {
-      const modelPowerRe = new RegExp(`(${modelToken}[^.!?\\n]*?)\\b(?:tem |com )?(?:cerca de |aproximadamente |em torno de |perto de )?\\d+(?:[.,]\\d+)?\\s*(?:cv|cavalos)(?: de pot[eê]ncia)?\\b`, "gi");
-      out = out.replace(modelPowerRe, "$1");
-    }
-  }
-
-  out = out.replace(/\btem\s*,\s*mas entrega/gi, "entrega")
-           .replace(/\s+([.,])/g, "$1")
-           .replace(/[ \t]{2,}/g, " ")
-           .trim();
-  return out;
+/** Regra comercial: o assistente nunca cita cv, cavalos nem número de marchas. */
+function sanitizePower(text: string, _vehicles: ChatVehicleRecord[]): string {
+  const fuelSuffix =
+    "(?:\\s+n[oa]s?\\s+(?:etanol|gasolina|[aá]lcool))?(?:\\s+e\\s+(?:cerca de |aproximadamente |em torno de |perto de )?\\d+(?:[.,]\\d+)?\\s*(?:cv|cavalos)(?:\\s+n[oa]s?\\s+(?:etanol|gasolina|[aá]lcool))?)?(?:\\s*,?\\s*tanto n[oa] etanol quanto n[oa] gasolina)?";
+  let out = text;
+  out = out.replace(
+    new RegExp(`\\btem\\s+(?:cerca de |aproximadamente |em torno de |perto de )?\\d+(?:[.,]\\d+)?\\s*(?:cv|cavalos)(?:\\s+de pot[eê]ncia)?${fuelSuffix}\\s*,\\s*mas\\s+entrega\\b`, "gi"),
+    "entrega",
+  );
+  out = out.replace(
+    new RegExp(`\\btem\\s+(?:cerca de |aproximadamente |em torno de |perto de )?\\d+(?:[.,]\\d+)?\\s*(?:cv|cavalos)(?:\\s+de pot[eê]ncia)?${fuelSuffix}`, "gi"),
+    "tem motor adequado ao dia a dia",
+  );
+  out = out.replace(
+    new RegExp(`(?:,\\s*)?(?:com\\s+|de\\s+)?(?:cerca de |aproximadamente |em torno de |perto de )?\\b\\d+(?:[.,]\\d+)?(?:\\s*(?:a|–|-)\\s*\\d+(?:[.,]\\d+)?)?\\s*(?:cv|cavalos)(?:\\s+de pot[eê]ncia)?${fuelSuffix}(?:\\s*[·•–—]\\s*)?`, "gi"),
+    "",
+  );
+  out = out.replace(/\bpot[eê]ncia de (?:cerca de |aproximadamente |em torno de |perto de )?\d+(?:[.,]\d+)?\s*(?:cv|cavalos)\b/gi, "");
+  out = out.replace(/;?\s*no\s+modo\s+manual(?:\s+ele)?\s+simula\s+\d+\s+marchas?\b/gi, "");
+  out = out.replace(/,?\s*que\s+n[ãa]o\s+tem\s+marchas?\s+fixas?\b/gi, "");
+  out = out.replace(/\b(?:de|com)\s+\d+\s+marchas?(?:\s+simuladas?)?\b/gi, "");
+  out = out.replace(/\bsimula\s+\d+\s+marchas?\b/gi, "");
+  out = out.replace(/\b\d+\s+marchas?(?:\s+(?:fixas?|simuladas?))?\b/gi, "câmbio adequado");
+  return out
+    .replace(/—\s*[·•–—]\s*/g, "— ")
+    .replace(/\btem\s*,\s*mas entrega/gi, "entrega")
+    .replace(/\s+([.,;:])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
 }
 
 export async function runChatTurn(input: Parameters<typeof runChatTurnInternal>[0]): Promise<ChatTurnResult> {

@@ -189,18 +189,25 @@ test("filtro de câmbio aceita o slug da URL e o rótulo gravado", () => {
   assert.equal(transmissionFilterParam("AUTOMATICA"), "automatico");
   assert.equal(transmissionFilterParam("manual"), "manual");
   assert.equal(transmissionFilterParam("Manual"), "manual");
-  assert.equal(transmissionFilterParam("CVT"), "cvt");
-  assert.equal(transmissionFilterParam("Semi-automático"), "semi");
+  // CVT, Semi-automático e Automatizado viram "automatico" no slug
+  assert.equal(transmissionFilterParam("CVT"), "automatico");
+  assert.equal(transmissionFilterParam("Semi-automático"), "automatico");
+  assert.equal(transmissionFilterParam("Automatizado"), "automatico");
   assert.equal(transmissionFilterParam("  "), "");
   assert.equal(transmissionFilterLabel("automatico"), "Automático");
   assert.equal(transmissionFilterLabel("manual"), "Manual");
+  // O rótulo do filtro é sempre "Automático" para CVT/Automatizado/Semi
+  assert.equal(transmissionFilterLabel("CVT"), "Automático");
+  assert.equal(transmissionFilterLabel("Semi-automático"), "Automático");
 
   const automatic = transmissionFilterValues("automatico");
   assert.ok(automatic.includes("Automático"));
   assert.ok(automatic.includes("Automatico"));
+  // Automático agora inclui CVT, Automatizado e Semi-automático
   assert.ok(automatic.includes("CVT"));
-  assert.equal(automatic.some((item) => /manual|semi/i.test(item)), false);
-  assert.equal(automatic.includes("Automatizado"), false);
+  assert.ok(automatic.includes("Automatizado"));
+  assert.ok(automatic.includes("Semi-automático"));
+  assert.equal(automatic.some((item) => /^manual$/i.test(item)), false);
 
   const where = transmissionWhere("automatico") as {
     OR?: Array<{ transmission: { equals: string } }>;
@@ -208,19 +215,17 @@ test("filtro de câmbio aceita o slug da URL e o rótulo gravado", () => {
   const equals = (where.OR ?? []).map((item) => item.transmission.equals);
   assert.ok(equals.includes("Automático"));
   assert.ok(equals.includes("CVT"));
+  assert.ok(equals.includes("Automatizado"));
+  assert.ok(equals.includes("Semi-automático"));
   assert.equal(equals.includes("Manual"), false);
-  assert.equal(equals.includes("Semi-automático"), false);
-  assert.equal(equals.includes("Automatizado"), false);
 
-  const cvtOnly = transmissionWhere("cvt") as {
-    transmission?: { equals: string };
+  // "cvt" no filtro busca o mesmo que "automatico"
+  const cvtWhere = transmissionWhere("cvt") as {
     OR?: Array<{ transmission: { equals: string } }>;
   };
-  const cvtEquals = cvtOnly.OR
-    ? cvtOnly.OR.map((item) => item.transmission.equals)
-    : [cvtOnly.transmission?.equals];
+  const cvtEquals = (cvtWhere.OR ?? []).map((item) => item.transmission.equals);
   assert.ok(cvtEquals.includes("CVT"));
-  assert.equal(cvtEquals.includes("Automático"), false);
+  assert.ok(cvtEquals.includes("Automático"), "CVT no filtro também pega Automático");
 
   const manual = transmissionWhere("Manual") as {
     OR?: Array<{ transmission: { equals: string } }>;
@@ -233,13 +238,14 @@ test("filtro de câmbio aceita o slug da URL e o rótulo gravado", () => {
   assert.deepEqual(transmissionWhere(null), {});
   assert.deepEqual(transmissionWhere("   "), {});
 
+  // O filtro só gera duas opções: automatico e manual
   const options = transmissionFilterOptions(
     ["Automático", "Automatico", "Manual", "CVT"],
     "automatico",
   );
   assert.deepEqual(
     options.map((item) => item.value),
-    ["automatico", "manual", "cvt"],
+    ["automatico", "manual"],
   );
   assert.equal(options[0]?.label, "Automático");
   const kept = transmissionFilterOptions(["Manual"], "automatico");
@@ -250,9 +256,10 @@ test("filtro de câmbio aceita o slug da URL e o rótulo gravado", () => {
 test("câmbio alinhado não dispara alerta", () => {
   assert.equal(gearsConflict("XS 1.5 Flex Automático", "Automático"), false);
   assert.equal(resolveTransmission("XS 1.5 Flex Automático", "Automático"), "Automático");
-  assert.equal(resolveTransmission("EXL CVT", "Automático"), "CVT");
+  // CVT na versão agora resolve como "Automático" (regra de negócio)
+  assert.equal(resolveTransmission("EXL CVT", "Automático"), "Automático");
   assert.equal(
-    suggestedTransmission("EX 1.8 Automático", "Manual", ["Manual", "Automático", "CVT"]),
+    suggestedTransmission("EX 1.8 Automático", "Manual", ["Manual", "Automático"]),
     "Automático",
   );
 });
@@ -445,4 +452,66 @@ test("Destaque fica limitado aos primeiros N featured", () => {
   );
   assert.deepEqual([...ids], ["a", "c", "d"]);
   assert.equal(featuredBadgeIds([{ id: "a", featured: true }], 0).size, 0);
+});
+
+
+/* ---------- Normalização de câmbio (item 3 da auditoria) ---------- */
+
+test("resolveTransmission: CVT e Xtronic na versão resolvem como Automático", () => {
+  assert.equal(resolveTransmission("EXL 1.5 CVT", "Automático"), "Automático");
+  assert.equal(resolveTransmission("EXL 1.5 CVT", "CVT"), "Automático");
+  assert.equal(resolveTransmission("1.6 SL Xtronic", "Xtronic"), "Automático");
+  assert.equal(resolveTransmission("EXL 1.5 CVT", null), "Automático");
+  assert.equal(resolveTransmission(null, "CVT"), "Automático");
+  assert.equal(resolveTransmission(null, "Xtronic"), "Automático");
+});
+
+test("resolveTransmission: Automatizado e Semi-automático resolvem como Automático", () => {
+  assert.equal(resolveTransmission(null, "Automatizado"), "Automático");
+  assert.equal(resolveTransmission(null, "Semi-automático"), "Automático");
+  assert.equal(resolveTransmission("1.0 Automatizado", "Automatizado"), "Automático");
+  assert.equal(resolveTransmission("150 Semi-automático", "Semi-automático"), "Automático");
+});
+
+test("resolveTransmission: Manual permanece Manual", () => {
+  assert.equal(resolveTransmission("1.0 Manual", "Manual"), "Manual");
+  assert.equal(resolveTransmission(null, "Manual"), "Manual");
+  assert.equal(resolveTransmission(null, "Mecânico"), "Manual");
+});
+
+test("formatTransmissionLabel: todas as variantes viram Automático ou Manual", () => {
+  assert.equal(formatTransmissionLabel("CVT"), "Automático");
+  assert.equal(formatTransmissionLabel("Automatizado"), "Automático");
+  assert.equal(formatTransmissionLabel("Semi-automático"), "Automático");
+  assert.equal(formatTransmissionLabel("AUTOMATICO"), "Automático");
+  assert.equal(formatTransmissionLabel("Manual"), "Manual");
+  assert.equal(formatTransmissionLabel("Mecânico"), "Manual");
+});
+
+test("filtro de câmbio: CVT/Semi/Automatizado mapeiam para automatico", () => {
+  assert.equal(transmissionFilterParam("CVT"), "automatico");
+  assert.equal(transmissionFilterParam("Semi-automático"), "automatico");
+  assert.equal(transmissionFilterParam("Automatizado"), "automatico");
+  assert.equal(transmissionFilterParam("semiautomatico"), "automatico");
+});
+
+test("transmissionWhere: Automático encontra veículos gravados como CVT", () => {
+  const where = transmissionWhere("automatico") as {
+    OR?: Array<{ transmission: { equals: string } }>;
+  };
+  const values = (where.OR ?? []).map((item) => item.transmission.equals);
+  assert.ok(values.includes("CVT"), "Automático no filtro deve encontrar CVT");
+  assert.ok(values.includes("Automatizado"), "Automático no filtro deve encontrar Automatizado");
+  assert.ok(values.includes("Semi-automático"), "Automático no filtro deve encontrar Semi-automático");
+});
+
+test("transmissionFilterOptions: só gera Manual e Automático", () => {
+  const options = transmissionFilterOptions(
+    ["Automático", "Manual", "CVT", "Automatizado", "Semi-automático"],
+  );
+  const values = options.map((o) => o.value);
+  assert.ok(values.includes("automatico"));
+  assert.ok(values.includes("manual"));
+  assert.equal(values.length, 2, "Deve ter exatamente 2 opções");
+  assert.ok(options.every((o) => o.label === "Automático" || o.label === "Manual"));
 });

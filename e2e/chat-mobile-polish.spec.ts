@@ -20,7 +20,8 @@ test("resposta técnica curta, mensagem visível e viewport de teclado",async({p
   await dialog.getByRole("button",{name:"Enviar",exact:true}).click();
   await expect(dialog).toHaveAttribute("aria-busy","false");
   const answer=dialog.locator('[data-chat-latest="1"]');
-  await expect(answer).toContainText("142 cv no etanol e 138 cv na gasolina");
+  await expect(answer).toContainText("motor 2.0 16V (F4R)");
+  await expect(answer).not.toContainText(/cv\b/i);
   await dialog.locator("textarea").focus();
   if(info.project.name.startsWith("mobile")){
     // Chromium does not open an OS keyboard. Simulate only its visual viewport

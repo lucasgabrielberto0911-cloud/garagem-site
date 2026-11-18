@@ -23,14 +23,14 @@ test("Civic: pergunta técnica, continuidade do torque e nova busca", async ({pa
     return dialog.locator('[data-chat-latest="1"]');
   }
   let answer=await send("quantos cvs tem o Civic LXR 2015?");
-  await expect(answer).toContainText("155 cv no etanol e 150 cv na gasolina");
+  await expect(answer).toContainText("motor 2.0 16V i-VTEC");
   await expect(answer).not.toContainText("No estoque");
-  await expect(answer).not.toContainText("142 cv");
+  await expect(answer).not.toContainText(/cv\b|Duster/i);
   await expect(answer.locator("[data-chat-vehicle]")).toHaveCount(1);
   await expect(answer.getByRole("link",{name:/^Tenho interesse/})).toHaveAttribute("href",/^https:\/\/wa\.me\/5527996330706\?/);
   answer=await send("e o torque?");
   await expect(answer).toContainText("19,5 kgfm no etanol e 19,3 kgfm na gasolina");
-  await expect(answer).not.toContainText("155 cv");
+  await expect(answer).not.toContainText(/cv\b/i);
   await dialog.getByRole("button",{name:"Nova conversa",exact:true}).click();
   answer=await send("automático até 60 mil");
   await expect(answer).toContainText("Duster");

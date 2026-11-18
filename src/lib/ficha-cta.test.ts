@@ -638,6 +638,8 @@ test("descrição tira a mini-grade repetida (Cor, Câmbio, Combustível, Motor)
   assert.deepEqual(lines, ["Histórico: único dono"]);
   const extra = visibleDescriptionSegments("⚙️ Câmbio: Automático CVT", undefined, specs);
   assert.equal(extra.length, 1);
+  const bareGear = visibleDescriptionSegments("⚙️ Câmbio Automático", undefined, specs);
+  assert.equal(bareGear.length, 0);
 });
 
 test("parecidos na ficha não têm Tenho interesse, mas o estoque tem", () => {

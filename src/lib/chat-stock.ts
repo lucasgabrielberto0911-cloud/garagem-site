@@ -1974,19 +1974,25 @@ function formatEconomyCompare(vehicles: ChatVehicleRecord[]) {
   return `${lead} ${others.charAt(0).toUpperCase()}${others.slice(1)}.`;
 }
 
-/** Comparação por força: frase curta + “• carro — N cv” (ou o motor, sem ficha). */
+/** Comparação por força: frase curta + “• carro — motor”. */
 function formatPowerCompareList(vehicles: ChatVehicleRecord[]) {
   const specs = vehicles.map((v) => findVehicleSpec(v));
   if (specs.every(Boolean)) {
     const rows = vehicles
-      .map((v, index) => ({ v, cv: specMaxCv(specs[index]!) }))
+      .map((v, index) => ({ v, spec: specs[index]!, cv: specMaxCv(specs[index]!) }))
       .sort((a, b) => b.cv - a.cv || a.v.price - b.v.price);
     const top = rows[0]!;
     const tie = rows.filter((row) => row.cv === top.cv).length > 1;
     const lead = tie
       ? "Pela ficha de fábrica, empatam em potência:"
       : `Pela ficha de fábrica, ${talkName(top.v).labeled} é o mais forte:`;
-    return formatRankList(lead, rows.map((row) => ({ name: rankLineName(row.v), value: `${row.cv.toLocaleString("pt-BR")} cv` })));
+    return formatRankList(
+      lead,
+      rows.map((row) => ({
+        name: rankLineName(row.v),
+        value: `motor ${stockEngineLabel(row.v) ?? row.spec.motor.split(",")[0]?.trim() ?? row.spec.motor}`,
+      })),
+    );
   }
   const ranked = rankByPower(vehicles, "");
   if (!ranked.some((v) => stockEngineLabel(v))) return formatPowerCompare(vehicles);
@@ -3449,14 +3455,11 @@ export function searchChatInventory(
       reply: `${formatRankList(`${label} ${scope}:`, picks.map((v, index) => ({ name: rankLineName(v), value: value(v, index) })))}${note ? `\n\n${note}` : ""}\n\n${listing}`,
     });
   if (power) {
-    const allSpecs = specs.every(Boolean);
-    const note = allSpecs ? "" : "Se quiser os cv de cada um, me diz qual deles que eu passo os números de fábrica.";
-    return ranking(allSpecs ? "Mais fortes (cv de fábrica)" : "Motores maiores", (v, index) => {
+    return ranking("Motores mais fortes", (v, index) => {
       const spec = specs[index];
-      if (spec) return `${specMaxCv(spec).toLocaleString("pt-BR")} cv`;
-      const motor = stockEngineLabel(v);
+      const motor = stockEngineLabel(v) ?? spec?.motor.split(",")[0]?.trim();
       return motor ? `motor ${motor}` : null;
-    }, note);
+    });
   }
   if (!power && chatRankMode(message) === "economy" && picks.length > 1 && specs.every((spec) => spec && specCityKmL(spec) != null)) {
     return ranking("Mais econômicos (Inmetro, cidade)", (_v, index) => `${String(specCityKmL(specs[index]!)).replace(".", ",")} km/l`);

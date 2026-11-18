@@ -36,18 +36,18 @@ test("aceleração nunca vira preço mínimo, máximo nem memória de orçamento
   assert.deepEqual(parseChatSearchRanges("entre 50 e 70 mil"), { minPrice: 50000 });
 });
 
-test("conversa exata: Civic → consumo/autonomia do Kicks → marchas do Corolla → e o City", async () => {
+test("conversa exata: Civic → consumo/autonomia do Kicks → câmbio do Corolla → e o City", async () => {
   const historico: ChatTurn[] = [];
   for (const [mensagem, pattern] of [
     ["quanto faz de 0 a 100 o Civic?", /Civic.*10,9 segundos/],
     ["e o Kicks, quanto faz de consumo e qual a autonomia com um tanque?", /Kicks.*km\/l.*41 litros/],
-    ["quantas marchas tem o Corolla?", /Corolla.*CVT.*simula 7 marchas/],
-    ["e o City?", /City.*CVT.*simula 7 marchas/],
+    ["quantas marchas tem o Corolla?", /Corolla.*câmbio automático/],
+    ["e o City?", /City.*câmbio automático/],
   ] as const) {
     const result = await runChatTurn({ mensagem, historico, stock, generate: noModel });
     assert.equal(result.meta?.policy, "spec-direct", mensagem);
     assert.match(textoVisivelChat(result.reply), pattern, mensagem);
-    assert.doesNotMatch(textoVisivelChat(result.reply), /100\.000|Olha o que tenho|R\$/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /100\.000|Olha o que tenho|R\$|\bcv\b|\d+\s+marchas/i);
     historico.push({ role: "user", content: mensagem }, { role: "assistant", content: result.reply });
   }
   assert.doesNotMatch(scopeChatMessage("tem SUV?", historico, stock), /até 100 mil/);
@@ -57,19 +57,23 @@ test("ranking considera Lancer após os primeiros 16 anúncios, inclusive depois
   const many = [...Array.from({ length: 20 }, (_, index) => ({ ...hb, id: `hb-${index}` })), ...stock];
   for (const historico of [[], [{ role: "user", content: "me mostra HB20" }, { role: "assistant", content: "Hyundai HB20 Premium 1.6 Aut 2015 · 60.000 km · R$ 56.900" }]] as ChatTurn[][]) {
     const plan = planExpertTurn({ mensagem: "qual o mais forte da loja?", historico, stock: many, promptStock: many.slice(0, 3) });
-    assert.match(plan.stockRanking!, /Lancer 2.0: 160 cv/);
+    assert.match(plan.stockRanking!, /Lancer 2\.0: motor 2\.0 16V MIVEC/);
+    assert.doesNotMatch(plan.stockRanking!, /\bcv\b/i);
     const result = await runChatTurn({ mensagem: "qual o mais forte?", historico, stock: many, generate: noModel });
-    assert.match(textoVisivelChat(result.reply), /Lancer.*160 cv/);
+    assert.match(textoVisivelChat(result.reply), /Lancer.*motor 2\.0 16V MIVEC/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /\bcv\b/i);
     if (historico.length) assert.match(textoVisivelChat(result.reply), /HB20/);
   }
   const generated = await runChatTurn({ mensagem: "qual o mais forte da loja?", historico: [], stock: many,
-    generate: async () => ({ text: "O HB20 1.6 tem 128 cv com etanol.", functionCall: null }),
+    generate: async () => ({ text: "O HB20 1.6 tem motor 1.6 flex.", functionCall: null }),
   });
-  assert.match(textoVisivelChat(generated.reply), /No estoque inteiro.*Lancer.*160 cv/);
+  assert.match(textoVisivelChat(generated.reply), /No estoque inteiro.*Lancer.*motor 2\.0 16V MIVEC/);
+  assert.doesNotMatch(textoVisivelChat(generated.reply), /\bcv\b/i);
   const fallback = await runChatTurn({ mensagem: "qual o mais forte?", historico: [], stock: many,
     generate: async () => ({ text: CHAT_FALLBACK_REPLY, functionCall: null }),
   });
-  assert.match(textoVisivelChat(fallback.reply), /Lancer.*160 cv/);
+  assert.match(textoVisivelChat(fallback.reply), /Lancer.*motor 2\.0 16V MIVEC/);
+  assert.doesNotMatch(textoVisivelChat(fallback.reply), /\bcv\b/i);
   assert.ok(!fallback.reply.startsWith(CHAT_FALLBACK_REPLY));
   for (const question of ["qual o mais rápido?", "qual o mais econômico?"]) {
     const plan = planExpertTurn({ mensagem: question, historico: [], stock: many, promptStock: [hb] });
