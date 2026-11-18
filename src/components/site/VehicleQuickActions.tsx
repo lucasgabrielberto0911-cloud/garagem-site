@@ -36,6 +36,7 @@ export function VehicleQuickActions({
   finance,
   trade,
   visit,
+  hasVideo,
   className = "hidden lg:grid",
   variant = "default",
 }: {
@@ -57,6 +58,8 @@ export function VehicleQuickActions({
   finance: string;
   trade: string;
   visit?: string;
+  /** Quando true, o botão de vídeo diz "Ver vídeo no WhatsApp" em vez de "Pedir vídeo". */
+  hasVideo?: boolean;
   className?: string;
   /** `secondary`: botões menores, sem competir com o WhatsApp principal. */
   variant?: "default" | "secondary";
@@ -77,8 +80,10 @@ export function VehicleQuickActions({
     {
       trackingLabel: "ficha-video",
       hrefMessage: video,
-      label: "Pedir vídeo",
-      ariaLabel: "Pedir vídeo deste veículo no WhatsApp",
+      label: hasVideo ? "Ver vídeo no WhatsApp" : "Pedir vídeo",
+      ariaLabel: hasVideo
+        ? "Ver vídeo deste veículo no WhatsApp"
+        : "Pedir vídeo deste veículo no WhatsApp",
     },
     ...(visit
       ? [

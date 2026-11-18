@@ -63,6 +63,7 @@ import { soldFichaNavLinks } from "@/lib/sold-ficha-nav";
 import { getVehicleConditions } from "@/lib/site-content";
 import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
+import { publicDossierChips } from "@/lib/vehicle-dossier";
 import { publicVehicleSeals } from "@/lib/vehicle-seals";
 import {
   getPublicVehicleStaticParams,
@@ -184,6 +185,7 @@ export default async function VehicleDetailPage({
   ]);
   const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
   const seals = sold ? [] : publicVehicleSeals({ verified, accessories });
+  const dossierChips = sold ? [] : publicDossierChips(vehicle);
 
   const specs = buildVehiclePublicSpecs({
     category: vehicle.category,
@@ -493,7 +495,10 @@ export default async function VehicleDetailPage({
 
               <VehicleInspectionBadge inspection={sold ? null : vehicle.inspection} />
               {!sold ? (
-                <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} />
+                <VehicleSeals
+                  seals={seals.filter((seal) => seal.id !== "opcionais")}
+                  chips={dossierChips}
+                />
               ) : null}
 
               {sold ? (
@@ -565,6 +570,7 @@ export default async function VehicleDetailPage({
                       finance={whatsapp.finance}
                       trade={whatsapp.trade}
                       visit={whatsapp.visit}
+                      hasVideo={!!vehicle.hasVideo}
                       variant="secondary"
                       className=""
                     />
@@ -683,6 +689,7 @@ export default async function VehicleDetailPage({
                   finance: whatsapp.finance,
                   trade: whatsapp.trade,
                   visit: whatsapp.visit,
+                  hasVideo: !!vehicle.hasVideo,
                 }
           }
         />

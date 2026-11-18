@@ -28,6 +28,7 @@ import {
 import { whatsappContentFromVehicle } from "@/lib/site";
 import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import type { PublicVerifiedItem } from "@/lib/vehicle-verified";
+import { publicDossierChips } from "@/lib/vehicle-dossier";
 import type { VehicleSeal } from "@/lib/vehicle-seals";
 
 /** Garantia e vistoria já aparecem na faixa de confiança. */
@@ -105,6 +106,9 @@ export function VehicleMobileSummary({
   inspection,
   warranty,
   seals = [],
+  hasSpareKey,
+  hasManual,
+  hasVideo,
   specAnchor = false,
 }: {
   title: string;
@@ -119,9 +123,15 @@ export function VehicleMobileSummary({
   warranty?: string | null;
   /** Selos já filtrados (sem dado = sem selo). */
   seals?: readonly VehicleSeal[];
+  hasSpareKey?: boolean | null;
+  hasManual?: boolean | null;
+  hasVideo?: boolean | null;
   /** Quando a ficha técnica não existe, a âncora aponta para estes fatos. */
   specAnchor?: boolean;
 }) {
+  const dossierChips = sold
+    ? []
+    : publicDossierChips({ hasSpareKey, hasManual, hasVideo });
   return (
     <div className="ficha-mobile-sheet px-4 pb-3 pt-3 sm:px-6">
       <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
@@ -155,7 +165,13 @@ export function VehicleMobileSummary({
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
       ) : null}
-      {!sold ? <VehicleSeals seals={seals.filter((seal) => seal.id !== "opcionais")} className="mt-2.5" /> : null}
+      {!sold ? (
+        <VehicleSeals
+          seals={seals.filter((seal) => seal.id !== "opcionais")}
+          chips={dossierChips}
+          className="mt-2.5"
+        />
+      ) : null}
     </div>
   );
 }
@@ -233,6 +249,7 @@ export function VehicleMobileBlocks({
     finance: string;
     trade: string;
     visit?: string;
+    hasVideo?: boolean;
     stateOfVehicle?: string;
     exteriorColor?: string;
     transmission?: string;
@@ -309,6 +326,7 @@ export function VehicleMobileBlocks({
               finance={quickActions.finance}
               trade={quickActions.trade}
               visit={quickActions.visit}
+              hasVideo={quickActions.hasVideo}
               variant="secondary"
               className="grid"
             />
