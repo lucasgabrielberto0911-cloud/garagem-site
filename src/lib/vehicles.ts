@@ -23,7 +23,7 @@ import {
   colorWhere,
   transmissionWhere,
 } from "@/lib/vehicle-display";
-import { MAX_HOME_FEATURED } from "@/lib/featured";
+import { MAX_HOME_FEATURED, sortShowcaseVehicles } from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
 import { mapCatalogBodyStyle } from "@/lib/catalog-feed";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
@@ -246,17 +246,85 @@ async function findDetailVehicle(
   }
 }
 
-async function fetchFeaturedVehicles(take: number): Promise<VehicleCardRecord[]> {
-  return findCardVehicles({
-    where: { status: "disponivel", featured: true },
-    orderBy: { createdAt: "desc" },
-    take,
-  });
+export type FeaturedShowcaseWhere = {
+  status: "disponivel";
+  historical?: false;
+  consigned?: false;
+  featured: boolean;
+};
+
+export type FeaturedShowcaseQuery = {
+  where: FeaturedShowcaseWhere;
+  orderBy: Array<{ yearModel: "desc" } | { km: "asc" } | { createdAt: "desc" }>;
+  take: number;
+};
+
+async function findOwnShowcaseCards(
+  featured: boolean,
+  take: number,
+  find: (args: FeaturedShowcaseQuery) => Promise<VehicleCardRecord[]>,
+): Promise<VehicleCardRecord[]> {
+  const where: FeaturedShowcaseWhere = {
+    status: "disponivel",
+    historical: false,
+    consigned: false,
+    featured,
+  };
+  const orderBy: FeaturedShowcaseQuery["orderBy"] = [
+    { yearModel: "desc" },
+    { km: "asc" },
+    { createdAt: "desc" },
+  ];
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await find({ where: { ...where }, orderBy: [...orderBy], take });
+    } catch (error) {
+      if (attempt >= 2) throw error;
+      if (where.historical === false && isMissingColumnError(error, "historical")) {
+        delete where.historical;
+      } else if (where.consigned === false && isMissingColumnError(error, "consigned")) {
+        delete where.consigned;
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
+export async function fetchFeaturedVehicles(
+  take: number,
+  find: (args: FeaturedShowcaseQuery) => Promise<VehicleCardRecord[]> = findCardVehicles,
+): Promise<VehicleCardRecord[]> {
+  if (take <= 0) return [];
+
+  const highlightedPool = await findOwnShowcaseCards(
+    true,
+    Math.max(take * 2, 16),
+    find,
+  );
+  const highlighted = sortShowcaseVehicles(highlightedPool).slice(0, take);
+  if (highlighted.length >= take) {
+    return highlighted;
+  }
+
+  const missing = take - highlighted.length;
+  const fillerPool = await findOwnShowcaseCards(
+    false,
+    Math.max(missing * 4, 32),
+    find,
+  );
+  const seenIds = new Set(highlighted.map((vehicle) => vehicle.id));
+  const fillers = sortShowcaseVehicles(
+    fillerPool.filter((vehicle) => !seenIds.has(vehicle.id)),
+  ).slice(0, missing);
+
+  return sortShowcaseVehicles([...highlighted, ...fillers]).slice(0, take);
 }
 
 const loadFeaturedCached = unstable_cache(
   async (take: number) => fetchFeaturedVehicles(take),
-  ["featured-vehicles-v7"],
+  ["featured-vehicles-v8"],
   PUBLIC_CACHE,
 );
 
