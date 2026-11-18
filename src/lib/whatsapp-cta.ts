@@ -1,13 +1,14 @@
 import type { ChatVehicleContext } from "@/lib/chat-vehicle-context";
 import {
   WHATSAPP_MESSAGES,
-  formatCustomerVehicleWhatsAppText,
   isVehicleFichaPath,
   pageWhatsAppTracking,
   whatsappUrl,
 } from "@/lib/site";
 import { getServiceCity } from "@/lib/service-cities";
-import { formatVehicleWhatsAppMessage } from "@/lib/vehicle-display";
+import { buildWhatsAppCarMessage } from "@/lib/vehicle-display";
+
+export { buildWhatsAppCarMessage } from "@/lib/vehicle-display";
 
 /** Pré-preenchido do header/float: o carro da ficha, senão o recado genérico. */
 export function pageWhatsAppMessage(
@@ -15,27 +16,31 @@ export function pageWhatsAppMessage(
   pathname?: string | null,
 ): string {
   if (!vehicle) return cityPageMessage(pathname) ?? WHATSAPP_MESSAGES.general;
-  if (vehicle.brand && vehicle.model && vehicle.year) {
-    return formatVehicleWhatsAppMessage({
+  const fallbackPath =
+    vehicle.path ||
+    (pathname && isVehicleFichaPath(pathname) ? pathname : undefined);
+  if (
+    (vehicle.brand && vehicle.model) ||
+    vehicle.label ||
+    vehicle.sold ||
+    vehicle.status === "vendido" ||
+    vehicle.status === "reservado"
+  ) {
+    return buildWhatsAppCarMessage({
+      id: vehicle.id,
       brand: vehicle.brand,
       model: vehicle.model,
       version: vehicle.version,
-      yearModel: vehicle.year,
+      label: vehicle.label,
+      year: vehicle.year,
       price: vehicle.price,
-      status: vehicle.sold ? "vendido" : undefined,
-      path: vehicle.path,
-      isMoto: vehicle.category === "moto",
+      status: vehicle.sold ? "vendido" : vehicle.status,
+      sold: vehicle.sold,
+      path: fallbackPath,
+      category: vehicle.category,
       intent: "interest",
+      pageOrigin: "ficha",
     });
-  }
-  if (vehicle.sold) {
-    return formatCustomerVehicleWhatsAppText({ label: vehicle.label, sold: true, isMoto: vehicle.category === "moto" });
-  }
-  if (vehicle.label) {
-    const label = vehicle.year
-      ? `${vehicle.label} ${vehicle.year}`
-      : vehicle.label;
-    return WHATSAPP_MESSAGES.vehicle(label, vehicle.category === "moto");
   }
   return WHATSAPP_MESSAGES.general;
 }

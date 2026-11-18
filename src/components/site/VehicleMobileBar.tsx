@@ -7,10 +7,10 @@ import { formatCurrencyBRL } from "@/lib/format";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import {
-  WHATSAPP_MESSAGES,
   fichaWhatsAppTracking,
   whatsappUrl,
 } from "@/lib/site";
+import { buildWhatsAppCarMessage } from "@/lib/whatsapp-car-message";
 
 function openWhatsApp(
   event: React.MouseEvent<HTMLAnchorElement>,
@@ -19,7 +19,7 @@ function openWhatsApp(
   vehicleId: string,
   slug?: string,
 ) {
-  trackWhatsAppClick(label, { vehicleId, slug });
+  trackWhatsAppClick(label, { vehicleId, slug, pageOrigin: "barra fixa" });
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     event.preventDefault();
     void queueWhatsAppIfOffline({
@@ -44,6 +44,8 @@ export function VehicleMobileBar({
   message,
   brand,
   model,
+  version,
+  status,
   year,
   price,
   stateOfVehicle,
@@ -64,6 +66,8 @@ export function VehicleMobileBar({
   message?: string;
   brand: string;
   model: string;
+  version?: string | null;
+  status?: string;
   year: number;
   price: number;
   stateOfVehicle?: string;
@@ -80,7 +84,21 @@ export function VehicleMobileBar({
   const isMoto = category === "moto";
   const track = fichaWhatsAppTracking({ id: vehicleId, path: vehiclePath });
   const href = whatsappUrl(
-    message ?? WHATSAPP_MESSAGES.vehicle(contentName, isMoto),
+    message ??
+      buildWhatsAppCarMessage({
+        id: vehicleId,
+        brand,
+        model,
+        version,
+        label: contentName,
+        yearModel: year,
+        price,
+        status: sold ? "vendido" : status,
+        sold,
+        path: vehiclePath,
+        isMoto,
+        pageOrigin: "barra fixa",
+      }),
     track,
   );
 
