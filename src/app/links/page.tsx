@@ -37,7 +37,7 @@ export default async function LinksPage() {
           className="mt-3 h-0.5 w-12 rounded-full bg-brand-gradient"
         />
         <p className="mt-3 text-sm leading-relaxed text-cream/80">
-          Seminovos com procedência no norte do ES.
+          Seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória · Combinamos o atendimento pelo WhatsApp.
         </p>
       </header>
 

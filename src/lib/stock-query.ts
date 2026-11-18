@@ -5,6 +5,7 @@ import {
   getFuels,
   isVehicleCategory,
 } from "@/lib/vehicle-accessories";
+import { formatStockModelLabel } from "@/lib/vehicle-display";
 
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
 
@@ -537,7 +538,10 @@ export function modelFilterOptions(
   const options = modelsForBrand(models, brand);
   const current = (selected ?? "").trim();
   if (!current) return options;
-  const exists = options.some((name) => foldLabel(name) === foldLabel(current));
+  const canonicalCurrent = foldLabel(formatStockModelLabel(current));
+  const exists = options.some(
+    (name) => foldLabel(formatStockModelLabel(name)) === canonicalCurrent,
+  );
   return exists ? options : [current, ...options];
 }
 
@@ -549,8 +553,9 @@ export function modelAfterBrandChange(
 ) {
   const current = model.trim();
   if (!current) return "";
+  const canonicalCurrent = foldLabel(formatStockModelLabel(current));
   const match = modelsForBrand(models, brand).find(
-    (name) => foldLabel(name) === foldLabel(current),
+    (name) => foldLabel(formatStockModelLabel(name)) === canonicalCurrent,
   );
   return match ?? "";
 }

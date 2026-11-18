@@ -21,6 +21,7 @@ import {
 import { orderStockDaily, saoPauloDateKey } from "@/lib/stock-daily-order";
 import {
   colorWhere,
+  modelWhere,
   transmissionWhere,
 } from "@/lib/vehicle-display";
 import {
@@ -599,6 +600,8 @@ export function buildStockWhere(filters: StockFilters, catalog: { brand: string;
   and.push(...stockSearchWhere(filters.q ?? "", catalog));
   const gear = transmissionWhere(filters.transmission);
   if (Object.keys(gear).length > 0) and.push(gear);
+  const modelFilter = modelWhere(filters.model);
+  if (Object.keys(modelFilter).length > 0) and.push(modelFilter);
   if (filters.accessories && filters.accessories.length > 0) {
     for (const acc of filters.accessories) {
       and.push({ accessories: { hasSome: accessoryFilterVariants(acc) } });
@@ -613,14 +616,6 @@ export function buildStockWhere(filters: StockFilters, catalog: { brand: string;
     ...(filters.category ? { category: filters.category } : filters.body ? { category: "carro" } : {}),
     ...(filters.brand
       ? { brand: { equals: filters.brand, mode: "insensitive" as const } }
-      : {}),
-    ...((filters.model ?? "").trim()
-      ? {
-          model: {
-            equals: (filters.model ?? "").trim(),
-            mode: "insensitive" as const,
-          },
-        }
       : {}),
     ...(filters.fuel ? { fuel: filters.fuel } : {}),
     ...colorWhere(filters.color),

@@ -727,6 +727,51 @@ const COLOR_CANONICAL: Record<string, string> = {
   amarela: "Amarelo",
 };
 
+/** Modelos equivalentes no estoque que devem compartilhar um único rótulo/filtro. */
+const MODEL_CANONICAL: Record<string, string> = {
+  "fazer 250": "Fazer 250",
+  "fazer fz25": "Fazer 250",
+  "fazer fz-25": "Fazer 250",
+  "fazer fz 25": "Fazer 250",
+  fz25: "Fazer 250",
+  "fz-25": "Fazer 250",
+  "fz 25": "Fazer 250",
+};
+
+export function formatStockModelLabel(model: string | null | undefined) {
+  const trimmed = collapseWhitespace(model ?? "");
+  if (!trimmed) return "";
+  const key = foldToken(trimmed);
+  if (MODEL_CANONICAL[key]) return MODEL_CANONICAL[key];
+  return formatModelName(trimmed);
+}
+
+/** Valores gravados que devem cair no mesmo filtro de modelo. */
+export function modelFilterValues(selected: string) {
+  const trimmed = collapseWhitespace(selected);
+  if (!trimmed) return [];
+  const canonical = formatStockModelLabel(trimmed);
+  const aliases = Object.entries(MODEL_CANONICAL)
+    .filter(([, label]) => foldToken(label) === foldToken(canonical))
+    .map(([key]) => key);
+  const unique = new Set<string>([canonical, trimmed, ...aliases]);
+  return [...unique].filter(Boolean);
+}
+
+export function modelWhere(selected: string | null | undefined) {
+  const value = collapseWhitespace(selected ?? "");
+  if (!value) return {};
+  const values = modelFilterValues(value);
+  if (values.length <= 1) {
+    return { model: { equals: values[0] ?? value, mode: "insensitive" as const } };
+  }
+  return {
+    OR: values.map((item) => ({
+      model: { equals: item, mode: "insensitive" as const },
+    })),
+  };
+}
+
 export function colorKey(value: string) {
   return foldToken(value);
 }
@@ -736,6 +781,10 @@ export function formatColorLabel(color: string | null | undefined) {
   if (!trimmed) return "";
   const key = colorKey(trimmed);
   if (COLOR_CANONICAL[key]) return COLOR_CANONICAL[key];
+  const firstToken = key.split(/[\s/-]+/)[0];
+  if (firstToken && COLOR_CANONICAL[firstToken]) {
+    return COLOR_CANONICAL[firstToken];
+  }
   if (/\bgrafite\b/.test(key) || /\bcinza\b/.test(key)) return "Cinza";
   return formatModelName(applyPtAccents(trimmed));
 }
@@ -755,13 +804,24 @@ export function colorWhere(selected: string | null | undefined) {
   const value = collapseWhitespace(selected ?? "");
   if (!value) return {};
   const values = colorFilterValues(value);
-  if (values.length <= 1) {
-    return { color: { equals: values[0] ?? value, mode: "insensitive" as const } };
+  const conditions: Array<{
+    color: {
+      equals?: string;
+      startsWith?: string;
+      contains?: string;
+      mode: "insensitive";
+    };
+  }> = values.flatMap((item) => [
+    { color: { equals: item, mode: "insensitive" as const } },
+    { color: { startsWith: `${item} `, mode: "insensitive" as const } },
+    { color: { startsWith: `${item}-`, mode: "insensitive" as const } },
+    { color: { startsWith: `${item}/`, mode: "insensitive" as const } },
+  ]);
+  if (foldToken(formatColorLabel(value)) === "cinza") {
+    conditions.push({ color: { contains: "grafite", mode: "insensitive" as const } });
   }
   return {
-    OR: values.map((item) => ({
-      color: { equals: item, mode: "insensitive" as const },
-    })),
+    OR: conditions,
   };
 }
 
