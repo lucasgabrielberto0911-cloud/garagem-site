@@ -58,6 +58,8 @@ export type ChatVehicleCard = {
   category?: string;
   photo: string | null;
   sold?: boolean;
+  /** `false` quando a unidade não está no catálogo da Meta (ex.: consignado). */
+  catalog?: boolean;
 };
 
 function fold(value: string) {
@@ -358,6 +360,7 @@ export function toChatVehicleCard(vehicle: ChatVehicleRecord): ChatVehicleCard {
     transmission: vehicle.transmission?.trim() || null,
     category: vehicle.category ?? "carro",
     photo: coverSrc(vehicle.photos ?? []) ?? null,
+    catalog: !vehicle.consigned,
   };
 }
 

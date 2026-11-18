@@ -57,6 +57,7 @@ export function VehicleMobileBar({
   fuelType,
   postalCode,
   sold = false,
+  catalog = false,
   category,
   soldHref = "/estoque",
   soldLabel = "Ver estoque",
@@ -79,6 +80,7 @@ export function VehicleMobileBar({
   fuelType?: string;
   postalCode?: string;
   sold?: boolean;
+  catalog?: boolean;
   category?: string;
   soldHref?: string;
   soldLabel?: string;
@@ -145,6 +147,9 @@ export function VehicleMobileBar({
             bodyStyle={bodyStyle}
             fuelType={fuelType}
             postalCode={postalCode}
+            catalog={catalog}
+            status={status}
+            sold={sold}
           >
             <a
               id="ficha-whatsapp"

@@ -12,6 +12,7 @@ import { publicCardFacts } from "@/lib/public-card-facts";
 import { buildWhatsAppCarMessage } from "@/lib/whatsapp-car-message";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { comparisonSelection, toggleComparison, readComparisonSession, writeComparisonSession } from "@/lib/favorites-comparison";
+import { VehicleLeadHit, isCatalogVehicle } from "@/lib/funnel-events";
 
 export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] }) {
   const [open, setOpen] = useState(true);
@@ -122,12 +123,22 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
               <tr className="border-t border-white/20 align-top">
                 <th scope="row" className="sticky left-0 z-10 bg-ink px-2 py-3 text-xs font-medium text-cream">Contato</th>
                 {selected.map(vehicle => <td key={vehicle.id} className="border-l border-white/20 p-2">
+                  <VehicleLeadHit
+                    contentId={vehicle.id}
+                    contentName={formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)}
+                    value={vehicle.status === "vendido" ? undefined : vehicle.price}
+                    make={vehicle.brand}
+                    model={vehicle.model}
+                    year={vehicle.yearModel}
+                    catalog={isCatalogVehicle({ ...vehicle, catalog: vehicle.catalog === true })}
+                  >
                   <WhatsAppButton message={buildWhatsAppCarMessage({
                     ...vehicle,
                     path: vehiclePath(vehicle),
                     isMoto: vehicle.category === "moto",
                     pageOrigin: "favoritos",
                   })} trackingLabel="comparacao-favoritos" vehicleId={vehicle.id} variant="outline" className="!h-14 !min-h-14 w-full !gap-1 !py-2 !whitespace-normal !border-emerald-500/30 bg-[#11231a] !px-1 !text-xs !tracking-normal hover:!bg-[#183225] [&_svg]:shrink-0 [&_svg]:!h-3.5 [&_svg]:!w-3.5 [&_svg]:text-[#25d366] sm:!text-xs"><span className="min-w-0 text-center">Tenho interesse</span></WhatsAppButton>
+                  </VehicleLeadHit>
                   <Link href={vehiclePath(vehicle)} className="mt-1 flex min-h-11 items-center justify-center text-xs text-cream underline underline-offset-4">Abrir anúncio</Link>
                 </td>)}
               </tr>

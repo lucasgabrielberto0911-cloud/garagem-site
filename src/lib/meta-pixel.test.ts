@@ -328,6 +328,7 @@ test("cabeçalho/float na ficha: params de catálogo do veículo e nada sem veí
     model: "HB20",
     year: 2024,
     price: 80000,
+    catalog: true,
   });
   const payload = buildCatalogPayload(params);
   assert.deepEqual(payload.content_ids, [VEHICLE_CUID]);

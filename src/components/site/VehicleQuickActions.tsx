@@ -32,6 +32,9 @@ export function VehicleQuickActions({
   bodyStyle,
   fuelType,
   postalCode,
+  catalog = false,
+  status,
+  sold,
   video,
   finance,
   trade,
@@ -54,6 +57,9 @@ export function VehicleQuickActions({
   bodyStyle?: string;
   fuelType?: string;
   postalCode?: string;
+  catalog?: boolean;
+  status?: string;
+  sold?: boolean;
   video: string;
   finance: string;
   trade: string;
@@ -114,6 +120,9 @@ export function VehicleQuickActions({
           bodyStyle={bodyStyle}
           fuelType={fuelType}
           postalCode={postalCode}
+          catalog={catalog}
+          status={status}
+          sold={sold}
         >
           <TrackedWhatsAppLink
             href={fichaHref(action.hrefMessage, contentId, contentPath)}
