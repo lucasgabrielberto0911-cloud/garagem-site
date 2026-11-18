@@ -36,9 +36,8 @@ export function restoreFavoriteIds(previous: string[]): string[] {
   return next;
 }
 
-type FavoritesContextValue = {
+type FavoritesStateValue = {
   ids: string[];
-  ready: boolean;
   count: number;
   has: (id: string) => boolean;
   toggle: (id: string) => boolean;
@@ -47,19 +46,29 @@ type FavoritesContextValue = {
   restore: (previous: string[]) => void;
 };
 
-const FavoritesContext = createContext<FavoritesContextValue | null>(null);
+type FavoritesContextValue = FavoritesStateValue & {
+  ready: boolean;
+};
+
+const EMPTY_IDS: string[] = [];
+const FavoritesStateContext = createContext<FavoritesStateValue | null>(null);
+const FavoritesReadyContext = createContext<boolean>(false);
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
-  const [ids, setIds] = useState<string[]>([]);
+  const [ids, setIds] = useState<string[]>(EMPTY_IDS);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setIds(read());
-    setReady(true);
-
     function sync() {
-      setIds(read());
+      const next = read();
+      setIds((prev) => {
+        if (prev.length === 0 && next.length === 0) return prev;
+        return next.length === 0 ? EMPTY_IDS : next;
+      });
     }
+
+    sync();
+    setReady(true);
 
     window.addEventListener(CHANGE_EVENT, sync);
     window.addEventListener("storage", sync);
@@ -92,21 +101,35 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   const has = useCallback((id: string) => ids.includes(id), [ids]);
 
-  const value = useMemo(
-    () => ({ ids, ready, has, toggle, remove, clear, restore, count: ids.length }),
-    [ids, ready, has, toggle, remove, clear, restore],
+  const stateValue = useMemo(
+    () => ({ ids, has, toggle, remove, clear, restore, count: ids.length }),
+    [ids, has, toggle, remove, clear, restore],
   );
 
-  return createElement(FavoritesContext.Provider, { value }, children);
+  return createElement(
+    FavoritesStateContext.Provider,
+    { value: stateValue },
+    createElement(FavoritesReadyContext.Provider, { value: ready }, children),
+  );
+}
+
+/**
+ * Lê apenas os favoritos salvos (sem assinar a transição `ready` do mount).
+ * Quando não há favoritos salvos, evita re-renderizar todos os cards na hidratação.
+ */
+export function useFavoritesState() {
+  const state = useContext(FavoritesStateContext);
+  if (state) return state;
+
+  throw new Error("useFavorites precisa de FavoritesProvider no layout público.");
 }
 
 /**
  * Favoritos ficam apenas no dispositivo (localStorage), sem login.
  * Com FavoritesProvider no layout, há um par de listeners para toda a página.
  */
-export function useFavorites() {
-  const context = useContext(FavoritesContext);
-  if (context) return context;
-
-  throw new Error("useFavorites precisa de FavoritesProvider no layout público.");
+export function useFavorites(): FavoritesContextValue {
+  const state = useFavoritesState();
+  const ready = useContext(FavoritesReadyContext);
+  return useMemo(() => ({ ...state, ready }), [state, ready]);
 }

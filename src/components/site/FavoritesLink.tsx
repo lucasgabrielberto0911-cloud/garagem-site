@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useFavorites } from "@/lib/favorites";
+import { useFavoritesState } from "@/lib/favorites";
 
 export function FavoritesLink({ className = "" }: { className?: string }) {
-  const { count, ready } = useFavorites();
+  const { count } = useFavoritesState();
+  const hasItems = count > 0;
   const label =
-    count > 0
+    hasItems
       ? `Favoritos (${count} ${count === 1 ? "veículo" : "veículos"})`
       : "Favoritos";
 
@@ -19,12 +20,12 @@ export function FavoritesLink({ className = "" }: { className?: string }) {
     >
       <svg
         viewBox="0 0 24 24"
-        fill={ready && count > 0 ? "currentColor" : "none"}
+        fill={hasItems ? "currentColor" : "none"}
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`h-5 w-5 ${ready && count > 0 ? "text-brand-light" : ""}`}
+        className={`h-5 w-5 ${hasItems ? "text-brand-light" : ""}`}
         aria-hidden="true"
       >
         <path d="M12 20s-7-4.6-7-9.6A4.4 4.4 0 0112 7a4.4 4.4 0 017 3.4c0 5-7 9.6-7 9.6z" />
@@ -32,7 +33,7 @@ export function FavoritesLink({ className = "" }: { className?: string }) {
       <span className="hidden font-display text-xs font-semibold uppercase tracking-wide 2xl:inline">
         Favoritos
       </span>
-      {ready && count > 0 ? (
+      {hasItems ? (
         <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-white 2xl:static 2xl:ml-0.5">
           {count > 9 ? "9+" : count}
         </span>

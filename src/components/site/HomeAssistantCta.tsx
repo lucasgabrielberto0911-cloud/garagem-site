@@ -42,6 +42,26 @@ function getServerReducedMotion() {
   return false;
 }
 
+function subscribeSmUp(onStoreChange: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => {};
+  }
+  const mq = window.matchMedia("(min-width: 640px)");
+  mq.addEventListener("change", onStoreChange);
+  return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getSmUp() {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia("(min-width: 640px)").matches;
+}
+
+function getServerSmUp() {
+  return false;
+}
+
 /**
  * Botão leve do assistente no hero (do tablet em diante: no celular o topo fica
  * só com WhatsApp e "Ver estoque", e o assistente segue no botão Ajuda do cabeçalho).
@@ -76,8 +96,9 @@ export function HomeAssistantAsk() {
     getReducedMotion,
     getServerReducedMotion,
   );
+  const smUp = useSyncExternalStore(subscribeSmUp, getSmUp, getServerSmUp);
 
-  const animatePlaceholder = !reducedMotion && !focused && text.length === 0;
+  const animatePlaceholder = smUp && !reducedMotion && !focused && text.length === 0;
 
   useEffect(() => {
     if (!animatePlaceholder) return;

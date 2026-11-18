@@ -29,9 +29,13 @@ import { VehicleSeals } from "@/components/site/VehicleSeals";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
+import dynamic from "next/dynamic";
 import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
-import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { MissingModelDisclosure } from "@/components/site/MissingModelDisclosure";
+
+const MissingModelForm = dynamic(() =>
+  import("@/components/site/MissingModelForm").then((mod) => mod.MissingModelForm),
+);
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { JsonLd } from "@/components/JsonLd";
 import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";

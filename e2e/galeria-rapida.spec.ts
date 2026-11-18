@@ -6,6 +6,10 @@ test("galeria pré-carrega vizinhas sem loading=lazy, não dobra download e mant
   const id = `ce2egaleria${Date.now().toString(36).padStart(10, "0")}${Math.random().toString(36).slice(2, 6)}`;
   const photoUrl = (order: number) =>
     `https://pub-e2e-galeria.r2.dev/173117000000${order}-aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee-g800.webp`;
+  const previewUrl = (order: number) =>
+    `https://pub-e2e-galeria.r2.dev/173117000000${order}-aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee-g800-preview.webp`;
+  const hasFulfilledSlide = (order: number) =>
+    fulfilledLargeUrls.has(photoUrl(order)) || fulfilledLargeUrls.has(previewUrl(order));
   const thumbUrl = (order: number) =>
     `https://pub-e2e-galeria.r2.dev/173117000000${order}-aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee-g800-card.webp`;
   const requestCounts = new Map<string, number>();
@@ -38,7 +42,7 @@ test("galeria pré-carrega vizinhas sem loading=lazy, não dobra download e mant
     await page.route("https://pub-e2e-galeria.r2.dev/**", async (route) => {
       const url = route.request().url();
       requestCounts.set(url, (requestCounts.get(url) ?? 0) + 1);
-      const isLarge = /-g800\.webp(?:$|\?)/.test(url);
+      const isLarge = /-g800(?:-preview)?\.webp(?:$|\?)/.test(url);
       if (isLarge) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
         fulfilledLargeUrls.add(url);
@@ -92,8 +96,8 @@ test("galeria pré-carrega vizinhas sem loading=lazy, não dobra download e mant
       await expect(img).not.toHaveAttribute("loading", "lazy");
     }
 
-    // Enquanto o -g800.webp do slide 4 ainda não terminou, há uma <img> visível (prévia) no visor.
-    expect(fulfilledLargeUrls.has(photoUrl(4))).toBe(false);
+    // Enquanto a foto principal do slide 4 ainda não terminou, há uma <img> visível (prévia) no visor.
+    expect(hasFulfilledSlide(4)).toBe(false);
     await expect
       .poll(
         () =>
@@ -108,10 +112,10 @@ test("galeria pré-carrega vizinhas sem loading=lazy, não dobra download e mant
         { timeout: 1200 },
       )
       .toBe(true);
-    expect(fulfilledLargeUrls.has(photoUrl(4))).toBe(false);
+    expect(hasFulfilledSlide(4)).toBe(false);
 
-    // Após o -g800.webp decodificar, a foto principal aparece com opacity 1.
-    await expect.poll(() => fulfilledLargeUrls.has(photoUrl(4))).toBe(true);
+    // Após a foto principal decodificar, ela aparece com opacity 1.
+    await expect.poll(() => hasFulfilledSlide(4)).toBe(true);
     await expect
       .poll(() =>
         slides.nth(4).locator('img:not([alt=""])').evaluate((img) => {
@@ -126,7 +130,7 @@ test("galeria pré-carrega vizinhas sem loading=lazy, não dobra download e mant
     // No celular (sem faixa de miniaturas), nem mesmo as miniaturas (-g800-card.webp) repetem pedido.
     const isMobileViewport = (page.viewportSize()?.width ?? 0) < 1024;
     for (const [url, count] of requestCounts.entries()) {
-      const isLarge = /-g800\.webp(?:$|\?)/.test(url);
+      const isLarge = /-g800(?:-preview)?\.webp(?:$|\?)/.test(url);
       if (isLarge || isMobileViewport) {
         expect(count, `download duplicado para ${url}`).toBe(1);
       } else {

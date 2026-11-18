@@ -43,6 +43,7 @@ export function VehicleGallery({
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLUListElement>(null);
+  const scrollerWidthRef = useRef(0);
   const thumbsRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
@@ -51,6 +52,7 @@ export function VehicleGallery({
   const [warmedSlides, setWarmedSlides] = useState<number[]>(() =>
     [0, 1, 2].filter((idx) => idx < photos.length),
   );
+  const [neighborsReady, setNeighborsReady] = useState(false);
   const [decodedUrls, setDecodedUrls] = useState<ReadonlySet<string>>(() => new Set());
   const [lastDecodedSrc, setLastDecodedSrc] = useState<string | null>(null);
   const [failedUrls, setFailedUrls] = useState<ReadonlySet<string>>(() => new Set());
@@ -70,10 +72,17 @@ export function VehicleGallery({
     });
   }, [active, total]);
 
-  const markDecoded = useCallback((url: string) => {
+  const markDecoded = useCallback((url: string, index?: number) => {
     setLastDecodedSrc(url);
     setDecodedUrls((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
+    if (index === 0) setNeighborsReady(true);
   }, []);
+
+  useEffect(() => {
+    if (neighborsReady || total < 2) return;
+    const timer = window.setTimeout(() => setNeighborsReady(true), 1200);
+    return () => window.clearTimeout(timer);
+  }, [neighborsReady, total]);
 
   const markFailed = useCallback((url: string) => {
     setFailedUrls((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
@@ -104,11 +113,12 @@ export function VehicleGallery({
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller || total < 2) return;
+    scrollerWidthRef.current = scroller.clientWidth;
 
     function onScroll() {
       const el = scrollerRef.current;
       if (!el) return;
-      const width = el.clientWidth;
+      const width = scrollerWidthRef.current || el.clientWidth;
       if (width <= 0) return;
       const pending = targetScrollIndexRef.current;
       if (pending) {
@@ -118,8 +128,11 @@ export function VehicleGallery({
           return;
         }
       }
-      const index = Math.round(el.scrollLeft / width);
-      setActive(Math.min(Math.max(index, 0), total - 1));
+      const next = Math.min(Math.max(Math.round(el.scrollLeft / width), 0), total - 1);
+      if (next !== activeRef.current) {
+        activeRef.current = next;
+        setActive(next);
+      }
     }
 
     scroller.addEventListener("scroll", onScroll, { passive: true });
@@ -130,10 +143,12 @@ export function VehicleGallery({
     const scroller = scrollerRef.current;
     if (!scroller || total < 2) return;
     let lastWidth = scroller.clientWidth;
+    scrollerWidthRef.current = lastWidth;
     const realign = () => {
       const el = scrollerRef.current;
       if (!el) return;
       const width = el.clientWidth;
+      scrollerWidthRef.current = width;
       if (width <= 0 || width === lastWidth) return;
       lastWidth = width;
       el.scrollTo({
@@ -225,7 +240,10 @@ export function VehicleGallery({
               shouldLoadGallerySlide(index, active) ||
               (active === 0 && index === 2) ||
               warmedSlides.includes(index);
-            const slideSrc = index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo);
+            const isFirstSlide = index === 0;
+            const shouldLoadFullSlide =
+              isFirstSlide || index === active || neighborsReady || active > 0;
+            const slideSrc = isFirstSlide ? galleryLcpSrc(photo) : galleryPreviewSrc(photo);
             const slideSrcSet = galleryPreviewSrcSet(photo);
             const isReady = decodedUrls.has(slideSrc);
             const isFailed = failedUrls.has(slideSrc);
@@ -270,17 +288,22 @@ export function VehicleGallery({
                           className="scale-125 object-cover blur-2xl"
                         />
                       ) : null}
-                      <VehicleImage
-                        src={slideSrc}
-                        alt=""
-                        fill
-                        sizes={GALLERY_HERO_SIZES}
-                        srcSet={slideSrcSet}
-                        eager
-                        className={`scale-125 object-cover blur-2xl transition-opacity duration-150 ${
-                          index === 0 || isReady ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
+                      {shouldLoadFullSlide ? (
+                        <VehicleImage
+                          src={slideSrc}
+                          alt=""
+                          fill
+                          sizes={GALLERY_HERO_SIZES}
+                          srcSet={slideSrcSet}
+                          priority={isFirstSlide}
+                          skipPreload={isFirstSlide}
+                          eager
+                          decoding={isFirstSlide ? "sync" : "async"}
+                          className={`scale-125 object-cover blur-2xl transition-opacity duration-150 ${
+                            isFirstSlide || isReady ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                      ) : null}
                     </div>
                     {showPreview ? (
                       <div
@@ -299,28 +322,30 @@ export function VehicleGallery({
                         />
                       </div>
                     ) : null}
-                    <div
-                      className={`absolute inset-0 transition-opacity duration-150 ${
-                        index === 0 || isReady || isFailed ? "opacity-100" : "opacity-0"
-                      }`}
-                    >
-                      <VehicleImage
-                        src={slideSrc}
-                        alt={vehiclePhotoAlt(alt, index, total)}
-                        fill
-                        sizes={GALLERY_HERO_SIZES}
-                        srcSet={slideSrcSet}
-                        recoverable
-                        priority={index === 0}
-                        eager
-                        decoding={index === 0 ? "sync" : "async"}
-                        onReady={() => markDecoded(slideSrc)}
-                        onErrorState={() => markFailed(slideSrc)}
-                        // Foto inteira no visor: cover cortava teto e chão de fotos
-                        // fora do 4:3 (Uno 2013); a sobra é preenchida pelo fundo desfocado.
-                        className="object-contain [-webkit-touch-callout:none]"
-                      />
-                    </div>
+                    {shouldLoadFullSlide ? (
+                      <div
+                        className={`absolute inset-0 transition-opacity duration-150 ${
+                          isFirstSlide || isReady || isFailed ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        <VehicleImage
+                          src={slideSrc}
+                          alt={vehiclePhotoAlt(alt, index, total)}
+                          fill
+                          sizes={GALLERY_HERO_SIZES}
+                          srcSet={slideSrcSet}
+                          recoverable
+                          priority={index === 0}
+                          eager
+                          decoding={index === 0 ? "sync" : "async"}
+                          onReady={() => markDecoded(slideSrc, index)}
+                          onErrorState={() => markFailed(slideSrc)}
+                          // Foto inteira no visor: cover cortava teto e chão de fotos
+                          // fora do 4:3 (Uno 2013); a sobra é preenchida pelo fundo desfocado.
+                          className="object-contain [-webkit-touch-callout:none]"
+                        />
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <div

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
+import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
 import { VehicleFeatures } from "@/components/site/VehicleFeatures";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleDescription, visibleDescriptionSegments } from "@/components/site/VehicleDescription";
@@ -334,7 +335,15 @@ export function VehicleMobileBlocks({
           section={hasAbout ? undefined : "detalhes"}
         >
           <div id="opcionais" className="scroll-mt-24">
-            <VehicleFeatures items={accessories} />
+            {accessories.length > 10 ? (
+              <VehicleFeatures
+                total={accessories.length}
+                preview={<VehicleAccessoryChips items={accessories.slice(0, 8)} />}
+                full={<VehicleAccessoryChips items={accessories} />}
+              />
+            ) : (
+              <VehicleAccessoryChips items={accessories} />
+            )}
           </div>
         </DossierBlock>
       ) : null}

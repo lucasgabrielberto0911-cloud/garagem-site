@@ -13,6 +13,7 @@ export function VehicleImage({
   sizes,
   className = "",
   priority = false,
+  skipPreload = false,
   eager = false,
   decoding,
   srcSet,
@@ -41,6 +42,8 @@ export function VehicleImage({
   unoptimized?: boolean;
   /** Primeira foto visível: preload, alta prioridade e decodificação imediata. */
   priority?: boolean;
+  /** Reutiliza a mesma URL prioritária (ex.: fundo desfocado do slide 0) sem duplicar `<link rel="preload">`. */
+  skipPreload?: boolean;
   /** Foto da primeira dobra que não é o LCP: baixa cedo, sem disputar a capa. */
   eager?: boolean;
   decoding?: "sync" | "async" | "auto";
@@ -57,7 +60,7 @@ export function VehicleImage({
   // Só a capa do LCP entra no preload e na prioridade alta. A segunda
   // foto da primeira dobra ainda baixa cedo, mas com prioridade baixa,
   // para não dividir a rede lenta com a capa.
-  if (priority) {
+  if (priority && !skipPreload) {
     const options = { as: "image" as const, fetchPriority: "high" as const,
       imageSizes: finalSet || mobileSet ? sizes : undefined };
     if (mobileSet) {

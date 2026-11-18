@@ -13,8 +13,8 @@ const SIZE: Record<
 > = {
   header: {
     img: "h-9 w-auto max-w-[min(46vw,160px)] object-contain object-left sm:max-w-[168px] lg:h-10 lg:max-w-[168px] xl:max-w-[196px]",
-    width: 280,
-    height: 50,
+    width: 887,
+    height: 160,
     sizes: "(min-width: 1280px) 196px, (min-width: 640px) 168px, min(46vw, 160px)",
   },
   hero: {
@@ -25,14 +25,14 @@ const SIZE: Record<
   },
   footer: {
     img: "h-11 w-auto sm:h-12",
-    width: 320,
-    height: 58,
+    width: 887,
+    height: 160,
     sizes: "(min-width: 640px) 267px, 244px",
   },
   splash: {
     img: "brand-splash-logo",
-    width: 480,
-    height: 86,
+    width: 887,
+    height: 160,
     sizes: "min(72vw, 280px)",
   },
 };

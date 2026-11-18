@@ -102,7 +102,7 @@ export function VehicleMobileBar({
           <div className="flex items-center gap-2">
           <p
             data-mobile-bar-price=""
-            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/15 bg-asphalt px-2.5 font-display text-base font-bold tracking-tight text-brand-light min-[380px]:px-3 min-[380px]:text-lg"
+            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/15 bg-asphalt px-2.5 font-display text-base font-bold tabular-nums tracking-tight text-brand-light min-[380px]:px-3 min-[380px]:text-lg"
           >
             {formatCurrencyBRL(price)}
           </p>

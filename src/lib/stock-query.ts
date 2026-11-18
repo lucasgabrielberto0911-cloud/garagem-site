@@ -1,4 +1,5 @@
 import { COVER_HD_WIDTH, hdCardCompanion, isCardVariantPath, isFramedCardUrl } from "@/lib/cover-frame";
+import { galleryPreviewObjectPath } from "@/lib/gallery-preview-path";
 import { publicPhotoOriginal } from "@/lib/public-photo-url";
 import {
   filterAccessoriesForCategory,
@@ -146,6 +147,9 @@ export function supabaseCardSrc(
 export function supabaseOriginalSrc(url: string) {
   const ownOriginal = publicPhotoOriginal(url);
   if (ownOriginal) return ownOriginal;
+  if (/-g800-preview\.webp(?:[?#]|$)/i.test(url)) {
+    return url.replace(/-g800-preview\.webp([?#].*)?$/i, "-g800.webp$1");
+  }
   if (!url.includes(SUPABASE_RENDER_PUBLIC)) return url;
   return url.split("?")[0].replace(SUPABASE_RENDER_PUBLIC, SUPABASE_OBJECT_PUBLIC);
 }
@@ -231,13 +235,23 @@ export function galleryPreviewSrc(photo: GalleryPhoto) {
   return supabaseTransformSrc(url, HERO_CAP_WIDTH, undefined, "contain", HERO_CAP_QUALITY);
 }
 
+function directGalleryPreviewSrc(url: string): string | null {
+  if (!url || canTransform(url) || isCardDerivative(url)) return null;
+  if (url.includes("?") || url.includes("#")) return null;
+  const preview = galleryPreviewObjectPath(url);
+  return preview && preview !== url ? preview : null;
+}
+
 /**
  * `src` da ficha. O srcset ainda oferece o arquivo de 1280 em telas grandes;
  * se o navegador ignorar o srcset, o padrão é o WebP de 800, não o original.
  */
 export function galleryLcpSrc(photo: GalleryPhoto) {
   const url = photo.url;
-  if (!url || !canTransform(url) || isCardDerivative(url)) return galleryPreviewSrc(photo);
+  if (!url || isCardDerivative(url)) return galleryPreviewSrc(photo);
+  const directPreview = directGalleryPreviewSrc(url);
+  if (directPreview) return directPreview;
+  if (!canTransform(url)) return galleryPreviewSrc(photo);
   return supabaseTransformSrc(url, HERO_NARROW_WIDTH, undefined, "contain", HERO_NARROW_QUALITY);
 }
 
@@ -248,7 +262,12 @@ export function galleryLcpSrc(photo: GalleryPhoto) {
  */
 export function galleryPreviewSrcSet(photo: GalleryPhoto) {
   const url = photo.url;
-  if (!url || !canTransform(url) || isCardDerivative(url)) return undefined;
+  if (!url || isCardDerivative(url)) return undefined;
+  const directPreview = directGalleryPreviewSrc(url);
+  if (directPreview) {
+    return `${directPreview} ${HERO_NARROW_WIDTH}w, ${url} ${GALLERY_FILE_WIDTH}w`;
+  }
+  if (!canTransform(url)) return undefined;
   const narrow = supabaseTransformSrc(
     url,
     HERO_NARROW_WIDTH,

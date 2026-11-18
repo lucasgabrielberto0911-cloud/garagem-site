@@ -1,8 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { GoogleAnalytics } from "@/components/GoogleAnalytics";
-import { MetaPixel } from "@/components/MetaPixel";
 import {
   CONSENT_EVENT,
   hasMarketingConsent,
@@ -11,6 +10,16 @@ import {
   shouldLoadMetaPixel,
   type ConsentChoice,
 } from "@/lib/consent";
+
+const GoogleAnalytics = dynamic(
+  () => import("@/components/GoogleAnalytics").then((mod) => mod.GoogleAnalytics),
+  { ssr: false },
+);
+
+const MetaPixel = dynamic(
+  () => import("@/components/MetaPixel").then((mod) => mod.MetaPixel),
+  { ssr: false },
+);
 
 /**
  * GA só com aceite. O Pixel sobe no aceite e no clique de anúncio (fbclid /

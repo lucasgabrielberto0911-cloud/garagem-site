@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { rememberFavoriteSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { notifyError, notifySuccess } from "@/lib/notify";
-import { useFavorites } from "@/lib/favorites";
+import { useFavoritesState } from "@/lib/favorites";
 import { trackAddToWishlist, trackPwaEvent } from "@/lib/meta-pixel";
-import {
-  enqueueIntent,
-  writeFavoriteSnapshot,
-  type FavoriteSnapshot,
-} from "@/lib/offline-queue";
+import type { FavoriteSnapshot } from "@/lib/offline-queue";
 
 export function FavoriteButton({
   vehicleId,
@@ -40,13 +35,15 @@ export function FavoriteButton({
   showLabel?: boolean;
   className?: string;
 }) {
-  const { has, toggle, ready } = useFavorites();
+  const { has, toggle } = useFavoritesState();
   const [pulse, setPulse] = useState(false);
-  const active = ready && has(vehicleId);
+  const active = has(vehicleId);
 
   useEffect(() => {
     if (active && snapshot) {
-      rememberFavoriteSnapshot(snapshot, true);
+      void import("@/components/site/RememberVehicleSnapshot").then(({ rememberFavoriteSnapshot }) => {
+        rememberFavoriteSnapshot(snapshot, true);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, vehicleId]);
@@ -54,12 +51,17 @@ export function FavoriteButton({
   function applyToggle() {
     try {
       const added = toggle(vehicleId);
-      if (added && snapshot) {
-        writeFavoriteSnapshot(snapshot);
-      }
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
-        void enqueueIntent({ type: "favorite", vehicleId, added });
-        trackPwaEvent("PwaOfflineQueued", { kind: "favorite" });
+      const offline = typeof navigator !== "undefined" && !navigator.onLine;
+      if ((added && snapshot) || offline) {
+        void import("@/lib/offline-queue").then(({ enqueueIntent, writeFavoriteSnapshot }) => {
+          if (added && snapshot) {
+            writeFavoriteSnapshot(snapshot);
+          }
+          if (offline) {
+            void enqueueIntent({ type: "favorite", vehicleId, added });
+            trackPwaEvent("PwaOfflineQueued", { kind: "favorite" });
+          }
+        });
       }
       if (added) {
         trackAddToWishlist({

@@ -64,6 +64,13 @@ export function withWhatsAppOrigin(text: string, origin?: LeadOrigin | null) {
   return lines.join("\n");
 }
 export function applyWhatsAppOrigin(href: string, origin?: LeadOrigin | null) {
+  const sentence = origin ? ORIGIN_SENTENCE[origin] : undefined;
+  if (
+    !sentence &&
+    !/Vim(?:%20|\+)pel|Vim(?:%20|\+)por|acessei(?:%20|\+)o(?:%20|\+)site/i.test(href)
+  ) {
+    return href;
+  }
   try {
     const url = new URL(href);
     if (url.hostname !== "wa.me") return href;

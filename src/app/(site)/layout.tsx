@@ -6,7 +6,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { OfflineLeadFlush } from "@/components/site/OfflineLeadFlush";
+import { DeferredOfflineLeadFlush } from "@/components/site/DeferredOfflineLeadFlush";
 import { DeferredSiteChat } from "@/components/site/DeferredSiteChat";
 import { FavoritesProvider } from "@/lib/favorites";
 import { localBusinessJsonLd } from "@/lib/seo";
@@ -47,7 +47,7 @@ export default function SiteLayout({
         <div className="pb-site-nav lg:hidden" aria-hidden="true" />
         <MobileBottomNav />
         <DeferredSiteChat />
-        <OfflineLeadFlush />
+        <DeferredOfflineLeadFlush />
       </div>
     </FavoritesProvider>
   );
