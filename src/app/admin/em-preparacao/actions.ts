@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { getSession } from "@/lib/auth";
 import { parsePreparationForm, type PreparationFormErrors } from "@/lib/preparation";
 import { prisma } from "@/lib/prisma";
@@ -57,6 +58,7 @@ export async function savePreparationAction(
   }
 
   revalidatePath("/admin/em-preparacao");
+  expireAdminData();
   return {
     ok: true,
     message: id ? "Carro atualizado com sucesso." : "Carro cadastrado com sucesso.",
@@ -70,6 +72,7 @@ export async function deletePreparationAction(form: FormData) {
     await prisma.preparationVehicle.deleteMany({ where: { id } });
   }
   revalidatePath("/admin/em-preparacao");
+  expireAdminData();
   return back("Carro excluído.");
 }
 
