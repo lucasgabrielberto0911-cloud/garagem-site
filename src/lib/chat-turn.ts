@@ -28,6 +28,7 @@ import {
   isPowerQuery,
   isChatSelectionQuery,
   parseBodyStyleFilter,
+  parseFamilyIntent,
   vehicleBodyStyle,
   rankChatVehicles,
   parsePriceLimit,
@@ -566,6 +567,12 @@ async function runChatTurnInternal(input: {
       return result;
     }
   }
+  const earlyCityPolicy = mayCreateLead ? null : (directPolicy ?? chatPolicyShortcut(scopedMessage));
+  if (earlyCityPolicy === "city") {
+    const reply = chatCityReply(visitorMessage);
+    emit(reply);
+    return finish(reply, false, { policy: "city", cards: false });
+  }
   const soldVehicle = !tradeTurn
     ? matchChatSoldVehicle(visitorMessage, input.stock, input.soldStock ?? [], input.vehicleId)
     : undefined;
@@ -937,9 +944,11 @@ async function runChatTurnInternal(input: {
   }
 
   const moreVehicles = asksForMoreChatVehicles(visitorMessage);
+  const familySearchWithoutSubject =
+    !activeVehicle && parseFamilyIntent(scopedMessage) && !isAnaphoricVehicleFollowUp(visitorMessage);
   const salesSearch = !skipShortcuts && !mayCreateLead && !humanAction && !namedComparison &&
     explicitModelUnits.length === 0 && !asksAboutEquipment(visitorMessage) &&
-    (moreVehicles || isChatSelectionQuery(scopedMessage) || hasChatStockFilter(scopedMessage))
+    (moreVehicles || isChatSelectionQuery(scopedMessage) || hasChatStockFilter(scopedMessage) || familySearchWithoutSubject)
     ? planChatSalesSearch(visitorMessage, scopedMessage, input.stock, shownIds)
     : null;
   if (salesSearch) {
@@ -1039,6 +1048,7 @@ async function runChatTurnInternal(input: {
       !asksToCompareModels(visitorMessage)) ||
     multipleCriteria ||
     isChatSelectionQuery(scopedMessage) ||
+    familySearchWithoutSubject ||
     roadUse ||
     // "tem Hyundai?": marca do estoque sem modelo vira busca da marca.
     (!mentionedPool && Boolean(mentionedStockBrand(scopedMessage, input.stock)) && !asksAboutEquipment(visitorMessage)) ||
