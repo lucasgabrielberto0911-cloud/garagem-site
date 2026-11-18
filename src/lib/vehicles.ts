@@ -23,7 +23,11 @@ import {
   colorWhere,
   transmissionWhere,
 } from "@/lib/vehicle-display";
-import { MAX_HOME_FEATURED, sortShowcaseVehicles } from "@/lib/featured";
+import {
+  MAX_HOME_FEATURED,
+  hasShowcaseCoverPhoto,
+  sortShowcaseVehicles,
+} from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
 import { mapCatalogBodyStyle } from "@/lib/catalog-feed";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
@@ -303,23 +307,38 @@ export async function fetchFeaturedVehicles(
     Math.max(take * 2, 16),
     find,
   );
-  const highlighted = sortShowcaseVehicles(highlightedPool).slice(0, take);
-  if (highlighted.length >= take) {
-    return highlighted;
+  const sortedHighlighted = sortShowcaseVehicles(highlightedPool);
+  const highlightedWithCover = sortedHighlighted.filter(hasShowcaseCoverPhoto);
+  if (highlightedWithCover.length >= take) {
+    return highlightedWithCover.slice(0, take);
   }
 
-  const missing = take - highlighted.length;
+  const missingWithCover = take - highlightedWithCover.length;
   const fillerPool = await findOwnShowcaseCards(
     false,
-    Math.max(missing * 4, 32),
+    Math.max(missingWithCover * 4, 32),
     find,
   );
-  const seenIds = new Set(highlighted.map((vehicle) => vehicle.id));
-  const fillers = sortShowcaseVehicles(
+  const seenIds = new Set(sortedHighlighted.map((vehicle) => vehicle.id));
+  const sortedFillers = sortShowcaseVehicles(
     fillerPool.filter((vehicle) => !seenIds.has(vehicle.id)),
-  ).slice(0, missing);
+  );
+  const fillersWithCover = sortedFillers.filter(hasShowcaseCoverPhoto);
+  const highlightedWithoutCover = sortedHighlighted.filter(
+    (vehicle) => !hasShowcaseCoverPhoto(vehicle),
+  );
+  const fillersWithoutCover = sortedFillers.filter(
+    (vehicle) => !hasShowcaseCoverPhoto(vehicle),
+  );
 
-  return sortShowcaseVehicles([...highlighted, ...fillers]).slice(0, take);
+  const selected = [
+    ...highlightedWithCover,
+    ...fillersWithCover,
+    ...highlightedWithoutCover,
+    ...fillersWithoutCover,
+  ].slice(0, take);
+
+  return sortShowcaseVehicles(selected);
 }
 
 const loadFeaturedCached = unstable_cache(

@@ -331,6 +331,59 @@ test("vitrine faz apenas 1 consulta quando já existem 8 destaques próprios dis
   assert.equal(result[7]?.yearModel, 2019);
 });
 
+test("vitrine evita card sem foto de capa quando há estoque próprio com foto disponível", async () => {
+  const rows: StoredVehicleRow[] = [
+    ...Array.from({ length: 7 }, (_, index) =>
+      makeCard({
+        id: `destaque-com-foto-${2019 + index}`,
+        yearModel: 2019 + index,
+        featured: true,
+        consigned: false,
+      }),
+    ),
+    makeCard({
+      id: "destaque-sem-foto-2026",
+      yearModel: 2026,
+      km: 2000,
+      featured: true,
+      consigned: false,
+      photos: [],
+    }),
+    makeCard({
+      id: "complemento-com-foto-2024",
+      yearModel: 2024,
+      km: 12000,
+      featured: false,
+      consigned: false,
+    }),
+  ];
+
+  const { find, queries } = makeInMemoryFinder(rows);
+  const result = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find);
+
+  assert.equal(queries.length, 2);
+  assert.equal(result.length, 8);
+  assert.ok(!result.some((vehicle) => vehicle.id === "destaque-sem-foto-2026"));
+  assert.ok(result.some((vehicle) => vehicle.id === "complemento-com-foto-2024"));
+
+  // Quando o estoque inteiro tem menos de `take` com foto, o sem foto entra no fim sem esvaziar
+  const smallStock = [
+    makeCard({ id: "unico-com-foto-2023", yearModel: 2023, featured: false }),
+    makeCard({ id: "unico-sem-foto-2025", yearModel: 2025, featured: true, photos: [] }),
+  ];
+  const { find: findSmall } = makeInMemoryFinder(smallStock);
+  const fallback = await fetchFeaturedVehicles(MAX_HOME_FEATURED, findSmall);
+  assert.deepEqual(
+    fallback.map((vehicle) => vehicle.id),
+    ["unico-com-foto-2023", "unico-sem-foto-2025"],
+  );
+
+  // take <= 0 não faz consulta
+  const { find: findZero, queries: zeroQueries } = makeInMemoryFinder(rows);
+  assert.deepEqual(await fetchFeaturedVehicles(0, findZero), []);
+  assert.equal(zeroQueries.length, 0);
+});
+
 test("vitrine tolera coluna ausente P2022 sem esconder erro real e mantém consignado no /estoque", async () => {
   const missing = (column: string) =>
     Object.assign(new Error("P2022"), { code: "P2022", meta: { column } });

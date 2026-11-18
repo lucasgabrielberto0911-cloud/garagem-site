@@ -1,4 +1,4 @@
-/** Teto da home: o painel marca os destaques; o site não inventa vitrine. */
+/** Teto da vitrine (Home e /seminovos): até 8 veículos do estoque próprio. */
 export const MAX_HOME_FEATURED = 8;
 
 export function featuredSlotState(
