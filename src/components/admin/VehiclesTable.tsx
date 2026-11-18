@@ -709,10 +709,10 @@ export function VehiclesTable({
         toast.error(result.message);
         return false;
       }
-      if (result.price != null) {
+      if (typeof result.price === "number") {
         setItems((current) =>
           current.map((item) =>
-            item.id === vehicle.id ? { ...item, price: result.price as number } : item,
+            item.id === vehicle.id ? { ...item, price: result.price } : item,
           ),
         );
       }
@@ -1650,20 +1650,22 @@ function VehicleAdminCard({
                   {finance.label} {formatCurrencyBRL(finance.value)}
                 </span>
               ) : null}
-              {canEditPrice && !editingPrice ? (
-                <button
-                  type="button"
-                  onClick={openPriceEditor}
-                  disabled={busy}
-                  className="mt-1 inline-flex min-h-[44px] items-center px-2 text-base font-medium text-cream underline underline-offset-4 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-                >
-                  Alterar preço
-                </button>
-              ) : null}
             </span>
           </span>
         </Link>
       </div>
+      {canEditPrice && !editingPrice ? (
+        <div className="px-3 pb-3">
+          <button
+            type="button"
+            onClick={openPriceEditor}
+            disabled={busy}
+            className="inline-flex min-h-[44px] items-center px-2 text-base font-medium text-cream underline underline-offset-4 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+          >
+            Alterar preço
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-1 border-t border-white/15 px-1.5 py-1">
         <Link
@@ -1696,6 +1698,17 @@ function VehicleAdminCard({
             </button>
           </>
         ) : null}
+        <button
+          type="button"
+          onClick={onMore}
+          disabled={busy || savingPrice}
+          aria-label={`Mais ações: ${title}`}
+          aria-haspopup="dialog"
+          className="ml-auto inline-flex h-11 w-11 items-center justify-center text-cream/80 transition touch-manipulation outline-none hover:bg-white/5 hover:text-cream focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+        >
+          <IconMore className="h-5 w-5" />
+        </button>
+      </div>
       {canEditPrice && editingPrice ? (
         <form
           onSubmit={(event) => void submitPrice(event)}
@@ -1750,17 +1763,6 @@ function VehicleAdminCard({
           </div>
         </form>
       ) : null}
-        <button
-          type="button"
-          onClick={onMore}
-          disabled={busy || savingPrice}
-          aria-label={`Mais ações: ${title}`}
-          aria-haspopup="dialog"
-          className="ml-auto inline-flex h-11 w-11 items-center justify-center text-cream/80 transition touch-manipulation outline-none hover:bg-white/5 hover:text-cream focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-        >
-          <IconMore className="h-5 w-5" />
-        </button>
-      </div>
     </li>
   );
 }

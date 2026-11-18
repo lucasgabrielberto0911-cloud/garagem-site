@@ -36,6 +36,7 @@ import {
   validateVehicleListing,
 } from "@/lib/admin-vehicle-validate";
 import { parseMoneyBR } from "@/lib/admin-money";
+import { QUICK_PRICE_MAX, QUICK_PRICE_MIN } from "@/lib/admin-quick-price";
 import {
   parseVehicleLocationCity,
 } from "@/lib/vehicle-location";
@@ -823,7 +824,7 @@ export async function setVehiclePrice(id: string, priceRaw: string) {
   const session = await requireAdmin();
 
   const price = parseMoneyBR(priceRaw);
-  if (price == null || price < 1 || price > 9_999_999) {
+  if (price == null || price < QUICK_PRICE_MIN || price > QUICK_PRICE_MAX) {
     return { ok: false as const, message: "Digite o preço à vista, só números. Exemplo: 45.900,00." };
   }
 
@@ -847,14 +848,36 @@ export async function setVehiclePrice(id: string, priceRaw: string) {
     return { ok: true as const, message: "Preço continua o mesmo.", price };
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
-    await tx.vehicle.update({ where: { id }, data: { price } });
-    await recordAdminAudit(tx, session.adminId, id, "vehicle.price", {
-      price: { before: current.price, after: price },
+  let beforePrice = current.price;
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+      const locked = await tx.vehicle.findUnique({
+        where: { id },
+        select: { price: true, status: true },
+      });
+      if (!locked) throw new Error("PRICE_VEHICLE_NOT_FOUND");
+      if (locked.status === "vendido") throw new Error("PRICE_VEHICLE_SOLD");
+      beforePrice = locked.price;
+      if (locked.price === price) return;
+      await tx.vehicle.update({ where: { id }, data: { price } });
+      await recordAdminAudit(tx, session.adminId, id, "vehicle.price", {
+        price: { before: locked.price, after: price },
+      });
     });
-  });
-  await recordVehiclePriceChange(id, current.price, price);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "PRICE_VEHICLE_SOLD") {
+      return { ok: false as const, message: "Veículo vendido não muda de preço." };
+    }
+    if (error instanceof Error && error.message === "PRICE_VEHICLE_NOT_FOUND") {
+      return { ok: false as const, message: "Veículo não encontrado." };
+    }
+    throw error;
+  }
+  if (beforePrice === price) {
+    return { ok: true as const, message: "Preço continua o mesmo.", price };
+  }
+  await recordVehiclePriceChange(id, beforePrice, price);
 
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
