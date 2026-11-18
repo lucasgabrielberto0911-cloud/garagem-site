@@ -205,6 +205,8 @@ export function VehicleMobileBlocks({
   fullLabel,
   path,
   sold,
+  catalog = false,
+  status,
   price,
   yearModel,
   make,
@@ -226,6 +228,9 @@ export function VehicleMobileBlocks({
   fullLabel: string;
   path: string;
   sold: boolean;
+  /** `true` só para disponível do estoque próprio (Meta). */
+  catalog?: boolean;
+  status?: string;
   price: number;
   yearModel: number;
   make: string;
@@ -323,6 +328,9 @@ export function VehicleMobileBlocks({
               bodyStyle={quickActions.bodyStyle}
               fuelType={quickActions.fuelType}
               postalCode={quickActions.postalCode}
+              catalog={catalog}
+              status={status}
+              sold={sold}
               video={quickActions.video}
               finance={quickActions.finance}
               trade={quickActions.trade}
@@ -430,6 +438,7 @@ export function VehicleMobileBlocks({
             make={make}
             model={model}
             year={yearModel}
+            catalog={catalog}
             variant="full"
             className="mt-4 w-full"
           />

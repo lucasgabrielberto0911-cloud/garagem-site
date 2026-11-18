@@ -88,12 +88,18 @@ import {
   whatsappUrl,
 } from "@/lib/site";
 import {
+  chatVehicleCatalogFlag,
   getChatVehicleContext,
   subscribeChatVehicleContext,
   type ChatVehicleContext,
 } from "@/lib/chat-vehicle-context";
 import { handleFocusTrap } from "@/lib/focus-trap";
-import { VehicleLeadHit } from "@/lib/funnel-events";
+import {
+  VehicleLeadHit,
+  trackVehiclesWhatsAppLead,
+  type CatalogVehicleCandidate,
+} from "@/lib/funnel-events";
+import type { ChatWhatsAppVehicle } from "@/lib/chat-text";
 
 
 const ASSISTANT_NAME = "Garagem";
@@ -208,8 +214,10 @@ function ChatLogo() {
   );
 }
 
-function chatFunnelRef() {
-  const vehicle = getChatVehicleContext();
+function chatFunnelRef(
+  override?: ChatWhatsAppVehicle | ChatVehicleContext | null,
+) {
+  const vehicle = override !== undefined ? override : getChatVehicleContext();
   if (!vehicle?.id) return undefined;
   return {
     vehicleId: vehicle.id,
@@ -222,25 +230,44 @@ function chatFunnelRef() {
 
 function ChatVehicleLeadWrapper({
   vehicle,
+  vehicles,
   children,
 }: {
-  vehicle: ChatVehicleContext | null;
+  vehicle?: ChatWhatsAppVehicle | ChatVehicleContext | null;
+  vehicles?: readonly CatalogVehicleCandidate[];
   children: ReactNode;
 }) {
-  if (!vehicle || vehicle.sold) return <>{children}</>;
-  return (
-    <VehicleLeadHit
-      contentId={vehicle.id}
-      contentName={vehicle.label}
-      slug={whatsappContentFromVehicle({ id: vehicle.id, path: vehicle.path })}
-      value={vehicle.price}
-      make={vehicle.brand}
-      model={vehicle.model}
-      year={vehicle.year}
-    >
-      {children}
-    </VehicleLeadHit>
-  );
+  if (vehicle?.id && !vehicle.sold) {
+    const catalog = "catalog" in vehicle ? vehicle.catalog : undefined;
+    return (
+      <VehicleLeadHit
+        contentId={vehicle.id}
+        contentName={vehicle.label}
+        slug={whatsappContentFromVehicle({ id: vehicle.id, path: vehicle.path })}
+        value={vehicle.price}
+        make={vehicle.brand}
+        model={vehicle.model}
+        year={vehicle.year}
+        catalog={catalog}
+      >
+        {children}
+      </VehicleLeadHit>
+    );
+  }
+  const available = vehicles?.filter((item) => Boolean(item.id) && !item.sold);
+  if (available && available.length > 0) {
+    return (
+      <span
+        className="contents"
+        onClickCapture={() => {
+          trackVehiclesWhatsAppLead(available, "Assistente");
+        }}
+      >
+        {children}
+      </span>
+    );
+  }
+  return <>{children}</>;
 }
 
 function ChatWhatsAppButton({
@@ -248,20 +275,25 @@ function ChatWhatsAppButton({
   label,
   benefit,
   trackingLabel = "chat",
+  vehicle: resolvedVehicle,
+  vehicles,
 }: {
   href: string;
   label: string;
   benefit: string;
   trackingLabel?: string;
+  vehicle?: ChatWhatsAppVehicle | ChatVehicleContext | null;
+  vehicles?: readonly CatalogVehicleCandidate[];
 }) {
-  const vehicle = getChatVehicleContext();
+  const vehicle =
+    resolvedVehicle !== undefined ? resolvedVehicle : getChatVehicleContext();
   return (
-    <ChatVehicleLeadWrapper vehicle={vehicle}>
+    <ChatVehicleLeadWrapper vehicle={vehicle} vehicles={vehicles}>
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => trackWhatsAppClick(trackingLabel, chatFunnelRef())}
+        onClick={() => trackWhatsAppClick(trackingLabel, chatFunnelRef(vehicle))}
         className="group flex min-h-14 w-full items-center gap-3 rounded-2xl bg-brand py-2.5 pl-2.5 pr-4 text-left text-white transition hover:bg-brand/90 active:bg-brand/80 touch-manipulation"
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/10">
@@ -345,7 +377,7 @@ function ChatVehicleMini({
           <span>{vehicle.year} · {vehicle.km.toLocaleString("pt-BR")} km ·</span>{" "}
           <span className="whitespace-nowrap font-display text-[13px] font-bold text-brand-light">{chatVehiclePrice(vehicle)}</span>
         </p>
-        <VehicleCardWhatsApp variant="chat-compact" vehicleId={vehicle.id} label={label} message={whatsappMessage} value={vehicle.sold ? 0 : vehicle.price} make={vehicle.brand} model={vehicle.model} year={vehicle.year} path={vehicle.href} showOnStockList trackingLabel="chat-card" campaign="chat" />
+        <VehicleCardWhatsApp variant="chat-compact" vehicleId={vehicle.id} catalog={!vehicle.sold && vehicle.catalog === true} label={label} message={whatsappMessage} value={vehicle.sold ? 0 : vehicle.price} make={vehicle.brand} model={vehicle.model} year={vehicle.year} path={vehicle.href} showOnStockList trackingLabel="chat-card" campaign="chat" />
       </div>
       <IconArrowRight className="pointer-events-none h-4 w-4 shrink-0 text-cream/40 max-[419px]:hidden" />
     </article>
@@ -434,6 +466,7 @@ function ChatText({
           path: vehicleContext.path,
           category: vehicleContext.category,
           sold: vehicleContext.sold,
+          catalog: chatVehicleCatalogFlag(vehicleContext),
         }
       : null,
     vehicles,
@@ -450,6 +483,7 @@ function ChatText({
           vehicles:
             vehicles.length > 0
               ? vehicles.map((vehicle) => ({
+                  id: vehicle.id,
                   brand: vehicle.brand,
                   model: vehicle.model,
                   version: vehicle.version,
@@ -459,6 +493,8 @@ function ChatText({
                   href: vehicle.href,
                   transmission: vehicle.transmission,
                   price: vehicle.sold ? null : vehicle.price,
+                  sold: vehicle.sold,
+                  catalog: vehicle.catalog,
                 }))
               : handoff?.vehicles,
           priceLimit: handoff?.priceLimit,
@@ -512,6 +548,8 @@ function ChatText({
           label={cta.label}
           benefit={cta.benefit}
           trackingLabel={cta.trackingLabel}
+          vehicle={cta.vehicle !== undefined ? cta.vehicle : ctaVehicle}
+          vehicles={cta.vehicles}
         />
       ) : null}
       {followups.length > 0 && onFollowup ? (
@@ -1154,6 +1192,18 @@ export function SiteChat() {
       (message) =>
         message.role === "assistant" && (message.vehicles?.length ?? 0) > 0,
     )?.vehicles;
+  const pageCatalogContext = vehicleContext
+    ? {
+        ...vehicleContext,
+        catalog: chatVehicleCatalogFlag(vehicleContext),
+      }
+    : null;
+  const headerLeadVehicle = resolveChatWhatsAppVehicle(
+    pageCatalogContext,
+    lastChatCards ?? [],
+  );
+  const headerLeadVehicles =
+    !headerLeadVehicle && !vehicleContext?.sold ? lastChatCards : undefined;
   const headerWhatsAppHref = whatsappUrl(
     chatHeaderWhatsAppMessage({
       cards: lastChatCards,
@@ -1229,12 +1279,12 @@ export function SiteChat() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-                <ChatVehicleLeadWrapper vehicle={vehicleContext}>
+                <ChatVehicleLeadWrapper vehicle={headerLeadVehicle} vehicles={headerLeadVehicles}>
                   <a
                     href={headerWhatsAppHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
+                    onClick={() => trackWhatsAppClick("chat", chatFunnelRef(headerLeadVehicle))}
                     className="relative flex h-10 w-10 items-center justify-center rounded-full before:absolute before:-inset-0.5 before:content-[''] bg-[#25D366]/[0.12] text-[#25D366] ring-1 ring-inset ring-[#25D366]/25 transition hover:bg-[#25D366]/20 active:bg-[#25D366]/25 touch-manipulation"
                     aria-label="Falar com um vendedor no WhatsApp"
                   >
@@ -1439,8 +1489,8 @@ export function SiteChat() {
           {visitOpen ? <ChatVisitPanel initialVehicle={vehicleContext && !vehicleContext.sold ? [vehicleContext.label, vehicleContext.year].filter(Boolean).join(" ") : lastChatCards?.[0]?.title} funnel={vehicleContext && !vehicleContext.sold ? chatFunnelRef() : undefined} onClose={() => setVisitOpen(false)} /> : null}
           <div role="toolbar" aria-label="Ações rápidas" data-chat-quick-actions="" className="flex shrink-0 gap-2 overflow-x-auto px-3 pb-1.5 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button type="button" aria-pressed={visitOpen} aria-expanded={visitOpen} aria-controls="chat-visit-panel" onClick={() => setVisitOpen(!visitOpen)} className={`${QUICK_ACTION_CLASS} ${visitOpen ? "border-brand/60 bg-brand/15 text-cream" : ""}`}>Marcar visita</button>
-            <ChatVehicleLeadWrapper vehicle={vehicleContext}>
-              <a href={headerWhatsAppHref} target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClick("chat", chatFunnelRef())} className={QUICK_ACTION_CLASS}><IconWhatsApp className="h-4 w-4 text-[#25D366]" />Falar no WhatsApp</a>
+            <ChatVehicleLeadWrapper vehicle={headerLeadVehicle} vehicles={headerLeadVehicles}>
+              <a href={headerWhatsAppHref} target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClick("chat", chatFunnelRef(headerLeadVehicle))} className={QUICK_ACTION_CLASS}><IconWhatsApp className="h-4 w-4 text-[#25D366]" />Falar no WhatsApp</a>
             </ChatVehicleLeadWrapper>
             <Link href="/estoque" prefetch={false} onClick={() => trackChatEvent("ChatStockExplore", { source: sourceRef.current, intent: lastIntentRef.current, message_count: messageCountRef.current })} className={QUICK_ACTION_CLASS}>Ver estoque<IconArrowRight className="h-4 w-4" /></Link>
             {vehicleContext && started ? activeSuggestions.slice(0, 2).map(suggestion => <button key={suggestion} type="button" disabled={pending} onClick={() => void send(resolveSuggestionPrompt(suggestion, vehicleContext), "suggestion")} className={QUICK_ACTION_CLASS}>{suggestion}</button>) : null}
@@ -1469,12 +1519,12 @@ export function SiteChat() {
                 >
                   Rever mensagem
                 </button>
-                <ChatVehicleLeadWrapper vehicle={vehicleContext}>
+                <ChatVehicleLeadWrapper vehicle={headerLeadVehicle} vehicles={headerLeadVehicles}>
                   <a
                     href={headerWhatsAppHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
+                    onClick={() => trackWhatsAppClick("chat", chatFunnelRef(headerLeadVehicle))}
                     className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-[#25D366]"
                   >
                     <IconWhatsApp className="h-4 w-4" />

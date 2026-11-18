@@ -19,7 +19,7 @@ test("FavoritesList exibe CTA de WhatsApp no topo e no final da lista com trackL
   assert.ok(firstCta > 0, "CTA de WhatsApp deve existir no topo de FavoritesList");
   assert.ok(grid > firstCta, "CTA do topo deve aparecer antes da grade de veículos");
   assert.ok(secondCta > grid, "CTA de WhatsApp também deve permanecer após a grade");
-  assert.match(favoritesList, /content_name:\s*"Favoritos"/);
+  assert.match(favoritesList, /trackVehiclesWhatsAppLead\([\s\S]*"Favoritos"/);
 });
 
 test("Sobre tem CTA de WhatsApp acima da dobra e ambos usam SiteLeadHit", () => {

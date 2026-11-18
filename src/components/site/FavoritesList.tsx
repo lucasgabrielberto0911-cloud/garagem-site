@@ -12,7 +12,7 @@ import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { snapshotsForIds, writeFavoriteSnapshots } from "@/lib/offline-queue";
 import { formatVehicleLabel } from "@/lib/format";
-import { trackLead } from "@/lib/meta-pixel";
+import { trackVehiclesWhatsAppLead } from "@/lib/funnel-events";
 import { notify } from "@/lib/notify";
 import { favoritesListWhatsApp, WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -41,7 +41,11 @@ export function FavoritesList() {
     const controller = new AbortController();
     let active = true;
     const timeout = window.setTimeout(() => controller.abort(), 15000);
-    const cached = snapshotsForIds(key.split(",")) as VehicleCardData[];
+    // Snapshot antigo sem `catalog` não é catálogo: só entra no Meta com true explícito.
+    const cached = snapshotsForIds(key.split(",")).map((vehicle) => ({
+      ...vehicle,
+      catalog: vehicle.catalog === true,
+    })) as VehicleCardData[];
 
     setResult((current) => {
       if (current.key === key && current.status !== "loading") {
@@ -66,7 +70,11 @@ export function FavoritesList() {
       .then((data) => {
         if (!active) return;
         if (!Array.isArray(data.vehicles)) throw new Error("Resposta inválida de favoritos");
-        const next = data.vehicles as VehicleCardData[];
+        // A API é autoritativa e sempre envia `catalog`; só `true` entra no catálogo.
+        const next = (data.vehicles as VehicleCardData[]).map((vehicle) => ({
+          ...vehicle,
+          catalog: vehicle.catalog === true,
+        }));
         setResult({ key, vehicles: next, status: "fresh", refreshing: false });
         writeFavoriteSnapshots(next.map((vehicle) => ({
           ...vehicle,
@@ -267,7 +275,7 @@ export function FavoritesList() {
 }
 
 function TrackedFavoritesWhatsApp({
-  vehicles,
+  vehicles: ordered,
   className,
 }: {
   vehicles: VehicleCardData[];
@@ -277,13 +285,10 @@ function TrackedFavoritesWhatsApp({
     <span
       className="contents"
       onClickCapture={() => {
-        trackLead({
-          content_ids: vehicles.map((vehicle) => vehicle.id),
-          content_name: "Favoritos",
-        });
+        trackVehiclesWhatsAppLead(ordered, "Favoritos");
       }}
     >
-      <FavoritesListWhatsApp vehicles={vehicles} className={className} />
+      <FavoritesListWhatsApp vehicles={ordered} className={className} />
     </span>
   );
 }
