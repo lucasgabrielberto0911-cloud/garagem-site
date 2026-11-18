@@ -6,12 +6,15 @@ import { IconWhatsApp } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import {
-  WHATSAPP_MESSAGES,
   whatsappCampaignFromLabel,
   whatsappContentFromVehicle,
   whatsappUrl,
   type WhatsAppCampaign,
 } from "@/lib/site";
+import {
+  buildWhatsAppCarMessage,
+  type WhatsAppCarPageOrigin,
+} from "@/lib/whatsapp-car-message";
 
 /**
  * Atalho de conversão no card: o interessado fala no WhatsApp sem abrir a ficha.
@@ -24,12 +27,15 @@ export function VehicleCardWhatsApp({
   value,
   make,
   model,
+  version,
+  status,
   year,
   path,
   className = "",
   variant = "bar",
   trackingLabel = "vehicle-card",
   campaign,
+  pageOrigin,
   showOnStockList = false,
   catalog,
 }: {
@@ -39,12 +45,15 @@ export function VehicleCardWhatsApp({
   value: number;
   make: string;
   model: string;
+  version?: string | null;
+  status?: string | null;
   year: number;
   path?: string;
   className?: string;
   variant?: "bar" | "chat" | "chat-compact";
   trackingLabel?: string;
   campaign?: WhatsAppCampaign;
+  pageOrigin?: WhatsAppCarPageOrigin;
   /** O novo card mobile reutiliza a barra original mesmo dentro do estoque. */
   showOnStockList?: boolean;
   catalog?: boolean;
@@ -53,7 +62,22 @@ export function VehicleCardWhatsApp({
   const compact = variant === "chat-compact";
   const chat = variant === "chat" || compact;
   if (hideOnStockList && !chat && !showOnStockList) return null;
-  const text = message ?? WHATSAPP_MESSAGES.vehicle(label);
+  const resolvedOrigin: WhatsAppCarPageOrigin =
+    pageOrigin ?? (chat ? "chat" : "card do estoque");
+  const text =
+    message ??
+    buildWhatsAppCarMessage({
+      id: vehicleId,
+      brand: make,
+      model,
+      version,
+      label,
+      yearModel: year,
+      price: value,
+      status,
+      path,
+      pageOrigin: resolvedOrigin,
+    });
   const content = whatsappContentFromVehicle({ id: vehicleId, path });
   const href = whatsappUrl(text, {
     campaign: campaign ?? whatsappCampaignFromLabel(trackingLabel),
@@ -74,7 +98,12 @@ export function VehicleCardWhatsApp({
         target="_blank"
         rel="noopener noreferrer"
         onClick={(event) => {
-          trackWhatsAppClick(trackingLabel, { vehicleId, slug: content });
+          event.stopPropagation();
+          trackWhatsAppClick(trackingLabel, {
+            vehicleId,
+            slug: content,
+            pageOrigin: resolvedOrigin,
+          });
           if (typeof navigator !== "undefined" && !navigator.onLine) {
             event.preventDefault();
             void queueWhatsAppIfOffline({
@@ -94,7 +123,7 @@ export function VehicleCardWhatsApp({
         }
       >
         <IconWhatsApp
-          className={compact ? "h-3.5 w-3.5 text-white" : chat ? "h-[18px] w-[18px] text-[#25D366]" : "h-4 w-4 text-asphalt"}
+          className={compact ? "h-3.5 w-3.5 shrink-0 text-white" : chat ? "h-[18px] w-[18px] shrink-0 text-[#25D366]" : "h-4 w-4 shrink-0 text-asphalt"}
         />
         {compact ? "Falar no WhatsApp" : chat ? "WhatsApp" : "Tenho interesse"}
       </a>

@@ -35,7 +35,7 @@ test("nenhum select público carrega campo interno (consignado, compra, placa, F
   assert.equal(PUBLIC_VEHICLE_OMIT.inStoreName, true);
 });
 
-test("ficha pública inclui chave, manual e vídeo e esconde documentos", () => {
+test("ficha pública e assistente incluem chave, manual e vídeo e escondem documentos", () => {
   assert.equal(PUBLIC_VEHICLE_DETAIL_SELECT.hasSpareKey, true);
   assert.equal(PUBLIC_VEHICLE_DETAIL_SELECT.hasManual, true);
   assert.equal(PUBLIC_VEHICLE_DETAIL_SELECT.hasVideo, true);
@@ -58,9 +58,9 @@ test("ficha pública inclui chave, manual e vídeo e esconde documentos", () => 
   assert.equal("hasSpareKey" in PUBLIC_VEHICLE_CARD_SELECT, false);
   assert.equal("hasManual" in PUBLIC_VEHICLE_CARD_SELECT, false);
   assert.equal("hasVideo" in PUBLIC_VEHICLE_CARD_SELECT, false);
-  assert.equal("hasSpareKey" in CHAT_VEHICLE_SELECT, false);
-  assert.equal("hasManual" in CHAT_VEHICLE_SELECT, false);
-  assert.equal("hasVideo" in CHAT_VEHICLE_SELECT, false);
+  assert.equal(CHAT_VEHICLE_SELECT.hasSpareKey, true);
+  assert.equal(CHAT_VEHICLE_SELECT.hasManual, true);
+  assert.equal(CHAT_VEHICLE_SELECT.hasVideo, true);
   assert.equal("documents" in CHAT_VEHICLE_SELECT, false);
 });
 

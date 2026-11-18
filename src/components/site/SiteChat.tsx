@@ -75,7 +75,7 @@ import {
   resolveChatWhatsAppVehicle,
   type ChatHandoffContext,
 } from "@/lib/chat-text";
-import { formatVehicleWhatsAppMessage } from "@/lib/vehicle-display";
+import { buildWhatsAppCarMessage } from "@/lib/whatsapp-car-message";
 import { pageWhatsAppMessage } from "@/lib/whatsapp-cta";
 import {
   classifyChatIntent,
@@ -346,7 +346,8 @@ function ChatVehicleMini({
         priceLimit: handoff?.priceLimit,
         transmission: handoff?.transmission,
       })
-    : formatVehicleWhatsAppMessage({
+    : buildWhatsAppCarMessage({
+        id: vehicle.id,
         brand: vehicle.brand,
         model: vehicle.model,
         version: vehicle.version,
@@ -355,6 +356,7 @@ function ChatVehicleMini({
         status: vehicle.sold ? "vendido" : undefined,
         path: vehicle.href,
         isMoto: vehicle.category === "moto",
+        pageOrigin: "chat",
       });
 
   return (

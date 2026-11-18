@@ -186,6 +186,8 @@ const PAGE_UTM_KEYS = [
 export type VehicleFunnelRef = {
   vehicleId?: string;
   slug?: string;
+  /** Origem curta controlada da página (ex.: "home", "card do estoque", "ficha"), nunca texto livre. */
+  pageOrigin?: string;
 };
 
 /** UTM da URL atual. Não lê o texto do WhatsApp. */
@@ -216,8 +218,10 @@ export function vehicleFunnelParams(ref?: VehicleFunnelRef) {
   const params: Record<string, string> = {};
   const vehicleId = compactString(ref?.vehicleId)?.slice(0, 80);
   const slug = compactString(ref?.slug)?.slice(0, 120);
+  const pageOrigin = compactString(ref?.pageOrigin)?.slice(0, 48);
   if (vehicleId) params.vehicle_id = vehicleId;
   if (slug) params.slug = slug;
+  if (pageOrigin) params.page_origin = pageOrigin;
   return { ...params, ...readPageUtm() };
 }
 
@@ -519,6 +523,16 @@ export function trackWhatsAppClick(label: string, ref?: VehicleFunnelRef) {
     event_category: "engagement",
     event_label: label,
     ...funnel,
+  });
+}
+
+/** Clique de envio em /troca: evento genérico sem conteúdo do formulário e sem gravação no banco. */
+export function trackTradeWhatsAppClick() {
+  if (typeof window === "undefined") return;
+  fireCustom("WhatsAppClick", { label: "troca" });
+  fireGtag("whatsapp_click", {
+    event_category: "engagement",
+    event_label: "troca",
   });
 }
 

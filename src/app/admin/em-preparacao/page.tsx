@@ -4,6 +4,7 @@ import { AdminPageHeader, btn } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatAdminMoney } from "@/lib/admin-money";
+import { getWantedStockMatches } from "@/lib/wanted-stock-match-store";
 import { deletePreparationAction } from "./actions";
 import { PreparationForm } from "./PreparationForm";
 
@@ -17,9 +18,18 @@ export default async function EmPreparacaoPage({
   const session = await getSession();
   if (!session) redirect("/admin/login");
   const { ok, erro } = await searchParams;
-  const items = await prisma.preparationVehicle.findMany({
-    orderBy: [{ createdAt: "desc" }],
-  });
+  const [items, matches] = await Promise.all([
+    prisma.preparationVehicle.findMany({
+      orderBy: [{ createdAt: "desc" }],
+    }),
+    getWantedStockMatches(),
+  ]);
+  const matchesByPrepId = new Map<string, typeof matches>();
+  for (const match of matches) {
+    const list = matchesByPrepId.get(match.vehicleId);
+    if (list) list.push(match);
+    else matchesByPrepId.set(match.vehicleId, [match]);
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -61,7 +71,9 @@ export default async function EmPreparacaoPage({
         <p className="text-sm text-muted">Nenhum carro em preparação.</p>
       ) : null}
       <ul className="space-y-3">
-        {items.map((item) => (
+        {items.map((item) => {
+          const itemMatches = matchesByPrepId.get(item.id) ?? [];
+          return (
           <li key={item.id} className="border border-white/10 p-4">
             <details>
               <summary className="cursor-pointer">
@@ -89,6 +101,37 @@ export default async function EmPreparacaoPage({
                 <PreparationForm item={item} />
               </div>
             </details>
+            {itemMatches.length > 0 ? (
+              <div className="mt-3 border border-brand/40 bg-brand/10 p-3 text-xs text-cream">
+                <p className="font-semibold">
+                  {itemMatches.length === 1
+                    ? "1 pedido em aberto compatível:"
+                    : `${itemMatches.length} pedidos em aberto compatíveis:`}
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {itemMatches.map((match) => (
+                    <li key={match.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <Link
+                        href={match.href}
+                        className="underline underline-offset-4 hover:text-brand-light"
+                      >
+                        {match.title} ({match.criteria})
+                      </Link>
+                      {match.whatsappHref ? (
+                        <a
+                          href={match.whatsappHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cream/85 underline underline-offset-4 hover:text-cream"
+                        >
+                          Chamar no WhatsApp
+                        </a>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {item.ready ? (
                 <Link
@@ -106,7 +149,8 @@ export default async function EmPreparacaoPage({
               </form>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );

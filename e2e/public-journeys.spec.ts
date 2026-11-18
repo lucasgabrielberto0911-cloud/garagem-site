@@ -153,7 +153,6 @@ test("pergunta de potência responde o dado antes do card e WhatsApp oficial", a
   await page.goto("/estoque");
   if (page.viewportSize()!.width >= 1024) {
     await page.locator(".site-chat-launcher").click();
-    await page.getByRole("menuitem", { name: "Perguntar ao assistente", exact: true }).click();
   } else {
     await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { VehicleGrid } from "./VehicleGrid";
 import { VehicleCardSkeletonGrid } from "./VehicleCardSkeleton";
@@ -19,6 +20,8 @@ export function RecentlyViewedPanel({
   regionId: string;
   onClear: () => void;
 }) {
+  const pathname = usePathname() || "/";
+  const pageOrigin = pathname === "/" ? "home" : "card do estoque";
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{
     key: string;
@@ -129,7 +132,7 @@ export function RecentlyViewedPanel({
           </button>
         </div>
       ) : current.vehicles.length ? (
-        <VehicleGrid vehicles={current.vehicles} desktopCols={4} lgVisibleCount={3} destaqueLimit={0} />
+        <VehicleGrid vehicles={current.vehicles} desktopCols={4} lgVisibleCount={3} destaqueLimit={0} pageOrigin={pageOrigin} />
       ) : (
         <p role="status" className="py-3 text-sm leading-relaxed text-cream/80">
           Esses anúncios não estão disponíveis agora. Você pode continuar escolhendo no estoque.

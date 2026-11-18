@@ -2,8 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { CityDirectory } from "@/components/site/CityDirectory";
-import { Container, PageHeader } from "@/components/site/ui";
-import { site } from "@/lib/site";
+import {
+  ActionRow,
+  ButtonLink,
+  Container,
+  PageHeader,
+  WhatsAppButton,
+} from "@/components/site/ui";
+import { SiteLeadHit } from "@/lib/funnel-events";
+import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import {
   CITIES_DIRECTORY_PATH,
   breadcrumbJsonLd,
@@ -15,7 +22,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = buildPageMetadata({
   title: `Cidades atendidas no Espírito Santo | ${site.name}`,
   description:
-    "Conheça as cidades atendidas pela Garagem no Espírito Santo e veja como funciona o atendimento online na sua região.",
+    "Conheça as cidades atendidas pela Garagem no Espírito Santo. Atendemos Linhares, Aracruz e Grande Vitória e combinamos o atendimento pelo WhatsApp.",
   path: CITIES_DIRECTORY_PATH,
 });
 
@@ -31,9 +38,9 @@ export default function CidadesPage() {
 
       <Container>
         <PageHeader
-          eyebrow={`${site.state} · atendimento pelo WhatsApp`}
+          eyebrow={`${site.state} · Linhares, Aracruz e Grande Vitória`}
           title="Cidades atendidas no Espírito Santo"
-          description="Encontre sua cidade e conheça o atendimento da Garagem na sua região. Nossa equipe atende pelo site e WhatsApp, todos os dias, das 8h às 23h."
+          description="Atendemos Linhares, Aracruz e Grande Vitória, além de outras regiões do estado. Combinamos o atendimento pelo WhatsApp, todos os dias, das 8h às 23h."
         />
 
         <nav aria-label="Você está aqui" className="mt-4 text-center text-xs text-cream/75">
@@ -52,9 +59,9 @@ export default function CidadesPage() {
             Atendimento na sua região
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-cream/80">
-            Escolha um município abaixo para consultar as informações de
-            atendimento local. Pelo WhatsApp, você pode combinar os próximos
-            passos da visita, negociação e entrega com a equipe.
+            Escolha um município ou região abaixo para consultar as informações
+            de atendimento local. Combinamos o atendimento pelo WhatsApp,
+            incluindo vídeo do veículo, proposta, visita e entrega.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-cream/80">
             Já quer escolher um veículo? Conheça nossos{" "}
@@ -70,6 +77,22 @@ export default function CidadesPage() {
 
         <div className="mt-6">
           <CityDirectory />
+        </div>
+
+        <div className="mt-10">
+          <ActionRow className="sm:flex-wrap">
+            <SiteLeadHit contentName="Cidades atendidas">
+              <WhatsAppButton
+                trackingLabel="cidades"
+                message={WHATSAPP_MESSAGES.general}
+              >
+                Falar no WhatsApp
+              </WhatsAppButton>
+            </SiteLeadHit>
+            <ButtonLink href="/estoque" variant="outline">
+              Ver estoque
+            </ButtonLink>
+          </ActionRow>
         </div>
       </Container>
     </div>

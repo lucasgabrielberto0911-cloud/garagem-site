@@ -21,6 +21,21 @@ export const WANTED_LEAD_SUCCESS =
 export const WANTED_LEAD_FAILURE =
   "Não conseguimos guardar o pedido agora. Tente de novo.";
 
+export function buildWantedOrderWhatsAppMessage(
+  model?: string | null,
+  priceMax?: number | null,
+) {
+  const cleanModel = (model ?? "").replace(/\s+/g, " ").trim();
+  if (!cleanModel) {
+    return "Oi! Acabei de enviar um pedido de carro no site da Garagem. Podemos conversar por aqui?";
+  }
+  const ceiling =
+    typeof priceMax === "number" && Number.isFinite(priceMax) && priceMax > 0
+      ? ` (até ${formatCurrencyBRL(priceMax)})`
+      : "";
+  return `Oi! Acabei de enviar um pedido no site procurando ${cleanModel}${ceiling}. Podemos conversar por aqui?`;
+}
+
 const EMAIL_LINE = /^E-mail:\s*(\S+)/m;
 
 export type WantedLeadPage = "estoque" | "ficha";

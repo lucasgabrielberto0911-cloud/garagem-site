@@ -10,7 +10,6 @@ import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { publicPhotoSrc } from "@/lib/public-photo-url";
 import {
-  formatCustomerVehicleWhatsAppText,
   WHATSAPP_MESSAGES,
   whatsappUrl,
 } from "@/lib/site";
@@ -21,7 +20,11 @@ import {
   type VehicleCardPhoto,
 } from "@/lib/stock-query";
 import { cleanTestimonialField } from "@/lib/testimonials-clean";
-import { formatCardVersion, formatVehicleDisplay } from "@/lib/vehicle-display";
+import {
+  buildWhatsAppCarMessage,
+  formatCardVersion,
+  formatVehicleDisplay,
+} from "@/lib/vehicle-display";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import {
   TESTIMONIALS_CACHE_TAG,
@@ -195,10 +198,17 @@ export function toSoldVehicleShowcaseItem(
     srcSet: coverSrcSet(row.photos),
     mobileSrcSet: coverMobileSrcSet(row.photos),
     whatsappHref: whatsappUrl(
-      formatCustomerVehicleWhatsAppText({
-        sold: true,
+      buildWhatsAppCarMessage({
+        id: row.id,
+        brand: row.brand,
+        model: row.model,
+        version: row.version,
         label: display.fullLabel || label,
+        yearModel: row.yearModel,
+        status: "vendido",
+        path: vehiclePath(row),
         isMoto,
+        pageOrigin: "vendidos",
       }),
       { campaign: "estoque", content: slug },
     ),

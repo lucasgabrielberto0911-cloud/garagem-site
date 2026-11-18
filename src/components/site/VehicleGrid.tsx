@@ -1,5 +1,6 @@
 import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard";
 import { featuredBadgeIds } from "@/lib/vehicle-display";
+import type { WhatsAppCarPageOrigin } from "@/lib/whatsapp-car-message";
 
 /** Mesmas margens e o mesmo card em todas as listas, com duas colunas no celular. */
 export function VehicleGrid({
@@ -10,6 +11,7 @@ export function VehicleGrid({
   destaqueLimit = 3,
   lgVisibleCount,
   hideInterest = false,
+  pageOrigin,
 }: {
   vehicles: VehicleCardData[];
   priorityCount?: number;
@@ -20,6 +22,8 @@ export function VehicleGrid({
   lgVisibleCount?: number;
   /** Esconde o "Tenho interesse" dos cards (ficha: o card só abre o anúncio). */
   hideInterest?: boolean;
+  /** Origem curta da página para a mensagem do WhatsApp (ex.: "home", "card do estoque"). */
+  pageOrigin?: WhatsAppCarPageOrigin;
   /** Mantido para compatibilidade; todos os cards usam agora a mesma foto 4:3. */
   photoLayout?: "default" | "stock";
 }) {
@@ -38,6 +42,7 @@ export function VehicleGrid({
               returnTo={returnTo}
               showDestaque={destaqueIds.has(vehicle.id)}
               hideInterest={hideInterest}
+              pageOrigin={pageOrigin}
             />
           </div>
         );
