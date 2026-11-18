@@ -52,8 +52,8 @@ test.afterAll(async () => { await db.$disconnect(); });
 
 async function openSimpleSale(page: Page, vehicle: { model: string }) {
   await page.goto(`/admin/veiculos?q=${encodeURIComponent(vehicle.model)}`);
-  await page.getByRole("button", { name: "Marcar como vendida (simples)", exact: true }).click();
-  return page.getByRole("dialog", { name: "Marcar como vendida (simples)" });
+  await page.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
+  return page.getByRole("dialog", { name: "Marcar como vendido" });
 }
 
 async function advanceSale(page: Page, heading: string) {
@@ -90,7 +90,7 @@ test("listagem abre anúncio e operação sem erro", async ({ page, vehicle }) =
 test("venda simples fecha modal, preserva custos e não gera faturamento", async ({ page, vehicle }) => {
   const dialog = await openSimpleSale(page, vehicle);
   const response = page.waitForResponse(response => response.url().endsWith(`/api/admin/vehicles/${vehicle.id}/sell`));
-  await dialog.getByRole("button", { name: "Marcar como vendida (simples)", exact: true }).click();
+  await dialog.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
   expect((await response).status()).toBe(200);
   await expect(dialog).toBeHidden();
   const saved = await db.vehicle.findUniqueOrThrow({ where: { id: vehicle.id }, include: { sale: true, costs: true } });
@@ -110,14 +110,14 @@ test("falha simples fecha confirmação, mantém veículo e permite tentar novam
     return route.fulfill({ status: 500, json: { ok: false, message: "Não foi possível marcar o veículo como vendido." } });
   }, { times: 1 });
   const dialog = await openSimpleSale(page, vehicle);
-  await dialog.getByRole("button", { name: "Marcar como vendida (simples)", exact: true }).click();
+  await dialog.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText("Não foi possível marcar o veículo como vendido.", { exact: true })).toBeVisible();
   expect(attempts).toBe(1);
   expect((await db.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("disponivel");
   expect(await db.sale.count({ where: { vehicleId: vehicle.id } })).toBe(0);
-  await page.getByRole("button", { name: "Marcar como vendida (simples)", exact: true }).click();
-  await dialog.getByRole("button", { name: "Marcar como vendida (simples)", exact: true }).click();
+  await page.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
+  await dialog.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
   await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("vendido");
   await expect(dialog).toBeHidden();
 });
@@ -180,7 +180,7 @@ test("fluxo completo valida cada etapa, preserva campos ao voltar, sem abrir ven
   await page.getByRole("button", { name: "Registrar venda completa", exact: true }).click();
   await page.getByRole("dialog", { name: "Registrar venda completa" }).getByRole("button", { name: "Registrar venda completa", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicle.id}`));
-  await expect(page.getByRole("dialog", { name: "Marcar como vendida (simples)" })).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "Marcar como vendido" })).toBeHidden();
   await advanceSale(page, "Cliente");
   await page.getByLabel("Cadastrar cliente nesta venda").check();
   await page.getByLabel("Nome", { exact: true }).fill("Comprador de teste");

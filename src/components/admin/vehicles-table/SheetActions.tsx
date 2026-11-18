@@ -95,7 +95,7 @@ export function SheetActions({
         <>
           <ActionSheetButton
             icon={<IconCheck className="h-4 w-4" />}
-            label="Marcar como vendida (simples)"
+            label="Marcar como vendido"
             hint="Sem comprador, preço ou registro de faturamento"
             disabled={busy}
             onClick={run(onMarkSoldSimple)}
