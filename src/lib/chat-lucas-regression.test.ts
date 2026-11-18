@@ -130,7 +130,7 @@ test("jornada de seis turnos responde a pergunta e conserva cards na busca", asy
     // Pontos positivos: listinha compacta (4 a 6 linhas) com câmbio da ficha, espaço e economia.
     if (mensagem.includes("pontos positivos")) {
       assert.match(textoVisivelChat(result.reply), /Kicks/);
-      assert.match(textoVisivelChat(result.reply), /CVT/);
+      assert.match(textoVisivelChat(result.reply), /automático/);
       assert.match(textoVisivelChat(result.reply), /porta-malas/);
       assert.match(textoVisivelChat(result.reply), /km\/l/);
       const points = result.reply.split("\n").filter(line => /^• \*\*/.test(line));
