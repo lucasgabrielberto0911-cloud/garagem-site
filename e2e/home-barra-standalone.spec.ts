@@ -224,12 +224,28 @@ test("home: três botões grandes no topo; assistente é um botão vermelho que 
     expect(Math.abs(boxes[0].width - boxes[2].width)).toBeLessThan(2);
   }
 
-  // Botão de verdade: fundo vermelho cheio, texto branco, sem sublinhado.
+  // Botão de verdade: fundo vermelho cheio (--brand), texto branco, sem sublinhado.
   const style = await assistant.evaluate((el) => {
     const css = getComputedStyle(el);
-    return { bg: css.backgroundColor, color: css.color, deco: css.textDecorationLine, radius: css.borderTopLeftRadius };
+    const probe = document.createElement("span");
+    probe.style.backgroundColor = "var(--brand)";
+    document.body.appendChild(probe);
+    const brandRgb = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return {
+      bg: css.backgroundColor,
+      brandRgb,
+      color: css.color,
+      deco: css.textDecorationLine,
+      radius: css.borderTopLeftRadius,
+    };
   });
-  expect(style.bg).toBe("rgb(232, 24, 28)");
+  expect(style.bg).toBe(style.brandRgb);
+  const rgbMatch = style.bg.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  expect(rgbMatch).not.toBeNull();
+  expect(Number(rgbMatch![1])).toBeGreaterThanOrEqual(180);
+  expect(Number(rgbMatch![2])).toBeLessThanOrEqual(60);
+  expect(Number(rgbMatch![3])).toBeLessThanOrEqual(60);
   expect(style.color).toBe("rgb(255, 255, 255)");
   expect(style.deco).toBe("none");
   expect(parseFloat(style.radius)).toBeGreaterThan(0);

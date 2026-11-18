@@ -25,12 +25,22 @@ test("venda aceita mais de três fotos e permite adicionar outro lote", async ({
   expect(uploads).toBe(6);
 });
 
-test("buscar mantém alvo de toque maior sem transbordar", async ({ page }) => {
+test("botões do topo mantêm alvo de toque grande sem transbordar", async ({ page }) => {
   await page.goto("/");
-  const button = page.getByRole("button", { name: "Buscar", exact: true });
-  const box = await button.boundingBox();
-  expect(box!.height).toBeGreaterThanOrEqual(51.9); // tolerância de subpixel (51,99997 no CI)
-  expect(box!.width).toBeGreaterThanOrEqual(71.9);
+  const heroCta = page.locator(".hero-cta");
+  const buttons = [
+    heroCta.getByRole("link", { name: "Falar no WhatsApp" }),
+    heroCta.getByRole("link", { name: "Ver estoque", exact: true }),
+    heroCta.getByRole("button", { name: "Pergunte ao assistente" }),
+  ];
+  const viewportWidth = page.viewportSize()!.width;
+  for (const button of buttons) {
+    await expect(button).toBeVisible();
+    const box = (await button.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(56);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewportWidth + 1);
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
