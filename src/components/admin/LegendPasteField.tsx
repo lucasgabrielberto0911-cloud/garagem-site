@@ -36,16 +36,18 @@ export function LegendPasteField({ description, accessories, data, identity, onC
   const [text, setText] = useState(() => legendText(description, accessories, data));
   const [detected, setDetected] = useState<LegendData>({});
   const [sensitive, setSensitive] = useState<string[]>([]);
-  function applyCleanText(clean: string) {
-    setText(clean);
-    const parsed = parseLegend(clean);
+  function applyCleanText(raw: string) {
+    const sanitized = sanitizeLegendText(raw);
+    setText(sanitized.clean);
+    const parsed = parseLegend(sanitized.clean);
     setDetected(parsed.data);
-    setSensitive(parsed.sensitive);
-    onChange(parsed);
+    setSensitive(sanitized.found);
+    onChange({ ...parsed, sensitive: sanitized.found });
   }
   function syncPreview(nextDescription: string, nextAccessories: string[], nextData = data) {
     setText(legendText(nextDescription, nextAccessories, nextData));
     setDetected({});
+    setSensitive([]);
   }
   return <div className="space-y-4">
     <label htmlFor="vehicle-legend" className="block text-sm font-semibold text-cream">Colar legenda</label>
@@ -54,10 +56,10 @@ export function LegendPasteField({ description, accessories, data, identity, onC
     <textarea id="vehicle-legend" name="vehicle-legend" rows={16} value={text} className={`${inputClass} resize-y`}
       placeholder="Cole aqui a legenda completa do anúncio."
       onChange={event => {
-        applyCleanText(sanitizeLegendText(event.target.value).clean);
+        applyCleanText(event.target.value);
       }} />
     <AdminAiReview value={text} facts={identity ? { ...identity, description, accessories, data } : undefined} onApply={next => {
-      applyCleanText(sanitizeLegendText(next).clean);
+      applyCleanText(next);
     }} />
     <div aria-label="Prévia da legenda" className="space-y-4">
       {description && <section><h3 className="font-display font-semibold">Descrição</h3>

@@ -109,6 +109,32 @@ test("placa, CPF, telefone, chassi e RENAVAM colados não vão para o anúncio",
   assert.ok(!JSON.stringify(parsed).match(/ABC1D23|9BWZZZ377VT004251|123\.456\.789-00|99988-7777/));
 });
 
+test("palavra telefone ou placa sem número não derruba a linha", () => {
+  const text = "Telefone sem fio\nsuporte para placa\n✅ Ar-condicionado";
+  const sanitized = sanitizeLegendText(text);
+  assert.ok(sanitized.clean.includes("Telefone sem fio"));
+  assert.ok(sanitized.clean.includes("suporte para placa"));
+  assert.deepEqual(sanitized.found, []);
+  assert.equal(parseLegend(text).description.includes("Telefone sem fio"), true);
+});
+
+test("só o número sensível sai e o resto da linha fica", () => {
+  const sanitized = sanitizeLegendText("Ar-condicionado (27) 99988-7777");
+  assert.ok(!sanitized.clean.match(/99988-7777/));
+  assert.ok(sanitized.clean.includes("Ar-condicionado"));
+  assert.ok(sanitized.found.includes("telefone"));
+});
+
+test("celular com 11 dígitos seguidos é telefone, não CPF", () => {
+  const phone = sanitizeLegendText("Contato 27999887777");
+  assert.ok(phone.found.includes("telefone"));
+  assert.ok(!phone.found.includes("CPF"));
+  assert.ok(!phone.clean.match(/27999887777/));
+  const cpf = sanitizeLegendText("CPF 12345678900");
+  assert.ok(cpf.found.includes("CPF"));
+  assert.ok(!cpf.found.includes("telefone"));
+});
+
 test("legenda limpa continua igual e sem aviso", () => {
   const text = "SUV prata com 24 mil km.\n\nConforto:\n✅ Ar-condicionado";
   const sanitized = sanitizeLegendText(text);
