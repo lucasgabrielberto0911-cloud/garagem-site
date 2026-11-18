@@ -5,8 +5,8 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatAdminMoney } from "@/lib/admin-money";
 import { getWantedStockMatches } from "@/lib/wanted-stock-match-store";
-import { deletePreparationAction } from "./actions";
 import { PreparationForm } from "./PreparationForm";
+import { PreparationItemActions } from "./PreparationItemActions";
 
 export const dynamic = "force-dynamic";
 
@@ -132,22 +132,7 @@ export default async function EmPreparacaoPage({
                 </ul>
               </div>
             ) : null}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {item.ready ? (
-                <Link
-                  href={`/admin/veiculos/novo?prep=${encodeURIComponent(item.id)}`}
-                  className={btn.primary}
-                >
-                  Criar anúncio
-                </Link>
-              ) : null}
-              <form action={deletePreparationAction}>
-                <input type="hidden" name="id" value={item.id} />
-                <button type="submit" className={btn.danger}>
-                  Excluir
-                </button>
-              </form>
-            </div>
+            <PreparationItemActions id={item.id} ready={item.ready} />
           </li>
           );
         })}
