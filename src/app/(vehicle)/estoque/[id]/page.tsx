@@ -1,6 +1,7 @@
 import { publicVehicleDescription } from "@/lib/public-vehicle-description";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { RememberHotLeadVehicle } from "@/components/site/RememberHotLeadVehicle";
 import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -44,12 +45,13 @@ import {
   vehicleKeyFacts,
 } from "@/lib/vehicle-specs";
 import { VehicleKeyFacts } from "@/components/site/VehicleKeyFacts";
-import { breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
+import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
 import { priceBandHref } from "@/lib/related-vehicles";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
+  buildVehicleShortName,
   buildWhatsAppCarMessage,
   collapseDuplicateAccessories,
   collapseWhitespace,
@@ -244,6 +246,13 @@ export default async function VehicleDetailPage({
       className="pb-sticky-bar-safe lg:pb-10"
     >
       {!sold ? <RememberRecentVehicle id={vehicle.id} /> : null}
+      <RememberHotLeadVehicle
+        slug={canonicalSlug}
+        name={buildVehicleShortName(vehicle)}
+        year={vehicle.yearModel}
+        link={absoluteUrl(path)}
+        sold={sold}
+      />
       <VehicleViewContent
         contentId={vehicle.id}
         contentName={fullLabel}
