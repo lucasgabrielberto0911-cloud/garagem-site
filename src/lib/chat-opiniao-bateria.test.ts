@@ -87,6 +87,7 @@ function judge(c: Case, r: Result): string | null {
       if (reply.length > 650) return "mensagem grande demais";
     } else if (reply.length > 520) return "resposta longa demais";
   }
+  if (/\bcv\b|cavalos|\d+\s+marchas/i.test(reply)) return "citou cv ou número de marchas";
   for (const re of c.has ?? []) if (!re.test(reply)) return `faltou ${re}`;
   return null;
 }
@@ -96,14 +97,14 @@ const hist = (...turns: string[]): ChatTurn[] =>
 
 const CASES: Case[] = [
   // Desempenho e opinião sobre carro citado
-  { q: "e do hb20 1.6? ele parece ser rapido tmb ne? por ser 1.6 em um carro leve", hist: ["o civic 2.0 é rápido?", "O Civic 2.0 tem 155 cv no etanol, anda muito bem."], car: HB20_16, kind: "opiniao", has: [/128 cv/, /autom[áa]tic/i] },
-  { q: "e do hb20 1.6? ele parece ser rapido tmb ne? por ser 1.6 em um carro leve", car: HB20_16, kind: "opiniao", has: [/128 cv/] },
+  { q: "e do hb20 1.6? ele parece ser rapido tmb ne? por ser 1.6 em um carro leve", hist: ["o civic 2.0 é rápido?", "Sim! O Civic 2.0 usa motor 2.0, anda muito bem."], car: HB20_16, kind: "opiniao", has: [/motor 1\.6/i, /autom[áa]tic/i] },
+  { q: "e do hb20 1.6? ele parece ser rapido tmb ne? por ser 1.6 em um carro leve", car: HB20_16, kind: "opiniao", has: [/motor 1\.6/i] },
   { q: "o hb20 1.6 é rápido?", car: HB20_16, kind: "opiniao", has: [/^sim/i] },
-  { q: "o civic exl anda bem?", car: CIVIC_EXL, kind: "opiniao", has: [/155 cv/] },
+  { q: "o civic exl anda bem?", car: CIVIC_EXL, kind: "opiniao", has: [/motor 2\.0/i] },
   { q: "nivus é rapido?", car: NIVUS, kind: "opiniao", has: [/turbo/i] },
   { q: "o kicks é bom de estrada?", car: KICKS, kind: "opiniao" },
   { q: "a duster anda bem na estrada?", car: DUSTER, kind: "opiniao" },
-  { q: "o lancer é potente?", car: LANCER, kind: "opiniao", has: [/160 cv/] },
+  { q: "o lancer é potente?", car: LANCER, kind: "opiniao", has: [/motor 2\.0/i] },
   { q: "o mobi é fraco?", car: MOBI, kind: "opiniao" },
   { q: "o gol 1.0 anda bem?", car: GOL, kind: "opiniao" },
   { q: "palio weekend é boa de estrada?", car: WEEKEND, kind: "opiniao" },
@@ -123,7 +124,7 @@ const CASES: Case[] = [
   { q: "compensa pegar o palio 2008?", car: PALIO, kind: "opiniao" },
   // Pontos positivos (listinha por carro)
   { q: "quais os pontos positivos dele?", page: CIVIC_LXR, car: CIVIC_LXR, kind: "pontos", has: [/porta-malas/i] },
-  { q: "por que comprar esse carro?", page: HB20_16, car: HB20_16, kind: "pontos", has: [/128 cv/] },
+  { q: "por que comprar esse carro?", page: HB20_16, car: HB20_16, kind: "pontos", has: [/1\.6/i] },
   { q: "quais as vantagens dela?", page: BIZ125, car: BIZ125, kind: "pontos", has: [/econom/i, /manuten/i] },
   { q: "o que ele tem de bom?", page: HRV, car: HRV, kind: "pontos", has: [/altur|alto|alta/i, /espa[çc]o|porta-malas/i] },
   { q: "pontos fortes?", page: CITY, car: CITY, kind: "pontos", has: [/porta-malas/i] },
@@ -133,7 +134,7 @@ const CASES: Case[] = [
   { q: "me fala os pontos positivos da duster", car: DUSTER, kind: "pontos", has: [/altur|alto|alta/i] },
   { q: "quais as vantagens da cg?", car: CG, kind: "pontos", has: [/manuten/i] },
   // Continuação ("e do X?")
-  { q: "e o civic exl?", hist: ["o hb20 1.6 é rápido?", "Sim! O HB20 1.6 tem 128 cv."], car: CIVIC_EXL, kind: "opiniao", has: [/155 cv/] },
+  { q: "e o civic exl?", hist: ["o hb20 1.6 é rápido?", "Sim! O HB20 1.6 usa motor 1.6."], car: CIVIC_EXL, kind: "opiniao", has: [/motor 2\.0/i] },
   { q: "e do hb20 1.0?", hist: ["o city é econômico?", "Sim! O City faz cerca de 12,3 km/l na cidade."], car: HB20_10, kind: "opiniao", has: [/km\/l/] },
   { q: "e do hrv?", hist: ["quais os pontos positivos do kicks?", "Os pontos fortes do Kicks..."], car: HRV, kind: "pontos" },
   { q: "ele é rápido?", prev: [NIVUS], hist: ["tem nivus?", "Temos o Nivus Highline 2021."], car: NIVUS, kind: "opiniao" },
@@ -147,7 +148,7 @@ const CASES: Case[] = [
   { q: "civic lxr é bom memo?", car: CIVIC_LXR, kind: "opiniao" },
   // Comparação
   { q: "civic ou city, qual é mais econômico?", kind: "comparacao", has: [/city/i, /civic/i] },
-  { q: "hb20 1.6 ou kicks, qual anda mais?", kind: "comparacao", has: [/hb20/i, /kicks/i, /\d+ cv/] },
+  { q: "hb20 1.6 ou kicks, qual anda mais?", kind: "comparacao", has: [/hb20/i, /kicks/i, /motor.*kgfm/i] },
   { q: "o nivus é melhor que o kicks?", kind: "comparacao" },
   // Manutenção
   { q: "a manutenção do civic exl é cara?", car: CIVIC_EXL, kind: "opiniao" },
@@ -223,11 +224,10 @@ test(`bateria de conversa: ${CASES.length} perguntas de cliente real`, async () 
 });
 
 
-test("opinião rejeita potência e consumo de outro card", async () => {
+test("opinião rejeita números de outro card e bloqueia cv", async () => {
   const result = await runChatTurn({ mensagem: "o civic exl anda bem?", historico: [], stock, generate: llm, readIntent: async () => null });
   const caseInfo: Case = { q: "o civic exl anda bem?", car: CIVIC_EXL, kind: "opiniao" };
   const foreign = await runChatTurn({ mensagem: "o hb20 1.6 anda bem?", historico: [], stock, generate: llm, readIntent: async () => null });
-  for (const number of ["128 cv", "9,7 km/l"]) {
-    assert.match(judge(caseInfo, { ...result, reply: `O Civic tem ${number}.`, vehicles: [...result.vehicles, ...foreign.vehicles] }) ?? "", /número inventado/);
-  }
+  assert.match(judge(caseInfo, { ...result, reply: "O Civic tem 128 cv.", vehicles: [...result.vehicles, ...foreign.vehicles] }) ?? "", /número inventado|citou cv/);
+  assert.match(judge(caseInfo, { ...result, reply: "O Civic faz 9,7 km/l.", vehicles: [...result.vehicles, ...foreign.vehicles] }) ?? "", /número inventado/);
 });

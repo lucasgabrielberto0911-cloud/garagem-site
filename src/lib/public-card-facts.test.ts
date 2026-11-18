@@ -234,7 +234,7 @@ test("o card completo tem um link para a ficha e uma ação separada para o What
   const html = renderCard();
   const linkTag = html.match(/<a[^>]*data-stock-card[^>]*>/)?.[0];
   assert.ok(linkTag);
-  assert.match(linkTag, /aria-label="Honda HR-V 2016"/);
+  assert.doesNotMatch(linkTag, /aria-label=/);
   const main = html.match(/<a[^>]*data-stock-card[^>]*>([\s\S]*?)<\/a>/)?.[1];
   assert.ok(main);
   assert.match(main, /<img[^>]*alt=""/);
@@ -259,7 +259,7 @@ test("versão integral e WhatsApp permanecem iguais no estoque e nas outras list
   const stock = renderCard(vehicle, true);
   const standard = renderCard(vehicle);
   assert.equal(stock, standard);
-  assert.match(stock, />Dynamique 2\.0 16V Tech Road 2</);
+  assert.match(stock, />Dynamique 2\.0 Tech Road 2</);
   assert.match(stock, />2014</);
   assert.match(stock, />Tenho interesse<\/a>/);
   assert.doesNotMatch(stock, /…|Ver ficha|Atualizado em/);
@@ -356,4 +356,24 @@ test("veículo vendido nunca mostra preço no card, mesmo com preço no cadastro
   assert.equal(publicCardFacts({ ...hrv, status: "vendido" }).priceLabel, "");
   assert.notEqual(publicCardFacts({ ...hrv, status: "disponivel" }).priceLabel, "");
   assert.notEqual(publicCardFacts({ ...hrv, status: null }).priceLabel, "");
+});
+
+test("VehicleCard usa card.version sem repetir modelo nem exibir Automatico sem acento", () => {
+  const sanderoHtml = renderCard({
+    brand: "Renault",
+    model: "Sandero",
+    version: "Sandero Privilège 1.6 8V",
+    transmission: "Manual",
+  });
+  assert.doesNotMatch(sanderoHtml, />Sandero Privilège/);
+  assert.match(sanderoHtml, />Privilège 1\.6</);
+
+  const kicksHtml = renderCard({
+    brand: "Nissan",
+    model: "Kicks",
+    version: "SV 1.6 Automatico",
+    transmission: "Automático",
+  });
+  assert.doesNotMatch(kicksHtml, /Automatico/);
+  assert.match(kicksHtml, />SV 1\.6</);
 });

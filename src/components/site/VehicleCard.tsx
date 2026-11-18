@@ -12,10 +12,7 @@ import {
   coverMobileSrcSet,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
-import {
-  formatCardVersion,
-  formatVehicleDisplay,
-} from "@/lib/vehicle-display";
+import { formatVehicleDisplay } from "@/lib/vehicle-display";
 import type { WhatsAppCampaign } from "@/lib/site";
 import {
   buildWhatsAppCarMessage,
@@ -69,12 +66,7 @@ export function VehicleCard({
   const cover = coverSrc(vehicle.photos);
   const badge = STATUS_BADGE[vehicle.status];
   const facts = new Map(card.facts.map((fact) => [fact.label, fact]));
-  const version = formatCardVersion(vehicle.version, vehicle.model);
-  const accessibleName =
-    display.titleWithYear ||
-    display.fullLabel ||
-    `${formatBrandName(vehicle.brand)} ${formatModelName(vehicle.model)}`.trim();
-  const hasAccessibleLinkName = Boolean(accessibleName);
+  const version = card.version;
   const favoriteSnapshot = {
     id: vehicle.id,
     category: vehicle.category,
@@ -101,14 +93,13 @@ export function VehicleCard({
         href={display.path}
         returnTo={returnTo}
         className="listing-card-main"
-        aria-label={hasAccessibleLinkName ? accessibleName : undefined}
       >
         <div className="listing-card-photo relative aspect-[4/3] overflow-hidden bg-asphalt" data-vehicle-photo="">
           <VehicleImage
             src={cover}
             srcSet={coverSrcSet(vehicle.photos)}
             mobileSrcSet={coverMobileSrcSet(vehicle.photos)}
-            alt={hasAccessibleLinkName ? "" : display.titleWithYear}
+            alt=""
             fill
             width={480}
             height={360}

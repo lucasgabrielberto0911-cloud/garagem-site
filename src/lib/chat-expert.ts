@@ -37,6 +37,7 @@ import {
   rankingSpecReply,
   rankSpecs,
   specCriterionFromMessage,
+  stripCvAndMarchas,
   type NamedSpec,
   type SpecTopic,
   type VehicleSpec,
@@ -381,16 +382,17 @@ export function planExpertTurn(ctx: ExpertContext): ExpertPlan {
   const motoTalk = /\bmotos?\b/.test(question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
   const whole = namedSpecsFor(ctx.stock.filter(vehicle => (vehicle.category === "moto") === motoTalk));
   const global = criterion && topics.includes("ranking") && subject.source !== "named" ? rankSpecs(criterion === "forca" ? "potencia" : criterion, whole.entries)[0] : undefined;
+  const fmtDec = (val: unknown) => String(val).replace(/(\d)\.(\d)/g, "$1,$2");
   const values = global ? {
-    economia: [`${global.spec.cidade?.gasolina ?? global.spec.consumoMoto} km/l na cidade, na gasolina`, "em economia"],
-    aceleracao: [`0 a 100 em cerca de ${global.spec.zeroACem} s`, "em aceleração"],
+    economia: [`${fmtDec(global.spec.cidade?.gasolina ?? global.spec.consumoMoto)} km/l na cidade, na gasolina`, "em economia"],
+    aceleracao: [`0 a 100 em cerca de ${fmtDec(global.spec.zeroACem)} s`, "em aceleração"],
     espaco: [`${global.spec.portaMalas} litros de porta-malas`, "em espaço de porta-malas"],
-    torque: [`${Math.max(global.spec.torque.etanol ?? 0, global.spec.torque.gasolina ?? 0)} kgfm`, "em torque"],
-    potencia: [`${Math.max(global.spec.cv.etanol ?? 0, global.spec.cv.gasolina ?? 0)} cv${global.spec.cv.etanol != null ? " com etanol" : " na gasolina"}`, "em potência"],
+    torque: [`${fmtDec(Math.max(global.spec.torque.etanol ?? 0, global.spec.torque.gasolina ?? 0))} kgfm`, "em torque"],
+    potencia: [`motor ${global.spec.motor.split(",")[0]?.trim() ?? global.spec.motor}`, "em potência"],
   } : undefined;
   const summary = values && criterion ? values[criterion === "forca" ? "potencia" : criterion] : undefined;
   const stockRanking = global && summary && !summary[0]!.includes("undefined")
-    ? `No estoque inteiro, o destaque ${summary[1]} é o ${global.nome}: ${summary[0]!.replace(/(\d)\.(\d)/g, "$1,$2")}.${whole.missing.length ? " Entre os modelos com dados de referência disponíveis." : ""}`
+    ? `No estoque inteiro, o destaque ${summary[1]} é o ${global.nome}: ${summary[0]!}.${whole.missing.length ? " Entre os modelos com dados de referência disponíveis." : ""}`
     : undefined;
   return { topics, subject, entries, missing, stockRanking };
 }
@@ -426,6 +428,13 @@ export function wantsExpertAnswer(ctx: ExpertContext) {
   }
   if (named.length > 0) return true;
   if (/\b(manual ou automatico|automatico ou manual)\b/.test(fold(ctx.mensagem))) return false;
+  if (
+    topics.every((topic) => topic === "portamalas") &&
+    /\bporta\s*malas\s+(?:grandes?|amplos?|espacosos?|bom|bons)\b/.test(fold(ctx.mensagem)) &&
+    expertSubject(ctx).source === "none"
+  ) {
+    return false;
+  }
   return !isListRequest(ctx.mensagem);
 }
 
@@ -458,7 +467,7 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
     "- Responda PRIMEIRO e direto ao que foi perguntado, como vendedor que entende de carro: 1 a 4 frases faladas, sem lista, sem markdown. Não abra com “No estoque”, contagem de anúncios nem “Achei”. Nada de resposta seca ou de recusa.",
   );
   lines.push(
-    "- Dados de fábrica do MODELO (potência, torque, consumo do Inmetro, autonomia, 0 a 100, câmbio e marchas, porta-malas, dimensões, segurança, manutenção típica): use as FICHAS abaixo quando existir a do carro. Se não houver ficha, use o que você conhece do modelo, só com números de que tenha segurança, com “cerca de”; se não tiver segurança, diga com naturalidade que não tem o número exato aí e que o consultor confirma no WhatsApp. Nunca invente.",
+    "- Dados de fábrica do MODELO (torque, consumo do Inmetro, autonomia, 0 a 100, câmbio, porta-malas, dimensões, segurança, manutenção típica): use as FICHAS abaixo quando existir a do carro. NUNCA cite cv, cavalos nem número de marchas. Se não houver ficha, use o que você conhece do modelo, só com números permitidos de que tenha segurança, com “cerca de”; se não tiver segurança, diga com naturalidade que não tem o número exato aí e que o consultor confirma no WhatsApp. Nunca invente.",
   );
   lines.push(
     "- Avise de leve, uma vez só, que pode variar (etanol ou gasolina, versão, ano, jeito de dirigir). Consumo é de teste; na rua muda com trânsito e estado do carro. Autonomia é teórica (tanque × consumo): use o valor já calculado na ficha, sem refazer a conta.",
@@ -467,7 +476,7 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
     "- NUNCA afirme nada sobre a UNIDADE do estoque: estado, revisões, histórico, dono, laudo, garantia além da política da loja, ou equipamento que não esteja na linha do estoque. Equipamentos da base genérica não comprovam versão e ano exatos; só dados cadastrados ou pesquisa exata confirmada permitem afirmá-los; “esta unidade tem…” só com o que está na linha do estoque. Estado e histórico: consultor. Manutenção: destaque mecânica conhecida e oferta de peças. NÃO traga pontos de atenção, defeitos ou críticas espontaneamente. Só responda a uma crítica quando o visitante perguntar diretamente, com tato e sem mentir. Nunca diga que a unidade tem laudo, garantia de fábrica, revisões feitas, “original”, dono único, ausência de batida/sinistro nem que passou por “conferência de qualidade”: esse dado não está no anúncio e o consultor confirma. Marca sempre a dos dados (o HB20 é Hyundai, o City é Honda).",
   );
   lines.push(
-    "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, com abertura neutra e o ponto forte real de cada um. Entre nossos carros, nunca declare vencedor, vantagem geral, superioridade ou que um é melhor que o outro; pode mostrar que um tem mais cv e o outro mais torque em baixa. Sem inventar critério. Para modelo que não está no estoque (ex.: Taycan), compare com o que você conhece dele e diga que no momento não temos esse no estoque. Formato pro cliente leigo: 1 frase curta e depois uma linha por carro “• Modelo Versão Ano — dado pedido” (ex.: “• Civic EXL 2020 — 155 cv”), sem km, preço nem motor repetido.",
+    "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, com abertura neutra e o ponto forte real de cada um. Entre nossos carros, nunca declare vencedor, vantagem geral, superioridade ou que um é melhor que o outro; pode mostrar o motor de cada ficha e quem entrega mais torque em baixa, sem nunca citar cv nem número de marchas. Sem inventar critério. Para modelo que não está no estoque (ex.: Taycan), compare com o que você conhece dele e diga que no momento não temos esse no estoque. Formato pro cliente leigo: 1 frase curta e depois uma linha por carro “• Modelo Versão Ano — dado pedido” (ex.: “• Civic EXL 2020 — 19,5 kgfm”), sem km, preço nem motor repetido.",
   );
   lines.push(
     "- Não despeje a lista do estoque nem repita preço e km se a pergunta não pediu. Nunca mostre preço de carro vendido nem a cidade do veículo. Só convide para o consultor/WhatsApp quando ajudar de verdade.",
@@ -607,7 +616,7 @@ export function expertFallbackReply(plan: ExpertPlan, message: string) {
       const year = entry.vehicle ? ` ${entry.vehicle.yearModel}` : "";
       const km = entry.vehicle ? ` (${entry.vehicle.km.toLocaleString("pt-BR")} km na ficha)` : "";
       const city = spec.cidade?.gasolina;
-      return `O ${entry.nome}${year}${km} é uma boa escolha para quem busca ${city && city >= 11 ? "economia no dia a dia" : "conforto e espaço"}: ${spec.manutencao}${/CVT/.test(spec.cambio) ? ", com a suavidade do câmbio CVT" : ""}${spec.portaMalas ? ` e porta-malas de referência de ${spec.portaMalas} litros` : ""}.`;
+      return `O ${entry.nome}${year}${km} é uma boa escolha para quem busca ${city && city >= 11 ? "economia no dia a dia" : "conforto e espaço"}: ${stripCvAndMarchas(spec.manutencao)}${/CVT/i.test(spec.cambio) ? ", com a suavidade do câmbio automático" : ""}${spec.portaMalas ? ` e porta-malas de referência de ${spec.portaMalas} litros` : ""}.`;
     }).join(" ");
   }
   if (plan.subject.unmatched?.length) {

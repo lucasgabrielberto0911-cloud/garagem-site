@@ -36,15 +36,11 @@ export const MOTO_FUELS = ["Gasolina", "Etanol", "Flex", "Elétrico"] as const;
 export const CAR_TRANSMISSIONS = [
   "Manual",
   "Automático",
-  "CVT",
-  "Automatizado",
 ] as const;
 
 export const MOTO_TRANSMISSIONS = [
   "Manual",
   "Automático",
-  "Semi-automático",
-  "CVT",
 ] as const;
 
 export const CAR_ACCESSORY_PRESETS = [

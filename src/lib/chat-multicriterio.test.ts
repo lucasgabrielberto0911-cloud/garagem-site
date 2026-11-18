@@ -47,7 +47,8 @@ test("recomendação acolhedora mantém consumo e potência reais com fonte uma 
     for (const [index, block] of blocks.entries()) {
       const spec = findVehicleSpec(picks[index]!)!;
       assert.ok(block.includes(`${specCityKmL(spec)!.toLocaleString("pt-BR")} km/l`));
-      assert.ok(block.includes(`${specMaxCv(spec)} cv`));
+      assert.doesNotMatch(block, /\bcv\b|cavalos/i);
+      assert.match(block, /motor/i);
       assert.match(block, /na cidade.*gasolina/);
       assert.doesNotMatch(block, /Inmetro|de fábrica/);
     }
@@ -102,7 +103,8 @@ test("ranking de força no estoque mantém motor 1.0 elegível sem divulgar cv",
   const rows = result.reply.split("\n").filter(line => line.startsWith("• **["));
   assert.equal(rows.length, 2);
   assert.doesNotMatch(rows[0]!, /\bcv\b|cavalos|potência/i);
-  assert.match(rows[1]!, /114 cv/);
+  assert.doesNotMatch(rows[1]!, /\bcv\b|cavalos|potência/i);
+  assert.match(rows[1]!, /Motor 1,6|motor 1,6/i);
 });
 test("ranking de consumo dos cards respeita teto explícito e teto do follow-up", async () => {
   const pool = [stock[0]!, stock[1]!, {...stock[2]!, transmission: "Automático"}];

@@ -391,8 +391,9 @@ test("mais forte entre automáticos até 80 mil ordena pelos cv de catálogo, n�
     },
   });
   assert.deepEqual(result.vehicles.map((v) => v.id), ["civic", "duster"]);
-  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2015 — [^\n]*155 cv/);
-  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Duster 2014 — [^\n]*142 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2015 — [^\n]*motor 2,0/i);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Duster 2014 — [^\n]*motor 2,0/i);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /\bcv\b/i);
   assert.ok(result.vehicles.every(v => v.price <= 80_000 && v.transmission === "Automático"));
   assert.doesNotMatch(textoVisivelChat(result.reply), /Corolla|No estoque:|Achei \d/);
 });
@@ -466,8 +467,8 @@ test("modelo ausente do estoque citado na pergunta técnica não vira resposta d
     },
   });
   assert.equal(known.vehicles.length, 0);
-  assert.match(textoVisivelChat(known.reply), /Corolla 2\.0 tem cerca de 154 cv no etanol e 143 cv na gasolina/);
-  assert.doesNotMatch(textoVisivelChat(known.reply), /Civic|155 cv/);
+  assert.match(textoVisivelChat(known.reply), /Corolla 2\.0 usa motor 2\.0 16V Dual VVT-i/);
+  assert.doesNotMatch(textoVisivelChat(known.reply), /Civic|\bcv\b/i);
   // Modelo fora do estoque e fora da base: o modelo de linguagem responde sem usar a ficha do Civic.
   let prompt = "";
   const unknown = await runChatTurn({
