@@ -1,6 +1,5 @@
 import { e2ePhotoFixture } from "./e2e-photo-fixture";
 import { isPublicPhotoBlob } from "./public-photo-url";
-import { isPublicPhotoSource } from "./public-photo-source";
 import { downloadR2Photo, isR2PhotoUrl } from "./r2-photos";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -115,7 +114,7 @@ async function downloadStorageObject(storagePath: string): Promise<Uint8Array | 
 export async function loadArchiveOriginal(url: string, source: "admin" | "public" = "admin"): Promise<ArchiveFile | null> {
   const fixture = await e2ePhotoFixture();
   if (fixture) return { bytes: fixture, contentType: "image/png" };
-  if (source === "public" && !isPublicPhotoSource(url)) return null;
+  if (source === "public" && !isPublicPhotoBlob(url) && !isR2PhotoUrl(url)) return null;
   const withoutHash = url.split("#")[0] ?? url;
   const original = supabaseOriginalSrc(withoutHash).split("?")[0] ?? withoutHash;
   let storagePath: string | null = null;
@@ -127,12 +126,13 @@ export async function loadArchiveOriginal(url: string, source: "admin" | "public
 
   if (storagePath && isSafeVehicleStoragePath(storagePath)) {
     if (isR2PhotoUrl(original)) {
-      const bytes = await downloadR2Photo(original);
-      if (!bytes) return null; // sem segunda busca: R2 já tentou URL pública e API
-      return {
-        bytes,
-        contentType: contentTypeFromName(storagePath, "image/webp"),
-      };
+      const bytes = await downloadR2Photo(storagePath);
+      if (bytes) {
+        return {
+          bytes,
+          contentType: contentTypeFromName(storagePath, "image/webp"),
+        };
+      }
     } else {
       const bytes = await downloadStorageObject(storagePath);
       if (bytes) {
