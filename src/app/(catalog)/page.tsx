@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { HomeAssistantAsk, HomeAssistantButton } from "@/components/site/HomeAssistantCta";
+import { HomeAssistantButton } from "@/components/site/HomeAssistantCta";
 import { Suspense } from "react";
 import { JsonLd } from "@/components/JsonLd";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
-import { HeroSearch } from "@/components/site/HeroSearch";
-import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
 import { Testimonials } from "@/components/site/Testimonials";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
@@ -33,11 +31,7 @@ import { buildPageMetadata, itemListJsonLd, localBusinessJsonLd, websiteJsonLd }
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getGoogleReviews, getPublishedFaq } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
-import {
-  getFeaturedVehicles,
-  getStockBrands,
-  getTestimonials,
-} from "@/lib/vehicles";
+import { getFeaturedVehicles, getTestimonials } from "@/lib/vehicles";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { HOME_SEO_DESCRIPTION, HOME_SEO_TITLE } from "@/lib/seo-local";
 
@@ -68,10 +62,8 @@ const REASONS = [
 ] as const;
 
 export default async function HomePage() {
-  const [featured, brands, publicSite] =
-    await Promise.all([
+  const [featured, publicSite] = await Promise.all([
     getFeaturedVehicles(MAX_HOME_FEATURED),
-    getStockBrands(5),
     getPublicSite(),
   ]);
 
@@ -86,100 +78,51 @@ export default async function HomePage() {
           })}
         />
       ) : null}
-      {/* 1. HERO — o que a loja é, e o único WhatsApp */}
+      {/* 1. HERO — só o título e três botões grandes */}
       <section className="hero-red-black relative isolate overflow-hidden">
         <div className="hero-color-field" aria-hidden="true">
           <span className="hero-red-orb hero-red-orb-1" />
           <span className="hero-red-orb hero-red-orb-2" />
         </div>
-        <div
-          className="hero-bottom-fade"
-          aria-hidden="true"
-        />
+        <div className="hero-bottom-fade" aria-hidden="true" />
 
-        <Container className="pt-4 pb-4 sm:py-6 lg:py-6">
-          {/* Computador: grade de 2 colunas; a da direita alinha ações (WhatsApp principal,
-              Ver estoque secundário) + assistente leve e integrado ao hero. */}
-          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-center lg:gap-x-10 xl:grid-cols-[minmax(0,1fr)_28rem] xl:gap-x-12">
-          <div className="flex flex-col gap-3.5 sm:gap-5 lg:contents">
-            <div className="hero-text min-w-0 max-w-2xl lg:col-start-1 lg:row-start-1">
-              <p className="hidden font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light sm:block">
-                Garagem · Combinamos o atendimento pelo WhatsApp
-              </p>
-              <h1 className="font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-2 sm:text-3xl sm:leading-[1.12]">
-                Seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória.
-              </h1>
-              <ul className="mt-3 flex max-w-lg flex-col gap-2 border-l-2 border-brand/60 pl-3 text-sm leading-snug text-cream sm:gap-1.5 sm:border-0 sm:pl-0 sm:text-base">
-                <li>A gente revisa cada veículo, e ele sai com garantia.</li>
-                <li>A documentação vai 100% preparada, pra você ter mais tranquilidade.</li>
-              </ul>
-            </div>
-
-            {/* Celular: WhatsApp principal + Ver estoque secundário discreto (assistente
-                segue no cabeçalho); tablet/computador: ambos lado a lado + assistente leve. */}
-            <div className="hero-cta flex w-full shrink-0 flex-col gap-3 sm:max-w-md sm:gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none lg:self-center">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5">
-                <SiteLeadHit contentName="Home Hero">
-                  <WhatsAppButton
-                    size="md"
-                    className="w-full rounded-lg !min-h-[44px] sm:!min-h-[46px] !px-4 !py-2.5 !text-[13px] sm:!text-sm shadow-md shadow-brand/20 whitespace-nowrap"
-                    trackingLabel="home-hero"
-                    message={WHATSAPP_MESSAGES.help}
-                  >
-                    Falar no WhatsApp
-                  </WhatsAppButton>
-                </SiteLeadHit>
-                <ButtonLink
-                  href="/estoque"
-                  size="md"
-                  variant="outline"
-                  className="w-full rounded-lg !min-h-[44px] sm:!min-h-[46px] !px-4 !py-2.5 !text-[13px] sm:!text-sm !border-white/20 !bg-white/[0.04] hover:!border-white/40 hover:!bg-white/[0.08] whitespace-nowrap"
-                >
-                  Ver estoque
-                </ButtonLink>
-              </div>
-              <div className="hidden sm:flex sm:flex-col sm:gap-2.5 sm:pt-1">
-                <div className="flex items-center">
-                  <HomeAssistantButton />
-                </div>
-                <HomeAssistantAsk />
-              </div>
-              {/* O telefone já está no header e no WhatsApp; fica só no tablet, como antes. */}
-              <p className="hidden text-center text-sm font-medium leading-none text-cream/80 sm:block lg:hidden">
-                {site.whatsappLabel}
-              </p>
-            </div>
-          </div>
-
-          <div className="hero-stats mx-auto mt-4 w-full max-w-2xl sm:mt-7 lg:col-start-1 lg:row-start-2 lg:mx-0 lg:mt-6 lg:self-end">
-            <Suspense fallback={<StatsBarSkeleton />}>
-              <StatsBar />
-            </Suspense>
-          </div>
+        <Container className="py-5 sm:py-7 lg:py-8">
+          <h1 className="max-w-3xl font-display text-xl font-semibold leading-snug tracking-tight text-cream sm:text-3xl sm:leading-[1.12]">
+            Seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória.
+          </h1>
+          {/* Alvo de toque de 56px: acima de 44pt (Apple) e 48dp (Material). */}
+          <div className="hero-cta mt-4 grid max-w-xl grid-cols-1 gap-3 sm:mt-5 lg:max-w-4xl lg:grid-cols-3 lg:gap-4">
+            <SiteLeadHit contentName="Home Hero">
+              <WhatsAppButton
+                size="lg"
+                className="w-full rounded-xl !min-h-[56px] !px-6 !py-3.5 !text-lg !normal-case !tracking-normal shadow-md shadow-brand/25 focus-visible:!ring-4 focus-visible:!ring-white"
+                trackingLabel="home-hero"
+                message={WHATSAPP_MESSAGES.help}
+              >
+                Falar no WhatsApp
+              </WhatsAppButton>
+            </SiteLeadHit>
+            <ButtonLink
+              href="/estoque"
+              size="lg"
+              variant="outline"
+              className="w-full rounded-xl !min-h-[56px] !px-6 !py-3.5 !text-lg !normal-case !tracking-normal !border-2 !border-white/40 !bg-white/[0.06] hover:!border-white hover:!bg-white/[0.12] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white"
+            >
+              Ver estoque
+            </ButtonLink>
+            <HomeAssistantButton />
           </div>
         </Container>
       </section>
 
-      {/* 2. ESTOQUE — busca e anúncios reais, logo abaixo da loja */}
-      <Section id="destaques" spacing="none" className="border-t border-white/5 py-3 sm:py-5 lg:py-6">
+      {/* 2. DESTAQUES — logo depois do topo, só a lista de carros */}
+      <Section id="destaques" spacing="none" className="border-t border-white/5 py-4 sm:py-6 lg:py-8">
         <div className="flex flex-col">
-        <div>
-          <p className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light sm:block">
-            Estoque
-          </p>
-          <h2 className="font-display text-lg font-semibold leading-tight tracking-tight text-cream sm:mt-0.5 sm:text-2xl">
-            Veículos em destaque
-          </h2>
-          <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-muted sm:block">
-            Até 8 veículos em destaque. O estoque muda rápido; veja as demais opções disponíveis.
-          </p>
-        </div>
+        <h2 className="font-display text-xl font-semibold leading-tight tracking-tight text-cream sm:text-2xl">
+          Veículos em destaque
+        </h2>
 
-        <div className="hero-search mt-3 sm:mt-4">
-          <HeroSearch brands={brands.slice(0, 5)} />
-        </div>
-
-        <div className="mt-2 sm:mt-4">
+        <div className="mt-3 sm:mt-4">
           {featured.length === 0 ? (
             featured.error ? (
               <div

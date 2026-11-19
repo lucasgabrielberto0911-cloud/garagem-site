@@ -435,7 +435,7 @@ test("avaliação: formulário salva lead com origem e mostra recibo", async ({ 
   expect((await page.request.get("/api/admin/badge")).status()).toBe(200);
   await page.request.post("/api/auth/logout");
   await page.goto(`/vender?interesse=${samples[0].id}`);
-  const form = page.locator("form").filter({ has: page.locator('[name="plate"]') });
+  const form = page.locator("#conteudo form").filter({ has: page.locator('[name="plate"]') });
   await form.getByText("Complementar com placa, km ou fotos (opcional)", { exact: true }).click();
   for (const [field, value] of Object.entries({ name: conta.prefixo, phone: "27988887766", brand: "Honda", model: "Civic", year: "2020", plate: "ABC1D23", km: "42000", notes: "Avaliação fictícia" })) {
     await form.locator(`[name="${field}"]`).fill(value);

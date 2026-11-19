@@ -11,7 +11,6 @@ function readSrc(rel: string) {
 }
 
 test("cidade do veículo fica fora dos filtros e consultas públicos", () => {
-  const filters = readSrc("components/site/StockFilters.tsx") + readSrc("components/site/StockFilterFields.tsx") + readSrc("components/site/StockFilterControls.tsx");
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const vehicles = readSrc("lib/vehicles.ts");
   const where = vehicles.slice(
@@ -19,16 +18,12 @@ test("cidade do veículo fica fora dos filtros e consultas públicos", () => {
     vehicles.indexOf("function stockQueryKey"),
   );
 
-  assert.doesNotMatch(filters, /VEHICLE_LOCATION_CITIES/);
-  assert.doesNotMatch(filters, /sheet-city-/);
-  assert.doesNotMatch(filters, /Onde o veículo está/);
+  assert.doesNotMatch(browse, /VEHICLE_LOCATION_CITIES|Onde o veículo está/);
   const stockQuery = readSrc("lib/stock-query.ts");
   assert.doesNotMatch(stockQuery, /"city",/);
-  assert.match(browse, /STOCK_FILTER_KEYS/);
-  assert.doesNotMatch(browse, /city: params\.city/);
+  assert.doesNotMatch(browse, /city/);
   assert.match(where, /stockCityFilter\(filters\.city\)/);
   assert.match(vehicles, /stock-page-v17/);
-  assert.doesNotMatch(filters, /Vitória/);
 });
 
 test("landing de cidade lista o estoque inteiro e não filtra pela cidade", () => {
@@ -49,31 +44,11 @@ test("landing de cidade lista o estoque inteiro e não filtra pela cidade", () =
   assert.doesNotMatch(showcase, /locationCity|stockCityFilter|pickCityShowcase/);
 });
 
-test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscara", () => {
-  const filters = readSrc("components/site/StockFilters.tsx") + readSrc("components/site/StockFilterFields.tsx") + readSrc("components/site/StockFilterControls.tsx");
-  const css = readSrc("app/globals.css");
-  const barStart = filters.indexOf("data-stock-filters");
-  const barEnd = filters.indexOf('id="painel-filtros"');
-  assert.ok(barStart > 0 && barEnd > barStart);
-  const bar = filters.slice(barStart, barEnd);
-  assert.doesNotMatch(filters.slice(barEnd), /Onde o veículo está/);
-  assert.match(bar, />[\s\n]*Atalhos[\s\n]*<\/p>/);
-  assert.doesNotMatch(bar, /label="Marca"/);
-  assert.match(bar, /stock-chip-action/);
-  assert.match(bar, /Filtros/);
-  assert.doesNotMatch(bar, /chip-scroll/);
-  assert.match(readSrc("lib/stock-chip-track.ts"), /chipTrackInsets/);
-  assert.match(filters, /Até R\$ 60 mil/);
-  assert.match(filters, /Preço mínimo/);
-  assert.match(filters, /Preço máximo/);
-  assert.doesNotMatch(filters, /BUDGET_CHIPS/);
-  assert.match(css, /\.stock-chip-row\s*\{[^}]*align-items:\s*center/);
-  assert.match(css, /\.stock-chip-row\s*\{[^}]*height:\s*2\.75rem/);
-  assert.match(css, /\.stock-chip-action\s*\{[^}]*height:\s*2\.75rem/);
-  const track = css.slice(css.indexOf(".stock-chip-track {"), css.indexOf(".stock-chip-action"));
-  assert.doesNotMatch(track, /mask-image/);
-  assert.doesNotMatch(filters, /Confirmado neste anúncio/);
+test("estoque no celular tem rodapé e grade de 2 colunas sem filtros", () => {
+  assert.match(readSrc("components/site/VehicleGrid.tsx"), /grid-cols-2/);
+  assert.match(readSrc("components/site/MobileBottomNav.tsx"), /fixed inset-x-0 bottom-0/);
   assert.match(readSrc("lib/site.ts"), /label: "\(27\) 99633-0706"/);
+  assert.doesNotMatch(readSrc("app/(catalog)/estoque/page.tsx"), /StockFilters/);
 });
 
 test("estoque no celular não trava o body nem esconde a bottom nav", () => {
@@ -101,7 +76,4 @@ test("hero mobile não gasta blur largo nem empurra o estoque com padding morto"
   const marker = css.indexOf("Sem blur largo no celular");
   const orb = css.slice(marker, marker + 220);
   assert.match(orb, /filter:\s*none/);
-  const search = readSrc("components/site/HeroSearch.tsx");
-  assert.match(search, /sm:backdrop-blur-md/);
-  assert.doesNotMatch(search, /backdrop-blur-md transition/);
 });

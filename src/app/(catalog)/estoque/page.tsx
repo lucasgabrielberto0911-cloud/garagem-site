@@ -5,14 +5,12 @@ import { EstoqueBrowse } from "@/components/site/EstoqueBrowse";
 import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
 import { StockCatalogGate } from "@/components/site/StockCatalogGate";
 import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
-import { StockFilters } from "@/components/site/StockFilters";
 import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles";
-import { StockBrowseShell } from "@/components/site/StockPending";
 import { Container, PageHeader } from "@/components/site/ui";
 import { breadcrumbJsonLd, buildPageMetadata, itemListJsonLd } from "@/lib/seo";
 import { ESTOQUE_SEO_TITLE, SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 import { site } from "@/lib/site";
-import { getStockCatalogLinks, getStockFacets, getStockPage } from "@/lib/vehicles";
+import { getStockCatalogLinks, getStockPage } from "@/lib/vehicles";
 
 export const revalidate = 3600;
 
@@ -23,9 +21,8 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function EstoquePage() {
-  const [stock, facets, catalog] = await Promise.all([
+  const [stock, catalog] = await Promise.all([
     getStockPage({ page: 1 }),
-    getStockFacets(),
     getStockCatalogLinks(),
   ]);
   const listed = catalog.length > 0 ? catalog : stock.vehicles;
@@ -53,10 +50,9 @@ export default async function EstoquePage() {
           description={`Seminovos revisados e com garantia em ${SEO_LOCAL_LOCATION}. Troca, financiamento e vídeo do carro pelo WhatsApp.`}
         />
 
-        <StockBrowseShell
-          filters={<StockFilters facets={facets} />}
-          results={<EstoqueBrowse initialStock={stock} />}
-        />
+        <div className="mt-3 lg:mt-4">
+          <EstoqueBrowse initialStock={stock} />
+        </div>
 
         <RecentlyViewedVehicles />
 

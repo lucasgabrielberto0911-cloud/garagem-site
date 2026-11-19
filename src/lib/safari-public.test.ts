@@ -38,14 +38,11 @@ test("chat no iPad não ignora o teclado por breakpoint de 1024px", () => {
   );
 });
 
-test("layout público e filtros do estoque não dependem de 100vh", () => {
+test("layout público não depende de 100vh", () => {
   const layout = src("app/(site)/layout.tsx");
-  const filters = src("components/site/StockFilters.tsx");
   const offline = src("app/offline/page.tsx");
   assert.match(layout, /min-h-app-screen/);
   assert.doesNotMatch(layout, /min-h-screen/);
-  assert.match(filters, /88dvh/);
-  assert.doesNotMatch(filters, /100vh/);
   assert.match(offline, /min-h-app-screen/);
 });
 

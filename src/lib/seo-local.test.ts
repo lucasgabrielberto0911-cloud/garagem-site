@@ -82,7 +82,6 @@ test("hero da home, /links e keywords destacam Linhares, Aracruz e Grande Vitór
   const layout = readSrc("app/layout.tsx");
 
   assert.match(hero, /<h1[^>]*>\s*Seminovos com procedência\. Atendemos Linhares, Aracruz e Grande Vitória\.\s*<\/h1>/);
-  assert.match(hero, /Combinamos o atendimento pelo WhatsApp/);
   assert.doesNotMatch(hero, /todo o norte do ES/i);
 
   assert.match(

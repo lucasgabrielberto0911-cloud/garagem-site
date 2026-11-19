@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { IconChat, IconWhatsApp } from "@/components/site/icons";
 import { usePageWhatsAppTarget } from "@/components/site/usePageWhatsAppHref";
 import { SiteLeadHit } from "@/lib/funnel-events";
@@ -11,10 +12,13 @@ export function SiteSupportFloatContent({
   whatsapp,
   onOpenAssistant,
   busy = false,
+  hideAssistant = false,
 }: {
   whatsapp: SiteSupportWhatsAppTarget;
   onOpenAssistant: () => void;
   busy?: boolean;
+  /** Na home o assistente é o botão grande do topo; só o WhatsApp flutua. */
+  hideAssistant?: boolean;
 }) {
   const whatsappLink = (
     <a
@@ -38,7 +42,7 @@ export function SiteSupportFloatContent({
 
   return (
     <div className="pointer-events-none hidden flex-col items-end gap-2 lg:flex">
-      <button
+      {hideAssistant ? null : <button
         type="button"
         onClick={onOpenAssistant}
         aria-busy={busy}
@@ -46,7 +50,7 @@ export function SiteSupportFloatContent({
       >
         <IconChat className="h-4 w-4 shrink-0 text-brand-light transition group-hover:text-white" />
         <span>Tirar dúvida rápida</span>
-      </button>
+      </button>}
 
       {whatsapp.catalogParams ? (
         whatsappLink
@@ -72,9 +76,11 @@ export function SiteSupportFloat({
   busy?: boolean;
 }) {
   const whatsapp = usePageWhatsAppTarget();
+  const onHome = usePathname() === "/";
   return (
     <SiteSupportFloatContent
       whatsapp={whatsapp}
+      hideAssistant={onHome}
       onOpenAssistant={onOpenAssistant}
       busy={busy}
     />
