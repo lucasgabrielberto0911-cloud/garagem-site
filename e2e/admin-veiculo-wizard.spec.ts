@@ -116,6 +116,9 @@ test.describe("wizard nos tamanhos configurados", () => {
       const dragSecondOntoFirst = async () => {
         const handleButton = page.getByRole("button", { name: /^Reordenar foto 2\./ });
         const targetItem = page.locator('[data-photo-index="0"]');
+        // CoverPhotoGuide carrega com dynamic() acima da grade e desloca a tela ao montar.
+        await expect(page.getByText("Capa no card", { exact: true })).toBeVisible();
+        await expect(handleButton).toBeEnabled();
         // O mouse do Playwright usa coordenadas da janela: as duas fotos precisam estar visíveis.
         // Centralizado, longe das bordas onde o arraste rola a página sozinho; "instant" porque o html tem scroll-behavior: smooth.
         await targetItem.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
@@ -123,19 +126,19 @@ test.describe("wizard nos tamanhos configurados", () => {
         const target = (await targetItem.boundingBox())!;
         await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
         await page.mouse.down();
-        await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 5 });
+        await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 10 });
         await page.mouse.up();
       };
       await dragSecondOntoFirst();
-      expect(await order()).toEqual([original[1].url, original[0].url]);
+      await expect.poll(order).toEqual([original[1].url, original[0].url]);
       await dragSecondOntoFirst();
-      expect(await order()).toEqual(original.map((photo: { url: string }) => photo.url));
+      await expect.poll(order).toEqual(original.map((photo: { url: string }) => photo.url));
       await page.getByRole("button", { name: /^Reordenar foto 1\./ }).focus();
       await page.keyboard.press("ArrowRight");
-      expect(await order()).toEqual([original[1].url, original[0].url]);
+      await expect.poll(order).toEqual([original[1].url, original[0].url]);
       // O foco acompanha a foto movida: a mesma alça volta com ArrowLeft.
       await page.keyboard.press("ArrowLeft");
-      expect(await order()).toEqual(original.map((photo: { url: string }) => photo.url));
+      await expect.poll(order).toEqual(original.map((photo: { url: string }) => photo.url));
       if (page.viewportSize()!.width < 1024) await page.getByRole("button", { name: "Mais ações da foto 2", exact: true }).click();
       await page.getByRole("button", { name: "Definir como capa", exact: true }).last().click();
       const reordered = JSON.parse(await page.locator('[name="photoUrls"]').inputValue());
