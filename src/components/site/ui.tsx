@@ -170,14 +170,14 @@ export function WhatsAppButton({
 }) {
   const sizing =
     size === "lg"
-      ? "min-h-[52px] px-7 py-4 text-sm sm:text-base"
+      ? "min-h-[56px] px-7 py-4 text-sm sm:text-base"
       : "min-h-[48px] px-5 py-3 text-xs sm:text-sm";
-  // CTA principal do site: fundo brand sólido com sombra para destaque,
-  // hover/active em brand-dark e anel de foco em brand-light (contraste AA).
+  // CTA principal de WhatsApp: fundo verde oficial (#25D366) com texto branco para
+  // contrastar com os CTAs vermelhos da marca (ex.: assistente e ver estoque).
   const look =
     variant === "solid"
-      ? "bg-brand text-cream shadow-lg hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:bg-brand-dark"
-      : "border border-white/20 text-cream hover:border-brand hover:bg-white/5";
+      ? "bg-[#25D366] text-white shadow-[0_8px_24px_rgba(37,211,102,0.28)] hover:bg-[#1FB858] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:bg-[#1BA84E]"
+      : "border border-white/20 text-cream hover:border-[#25D366]/70 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt";
 
   return (
     <TrackedWhatsAppLink

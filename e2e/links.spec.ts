@@ -2,6 +2,9 @@ import { test, expect } from "@playwright/test";
 
 // Só leitura: não cria veículos nem mexe no estoque (o cache da vitrine fica intacto).
 test("/links mostra o hub com os 5 links padrão, sem o cromo do site", async ({ page }) => {
+  await page.route("**/fotos/**", (route) =>
+    route.fulfill({ contentType: "image/png", path: "public/branding/placeholder-car.png" }),
+  );
   const response = await page.goto("/links");
   expect(response?.status()).toBe(200);
 
@@ -23,8 +26,20 @@ test("/links mostra o hub com os 5 links padrão, sem o cromo do site", async ({
     await expect(link).toHaveAttribute("href", hrefs[name] as string | RegExp);
     await expect(link).toBeVisible();
     const box = await link.boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(48);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(56);
   }
+
+  const waLink = hub.getByRole("link", { name: "WhatsApp" });
+  // Remove o ponteiro antes de medir a cor base (#25D366; hover é #1FB858).
+  await page.mouse.move(0, 0);
+  await expect
+    .poll(() =>
+      waLink.evaluate((el) => {
+        const css = getComputedStyle(el);
+        return { bg: css.backgroundColor, color: css.color };
+      }),
+    )
+    .toEqual({ bg: "rgb(37, 211, 102)", color: "rgb(255, 255, 255)" });
 
   // Interno na mesma aba; externos em nova aba, sem opener.
   await expect(hub.getByRole("link", { name: "Ver estoque" })).not.toHaveAttribute("target", /.+/);
