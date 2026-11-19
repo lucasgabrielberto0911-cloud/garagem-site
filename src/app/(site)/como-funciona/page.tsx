@@ -28,7 +28,7 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Como funciona comprar na ${site.name}`,
-  description: `Atendemos Linhares, Aracruz e Grande Vitória e combinamos o atendimento pelo WhatsApp: vistoria e procedência, preparação do carro, vídeo detalhado, simulação, documentação e entrega.`,
+  description: `Atendemos Linhares, Aracruz e Grande Vitória e combinamos o atendimento pelo WhatsApp: vistoria e procedência, preparação do carro, vídeo detalhado, financiamento, documentação e entrega.`,
   path: "/como-funciona",
 });
 

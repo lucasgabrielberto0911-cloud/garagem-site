@@ -62,13 +62,13 @@ test("ficha vendida: links de marca, categoria e /vendidos, sem preço", () => {
   for (const l of [...car, ...moto]) assert.ok(!/preco|price|R\$|\d{2}\.\d{3}/i.test(l.href + l.label));
 });
 
-test("financiamento tem atalhos de intenção, praças de SEO local e sem simulador ou parcela", () => {
+test("financiamento tem atalhos de intenção, praças de SEO local e sem simular, simulador ou parcela", () => {
   const fin = read("src/app/(site)/financiamento/page.tsx");
   for (const t of [
     "WHATSAPP_MESSAGES.finance",
     "WHATSAPP_MESSAGES.sell",
     'href="/vender"',
-    "Simular financiamento no WhatsApp",
+    "Falar sobre financiamento no WhatsApp",
     "Quero avaliar meu usado na troca",
     "Financiamento de seminovos em Linhares, Aracruz e Grande Vitória",
     "Atendemos Linhares, Aracruz e Grande Vitória",
@@ -77,8 +77,17 @@ test("financiamento tem atalhos de intenção, praças de SEO local e sem simula
     assert.ok(fin.includes(t), t);
   assert.doesNotMatch(
     fin,
-    /\bsimulador\b|\bparcelas?\b|R\$\s*\d|loja física|loja digital|pontos de venda|hora marcada/i,
+    /\bsimul\w*\b|\bparcelas?\b|R\$\s*\d|loja física|loja digital|pontos de venda|hora marcada/i,
   );
   const how = read("src/app/(site)/como-funciona/page.tsx");
   for (const h of ["/estoque", "/financiamento", "/vendidos", "/guias"]) assert.ok(how.includes(`href: "${h}"`), h);
+
+  for (const pagePath of [
+    "src/app/(site)/como-funciona/page.tsx",
+    "src/app/(site)/faq/page.tsx",
+    "src/app/(site)/privacidade/page.tsx",
+    "src/app/(site)/contato/page.tsx",
+  ]) {
+    assert.doesNotMatch(read(pagePath), /\bsimul\w*\b/i, pagePath);
+  }
 });

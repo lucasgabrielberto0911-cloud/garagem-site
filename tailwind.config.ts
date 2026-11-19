@@ -1,5 +1,12 @@
 import type { Config } from "tailwindcss";
 
+export const siteBrandColors = {
+  DEFAULT: "#D91519",
+  dark: "#c91418",
+  light: "#FF4448",
+  orange: "#FF8A00",
+} as const;
+
 const config: Config = {
   // O painel tem CSS próprio (src/app/admin/admin.css): os utilitários que só
   // ele usa ficam fora do CSS bloqueante da home, do estoque e da ficha.
@@ -16,13 +23,7 @@ const config: Config = {
         asphalt: "#0D0D0F",
         cream: "#F7F5F2",
         ink: "#17171A",
-        brand: {
-          DEFAULT: "#D91519",
-          dark: "#c91418",
-          light: "#FF4448",
-          orange: "#FF8A00",
-          yellow: "#FFC72C",
-        },
+        brand: siteBrandColors,
         "accent-brand": "#ed1018",
         muted: "#B4B4BA",
         background: "var(--background)",
@@ -37,7 +38,7 @@ const config: Config = {
       },
       backgroundImage: {
         "brand-gradient":
-          "linear-gradient(90deg, #E8181C 0%, #FF8A00 50%, #FFC72C 100%)",
+          "linear-gradient(90deg, #E8181C 0%, #D91519 55%, #B31216 100%)",
       },
     },
   },

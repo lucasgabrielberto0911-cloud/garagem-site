@@ -33,7 +33,7 @@ export default async function FaqPage() {
         <PageHeader
           eyebrow="Dúvidas frequentes"
           title="Tudo que perguntam antes de comprar"
-          description="Busque por palavra-chave ou filtre por categoria. O assistente compara o estoque no site; para simular e fechar, chame no WhatsApp."
+          description="Busque por palavra-chave ou filtre por categoria. O assistente compara o estoque no site; para financiamento, troca ou fechar negócio, chame no WhatsApp."
         />
 
         <div id="financiamento" className="mt-8 lg:mt-10 scroll-mt-28">
@@ -45,8 +45,8 @@ export default async function FaqPage() {
             Ficou com outra dúvida?
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted">
-            Compare o estoque no assistente. Para parcela, troca ou fechamento,
-            fale com a gente no WhatsApp.
+            Compare o estoque no assistente. Para financiamento, troca ou
+            fechamento, fale com a gente no WhatsApp.
           </p>
           <div className="mt-5 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <ChatOpenButton source="faq" variant="outline" />

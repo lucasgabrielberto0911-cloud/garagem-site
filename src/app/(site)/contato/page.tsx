@@ -52,7 +52,7 @@ export default async function ContatoPage() {
             compact
             eyebrow="Contato"
             title={`Fale com a ${publicSite.name}`}
-            description="Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp."
+            description="Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp — todos os dias, das 8h às 23h. Compare o estoque no assistente; fale com a equipe e feche no WhatsApp."
           />
 
           <section

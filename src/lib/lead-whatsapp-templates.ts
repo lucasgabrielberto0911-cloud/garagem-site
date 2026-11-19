@@ -52,11 +52,11 @@ const TEMPLATES: Template[] = [
   },
   {
     id: "financiamento",
-    label: "Simulação de financiamento",
-    hint: "Pede entrada e prazo",
+    label: "Opções de financiamento",
+    hint: "Pede entrada e prazo desejado",
     scope: "estoque",
     text: (nome, car) =>
-      `Olá, ${nome}! Posso fazer uma simulação de financiamento do ${car}. Me diga a entrada e o prazo que você pensa em usar. A aprovação final depende da análise.`,
+      `Olá, ${nome}! Podemos verificar as opções de financiamento do ${car} com os bancos parceiros (em até 60x). Me diga a entrada e o prazo que você pensa em usar. A aprovação e as condições dependem da análise de crédito.`,
   },
   {
     id: "troca",
