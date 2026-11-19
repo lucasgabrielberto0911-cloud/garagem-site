@@ -129,12 +129,35 @@ test("páginas /links, /como-funciona e /financiamento seguem cache, estoque pr�
     assert.match(src, /shadow-/, name);
     assert.doesNotMatch(
       src,
-      /loja digital|Sua Garagem|gold|#ffd700|simulador|\b\d+\s*cv\b|\bmarchas\b/i,
+      /loja digital|Sua Garagem|gold|#ffc72c|#ffd700|\bsimul\w*\b|\b\d+\s*cv\b|\bmarchas\b/i,
       name,
     );
   }
 
   // /links não pode mencionar parcela, financiamento ou simulador (coberto também no e2e).
-  assert.doesNotMatch(linksPage, /parcela|financiamento|simulador/i);
+  assert.doesNotMatch(linksPage, /parcela|financiamento|simul/i);
   assert.doesNotMatch(linksPage, /<nav\b|<ul\b/);
+});
+
+test("tokens de marca públicos em globals.css e tailwind.config.ts ficam só em vermelho, sem dourado/amarelo", () => {
+  const globalsCss = readSrc("app/globals.css");
+  const tailwindConfig = readFileSync(
+    join(process.cwd(), "tailwind.config.ts"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    globalsCss,
+    /#ffc72c|#ffc0|#ffd700|#ff8a00|255,\s*138,\s*0|--brand-yellow|--brand-gold/i,
+  );
+  assert.doesNotMatch(
+    tailwindConfig,
+    /#ffc72c|#ffc0|#ffd700|\byellow\s*:|brand-gold/i,
+  );
+
+  const gradientMatch = tailwindConfig.match(
+    /"brand-gradient":\s*([\s\S]*?),/,
+  );
+  assert.ok(gradientMatch, "brand-gradient definido em tailwind.config.ts");
+  assert.doesNotMatch(gradientMatch[1], /#ff8a00|#ffc|#ffd|amber|yellow|gold/i);
 });

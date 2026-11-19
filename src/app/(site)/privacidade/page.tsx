@@ -88,7 +88,7 @@ export default function PrivacidadePage() {
           <Block title="4. Compartilhamento">
             <p>
               Seus dados podem ser compartilhados com instituições financeiras
-              parceiras (apenas quando você solicita simulação ou financiamento),
+              parceiras (apenas quando você solicita financiamento),
               com prestadores de serviço de tecnologia que hospedam o site e o
               banco de dados, e com autoridades públicas quando houver exigência
               legal. Não vendemos dados pessoais.

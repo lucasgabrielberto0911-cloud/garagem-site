@@ -66,7 +66,7 @@ export const SEO_GUIDES: readonly SeoGuide[] = [
         ],
       },
       {
-        heading: "Por que simular no WhatsApp (e não no site)",
+        heading: "Por que fazer a análise no WhatsApp (e não no site)",
         paragraphs: [
           "A análise depende do seu perfil e do veículo escolhido, e muda com o tempo. Por isso a conversa acontece no WhatsApp, com uma pessoa da Garagem acompanhando do primeiro recado até a documentação.",
         ],
@@ -97,7 +97,7 @@ export const SEO_GUIDES: readonly SeoGuide[] = [
           "Atendimento online para Linhares, Vitória, Aracruz e toda a região norte do ES.",
       },
     ],
-    whatsappMessage: "Oi Garagem! Quero simular financiamento de seminovo.",
+    whatsappMessage: "Oi Garagem! Quero saber sobre financiamento de seminovo.",
     links: [
       { href: "/estoque", label: "Ver o estoque" },
       { href: "/vender", label: "Vender ou trocar meu veículo" },

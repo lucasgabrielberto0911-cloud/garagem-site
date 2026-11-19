@@ -4,12 +4,12 @@ import { SEO_GUIDES, getSeoGuide, pickGuideVehicles } from "./seo-guides";
 import { getCityLocalContent } from "./city-local-content";
 import { getServiceCity } from "./service-cities";
 
-test("guias SEO: slugs do roteiro, 4 FAQs e sem parcela/simulador", () => {
+test("guias SEO: slugs do roteiro, 4 FAQs e sem parcela/simulação", () => {
   assert.deepEqual(SEO_GUIDES.map(g => g.slug), ["financiamento-seminovos-linhares", "troca-com-volta", "comparativos-estoque"]);
   for (const guide of SEO_GUIDES) {
     assert.equal(guide.faqs.length, 4);
     assert.ok(guide.description.length <= 170);
-    assert.doesNotMatch(JSON.stringify(guide), /parcela|simulador|\d+x\b/i);
+    assert.doesNotMatch(JSON.stringify(guide), /parcela|\bsimul\w*\b|\d+x\b/i);
   }
   assert.ok(getSeoGuide("troca-com-volta"));
 });

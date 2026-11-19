@@ -187,7 +187,7 @@ export default async function FinanciamentoPage() {
                 trackingLabel="financiamento"
                 className="w-full rounded-xl !min-h-[56px] !text-base !normal-case !tracking-normal sm:w-auto"
               >
-                Simular financiamento no WhatsApp
+                Falar sobre financiamento no WhatsApp
               </WhatsAppButton>
             </SiteLeadHit>
             <SiteLeadHit contentName="Financiamento - Troca">

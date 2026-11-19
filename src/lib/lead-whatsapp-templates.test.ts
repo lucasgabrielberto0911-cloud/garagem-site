@@ -21,6 +21,7 @@ test("modelos de compra trazem primeiro nome e carro, sem preço", () => {
     const text = textOf(t.href);
     assert.match(text, /Carlos/);
     assert.doesNotMatch(text, /Eduardo|R\$/);
+    assert.doesNotMatch(`${t.label} ${t.hint} ${text}`, /simul|parcela/i);
     assert.match(text, /Honda Civic 2022/);
   }
 });
