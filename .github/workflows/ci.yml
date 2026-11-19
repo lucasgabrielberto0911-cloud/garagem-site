@@ -116,7 +116,7 @@ jobs:
           fi
       - name: Playwright (deps)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 8
+        timeout-minutes: 20
         env:
           DEBIAN_FRONTEND: noninteractive
           NEEDRESTART_MODE: l
@@ -128,15 +128,21 @@ jobs:
           fi
           for attempt in 1 2; do
             status=0
-            timeout --kill-after=30s 210s npx playwright install-deps $BROWSERS < /dev/null || status=$?
+            npx playwright install-deps $BROWSERS < /dev/null || status=$?
             if [ "$status" -eq 0 ]; then
               exit 0
             fi
             if [ "$attempt" -eq 2 ]; then
               exit "$status"
             fi
-            echo "Playwright install-deps falhou (exit $status); tentando novamente em 5s..."
-            sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l dpkg --configure -a || true
+            echo "Playwright install-deps falhou (exit $status); aguardando locks do apt/dpkg antes de tentar novamente..."
+            for _ in $(seq 1 30); do
+              if ! sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock >/dev/null 2>&1 \
+                 && ! pgrep -x '(apt|apt-get|dpkg)' >/dev/null 2>&1; then
+                break
+              fi
+              sleep 2
+            done
             sleep 5
           done
       - name: Cache .next/cache
