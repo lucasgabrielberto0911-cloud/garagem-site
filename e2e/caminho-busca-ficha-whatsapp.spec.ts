@@ -114,11 +114,13 @@ test.describe("Caminho lista -> página do carro -> botão WhatsApp", () => {
     expect(buttonClass).not.toContain("gold");
     expect(buttonClass).not.toContain("yellow");
 
-    const buttonBg = await desktopWaButton.evaluate((el) =>
-      getComputedStyle(el).backgroundColor,
-    );
-    // #25D366: verde WhatsApp (rgb 37, 211, 102)
-    expect(buttonBg).toBe("rgb(37, 211, 102)");
+    // Remove o ponteiro do botão antes de medir a cor base (#25D366; hover é #1FB858).
+    await page.mouse.move(0, 0);
+    await expect
+      .poll(() =>
+        desktopWaButton.evaluate((el) => getComputedStyle(el).backgroundColor),
+      )
+      .toBe("rgb(37, 211, 102)");
 
     // Validação do link do WhatsApp e mensagem pré-preenchida com dados do carro
     const href = (await desktopWaButton.getAttribute("href")) || "";
