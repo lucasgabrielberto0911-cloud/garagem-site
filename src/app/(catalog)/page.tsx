@@ -95,7 +95,7 @@ export default async function HomePage() {
             <SiteLeadHit contentName="Home Hero">
               <WhatsAppButton
                 size="lg"
-                className="w-full rounded-xl !min-h-[56px] !px-6 !py-3.5 !text-lg !normal-case !tracking-normal shadow-md shadow-brand/25 focus-visible:!ring-4 focus-visible:!ring-white"
+                className="w-full rounded-xl !min-h-[56px] !px-6 !py-3.5 !text-lg !normal-case !tracking-normal shadow-[0_10px_28px_rgba(37,211,102,0.32)] focus-visible:!ring-4 focus-visible:!ring-white"
                 trackingLabel="home-hero"
                 message={WHATSAPP_MESSAGES.help}
               >

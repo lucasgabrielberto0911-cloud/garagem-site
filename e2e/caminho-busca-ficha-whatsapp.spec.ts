@@ -107,24 +107,18 @@ test.describe("Caminho lista -> página do carro -> botão WhatsApp", () => {
     await expect(desktopWaButton).toBeVisible();
     await expect(desktopWaButton).toContainText("Falar no WhatsApp");
 
-    // Validação da cor da marca: vermelho da loja (bg-brand), nunca dourado
+    // Validação da cor do CTA principal de WhatsApp: verde #25D366 com texto branco, nunca dourado
     const buttonClass = (await desktopWaButton.getAttribute("class")) || "";
-    expect(buttonClass).toContain("bg-brand");
-    expect(buttonClass).toContain("text-cream");
+    expect(buttonClass).toContain("bg-[#25D366]");
+    expect(buttonClass).toContain("text-white");
     expect(buttonClass).not.toContain("gold");
     expect(buttonClass).not.toContain("yellow");
 
     const buttonBg = await desktopWaButton.evaluate((el) =>
       getComputedStyle(el).backgroundColor,
     );
-    // bg-brand resolve para tom de vermelho da loja (RGB alto em R, baixo em G e B)
-    const matchRgb = buttonBg.match(/\d+/g);
-    if (matchRgb) {
-      const [r, g, b] = matchRgb.map(Number);
-      expect(r).toBeGreaterThan(180);
-      expect(g).toBeLessThan(50);
-      expect(b).toBeLessThan(50);
-    }
+    // #25D366: verde WhatsApp (rgb 37, 211, 102)
+    expect(buttonBg).toBe("rgb(37, 211, 102)");
 
     // Validação do link do WhatsApp e mensagem pré-preenchida com dados do carro
     const href = (await desktopWaButton.getAttribute("href")) || "";

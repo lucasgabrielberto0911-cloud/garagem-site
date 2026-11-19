@@ -59,24 +59,38 @@ const ICONS: Record<SiteLinkKind, (props: { className?: string }) => React.React
 };
 
 const BASE =
-  "group flex min-h-14 w-full items-center gap-3.5 rounded-xl px-4 py-3 font-display text-base font-semibold touch-manipulation transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:scale-[0.99]";
+  "group flex min-h-[58px] w-full items-center gap-3.5 rounded-2xl px-4 py-3.5 font-display text-base font-semibold touch-manipulation transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:scale-[0.99]";
 
-/** Estoque = vermelho da loja; WhatsApp = verde dos CTAs de WhatsApp; resto = card neutro. */
+/** Estoque = vermelho da loja; WhatsApp = verde oficial com texto branco; resto = card elevado. */
 const LOOK: Record<SiteLinkKind, string> = {
   estoque:
-    "bg-brand text-cream shadow-lg hover:bg-brand-dark active:bg-brand-dark",
+    "border border-brand-light/40 bg-brand text-white shadow-[0_14px_30px_-10px_rgba(217,21,25,0.6)] hover:-translate-y-0.5 hover:bg-brand-dark active:bg-brand-dark",
   whatsapp:
-    "bg-[#25D366] text-asphalt shadow-[0_6px_18px_rgba(0,0,0,0.4)] hover:bg-[#1FB858] active:bg-[#1FB858]",
-  facebook: "border border-white/20 bg-white/[0.04] text-cream hover:border-white/35 hover:bg-white/[0.08]",
-  olx: "border border-white/20 bg-white/[0.04] text-cream hover:border-white/35 hover:bg-white/[0.08]",
-  instagram: "border border-white/20 bg-white/[0.04] text-cream hover:border-white/35 hover:bg-white/[0.08]",
-  generic: "border border-white/20 bg-white/[0.04] text-cream hover:border-white/35 hover:bg-white/[0.08]",
+    "border border-white/15 bg-[#25D366] text-white shadow-[0_14px_30px_-10px_rgba(37,211,102,0.45)] hover:-translate-y-0.5 hover:bg-[#1FB858] active:bg-[#1BA84E]",
+  facebook:
+    "border border-white/15 bg-ink/95 text-cream shadow-[0_10px_24px_-12px_rgba(0,0,0,0.8)] hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.08]",
+  olx:
+    "border border-white/15 bg-ink/95 text-cream shadow-[0_10px_24px_-12px_rgba(0,0,0,0.8)] hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.08]",
+  instagram:
+    "border border-white/15 bg-ink/95 text-cream shadow-[0_10px_24px_-12px_rgba(0,0,0,0.8)] hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.08]",
+  generic:
+    "border border-white/15 bg-ink/95 text-cream shadow-[0_10px_24px_-12px_rgba(0,0,0,0.8)] hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.08]",
+};
+
+const ICON_BADGE: Record<SiteLinkKind, string> = {
+  estoque: "bg-white/15 text-white",
+  whatsapp: "bg-white/20 text-white",
+  facebook: "border border-white/15 bg-white/[0.06] text-cream",
+  olx: "border border-brand/35 bg-brand/15 text-brand-light",
+  instagram:
+    "bg-[radial-gradient(circle_at_30%_110%,#fdf497_0%,#fd5949_45%,#d6249f_62%,#285AEB_90%)] text-white",
+  generic: "border border-white/15 bg-white/[0.06] text-cream",
 };
 
 export function LinksHub({ links }: { links: readonly SiteLink[] }) {
   if (links.length === 0) {
     return (
-      <p className="rounded-xl border border-white/20 px-4 py-6 text-center text-sm text-cream/80">
+      <p className="rounded-2xl border border-white/15 bg-ink px-4 py-6 text-center text-sm text-cream/80 shadow-lg">
         Nenhum link disponível por enquanto.
       </p>
     );
@@ -98,10 +112,15 @@ export function LinksHub({ links }: { links: readonly SiteLink[] }) {
                 : { target: "_blank", rel: "noopener noreferrer" })}
               className={`${BASE} ${LOOK[kind]}`}
             >
-              <Icon className="h-6 w-6 shrink-0" />
+              <span
+                aria-hidden="true"
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ICON_BADGE[kind]}`}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
               <span className="min-w-0 flex-1 break-words">{link.label}</span>
               <IconArrowRight
-                className={`h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 ${highlighted ? "opacity-90" : "text-cream/75"}`}
+                className={`h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 ${highlighted ? "text-white/95" : "text-cream/70 group-hover:text-cream"}`}
               />
             </a>
           </li>
