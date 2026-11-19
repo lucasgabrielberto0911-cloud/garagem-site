@@ -116,12 +116,29 @@ jobs:
           fi
       - name: Playwright (deps)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 8
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: l
         run: |
           if [ "${{ matrix.shard }}" = "1" ]; then
-            npx playwright install-deps chromium webkit
+            BROWSERS="chromium webkit"
           else
-            npx playwright install-deps chromium
+            BROWSERS="chromium"
           fi
+          for attempt in 1 2; do
+            status=0
+            timeout --kill-after=30s 210s npx playwright install-deps $BROWSERS < /dev/null || status=$?
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 2 ]; then
+              exit "$status"
+            fi
+            echo "Playwright install-deps falhou (exit $status); tentando novamente em 5s..."
+            sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l dpkg --configure -a || true
+            sleep 5
+          done
       - name: Cache .next/cache
         uses: actions/cache@v4
         with:
