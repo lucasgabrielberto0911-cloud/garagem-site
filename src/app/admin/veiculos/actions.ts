@@ -811,7 +811,7 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
   return {
     ok: true,
     message: featured
-      ? "Na home (destaque). A ordem é a do cadastro — mais recente primeiro."
+      ? "Fixado na home. Os fixados aparecem primeiro na vitrine."
       : "Destaque removido da home.",
   };
 }

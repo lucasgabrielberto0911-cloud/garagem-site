@@ -1,36 +1,96 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import Module, { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  MAX_FEATURED_PINS,
   MAX_HOME_FEATURED,
   canEnableFeatured,
   featuredCapMessage,
   featuredOrdersFromIds,
+  featuredRotationPeriod,
   featuredSlotState,
   hasShowcaseCoverPhoto,
   moveFeaturedIds,
   nextFeaturedOrder,
+  shuffleForFeaturedPeriod,
   sortFeaturedForHome,
   sortShowcaseVehicles,
 } from "./featured";
 import { parseStockFilters, type VehicleCardRecord } from "./stock-query";
 import {
   buildStockWhere,
+  featuredCacheKey,
   fetchFeaturedVehicles,
   type FeaturedShowcaseQuery,
 } from "./vehicles";
 
-test("home tem teto de 8 destaques e não deixa passar do limite", () => {
+test("grade da home mantém teto de 8 e teto de fixados (pins) é 4", () => {
   assert.equal(MAX_HOME_FEATURED, 8);
-  const slots = featuredSlotState(8);
-  assert.equal(slots.atCap, true);
-  assert.equal(slots.remaining, 0);
-  assert.equal(canEnableFeatured(8, false), false);
-  assert.equal(canEnableFeatured(8, true), true);
+  assert.equal(MAX_FEATURED_PINS, 4);
+
+  const atThree = featuredSlotState(3);
+  assert.equal(atThree.max, 4);
+  assert.equal(atThree.atCap, false);
+  assert.equal(atThree.remaining, 1);
+
+  const atFour = featuredSlotState(4);
+  assert.equal(atFour.max, 4);
+  assert.equal(atFour.atCap, true);
+  assert.equal(atFour.remaining, 0);
+
+  // Recusa o 5º pin, mas permite quem já está marcado permanecer
   assert.equal(canEnableFeatured(3, false), true);
-  assert.match(featuredCapMessage(), /8 destaques/);
+  assert.equal(canEnableFeatured(4, false), false);
+  assert.equal(canEnableFeatured(5, false), false);
+  assert.equal(canEnableFeatured(4, true), true);
+  assert.equal(canEnableFeatured(6, true), true);
+  assert.match(featuredCapMessage(), /4 destaques/);
+});
+
+test("period usa blocos de 2 dias corridos no fuso America/Sao_Paulo", () => {
+  // 1970-01-01 e 1970-01-02 em São Paulo -> dias 0 e 1 -> period 0
+  assert.equal(featuredRotationPeriod(new Date("1970-01-01T12:00:00-03:00")), 0);
+  assert.equal(featuredRotationPeriod(new Date("1970-01-02T23:59:59-03:00")), 0);
+  // 1970-01-03 02:59:59Z ainda é 1970-01-02 23:59:59 em São Paulo -> period 0
+  assert.equal(featuredRotationPeriod(new Date("1970-01-03T02:59:59Z")), 0);
+  // Virada da meia-noite em São Paulo (03:00 UTC) -> dia 2 -> period 1
+  assert.equal(featuredRotationPeriod(new Date("1970-01-03T03:00:00Z")), 1);
+  assert.equal(featuredRotationPeriod(new Date("1970-01-04T23:59:59-03:00")), 1);
+  assert.equal(featuredRotationPeriod(new Date("1970-01-05T00:00:00-03:00")), 2);
+
+  // Mesmo dia em São Paulo (manhã vs 23:30 SP = 02:30Z do dia seguinte em UTC) -> mesmo period
+  const morningSp = new Date("2026-11-20T09:00:00-03:00");
+  const lateNightSp = new Date("2026-11-21T02:30:00Z"); // 2026-11-20 23:30 SP
+  assert.equal(
+    featuredRotationPeriod(morningSp),
+    featuredRotationPeriod(lateNightSp),
+  );
+});
+
+test("shuffleForFeaturedPeriod é determinístico, estável por id e muda na virada do período", () => {
+  const pool = Array.from({ length: 12 }, (_, idx) => ({
+    id: `veiculo-${String(idx + 1).padStart(2, "0")}`,
+  }));
+  const reversed = [...pool].reverse();
+
+  const p100a = shuffleForFeaturedPeriod(pool, 100).map((v) => v.id);
+  const p100b = shuffleForFeaturedPeriod(reversed, 100).map((v) => v.id);
+  const p101 = shuffleForFeaturedPeriod(pool, 101).map((v) => v.id);
+
+  assert.deepEqual(p100a, p100b);
+  assert.notDeepEqual(p100a, p101);
+  assert.deepEqual([...p100a].sort(), pool.map((v) => v.id).sort());
+});
+
+test("chave de cache inclui period e muda quando o bloco de 2 dias vira", () => {
+  const keyA = featuredCacheKey(MAX_HOME_FEATURED, 10380);
+  const keyB = featuredCacheKey(MAX_HOME_FEATURED, 10381);
+  assert.match(keyA, /:8:10380$/);
+  assert.match(keyB, /:8:10381$/);
+  assert.notEqual(keyA, keyB);
 });
 
 test("ordem da home usa featuredOrder e cai na data se faltar número", () => {
@@ -92,7 +152,6 @@ function makeInMemoryFinder(rows: StoredVehicleRow[]) {
     const filtered = rows.filter((row) => {
       if (row.status !== args.where.status) return false;
       if (args.where.historical === false && row.historical === true) return false;
-      if (args.where.consigned === false && row.consigned === true) return false;
       if (row.featured !== args.where.featured) return false;
       return true;
     });
@@ -163,208 +222,174 @@ test("sortShowcaseVehicles prioriza foto de capa, ordem do painel e ano mais nov
       "novo-sem-foto-2026",
     ],
   );
-
-  const withPanelOrder = sortShowcaseVehicles([
-    {
-      id: "segundo-painel",
-      yearModel: 2026,
-      km: 8000,
-      featuredOrder: 2,
-      photos: [{ url: "/fotos/b.webp" }],
-    },
-    {
-      id: "primeiro-painel",
-      yearModel: 2022,
-      km: 30000,
-      featuredOrder: 1,
-      photos: [{ url: "/fotos/a.webp" }],
-    },
-  ]);
-  assert.deepEqual(
-    withPanelOrder.map((item) => item.id),
-    ["primeiro-painel", "segundo-painel"],
-  );
 });
 
-test("vitrine completa 8 veículos próprios (consigned: false) e coloca os mais novos na 1ª linha", async () => {
+test("pins vêm primeiro (mesmo mais antigos), consignado entra e vendidos/indisponíveis ficam fora", async () => {
   const rows: StoredVehicleRow[] = [
-    // Destaque antigo cadastrado por último (não pode liderar a 1ª linha)
+    // 2 pins válidos: 1 próprio (2015) e 1 consignado (2021) -> ambos devem liderar a grade
     makeCard({
-      id: "sandero-2009",
-      brand: "Renault",
-      model: "Sandero",
-      yearModel: 2009,
-      km: 173500,
+      id: "pin-proprio-2015",
+      yearModel: 2015,
+      km: 98000,
       featured: true,
       consigned: false,
-      createdAt: "2026-11-17T10:00:00Z",
     }),
     makeCard({
-      id: "hb20-2019",
-      brand: "Hyundai",
-      model: "HB20",
-      yearModel: 2019,
-      km: 62000,
-      featured: true,
-      consigned: false,
-      createdAt: "2026-11-10T10:00:00Z",
-    }),
-    // Consignados (mesmo marcados como destaque ou novos) nunca entram na vitrine
-    makeCard({
-      id: "consignado-destaque-2026",
-      yearModel: 2026,
-      km: 4000,
+      id: "pin-consignado-2021",
+      yearModel: 2021,
+      km: 42000,
       featured: true,
       consigned: true,
     }),
-    makeCard({
-      id: "consignado-comum-2025",
-      yearModel: 2025,
-      km: 10000,
-      featured: false,
-      consigned: true,
-    }),
-    // Indisponíveis / históricos nunca entram
+    // Vendido, reservado e histórico nunca entram (mesmo marcados)
     makeCard({
       id: "vendido-2026",
       yearModel: 2026,
       status: "vendido",
       featured: true,
-      consigned: false,
+    }),
+    makeCard({
+      id: "reservado-2026",
+      yearModel: 2026,
+      status: "reservado",
+      featured: false,
     }),
     makeCard({
       id: "historico-2025",
       yearModel: 2025,
       historical: true,
       featured: true,
-      consigned: false,
     }),
-    // Estoque próprio disponível não destacado (2020–2026) que completa os 8 slots
-    makeCard({ id: "nivus-2026", yearModel: 2026, km: 9000, featured: false }),
-    makeCard({ id: "tracker-2025", yearModel: 2025, km: 15000, featured: false }),
-    makeCard({ id: "creta-2024", yearModel: 2024, km: 22000, featured: false }),
-    makeCard({ id: "polo-2023", yearModel: 2023, km: 27000, featured: false }),
-    makeCard({ id: "kicks-2022", yearModel: 2022, km: 35000, featured: false }),
-    makeCard({ id: "onix-2021", yearModel: 2021, km: 41000, featured: false }),
-    makeCard({ id: "argo-2020", yearModel: 2020, km: 55000, featured: false }),
-    makeCard({
-      id: "sem-foto-2026",
-      yearModel: 2026,
-      km: 1000,
-      featured: false,
-      photos: [],
-    }),
+    // Estoque disponível não fixado (próprios + consignado) para o rodízio de 2 dias
+    makeCard({ id: "rot-consignado-2025", yearModel: 2025, featured: false, consigned: true }),
+    makeCard({ id: "rot-01", yearModel: 2026, featured: false }),
+    makeCard({ id: "rot-02", yearModel: 2025, featured: false }),
+    makeCard({ id: "rot-03", yearModel: 2024, featured: false }),
+    makeCard({ id: "rot-04", yearModel: 2023, featured: false }),
+    makeCard({ id: "rot-05", yearModel: 2022, featured: false }),
+    makeCard({ id: "rot-06", yearModel: 2021, featured: false }),
+    makeCard({ id: "rot-07", yearModel: 2020, featured: false }),
+    makeCard({ id: "rot-08", yearModel: 2019, featured: false }),
   ];
 
+  const periodA = featuredRotationPeriod(new Date("2026-11-20T10:00:00-03:00"));
+  const sameBlockNight = featuredRotationPeriod(new Date("2026-11-21T02:00:00Z")); // ainda 20/11 em SP
+  const nextPeriod = periodA + 1;
+
   const { find, queries } = makeInMemoryFinder(rows);
-  const result = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find);
+  const resA1 = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find, periodA);
+  const resA2 = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find, sameBlockNight);
+  const resB = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find, nextPeriod);
 
-  assert.equal(result.length, 8);
-  assert.equal(queries.length, 2);
-  assert.deepEqual(queries[0]?.where, {
-    status: "disponivel",
-    historical: false,
-    consigned: false,
-    featured: true,
-  });
-  assert.deepEqual(queries[1]?.where, {
-    status: "disponivel",
-    historical: false,
-    consigned: false,
-    featured: false,
-  });
+  assert.equal(resA1.length, 8);
+  // Nenhuma query filtra consigned: false
+  for (const query of queries) {
+    assert.equal("consigned" in query.where, false);
+    assert.equal(query.where.status, "disponivel");
+    assert.equal(query.where.historical, false);
+  }
 
-  // Nenhum consignado, vendido, histórico ou veículo sem foto (havendo 8 com foto) entra
-  const ids = result.map((vehicle) => vehicle.id);
-  assert.ok(!ids.includes("consignado-destaque-2026"));
-  assert.ok(!ids.includes("consignado-comum-2025"));
-  assert.ok(!ids.includes("vendido-2026"));
-  assert.ok(!ids.includes("historico-2025"));
-  assert.ok(!ids.includes("sem-foto-2026"));
+  // Mesmo período em São Paulo -> exatamente o mesmo conjunto e ordem
+  assert.deepEqual(
+    resA1.map((v) => v.id),
+    resA2.map((v) => v.id),
+  );
 
-  // Os 4 primeiros slots (1ª linha da Home) têm os modelos 2023–2026 mais novos com foto
-  assert.deepEqual(ids.slice(0, 4), [
-    "nivus-2026",
-    "tracker-2025",
-    "creta-2024",
-    "polo-2023",
+  // Pins vêm nas 2 primeiras posições (incluindo consignado e modelo 2015 antes dos 2026 do rodízio)
+  assert.deepEqual(resA1.slice(0, 2).map((v) => v.id), [
+    "pin-consignado-2021",
+    "pin-proprio-2015",
   ]);
-  // Os destaques próprios antigos permanecem nos 8 slots, mas no fim da grade
-  assert.deepEqual(ids.slice(4), [
-    "kicks-2022",
-    "onix-2021",
-    "hb20-2019",
-    "sandero-2009",
+  assert.deepEqual(resB.slice(0, 2).map((v) => v.id), [
+    "pin-consignado-2021",
+    "pin-proprio-2015",
   ]);
+
+  // Na virada do bloco de 2 dias, os pins continuam fixos e o preenchimento roda
+  assert.notDeepEqual(
+    resA1.slice(2).map((v) => v.id),
+    resB.slice(2).map((v) => v.id),
+  );
+
+  // Vendido, reservado e histórico nunca entram
+  for (const list of [resA1, resB]) {
+    const ids = list.map((v) => v.id);
+    assert.ok(!ids.includes("vendido-2026"));
+    assert.ok(!ids.includes("reservado-2026"));
+    assert.ok(!ids.includes("historico-2025"));
+  }
+
+  // Consignado não fixado também participa do rodízio
+  const seenAcrossPeriods = new Set<string>();
+  for (let p = periodA; p < periodA + 10; p += 1) {
+    const sample = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find, p);
+    for (const item of sample.slice(2)) seenAcrossPeriods.add(item.id);
+  }
+  assert.ok(seenAcrossPeriods.has("rot-consignado-2025"));
 });
 
-test("vitrine não cai em estado vazio quando há 0 destaques marcados mas existe estoque próprio", async () => {
+test("no máximo 4 pins ocupam o topo mesmo se houver mais de 4 legados marcados no banco", async () => {
   const rows: StoredVehicleRow[] = [
-    makeCard({ id: "consignado-unico-destaque", featured: true, consigned: true }),
-    makeCard({ id: "proprio-2022", yearModel: 2022, featured: false, consigned: false }),
-    makeCard({ id: "proprio-2025", yearModel: 2025, featured: false, consigned: false }),
+    ...Array.from({ length: 6 }, (_, index) =>
+      makeCard({
+        id: `pin-legado-${2020 + index}`,
+        yearModel: 2020 + index,
+        featured: true,
+      }),
+    ),
+    ...Array.from({ length: 8 }, (_, index) =>
+      makeCard({
+        id: `estoque-rot-${index + 1}`,
+        yearModel: 2018 + index,
+        featured: false,
+      }),
+    ),
   ];
 
   const { find } = makeInMemoryFinder(rows);
-  const result = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find);
-  assert.deepEqual(
-    result.map((vehicle) => vehicle.id),
-    ["proprio-2025", "proprio-2022"],
-  );
-});
+  const result = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find, 500);
 
-test("vitrine faz apenas 1 consulta quando já existem 8 destaques próprios disponíveis", async () => {
-  const rows = Array.from({ length: 9 }, (_, index) =>
-    makeCard({
-      id: `destaque-${2018 + index}`,
-      yearModel: 2018 + index,
-      featured: true,
-      consigned: false,
-    }),
-  );
-  const { find, queries } = makeInMemoryFinder(rows);
-  const result = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find);
-
-  assert.equal(queries.length, 1);
   assert.equal(result.length, 8);
-  assert.equal(result[0]?.yearModel, 2026);
-  assert.equal(result[7]?.yearModel, 2019);
+  // Os 4 primeiros são pins; as 4 vagas seguintes vêm do rodízio (featured: false)
+  assert.equal(result.slice(0, 4).every((v) => v.featured), true);
+  assert.equal(result.slice(4).every((v) => !v.featured), true);
 });
 
-test("vitrine evita card sem foto de capa quando há estoque próprio com foto disponível", async () => {
+test("vitrine evita card sem foto de capa quando há estoque com foto disponível", async () => {
   const rows: StoredVehicleRow[] = [
+    makeCard({
+      id: "pin-com-foto-2022",
+      yearModel: 2022,
+      featured: true,
+    }),
+    makeCard({
+      id: "pin-sem-foto-2026",
+      yearModel: 2026,
+      featured: true,
+      photos: [],
+    }),
     ...Array.from({ length: 7 }, (_, index) =>
       makeCard({
-        id: `destaque-com-foto-${2019 + index}`,
-        yearModel: 2019 + index,
-        featured: true,
-        consigned: false,
+        id: `rot-com-foto-${index + 1}`,
+        yearModel: 2020 + index,
+        featured: false,
       }),
     ),
     makeCard({
-      id: "destaque-sem-foto-2026",
+      id: "rot-sem-foto-2026",
       yearModel: 2026,
-      km: 2000,
-      featured: true,
-      consigned: false,
-      photos: [],
-    }),
-    makeCard({
-      id: "complemento-com-foto-2024",
-      yearModel: 2024,
-      km: 12000,
       featured: false,
-      consigned: false,
+      photos: [],
     }),
   ];
 
-  const { find, queries } = makeInMemoryFinder(rows);
-  const result = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find);
+  const { find } = makeInMemoryFinder(rows);
+  const result = await fetchFeaturedVehicles(MAX_HOME_FEATURED, find, 42);
 
-  assert.equal(queries.length, 2);
   assert.equal(result.length, 8);
-  assert.ok(!result.some((vehicle) => vehicle.id === "destaque-sem-foto-2026"));
-  assert.ok(result.some((vehicle) => vehicle.id === "complemento-com-foto-2024"));
+  assert.equal(result[0]?.id, "pin-com-foto-2022");
+  assert.ok(!result.some((v) => v.id === "pin-sem-foto-2026"));
+  assert.ok(!result.some((v) => v.id === "rot-sem-foto-2026"));
 
   // Quando o estoque inteiro tem menos de `take` com foto, o sem foto entra no fim sem esvaziar
   const smallStock = [
@@ -372,7 +397,7 @@ test("vitrine evita card sem foto de capa quando há estoque próprio com foto d
     makeCard({ id: "unico-sem-foto-2025", yearModel: 2025, featured: true, photos: [] }),
   ];
   const { find: findSmall } = makeInMemoryFinder(smallStock);
-  const fallback = await fetchFeaturedVehicles(MAX_HOME_FEATURED, findSmall);
+  const fallback = await fetchFeaturedVehicles(MAX_HOME_FEATURED, findSmall, 42);
   assert.deepEqual(
     fallback.map((vehicle) => vehicle.id),
     ["unico-com-foto-2023", "unico-sem-foto-2025"],
@@ -380,43 +405,148 @@ test("vitrine evita card sem foto de capa quando há estoque próprio com foto d
 
   // take <= 0 não faz consulta
   const { find: findZero, queries: zeroQueries } = makeInMemoryFinder(rows);
-  assert.deepEqual(await fetchFeaturedVehicles(0, findZero), []);
+  assert.deepEqual(await fetchFeaturedVehicles(0, findZero, 42), []);
   assert.equal(zeroQueries.length, 0);
 });
 
-test("vitrine tolera coluna ausente P2022 sem esconder erro real e mantém consignado no /estoque", async () => {
+test("vitrine tolera coluna ausente P2022 em historical sem esconder erro real", async () => {
   const missing = (column: string) =>
     Object.assign(new Error("P2022"), { code: "P2022", meta: { column } });
 
-  const seenWhere: FeaturedShowcaseQuery["where"][] = [];
-  const recovered = await fetchFeaturedVehicles(2, async (args) => {
-    seenWhere.push(args.where);
-    if ("historical" in args.where) throw missing("Vehicle.historical");
-    if ("consigned" in args.where) throw missing("Vehicle.consigned");
-    return args.where.featured
-      ? [makeCard({ id: "unico-2024", yearModel: 2024, featured: true })]
-      : [makeCard({ id: "extra-2025", yearModel: 2025, featured: false })];
-  });
+  const recovered = await fetchFeaturedVehicles(
+    2,
+    async (args) => {
+      if ("historical" in args.where) throw missing("Vehicle.historical");
+      return args.where.featured
+        ? [makeCard({ id: "pin-2024", yearModel: 2024, featured: true })]
+        : [makeCard({ id: "rot-2025", yearModel: 2025, featured: false })];
+    },
+    77,
+  );
   assert.deepEqual(
     recovered.map((vehicle) => vehicle.id),
-    ["extra-2025", "unico-2024"],
+    ["pin-2024", "rot-2025"],
   );
-  assert.equal(seenWhere[0]?.consigned, false);
 
   await assert.rejects(
-    fetchFeaturedVehicles(2, async () => {
-      throw new Error("banco indisponivel");
-    }),
+    fetchFeaturedVehicles(
+      2,
+      async () => {
+        throw new Error("banco indisponivel");
+      },
+      77,
+    ),
     /banco indisponivel/,
   );
 
-  // Consignado continua permitido em /estoque; a regra é exclusiva da vitrine (Home e /seminovos)
   const stockWhere = buildStockWhere(parseStockFilters({}));
   assert.equal("consigned" in stockWhere, false);
 
   const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
   const homePage = readFileSync(join(srcRoot, "app/(catalog)/page.tsx"), "utf8");
   const seminovosPage = readFileSync(join(srcRoot, "app/(site)/seminovos/page.tsx"), "utf8");
+  const vehiclesSrc = readFileSync(join(srcRoot, "lib/vehicles.ts"), "utf8");
+  const tableSrc = readFileSync(join(srcRoot, "components/admin/VehiclesTable.tsx"), "utf8");
+  const sheetSrc = readFileSync(
+    join(srcRoot, "components/admin/vehicles-table/SheetActions.tsx"),
+    "utf8",
+  );
   assert.match(homePage, /getFeaturedVehicles\(MAX_HOME_FEATURED\)/);
   assert.match(seminovosPage, /getFeaturedVehicles\(MAX_HOME_FEATURED\)/);
+  assert.match(vehiclesSrc, /featuredCacheKey\(take, period\)/);
+  assert.match(tableSrc, /Home · \{featuredCount\}\/\{MAX_FEATURED_PINS\} destaques/);
+  assert.match(sheetSrc, /Até \$\{MAX_FEATURED_PINS\} destaques/);
+});
+
+test("setVehicleFeatured permite até o 4º pin, recusa o 5º e permite desmarcar", async () => {
+  const state = {
+    vehicles: [
+      { id: "v1", featured: true, status: "disponivel", historical: false, description: "Ok", price: 50000 },
+      { id: "v2", featured: true, status: "disponivel", historical: false, description: "Ok", price: 50000 },
+      { id: "v3", featured: true, status: "disponivel", historical: false, description: "Ok", price: 50000 },
+      { id: "v4", featured: false, status: "disponivel", historical: false, description: "Ok", price: 50000 },
+      { id: "v5", featured: false, status: "disponivel", historical: false, description: "Ok", price: 50000 },
+    ],
+  };
+
+  const fakePrisma = {
+    vehicle: {
+      findUnique: async ({ where }: { where: { id: string } }) =>
+        state.vehicles.find((v) => v.id === where.id) ?? null,
+      count: async () =>
+        state.vehicles.filter((v) => v.featured && v.status === "disponivel" && !v.historical)
+          .length,
+      update: async ({
+        where,
+        data,
+      }: {
+        where: { id: string };
+        data: { featured: boolean };
+      }) => {
+        const target = state.vehicles.find((v) => v.id === where.id);
+        if (!target) throw new Error("not found");
+        target.featured = data.featured;
+        return target;
+      },
+    },
+  };
+
+  const require = createRequire(import.meta.url);
+  const loader = Module as unknown as {
+    _load: (id: string, parent: unknown, isMain: boolean) => unknown;
+  };
+  const originalLoad = loader._load;
+  loader._load = function (id, parent, isMain) {
+    if (id === "@/lib/auth") {
+      return { getSession: async () => ({ adminId: "admin-1", email: "admin@test.com" }) };
+    }
+    if (id === "@/lib/prisma") {
+      return { prisma: fakePrisma };
+    }
+    if (id === "@/lib/public-stock-revalidate") {
+      return {
+        revalidatePublicStock: async () => {},
+        revalidatePublicStockMany: async () => {},
+      };
+    }
+    if (id === "next/cache") {
+      return {
+        revalidatePath: () => {},
+        revalidateTag: () => {},
+        updateTag: () => {},
+        unstable_cache: (fn: unknown) => fn,
+      };
+    }
+    return originalLoad.call(this, id, parent, isMain);
+  };
+
+  let setVehicleFeatured: typeof import("../app/admin/veiculos/actions").setVehicleFeatured;
+  try {
+    delete require.cache[require.resolve("../app/admin/veiculos/actions.ts")];
+    const actions = require("../app/admin/veiculos/actions.ts");
+    setVehicleFeatured = actions.setVehicleFeatured;
+  } finally {
+    loader._load = originalLoad;
+  }
+
+  // 4º pin (com 3 já marcados) -> permitido
+  const fourth = await setVehicleFeatured("v4", true);
+  assert.equal(fourth.ok, true);
+  assert.equal(state.vehicles.find((v) => v.id === "v4")?.featured, true);
+
+  // 5º pin (com 4 já marcados) -> recusado com featuredCapMessage()
+  const fifth = await setVehicleFeatured("v5", true);
+  assert.equal(fifth.ok, false);
+  assert.equal(fifth.message, featuredCapMessage());
+  assert.equal(state.vehicles.find((v) => v.id === "v5")?.featured, false);
+
+  // Quem já está marcado pode ser desmarcado normalmente
+  const unpin = await setVehicleFeatured("v1", false);
+  assert.equal(unpin.ok, true);
+  assert.equal(state.vehicles.find((v) => v.id === "v1")?.featured, false);
+
+  // Agora que voltou a ter 3 marcados, v5 pode entrar como 4º
+  const fifthAfterUnpin = await setVehicleFeatured("v5", true);
+  assert.equal(fifthAfterUnpin.ok, true);
+  assert.equal(state.vehicles.find((v) => v.id === "v5")?.featured, true);
 });

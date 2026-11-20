@@ -26,6 +26,7 @@ import {
 } from "@/components/admin/ui";
 import { IconQuote } from "@/components/site/icons";
 import { getSession } from "@/lib/auth";
+import { MAX_FEATURED_PINS } from "@/lib/featured";
 import { PARKED_MIN_DAYS } from "@/lib/admin-parados";
 import { getDashboardData, STALE_DAYS } from "@/lib/admin-stats";
 import {
@@ -190,8 +191,8 @@ async function DashboardContent() {
       value={vehicles.featured}
       hint={
         vehicles.featured === 0
-          ? "A home fica vazia até você marcar destaques"
-          : `${vehicles.featured}/8 na home · ordem pelo cadastro`
+          ? "Sem fixos · a home gira o estoque a cada 2 dias"
+          : `${vehicles.featured}/${MAX_FEATURED_PINS} fixos na home · resto gira a cada 2 dias`
       }
       tone={alerts.noFeatured ? "warning" : "default"}
       href="/admin/veiculos?tab=destaques"

@@ -32,14 +32,14 @@ try {
     const data = { ...item, published: true, photoUrl: index === 0 ? samples[0].photos[0].url : null };
     await prisma.testimonial.upsert({ where: { id }, create: { id, ...data }, update: data });
   }
-  for (const sample of samples) {
+  for (const [index, sample] of samples.entries()) {
     const { photos, ...publicFields } = sample;
     const description = /civic/i.test(sample.model)
       ? "Sedã confortável para o dia a dia, com espaço para toda a família."
       : /hr-?v/i.test(sample.model)
         ? "🔥 NOVIDADE NO ESTOQUE DA GARAGEM!\n\nSUV confortável para viajar com a família.\n\n✅ Revisões em dia"
         : null;
-    const data = { ...publicFields, description, accessories: accessoriesFor(sample.model), year: sample.yearModel, status: "disponivel", featured: true, historical: false };
+    const data = { ...publicFields, description, accessories: accessoriesFor(sample.model), year: sample.yearModel, status: "disponivel", featured: index === 0, historical: false };
     await prisma.vehicle.upsert({ where: { id: sample.id }, create: data, update: data });
     await prisma.photo.deleteMany({ where: { vehicleId: sample.id } });
     await prisma.photo.createMany({ data: photos.map((photo, order) => ({ ...photo, vehicleId: sample.id, order })) });

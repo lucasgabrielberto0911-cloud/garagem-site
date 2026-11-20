@@ -1,4 +1,5 @@
 /** Pendências do dashboard em ordem de urgência — sem prisma, testável. */
+import { MAX_FEATURED_PINS } from "@/lib/featured";
 
 export type DashboardAlertTone = "brand" | "warning" | "neutral";
 export type DashboardAlertIcon = "alert" | "image" | "star" | "quote";
@@ -67,7 +68,7 @@ export function buildDashboardAlerts(
       icon: "star",
       title: "Nenhum veículo em destaque",
       description:
-        "Marque até 8 anúncios disponíveis. A home não escolhe carro sozinha — sem destaque, a vitrine fica vazia.",
+        `Você pode fixar até ${MAX_FEATURED_PINS} anúncios disponíveis para aparecerem primeiro na home (o restante gira a cada 2 dias).`,
       href: "/admin/veiculos?tab=destaques",
     });
   }
