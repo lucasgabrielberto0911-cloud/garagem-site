@@ -1339,9 +1339,8 @@ textarea:-webkit-autofill:focus {
 }
 
 /*
- * Âncoras da ficha. Card do anúncio parado parecia um segundo scroll no
- * computador (Lucas, ficha do Uno 2013). Nada de sticky no `.ficha-aside`;
- * só o header do site fica fixo.
+ * Âncoras da ficha na coluna principal descontam a altura do header fixo.
+ * No desktop, `.ficha-aside` usa `lg:sticky` sem `overflow-y` próprio (um scroll só).
  */
 .ficha-jump-target {
   scroll-margin-top: calc(4.5rem + env(safe-area-inset-top, 0px) + 0.5rem);
