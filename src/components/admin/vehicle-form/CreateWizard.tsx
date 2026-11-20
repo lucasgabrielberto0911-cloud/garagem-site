@@ -4,7 +4,6 @@ import {
   type VehicleWizardStep,
 } from "@/lib/admin-form-sections";
 import { stepForField } from "@/lib/admin-vehicle-form-validate";
-import { VEHICLE_LOCATION_CITIES } from "@/lib/vehicle-location";
 import { VehicleWizardNav } from "@/components/admin/VehicleWizardNav";
 import { btn } from "@/components/admin/ui";
 import { IdentitySection } from "./sections/IdentitySection";
@@ -12,7 +11,10 @@ import { PriceStatusSection } from "./sections/PriceStatusSection";
 import { PhotosSection } from "./sections/PhotosSection";
 import { SpecsSection } from "./sections/SpecsSection";
 import { LegendSection } from "./sections/LegendSection";
-import { MoreDetailsSection } from "./sections/MoreDetailsSection";
+import {
+  LocationCitySection,
+  MoreDetailsSection,
+} from "./sections/MoreDetailsSection";
 import { OperationSection } from "./sections/OperationSection";
 import { SubmitButton } from "./SubmitButton";
 import type { VehicleFormProps } from "./types";
@@ -25,7 +27,7 @@ export type WizardLayoutProps = {
   adminId: string;
 };
 
-/** Cidade, destaque, consignado e custos internos: recolhidos, com resumo de uma linha. */
+/** Destaque, consignado e custos internos: recolhidos, com resumo de uma linha. */
 function PriceMoreDetails({
   form,
   vehicle,
@@ -33,8 +35,8 @@ function PriceMoreDetails({
   form: VehicleFormModel;
   vehicle?: VehicleFormProps["vehicle"];
 }) {
-  const { locationCity, errors, consigned } = form;
-  const hasError = Boolean(errors.locationCity || errors.purchasePrice);
+  const { errors, consigned } = form;
+  const hasError = Boolean(errors.purchasePrice);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -42,9 +44,6 @@ function PriceMoreDetails({
     setOpen(true);
     ref.current?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [hasError]);
-  const city = VEHICLE_LOCATION_CITIES.find(
-    (option) => option.value === locationCity,
-  )?.label;
   return (
     <details
       ref={ref}
@@ -53,12 +52,10 @@ function PriceMoreDetails({
       onToggle={(event) => setOpen(event.currentTarget.open)}
       className="border border-white/10 bg-ink/50"
     >
-      <summary className="flex min-h-11 cursor-pointer touch-manipulation flex-wrap items-center gap-x-2 px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-cream sm:px-5">
+      <summary className="flex min-h-11 cursor-pointer touch-manipulation flex-wrap items-center gap-x-2 px-4 py-2 font-display text-sm font-semibold uppercase tracking-wider text-cream sm:px-5">
         Mais detalhes (opcional)
-        <span
-          className={`font-body text-xs font-normal normal-case tracking-normal ${errors.locationCity ? "text-red-400" : "text-muted"}`}
-        >
-          {city ? `Cidade ${city}` : "Falta a cidade"}
+        <span className="font-body text-sm font-normal normal-case tracking-normal text-muted">
+          Destaque, consignado, preço de compra e documentos
           {consigned ? " · Consignado" : ""}
         </span>
       </summary>
@@ -124,8 +121,11 @@ export function CreateWizard({
       <div hidden={!visible.includes("ficha")}>
         <SpecsSection form={form} vehicle={vehicle} collapseAdvanced />
       </div>
-      <div hidden={!visible.includes("essencial")}>
+      <div hidden={!visible.includes("essencial")} className="space-y-4">
         <PriceStatusSection form={form} />
+        <div className="border border-white/10 bg-ink/50 p-4 sm:p-5">
+          <LocationCitySection form={form} />
+        </div>
       </div>
       <input type="hidden" name="description" value={description} />
       <div hidden={!visible.includes("itens")}>

@@ -16,7 +16,7 @@ export function stepForField(
   mode: "create" | "edit" = "create",
 ): VehicleWizardStep | undefined {
   if (field === "photos") return 1;
-  // Na edição, cidade e destaque ficam na revisão; na criação, em "Mais detalhes" da etapa 3.
+  // Na edição, cidade e destaque ficam na revisão; na criação, cidade na etapa 3 e destaque nos detalhes opcionais.
   if (mode === "edit" && (field === "locationCity" || field === "featured"))
     return 4;
   const section = sectionForField(field);
@@ -86,20 +86,6 @@ export function validateVehicleForm(
   if (options.mode === "create" && options.status === "vendido")
     next.status = "Cadastre como disponível antes de iniciar a venda.";
 
-  if (options.onlyStep === 2) {
-    for (const field of [
-      "color",
-      "year",
-      "yearModel",
-      "km",
-      "fuel",
-      "transmission",
-      "engine",
-    ]) {
-      if (!value(field === "km" ? "kmDisplay" : field).trim())
-        delete next[field];
-    }
-  }
   if (options.onlyStep) {
     for (const field of Object.keys(next)) {
       if (stepForField(field, options.mode) !== options.onlyStep) delete next[field];

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   stepForField,
@@ -83,7 +84,7 @@ test("validar uma etapa não antecipa nem apaga erros de outras etapas", () => {
   }
 });
 
-test("campos vazios da ficha podem avançar na etapa 2, mas impedem publicar", () => {
+test("campos obrigatórios vazios da ficha já são validados na etapa 2", () => {
   const form = data({
     color: "",
     year: "",
@@ -93,7 +94,7 @@ test("campos vazios da ficha podem avançar na etapa 2, mas impedem publicar", (
     transmission: "",
   });
   const empty = { ...options, color: "", fuel: "", transmission: "" };
-  assert.deepEqual(validateVehicleForm(form, { ...empty, onlyStep: 2 }), {});
+  const step2Errors = validateVehicleForm(form, { ...empty, onlyStep: 2 });
   const all = validateVehicleForm(form, empty);
   for (const field of [
     "color",
@@ -102,8 +103,30 @@ test("campos vazios da ficha podem avançar na etapa 2, mas impedem publicar", (
     "km",
     "fuel",
     "transmission",
-  ])
+  ]) {
+    assert.ok(step2Errors[field], field);
     assert.ok(all[field], field);
+  }
+  assert.deepEqual(
+    validateVehicleForm(data({ doors: "" }), { ...options, onlyStep: 2 }),
+    {},
+  );
+});
+
+test("CreateWizard exibe a cidade fora do details recolhido", () => {
+  const source = readFileSync(
+    "src/components/admin/vehicle-form/CreateWizard.tsx",
+    "utf8",
+  );
+  const detailsMatch = source.match(/<details[\s\S]*?<\/details>/);
+  assert.ok(detailsMatch, "deve manter o details para operação interna");
+  assert.doesNotMatch(
+    detailsMatch[0],
+    /<LocationCitySection\b/,
+    "LocationCitySection (Onde está o veículo *) não pode ficar dentro do details recolhido",
+  );
+  assert.match(source, /<LocationCitySection\b/);
+  assert.match(detailsMatch[0], /<MoreDetailsSection\b/);
 });
 
 test("dados malformados não são tratados como campos vazios ao avançar", () => {

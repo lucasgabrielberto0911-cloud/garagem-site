@@ -50,7 +50,7 @@ export function IdentitySection({
   return (
     <WizardSection {...sectionProps("identificacao")}>
       <div className="mb-5">
-        <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+        <span className="mb-1.5 block text-sm uppercase tracking-wider text-muted">
           Tipo do anúncio
         </span>
         <div className="flex gap-2" role="group" aria-label="Tipo do anúncio">
@@ -79,15 +79,15 @@ export function IdentitySection({
       </div>
       <div className="mb-4 border border-white/10 p-3">
         <FipeDataLink form={form} />
-        <p className="text-xs leading-relaxed text-muted">
-          Preencha marca, modelo, versão, ano modelo e combustível pela FIPE.
-          A consulta não usa a placa.
+        <p className="text-sm leading-relaxed text-muted">
+          Preencha marca, modelo, versão, ano e combustível pela tabela FIPE.
+          A placa não é usada na consulta.
         </p>
       </div>
       <Field
-        label="Placa (interna)"
+        label="Placa"
         error={errors.plate}
-        hint="Só no admin. O site mostra no máximo o final da placa."
+        hint="O site mostra só o final da placa."
       >
         <input
           name="plate"

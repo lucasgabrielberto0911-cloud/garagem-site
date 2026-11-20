@@ -31,7 +31,7 @@ export function FipePriceLine({ form }: { form: FipeForm }) {
     form.setDirty(true);
     form.setErrors(current => { const next = { ...current }; delete next.price; return next; });
   }
-  return <div className="col-span-2 text-xs leading-relaxed text-muted">
+  return <div className="col-span-2 text-sm leading-relaxed text-muted">
     {quote ? <>
       <span title={`Referência: ${quote.vehicle.reference} · código ${quote.vehicle.code}`}>FIPE {formatAdminMoney(quote.vehicle.price)}</span>
       {quote.stock ? <> · estoque parecido ({quote.stock.count}): {formatAdminMoney(quote.stock.min)} a {formatAdminMoney(quote.stock.max)} · média {formatAdminMoney(quote.stock.average)}</> : null}

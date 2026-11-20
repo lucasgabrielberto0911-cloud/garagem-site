@@ -95,7 +95,7 @@ export function SpecsSection({
   );
   const origin = (
     <>
-      <h3 className="mb-3 mt-6 border-t border-white/10 pt-5 font-display text-xs font-semibold uppercase tracking-wider text-muted">
+      <h3 className="mb-3 mt-6 border-t border-white/10 pt-5 font-display text-sm font-semibold uppercase tracking-wider text-muted">
         Procedência e garantia
       </h3>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -237,7 +237,7 @@ export function SpecsSection({
             ))}
           </select>
           {transmissionAlert ? (
-            <p className="mt-2 text-xs leading-relaxed text-brand-orange">
+            <p className="mt-2 text-sm leading-relaxed text-red-400">
               {transmissionAlert}. O site público mostra{" "}
               {transmissionSuggestion}.
               {canFixTransmission ? (
@@ -260,9 +260,9 @@ export function SpecsSection({
 
       {collapseAdvanced ? (
         <details className="mt-4 border-t border-white/10 pt-3">
-          <summary className="min-h-11 cursor-pointer touch-manipulation py-2 font-display text-xs font-semibold uppercase tracking-wider text-muted">
+          <summary className="min-h-11 cursor-pointer touch-manipulation py-2 font-display text-sm font-semibold uppercase tracking-wider text-muted">
             Mais detalhes (opcional)
-            <span className="ml-2 font-body normal-case tracking-normal">
+            <span className="ml-2 font-body text-sm normal-case tracking-normal">
               Motor, portas, garantia, vistoria
             </span>
           </summary>

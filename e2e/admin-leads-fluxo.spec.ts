@@ -67,10 +67,8 @@ async function avancarEtapa(page: import("@playwright/test").Page, etapa: number
 }
 
 async function escolherCidade(page: import("@playwright/test").Page) {
-  // Na criação, a cidade fica em "Mais detalhes" (recolhido) na etapa 3.
-  const detalhes = page.locator("#vehicle-more-details");
-  if ((await detalhes.getAttribute("open")) === null) await detalhes.locator(":scope > summary").click();
-  await detalhes.getByRole("button", { name: "Linhares ES", exact: true }).click();
+  // A cidade fica sempre visível na etapa 3, fora de "Mais detalhes".
+  await page.locator("#vehicle-form").getByRole("button", { name: "Linhares ES", exact: true }).click();
 }
 
 async function adicionarFotos(page: import("@playwright/test").Page) {
@@ -177,7 +175,12 @@ test("veículo: legenda inteira do Fastback publica 15 opcionais agrupados e per
   await form.locator('[name="brand"]').fill("Honda");
   await form.locator('[name="model"]').fill(conta.prefixo);
   await form.locator('[name="color"]').fill("Branco");
-  // Dados vazios podem ser completados automaticamente pela legenda na etapa 3.
+  // A etapa 2 exige estes campos; a legenda da etapa 3 sinaliza divergências.
+  await form.locator('[name="year"]').fill("2023");
+  await form.locator('[name="yearModel"]').fill("2024");
+  await form.locator('[name="kmDisplay"]').fill("24.000");
+  await form.locator('[name="fuel"]').selectOption({ label: "Flex" });
+  await form.locator('[name="transmission"]').selectOption({ label: "Automático" });
   await avancarEtapa(page, 3);
   await form.getByLabel("Colar legenda", { exact: true }).fill(fastbackLegend);
   const parsed = parseLegend(fastbackLegend);
@@ -220,7 +223,7 @@ test("veículo: legenda inteira do Fastback publica 15 opcionais agrupados e per
   expect(vehicle.year).toBe(2023);
   expect(vehicle.yearModel).toBe(2024);
   expect(vehicle.engine).toBe("1.0 Turbo 200, até 130 cv");
-  expect(vehicle.transmission).toBe("Automático CVT com 7 marchas simuladas");
+  expect(vehicle.transmission).toBe("Automático");
   await expandirOpcionais(page);
   const equipamentos = page.locator("[data-accessory-chips]:visible");
   await expect(equipamentos.locator("[data-accessory-chip]")).toHaveCount(15);
