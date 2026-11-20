@@ -44,6 +44,23 @@ test("celular: garantia e vistoria na primeira tela, acima da barra com preço",
   const botao = barra.getByRole("link", { name: /^Chamar no WhatsApp/ });
   await expect(botao).toBeVisible();
   expect(await botao.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  expect((await botao.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+  const estiloBotao = await botao.evaluate(el => {
+    const css = getComputedStyle(el);
+    return { bg: css.backgroundColor, color: css.color };
+  });
+  expect(estiloBotao.bg).toBe("rgb(37, 211, 102)");
+  expect(estiloBotao.color).toBe("rgb(255, 255, 255)");
+
+  // CTAs repetidos no corpo mobile (>=56px) e menção permitida de financiamento sem parcela/simular.
+  const ctaPassos = page.locator('[data-ficha-mobile-cta="passos"] a');
+  await expect(ctaPassos).toBeVisible();
+  expect((await ctaPassos.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+  const ctaAtendimento = page.locator('[data-ficha-mobile-cta="atendimento"] a');
+  await expect(ctaAtendimento).toBeVisible();
+  expect((await ctaAtendimento.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+  await expect(page.locator("#proximos-passos")).toContainText("Financiamos em até 60x");
+  await expect(page.locator("[data-ficha-page]")).not.toContainText(/parcela|simulador|simular/i);
 
   // Ficha técnica só traz o que o topo não mostra (motor, portas...): sem dado novo, o bloco some.
   // Quando existe, vem antes dos opcionais.

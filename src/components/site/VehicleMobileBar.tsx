@@ -115,14 +115,18 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 box-border bg-gradient-to-t from-asphalt via-asphalt/95 to-transparent pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] lg:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 box-border border-t border-white/15 bg-asphalt/95 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-[max(0.875rem,env(safe-area-inset-left,0px))] pr-[max(0.875rem,env(safe-area-inset-right,0px))] shadow-[0_-10px_30px_rgba(0,0,0,0.6)] backdrop-blur-md lg:hidden"
     >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-brand-gradient"
+      />
       <div className="mx-auto max-w-6xl">
         {sold ? (
           <Link
             href={soldHref}
             prefetch={false}
-            className="pointer-events-auto flex h-14 w-full items-center justify-center rounded-xl bg-brand px-5 font-display text-base font-semibold text-cream shadow-lg touch-manipulation"
+            className="pointer-events-auto flex h-14 w-full items-center justify-center rounded-xl bg-brand px-5 font-display text-base font-semibold text-white shadow-[0_8px_22px_rgba(217,21,25,0.3)] touch-manipulation transition hover:bg-brand-dark active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
           >
             {soldLabel}
           </Link>
@@ -130,7 +134,7 @@ export function VehicleMobileBar({
           <div className="flex items-center gap-2">
           <p
             data-mobile-bar-price=""
-            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/15 bg-asphalt px-2.5 font-display text-base font-bold tracking-tight text-brand-light min-[380px]:px-3 min-[380px]:text-lg"
+            className="pointer-events-auto flex h-14 shrink-0 items-center whitespace-nowrap rounded-xl border border-white/15 bg-ink px-2.5 font-display text-base font-bold tabular-nums tracking-tight text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] min-[380px]:px-3 min-[380px]:text-lg"
           >
             {formatCurrencyBRL(price)}
           </p>
@@ -160,7 +164,7 @@ export function VehicleMobileBar({
               onClick={(event) =>
                 openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
               }
-              className="ficha-whatsapp-cta pointer-events-auto flex h-14 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#25D366] px-3 font-display text-[15px] font-bold text-asphalt shadow-[0_6px_18px_rgba(0,0,0,0.4)] touch-manipulation transition active:scale-[0.98] active:bg-[#1FB858] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
+              className="ficha-whatsapp-cta pointer-events-auto flex h-14 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#25D366] px-3 font-display text-[15px] font-bold text-white shadow-[0_8px_22px_rgba(37,211,102,0.3)] touch-manipulation transition hover:bg-[#1FB858] active:scale-[0.98] active:bg-[#1BA84E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
             >
               <IconWhatsApp className="h-5 w-5 shrink-0" />
               <span>

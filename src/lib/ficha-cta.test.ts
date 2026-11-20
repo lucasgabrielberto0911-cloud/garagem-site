@@ -925,3 +925,82 @@ test("ficha do celular sem repetição: ano no título, sem chip de opcionais, f
   assert.match(onlyRepeated, />Atendimento</);
   assert.match(blocks([...specs, { label: "Portas", value: "4" }]), />Ficha técnica</);
 });
+
+test("polimento mobile da ficha: barra verde com texto branco, CTAs repetidos >=56px, até 60x sem parcela e sem dourado", () => {
+  const bar = readSrc("components/site/VehicleMobileBar.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
+  const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
+
+  // Barra fixa mobile: botão WhatsApp verde #25D366 com letra branca e altura 56px (h-14).
+  assert.match(bar, /bg-\[#25D366\][^"]*text-white/);
+  assert.doesNotMatch(bar, /bg-\[#25D366\][^"]*text-asphalt/);
+  assert.match(bar, /h-14/);
+  assert.match(bar, /bg-brand-gradient/);
+
+  // Sem dourado/laranja na ficha e sem sticky no desktop.
+  for (const src of [bar, page, dossier]) {
+    assert.doesNotMatch(src, /brand-orange|gold|yellow|#ffc72c|#ffd700/i);
+  }
+  assert.match(page, /interest:\s*whatsapp\.interest/);
+  assert.doesNotMatch(page, /lg:sticky/);
+
+  // Blocos mobile com CTA verde repetido em Próximos passos e Atendimento + selo "Financiamos em até 60x".
+  const html = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        hours: site.hours,
+        fullLabel: "Honda Civic EXL 2.0",
+        path: "/estoque/civic",
+        vehicleSlug: "honda-civic-exl-2-0-2020-v1",
+        sold: false,
+        price: 112900,
+        yearModel: 2020,
+        make: "Honda",
+        model: "Civic",
+        vehicleId: "v1",
+        accessories: ["Ar-condicionado"],
+        specs: [{ label: "Motor", value: "2.0" }],
+        conditions: DEFAULT_VEHICLE_CONDITIONS,
+        quickActions: {
+          contentPath: "/estoque/civic",
+          interest: "Olá! Tenho interesse no Honda Civic EXL 2.0",
+          video: "video",
+          finance: "finance",
+          trade: "trade",
+          visit: "visit",
+        },
+      }),
+    ),
+  );
+
+  assert.match(html, /Financiamos em até 60x/);
+  assert.doesNotMatch(html, /parcela|simulador|simular/i);
+  assert.match(html, /data-ficha-mobile-cta="passos"[\s\S]*?min-h-\[56px\][\s\S]*?bg-\[#25D366\] text-white/);
+  assert.match(html, /data-ficha-mobile-cta="atendimento"[\s\S]*?min-h-\[56px\][\s\S]*?bg-\[#25D366\] text-white/);
+
+  // Veículo vendido não exibe os CTAs repetidos de compra nem o selo de financiamento.
+  const soldHtml = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        hours: site.hours,
+        fullLabel: "Honda Civic EXL 2.0",
+        path: "/estoque/civic",
+        sold: true,
+        price: 0,
+        yearModel: 2020,
+        make: "Honda",
+        model: "Civic",
+        vehicleId: "v1",
+        accessories: [],
+        specs: [],
+        conditions: DEFAULT_VEHICLE_CONDITIONS,
+      }),
+    ),
+  );
+  assert.doesNotMatch(soldHtml, /Financiamos em até 60x/);
+  assert.doesNotMatch(soldHtml, /data-ficha-mobile-cta/);
+});
