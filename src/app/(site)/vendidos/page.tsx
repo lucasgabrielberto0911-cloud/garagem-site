@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { VehicleImage } from "@/components/VehicleImage";
+import { InstaDeliveriesGrid } from "@/components/site/InstaDeliveriesGrid";
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { IconArrowRight, IconStar, IconWhatsApp } from "@/components/site/icons";
@@ -13,12 +14,16 @@ import {
   SectionHeading,
   WhatsAppButton,
 } from "@/components/site/ui";
+import vendidosInstaData from "@/data/vendidos-insta.json";
 import { formatNumberBR } from "@/lib/format";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getSoldShowcaseData } from "@/lib/sold-showcase";
 import { CARD_SIZES } from "@/lib/stock-query";
 import { getSiteStats } from "@/lib/vehicles";
+import type { InstaDeliveryItem } from "@/lib/vendidos-insta";
+
+const instaDeliveries: readonly InstaDeliveryItem[] = vendidosInstaData;
 
 export const revalidate = 3600;
 
@@ -34,7 +39,8 @@ export default async function VendidosPage() {
     getSiteStats(),
   ]);
 
-  const hasAny = deliveries.length > 0 || vehicles.length > 0;
+  const hasAny =
+    deliveries.length > 0 || vehicles.length > 0 || instaDeliveries.length > 0;
   const soldLabel =
     stats.sales > 0 ? `+${formatNumberBR(stats.sales)} veículos vendidos` : null;
 
@@ -104,11 +110,11 @@ export default async function VendidosPage() {
             description="Fotos de quem já fechou negócio com a Garagem."
           />
 
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {deliveries.map((item, index) => (
               <li
                 key={item.id}
-                className="flex flex-col overflow-hidden border border-white/10 bg-ink"
+                className="flex min-w-0 flex-col overflow-hidden border border-white/10 bg-ink"
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-asphalt">
                   {/* eslint-disable-next-line @next/next/no-img-element -- foto pública via R2/Storage */}
@@ -126,15 +132,15 @@ export default async function VendidosPage() {
                     className="h-full w-full object-cover"
                   />
                   {item.vehicleLabel ? (
-                    <span className="absolute bottom-2.5 left-2.5 bg-asphalt/90 px-2.5 py-1 font-display text-[11px] font-semibold uppercase tracking-wide text-cream">
+                    <span className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate bg-asphalt/90 px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wide text-cream sm:bottom-2.5 sm:left-2.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
                       {item.vehicleLabel}
                     </span>
                   ) : null}
                 </div>
 
-                <div className="flex flex-1 flex-col p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate font-display text-base font-semibold text-cream">
+                <div className="flex flex-1 flex-col p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <p className="min-w-0 truncate font-display text-sm font-semibold text-cream sm:text-base">
                       {item.customerName}
                     </p>
                     {item.message ? (
@@ -146,7 +152,7 @@ export default async function VendidosPage() {
                         {([1, 2, 3, 4, 5] as const).map((star) => (
                           <IconStar
                             key={star}
-                            className={`h-3.5 w-3.5 ${
+                            className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${
                               star <= item.rating ? "text-brand-light" : "text-white/15"
                             }`}
                           />
@@ -162,21 +168,21 @@ export default async function VendidosPage() {
                   ) : null}
 
                   {item.message ? (
-                    <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-cream/85">
+                    <blockquote className="mt-2.5 flex-1 text-xs leading-relaxed text-cream/85 sm:mt-3 sm:text-sm">
                       {item.message}
                     </blockquote>
                   ) : (
                     <div className="flex-1" />
                   )}
 
-                  <div className="mt-4 border-t border-white/10 pt-3">
+                  <div className="mt-3 border-t border-white/10 pt-2.5 sm:mt-4 sm:pt-3">
                     <TrackedWhatsAppLink
                       href={item.whatsappHref}
                       trackingLabel="vendidos-entrega"
-                      className="inline-flex min-h-11 items-center gap-2 font-display text-xs font-semibold uppercase tracking-wider text-brand-light transition hover:text-cream"
+                      className="inline-flex min-h-10 w-full items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wider text-brand-light transition hover:text-cream sm:min-h-11 sm:gap-2 sm:text-xs"
                     >
-                      <IconWhatsApp className="h-4 w-4" />
-                      Quero um parecido
+                      <IconWhatsApp className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                      <span className="truncate">Quero um parecido</span>
                     </TrackedWhatsAppLink>
                   </div>
                 </div>
@@ -196,11 +202,11 @@ export default async function VendidosPage() {
             description="Unidades já entregues. Gostou de algum modelo? Chamamos você quando entrar outro parecido."
           />
 
-          <ul className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+          <ul className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {vehicles.map((vehicle, index) => (
               <li
                 key={vehicle.id}
-                className="flex flex-col overflow-hidden border border-white/10 bg-asphalt"
+                className="flex min-w-0 flex-col overflow-hidden border border-white/10 bg-asphalt"
               >
                 <Link
                   href={vehicle.path}
@@ -258,6 +264,24 @@ export default async function VendidosPage() {
               </li>
             ))}
           </ul>
+          </div>
+        </Section>
+      ) : null}
+
+      {instaDeliveries.length > 0 ? (
+        <Section
+          id="entregas-instagram"
+          spacing="tight"
+          className={`${deliveries.length === 0 && vehicles.length === 0 ? "mt-8 " : ""}border-t border-white/10`}
+        >
+          <div data-sold-showcase="" data-insta-deliveries="">
+            <SectionHeading
+              eyebrow="Instagram"
+              title="Clientes que já levaram o seu"
+              description="Registros reais de entregas publicados no @suagaragem1."
+            />
+
+            <InstaDeliveriesGrid items={instaDeliveries} />
           </div>
         </Section>
       ) : null}
