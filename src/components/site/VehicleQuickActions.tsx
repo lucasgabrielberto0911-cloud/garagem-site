@@ -133,7 +133,7 @@ export function VehicleQuickActions({
             pageOrigin="ficha"
             className={
               variant === "secondary"
-                ? "inline-flex min-h-14 w-full items-center justify-start gap-2.5 rounded-xl border border-white/15 bg-asphalt/75 px-3 py-2.5 text-left font-display text-sm font-semibold leading-snug text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition touch-manipulation hover:border-[#25D366]/60 hover:bg-white/[0.08] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:rounded-lg lg:border-white/20 lg:bg-white/[0.04] lg:py-2 lg:font-medium lg:shadow-none"
+                ? "inline-flex min-h-14 w-full items-center justify-start gap-2.5 rounded-lg border border-white/20 bg-white/[0.04] px-3 py-2 text-left font-display text-sm font-medium leading-snug text-cream transition touch-manipulation hover:border-[#25D366]/60 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 : "inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-ink px-2.5 py-2 text-center font-display text-sm font-semibold uppercase tracking-[0.1em] text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:min-h-[44px]"
             }
           >

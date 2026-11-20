@@ -133,7 +133,7 @@ body {
   }
 
   .pb-sticky-bar-safe {
-    padding-bottom: calc(var(--ficha-sticky-bar) + 1.25rem);
+    padding-bottom: calc(var(--ficha-sticky-bar) + 0.75rem);
   }
 
   /* Compensa header fixo + notch + borda de 2px (altura alinhada ao SiteHeader). */

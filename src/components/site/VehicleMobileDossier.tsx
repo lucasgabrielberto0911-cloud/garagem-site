@@ -8,9 +8,7 @@ import { VehicleDescription, visibleDescriptionSegments } from "@/components/sit
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleSeals } from "@/components/site/VehicleSeals";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
-import { WhatsAppButton } from "@/components/site/ui";
 import { IconMapPin } from "@/components/site/icons";
-import { VehicleLeadHit } from "@/lib/funnel-events";
 import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
 import { formatCurrencyBRL } from "@/lib/format";
 import {
@@ -136,25 +134,21 @@ export function VehicleMobileSummary({
     ? []
     : publicDossierChips({ hasSpareKey, hasManual, hasVideo });
   return (
-    <div className="ficha-mobile-sheet relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b from-[#1C1C22] via-ink to-[#131317] px-4 pb-4 pt-3.5 shadow-[0_14px_34px_rgba(0,0,0,0.45)] sm:px-6">
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-brand-gradient"
-      />
+    <div className="ficha-mobile-sheet px-4 pb-3 pt-3 sm:px-6">
       <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        <h1 className="break-normal whitespace-normal font-display text-[1.35rem] font-bold leading-snug tracking-tight text-cream">
+        <h1 className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream">
           {title}
         </h1>
         {yearLabel ? (
-          <span className="inline-flex shrink-0 items-center rounded-md border border-brand/35 bg-brand/15 px-2.5 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap">
+          <span className="inline-flex shrink-0 items-center border border-white/20 bg-ink px-2 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap">
             {yearLabel}
           </span>
         ) : null}
       </div>
       {version ? (
-        <p className="mt-0.5 break-normal whitespace-normal text-sm leading-snug text-cream/80">{version}</p>
+        <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-cream/80">{version}</p>
       ) : null}
-      <p className="mt-1.5 font-display text-[1.875rem] font-extrabold leading-none tracking-tight text-brand-light">
+      <p className="mt-1.5 font-display text-[1.75rem] font-bold leading-none tracking-tight text-brand-light">
         {sold ? (
           <span className="text-base text-cream/80">Já vendido</span>
         ) : (
@@ -183,42 +177,26 @@ export function VehicleMobileSummary({
   );
 }
 
-/** Bloco sempre aberto em card elevado: título em Sora com filete vermelho, sem acordeão. */
+/** Bloco sempre aberto: título em Sora, sem acordeão. */
 function DossierBlock({
   title,
   children,
   section,
   id,
-  tone = "default",
 }: {
   title: string;
   children: ReactNode;
   section?: "especificacoes" | "detalhes";
   id?: string;
-  tone?: "default" | "accent";
 }) {
-  const surface =
-    tone === "accent"
-      ? "relative overflow-hidden rounded-2xl border border-brand/30 bg-gradient-to-br from-[#211316] via-[#17171B] to-ink p-4 shadow-[0_12px_28px_rgba(0,0,0,0.4)]"
-      : "rounded-2xl border border-white/12 bg-gradient-to-b from-[#18181D] to-ink p-4 shadow-[0_8px_24px_rgba(0,0,0,0.32)]";
-
   return (
     <section
-      className={`${surface}${section ? " ficha-jump-target" : ""}`}
+      className={`border-b border-white/20 py-5${section ? " ficha-jump-target" : ""}`}
       id={id ?? section}
       data-ficha-section={section}
     >
-      {tone === "accent" ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-brand-gradient"
-        />
-      ) : null}
-      <div className="mb-3 flex items-center gap-2.5">
-        <span aria-hidden="true" className="h-5 w-1 shrink-0 rounded-full bg-brand" />
-        <h2 className="font-display text-lg font-bold tracking-tight text-cream">{title}</h2>
-      </div>
-      <div className="text-[15px] leading-relaxed text-cream/85">{children}</div>
+      <h2 className="mb-3 font-display text-lg font-semibold tracking-tight text-cream">{title}</h2>
+      <div className="text-[15px] leading-relaxed text-cream/80">{children}</div>
     </section>
   );
 }
@@ -226,7 +204,6 @@ function DossierBlock({
 export function VehicleMobileBlocks({
   fullLabel,
   path,
-  vehicleSlug,
   sold,
   catalog = false,
   status,
@@ -250,7 +227,6 @@ export function VehicleMobileBlocks({
 }: {
   fullLabel: string;
   path: string;
-  vehicleSlug?: string;
   sold: boolean;
   /** `true` só para disponível do estoque próprio (Meta). */
   catalog?: boolean;
@@ -275,7 +251,6 @@ export function VehicleMobileBlocks({
   hours: string;
   quickActions?: {
     contentPath: string;
-    interest?: string;
     video: string;
     finance: string;
     trade: string;
@@ -306,14 +281,12 @@ export function VehicleMobileBlocks({
   const hasAbout =
     !!description &&
     visibleDescriptionSegments(description, summaryFacts, specs).length > 0;
-  const contentTrack = whatsappContentFromVehicle({ id: vehicleId, path });
-  const resolvedSlug = vehicleSlug ?? contentTrack;
 
   return (
-    <div className="mt-3.5 space-y-3.5 pb-6 lg:hidden">
+    <div className="mt-2 pb-6 lg:hidden">
       {extraSpecs.length === 0 && listedLine ? (
-        // Sem ficha técnica, o "Anunciado hoje · Atualizado em..." continua discreto acima dos cards.
-        <p className="px-1 text-sm tracking-wide text-cream/80">{listedLine}</p>
+        // Sem ficha técnica, o "Anunciado hoje · Atualizado em..." continua como linha solta.
+        <p className="border-b border-white/20 pb-4 text-sm tracking-wide text-cream/80">{listedLine}</p>
       ) : null}
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha técnica" section="especificacoes">
@@ -322,14 +295,11 @@ export function VehicleMobileBlocks({
           ) : null}
           <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
             {extraSpecs.map((spec) => (
-              <div
-                key={spec.label}
-                className="min-w-0 rounded-xl border border-white/12 bg-asphalt/70 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-              >
+              <div key={spec.label} className="min-w-0 border border-white/20 bg-ink px-3 py-2.5">
                 <dt className="text-sm font-medium text-cream/75">{spec.label}</dt>
                 <dd
-                  className={`mt-1 font-display text-[15px] leading-snug [overflow-wrap:break-word] ${
-                    spec.empty ? "font-medium text-cream/80" : "font-bold text-cream"
+                  className={`mt-1 font-display text-sm leading-snug [overflow-wrap:break-word] ${
+                    spec.empty ? "font-medium text-cream/80" : "font-semibold text-cream"
                   }`}
                 >
                   {spec.value}
@@ -341,50 +311,11 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {!sold && quickActions ? (
-        <DossierBlock title="Próximos passos" id="proximos-passos" tone="accent">
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/35 bg-brand/15 px-3 py-1 font-display text-sm font-semibold text-cream">
-            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-brand-light" />
-            Financiamos em até 60x
-          </p>
-          {quickActions.interest ? (
-            <div data-ficha-mobile-cta="passos" className="mb-3">
-              <VehicleLeadHit
-                contentId={vehicleId}
-                contentName={fullLabel}
-                value={price}
-                make={make}
-                model={model}
-                year={yearModel}
-                stateOfVehicle={quickActions.stateOfVehicle}
-                exteriorColor={quickActions.exteriorColor}
-                transmission={quickActions.transmission}
-                bodyStyle={quickActions.bodyStyle}
-                fuelType={quickActions.fuelType}
-                postalCode={quickActions.postalCode}
-                catalog={catalog}
-                status={status}
-                sold={sold}
-              >
-                <WhatsAppButton
-                  size="lg"
-                  className="w-full rounded-xl text-[15px] font-bold normal-case tracking-normal"
-                  trackingLabel="ficha-mobile-passos"
-                  campaign="ficha"
-                  content={contentTrack}
-                  vehicleId={vehicleId}
-                  slug={resolvedSlug}
-                  pageOrigin="ficha"
-                  message={quickActions.interest}
-                >
-                  Chamar no WhatsApp
-                </WhatsAppButton>
-              </VehicleLeadHit>
-            </div>
-          ) : null}
+        <DossierBlock title="Próximos passos" id="proximos-passos">
           <div>
             <VehicleQuickActions
               contentId={vehicleId}
-              contentSlug={resolvedSlug}
+              contentSlug={whatsappContentFromVehicle({ id: vehicleId, path })}
               contentPath={quickActions.contentPath}
               contentName={fullLabel}
               value={price}
@@ -436,22 +367,19 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {!sold ? (
-        <details
-          className="group rounded-2xl border border-white/15 bg-gradient-to-b from-[#18181D] to-ink px-4 shadow-[0_8px_24px_rgba(0,0,0,0.3)] transition open:border-brand/35"
-          data-vistoria-garantia=""
-        >
-          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-[15px] font-semibold text-cream [&::-webkit-details-marker]:hidden">
+        <details className="group border-b border-white/20" data-vistoria-garantia="">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
             <span>Saiba mais sobre vistoria e garantia</span>
             <span
               aria-hidden="true"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-asphalt/70 text-cream/85 transition-transform duration-200 group-open:rotate-180 group-open:border-brand/40"
+              className="text-cream/80 transition-transform duration-200 group-open:rotate-180"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.7" />
+                <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
               </svg>
             </span>
           </summary>
-          <div className="border-t border-white/10 pb-4 pt-3 text-[15px] leading-relaxed text-cream/85">
+          <div className="pb-4 text-[15px] leading-relaxed text-cream/80">
             <h3 className="font-display text-sm font-semibold text-cream">{STORE_INSPECTION_LABEL}</h3>
             {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
               <p className="mt-1.5 text-cream">{inspectionNote}</p>
@@ -482,56 +410,21 @@ export function VehicleMobileBlocks({
       ) : null}
 
       <DossierBlock title="Atendimento" id="atendimento">
-        <p className="flex items-start gap-2 font-medium text-cream">
+        <p className="flex items-start gap-2 text-cream">
           <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
           <span>Atendemos Linhares, Aracruz e Grande Vitória</span>
         </p>
         <p className="mt-1.5">
           Combinamos o atendimento pelo WhatsApp. {hours}
         </p>
-        {!sold && quickActions?.interest ? (
-          <div data-ficha-mobile-cta="atendimento" className="mt-4">
-            <VehicleLeadHit
-              contentId={vehicleId}
-              contentName={fullLabel}
-              value={price}
-              make={make}
-              model={model}
-              year={yearModel}
-              stateOfVehicle={quickActions.stateOfVehicle}
-              exteriorColor={quickActions.exteriorColor}
-              transmission={quickActions.transmission}
-              bodyStyle={quickActions.bodyStyle}
-              fuelType={quickActions.fuelType}
-              postalCode={quickActions.postalCode}
-              catalog={catalog}
-              status={status}
-              sold={sold}
-            >
-              <WhatsAppButton
-                size="lg"
-                className="w-full rounded-xl text-[15px] font-bold normal-case tracking-normal"
-                trackingLabel="ficha-mobile-atendimento"
-                campaign="ficha"
-                content={contentTrack}
-                vehicleId={vehicleId}
-                slug={resolvedSlug}
-                pageOrigin="ficha"
-                message={quickActions.interest}
-              >
-                Tirar dúvidas no WhatsApp
-              </WhatsAppButton>
-            </VehicleLeadHit>
-          </div>
-        ) : null}
         {!sold && path.startsWith("/estoque/") ? (
-          <p className="mt-3 text-sm">
+          <p className="mt-2.5 text-sm">
             <Link
               href={`/troca?carro=${encodeURIComponent(
                 path.slice("/estoque/".length).split(/[?#]/)[0].replace(/\/+$/, ""),
               )}`}
               prefetch={false}
-              className="inline-flex min-h-11 items-center font-medium text-cream/90 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand"
+              className="inline-flex min-h-11 items-center text-cream/85 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand"
             >
               Tem carro pra dar na troca?
             </Link>
@@ -547,7 +440,7 @@ export function VehicleMobileBlocks({
             year={yearModel}
             catalog={catalog}
             variant="full"
-            className="mt-3 w-full rounded-xl"
+            className="mt-4 w-full"
           />
         ) : null}
         <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">

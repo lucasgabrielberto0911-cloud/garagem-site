@@ -19,7 +19,7 @@ export function VehicleFeatures({ items }: { items: readonly string[] }) {
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
-          className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-brand/40 bg-brand/10 px-4 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-brand hover:bg-brand/20 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="mt-4 inline-flex min-h-11 w-full items-center justify-center border border-white/20 px-4 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-brand"
         >
           {open ? "Mostrar menos" : `Ver todos os ${items.length} opcionais`}
         </button>
