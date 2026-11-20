@@ -1,4 +1,5 @@
 import { IconStar } from "@/components/admin/icons";
+import { MAX_FEATURED_PINS } from "@/lib/featured";
 import { CONSIGNED_HINT, CONSIGNED_LABEL } from "@/lib/vehicle-ops";
 import {
   VEHICLE_LOCATION_CITIES,
@@ -115,7 +116,7 @@ export function MoreDetailsSection({
             Destaque na home
           </label>
           <p className="mt-1.5 text-xs leading-relaxed text-muted">
-            Até 8 na home, só disponível. A home não escolhe carro sozinha.
+            Até {MAX_FEATURED_PINS} fixos na home (só disponível). O restante gira sozinho a cada 2 dias.
           </p>
         </div>
 

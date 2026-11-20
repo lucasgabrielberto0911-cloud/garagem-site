@@ -25,8 +25,11 @@ import {
   transmissionWhere,
 } from "@/lib/vehicle-display";
 import {
+  MAX_FEATURED_PINS,
   MAX_HOME_FEATURED,
+  featuredRotationPeriod,
   hasShowcaseCoverPhoto,
+  shuffleForFeaturedPeriod,
   sortShowcaseVehicles,
 } from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
@@ -274,7 +277,6 @@ async function findDetailVehicle(
 export type FeaturedShowcaseWhere = {
   status: "disponivel";
   historical?: false;
-  consigned?: false;
   featured: boolean;
 };
 
@@ -284,7 +286,7 @@ export type FeaturedShowcaseQuery = {
   take: number;
 };
 
-async function findOwnShowcaseCards(
+async function findShowcaseCards(
   featured: boolean,
   take: number,
   find: (args: FeaturedShowcaseQuery) => Promise<VehicleCardRecord[]>,
@@ -292,7 +294,6 @@ async function findOwnShowcaseCards(
   const where: FeaturedShowcaseWhere = {
     status: "disponivel",
     historical: false,
-    consigned: false,
     featured,
   };
   const orderBy: FeaturedShowcaseQuery["orderBy"] = [
@@ -305,11 +306,9 @@ async function findOwnShowcaseCards(
     try {
       return await find({ where: { ...where }, orderBy: [...orderBy], take });
     } catch (error) {
-      if (attempt >= 2) throw error;
+      if (attempt >= 1) throw error;
       if (where.historical === false && isMissingColumnError(error, "historical")) {
         delete where.historical;
-      } else if (where.consigned === false && isMissingColumnError(error, "consigned")) {
-        delete where.consigned;
       } else {
         throw error;
       }
@@ -320,60 +319,82 @@ async function findOwnShowcaseCards(
 export async function fetchFeaturedVehicles(
   take: number,
   find: (args: FeaturedShowcaseQuery) => Promise<VehicleCardRecord[]> = findCardVehicles,
+  period: number = featuredRotationPeriod(),
 ): Promise<VehicleCardRecord[]> {
   if (take <= 0) return [];
 
-  const highlightedPool = await findOwnShowcaseCards(
+  const maxPins = Math.min(MAX_FEATURED_PINS, take);
+  const highlightedPool = await findShowcaseCards(
     true,
     Math.max(take * 2, 16),
     find,
   );
-  const sortedHighlighted = sortShowcaseVehicles(highlightedPool);
+  const sortedHighlighted = sortShowcaseVehicles(
+    highlightedPool.filter((vehicle) => vehicle.status === "disponivel"),
+  );
   const highlightedWithCover = sortedHighlighted.filter(hasShowcaseCoverPhoto);
-  if (highlightedWithCover.length >= take) {
-    return highlightedWithCover.slice(0, take);
+  const pinsWithCover = highlightedWithCover.slice(0, maxPins);
+  if (pinsWithCover.length >= take) {
+    return pinsWithCover.slice(0, take);
   }
 
-  const missingWithCover = take - highlightedWithCover.length;
-  const fillerPool = await findOwnShowcaseCards(
+  const fillerPool = await findShowcaseCards(
     false,
-    Math.max(missingWithCover * 4, 32),
+    Math.max(take * 25, 200),
     find,
   );
   const seenIds = new Set(sortedHighlighted.map((vehicle) => vehicle.id));
-  const sortedFillers = sortShowcaseVehicles(
-    fillerPool.filter((vehicle) => !seenIds.has(vehicle.id)),
+  const availableFillers = fillerPool.filter(
+    (vehicle) => vehicle.status === "disponivel" && !seenIds.has(vehicle.id),
   );
-  const fillersWithCover = sortedFillers.filter(hasShowcaseCoverPhoto);
+  const fillersWithCover = shuffleForFeaturedPeriod(
+    availableFillers.filter(hasShowcaseCoverPhoto),
+    period,
+  );
   const highlightedWithoutCover = sortedHighlighted.filter(
     (vehicle) => !hasShowcaseCoverPhoto(vehicle),
   );
-  const fillersWithoutCover = sortedFillers.filter(
-    (vehicle) => !hasShowcaseCoverPhoto(vehicle),
+  const remainingPinAllowance = Math.max(0, maxPins - pinsWithCover.length);
+  const pinsWithoutCover = highlightedWithoutCover.slice(0, remainingPinAllowance);
+  const fillersWithoutCover = shuffleForFeaturedPeriod(
+    availableFillers.filter((vehicle) => !hasShowcaseCoverPhoto(vehicle)),
+    period,
   );
 
-  const selected = [
-    ...highlightedWithCover,
+  return [
+    ...pinsWithCover,
     ...fillersWithCover,
-    ...highlightedWithoutCover,
+    ...shuffleForFeaturedPeriod(highlightedWithCover.slice(maxPins), period),
+    ...pinsWithoutCover,
     ...fillersWithoutCover,
+    ...shuffleForFeaturedPeriod(
+      highlightedWithoutCover.slice(remainingPinAllowance),
+      period,
+    ),
   ].slice(0, take);
+}
 
-  return sortShowcaseVehicles(selected);
+export function featuredCacheKey(
+  take: number = MAX_HOME_FEATURED,
+  period: number = featuredRotationPeriod(),
+): string {
+  return `featured-vehicles-v9:${take}:${period}`;
 }
 
 const loadFeaturedCached = unstable_cache(
-  async (take: number) => fetchFeaturedVehicles(take),
-  ["featured-vehicles-v8"],
+  async (_cacheKey: string, take: number, period: number) =>
+    fetchFeaturedVehicles(take, findCardVehicles, period),
+  ["featured-vehicles-v9"],
   PUBLIC_CACHE,
 );
 
-export const getFeaturedVehicles = cache((take = MAX_HOME_FEATURED) =>
-  safeQuery(
-    "veículos em destaque",
-    () => loadFeaturedCached(take),
-    [] as VehicleCardRecord[],
-  ),
+export const getFeaturedVehicles = cache(
+  (take = MAX_HOME_FEATURED, period = featuredRotationPeriod()) =>
+    safeQuery(
+      "veículos em destaque",
+      () => loadFeaturedCached(featuredCacheKey(take, period), take, period),
+      [] as VehicleCardRecord[],
+    ),
 );
 
 /** Mesmo conjunto do /estoque sem filtro: todos os disponíveis, mais recentes primeiro. */

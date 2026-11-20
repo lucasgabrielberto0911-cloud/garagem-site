@@ -3,12 +3,13 @@
 import { ActionSheetButton, ActionSheetLink } from "@/components/admin/ActionSheet";
 import { IconCash, IconCheck, IconClipboard, IconCopy, IconExternal, IconPencil, IconStar, IconTrash } from "@/components/admin/icons";
 import { ADMIN_CARD_OVERFLOW_ACTIONS, adminCardOverflowStatuses, adminCardShowsSoldAction, type AdminCardOverflowAction } from "@/lib/admin-list";
-import { MAX_HOME_FEATURED } from "@/lib/featured";
+import { MAX_FEATURED_PINS, canEnableFeatured } from "@/lib/featured";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { VehicleRow } from "@/components/admin/VehiclesTable";
 
 export function SheetActions({
   vehicle,
+  featuredCount,
   busy,
   close,
   onStatus,
@@ -20,6 +21,7 @@ export function SheetActions({
   onPromo,
 }: {
   vehicle: VehicleRow;
+  featuredCount?: number;
   busy: boolean;
   close: () => void;
   onStatus: (status: string) => void;
@@ -60,6 +62,7 @@ export function SheetActions({
           key={action}
           action={action}
           vehicle={vehicle}
+          featuredCount={featuredCount}
           busy={busy}
           close={close}
           run={run}
@@ -99,6 +102,7 @@ export function SheetActions({
       <OverflowAction
         action="excluir"
         vehicle={vehicle}
+        featuredCount={featuredCount}
         busy={busy}
         close={close}
         run={run}
@@ -113,6 +117,7 @@ export function SheetActions({
 function OverflowAction({
   action,
   vehicle,
+  featuredCount,
   busy,
   close,
   run,
@@ -122,6 +127,7 @@ function OverflowAction({
 }: {
   action: AdminCardOverflowAction;
   vehicle: VehicleRow;
+  featuredCount?: number;
   busy: boolean;
   close: () => void;
   run: (action: () => void) => () => void;
@@ -152,12 +158,20 @@ function OverflowAction({
     );
   }
   if (action === "destacar") {
+    const canToggle =
+      featuredCount === undefined
+        ? true
+        : canEnableFeatured(featuredCount, vehicle.featured);
     return (
       <ActionSheetButton
         icon={<IconStar className="h-4 w-4" filled={vehicle.featured} />}
         label={vehicle.featured ? "Tirar da vitrine" : "Destacar na home"}
-        hint={`Até ${MAX_HOME_FEATURED} destaques`}
-        disabled={busy}
+        hint={
+          !canToggle
+            ? `Limite de ${MAX_FEATURED_PINS} atingido — tire um antes`
+            : `Até ${MAX_FEATURED_PINS} destaques`
+        }
+        disabled={busy || !canToggle}
         onClick={run(onFeatured)}
       />
     );

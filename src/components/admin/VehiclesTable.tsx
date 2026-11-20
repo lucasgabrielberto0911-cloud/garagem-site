@@ -43,7 +43,12 @@ import {
   deleteRequiresTypedConfirm,
 } from "@/lib/admin-list";
 import { coverSrc } from "@/lib/stock-query";
-import { MAX_HOME_FEATURED } from "@/lib/featured";
+import {
+  MAX_FEATURED_PINS,
+  MAX_HOME_FEATURED,
+  canEnableFeatured,
+  featuredCapMessage,
+} from "@/lib/featured";
 import type { StockPending } from "@/lib/admin-stock-pending";
 import { publishMissingLine, stockListQuietNote } from "@/lib/stock-quality";
 import { rotateLocalDraftOnDuplicate } from "@/lib/admin-duplicate-vehicle";
@@ -675,6 +680,10 @@ export function VehiclesTable({
   }
 
   function toggleFeatured(vehicle: VehicleRow) {
+    if (!canEnableFeatured(featuredCount, vehicle.featured)) {
+      toast.error(featuredCapMessage());
+      return;
+    }
     runQuickAction(
       vehicle.id,
       () => setVehicleFeatured(vehicle.id, !vehicle.featured),
@@ -844,7 +853,7 @@ export function VehiclesTable({
                 : "bg-white/15 text-cream/85"
             }`}
           >
-            {featuredCount}/{MAX_HOME_FEATURED}
+            {featuredCount}/{MAX_FEATURED_PINS}
           </span>
         </button>
         <button
@@ -1116,12 +1125,12 @@ export function VehiclesTable({
       {tab === "destaques" ? (
         <div className="border border-white/20 bg-ink/40 px-4 py-3 text-sm">
           <p className="font-display text-xs font-semibold uppercase tracking-wider text-cream">
-            Home · {featuredCount}/{MAX_HOME_FEATURED} destaques
+            Home · {featuredCount}/{MAX_FEATURED_PINS} destaques
           </p>
           <p className="mt-1 text-sm leading-relaxed text-cream/80">
-            Só o que está marcado aparece na vitrine. Ordem: cadastro mais
-            recente primeiro. Teto de {MAX_HOME_FEATURED} para não bagunçar a
-            home.{" "}
+            Os marcados aparecem primeiro na vitrine (até {MAX_FEATURED_PINS}).
+            O restante até {MAX_HOME_FEATURED} completa com o estoque disponível
+            e troca a cada 2 dias.{" "}
             <Link
               prefetch={false}
               href="/"
@@ -1246,7 +1255,7 @@ export function VehiclesTable({
               : tab === "vendidos"
                 ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
                 : tab === "destaques"
-                  ? "Marque até 8 anúncios disponíveis com a estrela. A home não escolhe carro sozinha."
+                  ? `Marque até ${MAX_FEATURED_PINS} anúncios disponíveis com a estrela para fixar no topo. O restante da home gira sozinho a cada 2 dias.`
                   : "Cadastre o primeiro veículo do estoque para começar."
           }
           action={
@@ -1367,6 +1376,7 @@ export function VehiclesTable({
         {actionsTarget ? (
           <SheetActions
             vehicle={actionsTarget}
+            featuredCount={featuredCount}
             busy={busyId === actionsTarget.id}
             close={() => setActionsTarget(null)}
             onStatus={(status) => changeStatus(actionsTarget, status)}

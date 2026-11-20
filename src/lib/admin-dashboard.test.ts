@@ -44,6 +44,8 @@ test("senha e anúncio sem foto vêm antes de ajuste de cadastro da loja", () =>
     ],
   );
   assert.equal(alerts[1].href, "/admin/veiculos/p1");
+  assert.match(alerts[2].description, /até 4 anúncios disponíveis/);
+  assert.match(alerts[2].description, /2 dias/);
   assert.equal(alerts[3].title, "Fiat Uno há 90 dias no estoque");
   assert.match(alerts[3].description, /45 dias/);
 });
