@@ -37,6 +37,8 @@ test("vender explica os passos, com um único atalho de WhatsApp antes do formul
   assert.match(vender, /retornamos no WhatsApp, das 8h às 23h, sem taxa e sem compromisso/);
   assert.match(vender, /data-clear-fab/);
   assert.match(vender, /clear-fab-screen/);
+  assert.doesNotMatch(vender, /lg:sticky/);
+  assert.doesNotMatch(vender, /simular|simula[cç][aã]o|loja digital/i);
   assert.doesNotMatch(vender, /step-scroll|setTimeout|setInterval/);
   assert.doesNotMatch(
     vender,
@@ -44,7 +46,7 @@ test("vender explica os passos, com um único atalho de WhatsApp antes do formul
   );
 });
 
-test("o formulário de venda mantém os campos e o envio de hoje", () => {
+test("o formulário de venda mantém os campos, progresso visível, alvos de toque grandes e privacidade", () => {
   for (const name of [
     "name",
     "phone",
@@ -65,6 +67,15 @@ test("o formulário de venda mantém os campos e o envio de hoje", () => {
   assert.match(honeypot, /hidden/);
   assert.match(sell, /<SellPhotoUpload/);
   assert.doesNotMatch(photos, /prepareMasterForUpload|master: true/);
+  assert.match(sell, /role="progressbar"/);
+  assert.match(sell, /data-sell-progress/);
+  assert.match(sell, /min-h-\[56px\]/);
+  assert.match(sell, /text-base/);
+  assert.match(
+    sell,
+    /trackLead\(\{\s*content_ids:\s*\[\],\s*content_name:\s*"Vender\/Trocar",\s*\}\)/,
+  );
+  assert.doesNotMatch(sell, /simular|simula[cç][aã]o|loja digital/i);
   assert.match(sell, /createSellLead\(data\)/);
   assert.match(sell, /sellReceivedLine\(photoCount\)/);
   assert.match(sell, /setSentPhotoCount\(photoUrls\.length\)/);

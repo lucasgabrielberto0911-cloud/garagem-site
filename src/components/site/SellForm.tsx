@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -29,11 +30,30 @@ import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
 import { normalizeBrazilPhone } from "@/lib/phone-br";
 import { createIntentId, enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
 import { sellReceivedLine } from "@/lib/sell-receipt";
+import {
+  getSellFormProgress,
+  validateSellYear,
+  type SellFormProgress,
+} from "@/lib/sell-form-progress";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { SiteLeadHit } from "@/lib/funnel-events";
 
-const inputClass =
-  "w-full min-h-[48px] border border-white/25 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation placeholder:text-cream/60 focus:border-brand focus-visible:ring-2 focus-visible:ring-brand";
+const baseInputClass =
+  "w-full min-h-[56px] rounded-lg border bg-asphalt px-4 py-3.5 text-base leading-normal text-cream outline-none transition touch-manipulation placeholder:text-cream/55 focus:border-brand focus-visible:ring-2 focus-visible:ring-brand";
+
+function inputToneClass(hasError: boolean) {
+  return hasError
+    ? `${baseInputClass} border-brand-light bg-brand/[0.06]`
+    : `${baseInputClass} border-white/25 hover:border-white/40`;
+}
+
+const INITIAL_PROGRESS = getSellFormProgress({
+  name: "",
+  phone: "",
+  brand: "",
+  model: "",
+  year: "",
+});
 
 export function SellForm({
   interestNote,
@@ -43,6 +63,7 @@ export function SellForm({
   interestVehicleId?: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
   useFormViewport(formRef);
   const [isPending, startTransition] = useTransition();
@@ -72,8 +93,42 @@ export function SellForm({
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [formError, setFormError] = useState("");
+  const [progress, setProgress] = useState<SellFormProgress>(INITIAL_PROGRESS);
   const requestKeyRef = useRef(createIntentId());
   const draft = useSellDraft(formRef, outcome === null, setPhone, setKm, setPlate);
+
+  const syncProgress = useCallback(
+    (nextPhotoCount = photoUrls.length) => {
+      const form = formRef.current;
+      if (!form) return;
+      const data = new FormData(form);
+      setProgress(
+        getSellFormProgress({
+          name: String(data.get("name") ?? ""),
+          phone: String(data.get("phone") ?? ""),
+          brand: String(data.get("brand") ?? ""),
+          model: String(data.get("model") ?? ""),
+          year: String(data.get("year") ?? ""),
+          plate: String(data.get("plate") ?? ""),
+          km: String(data.get("km") ?? ""),
+          notes: String(data.get("notes") ?? ""),
+          photoCount: nextPhotoCount,
+        }),
+      );
+    },
+    [photoUrls.length],
+  );
+
+  useEffect(() => {
+    if (outcome !== null) return;
+    syncProgress(photoUrls.length);
+  }, [outcome, draft.restored, draft.saved, phone, km, plate, photoUrls.length, syncProgress]);
+
+  useEffect(() => {
+    if (errors.plate && detailsRef.current) {
+      detailsRef.current.open = true;
+    }
+  }, [errors.plate]);
 
   useEffect(() => {
     if (outcome) return focusFormFeedback(receiptRef.current);
@@ -87,6 +142,16 @@ export function SellForm({
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isPending, photoBusy]);
+
+  function clearFieldError(fieldName: string) {
+    setErrors((current) => {
+      if (!current[fieldName]) return current;
+      const next = { ...current };
+      delete next[fieldName];
+      return next;
+    });
+    if (formError) setFormError("");
+  }
 
   async function queueOffline(data: FormData) {
     const fields: Record<string, string> = {};
@@ -128,17 +193,23 @@ export function SellForm({
     const brand = String(data.get("brand") ?? "").trim();
     const model = String(data.get("model") ?? "").trim();
     const year = String(data.get("year") ?? "").trim();
-    const plate = String(data.get("plate") ?? "").trim();
-    if (name.length < 3) nextErrors.name = "Informe seu nome completo.";
+    const plateValue = String(data.get("plate") ?? "").trim();
+    if (name.length < 3) nextErrors.name = "Digite seu nome completo (pelo menos 3 letras).";
     if (!isValidBrazilPhone(phoneRaw) || !normalizeBrazilPhone(phoneDigits)) {
-      nextErrors.phone = "Informe um WhatsApp com DDD.";
+      nextErrors.phone = "Digite seu WhatsApp com DDD (10 ou 11 números).";
     }
-    if (!brand) nextErrors.brand = "Informe a marca.";
-    if (!model) nextErrors.model = "Informe o modelo.";
-    if (!/^\d{4}$/.test(year)) nextErrors.year = "Informe o ano com 4 dígitos.";
-    if (plate && !isValidPlate(plate)) nextErrors.plate = "Informe uma placa válida ou deixe para depois.";
+    if (!brand) nextErrors.brand = "Digite a marca do veículo, como Volkswagen ou Honda.";
+    if (!model) nextErrors.model = "Digite o modelo do veículo, como Gol ou Civic.";
+    const yearError = validateSellYear(year);
+    if (yearError) nextErrors.year = yearError;
+    if (plateValue && !isValidPlate(plateValue)) {
+      nextErrors.plate = "Confira a placa (ABC-1234 ou ABC1D23) ou deixe em branco.";
+    }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
+      if (nextErrors.plate && detailsRef.current) {
+        detailsRef.current.open = true;
+      }
       const first = Object.keys(nextErrors)[0];
       setFocusTarget(first);
       return;
@@ -172,11 +243,15 @@ export function SellForm({
           setKm("");
           setPlate("");
           setPhotoUrls([]);
+          setProgress(INITIAL_PROGRESS);
           formRef.current?.reset();
         } else {
           setFormError(result.message);
           const first = Object.keys(fieldErrors)[0];
           if (first) {
+            if (first === "plate" && detailsRef.current) {
+              detailsRef.current.open = true;
+            }
             setFocusTarget(first);
           }
         }
@@ -206,6 +281,7 @@ export function SellForm({
           setKm("");
           setPlate("");
           setPhotoUrls([]);
+          setProgress(INITIAL_PROGRESS);
           requestKeyRef.current = createIntentId();
           setErrors({});
           setFormError("");
@@ -221,60 +297,118 @@ export function SellForm({
       ref={formRef}
       onSubmit={handleSubmit}
       onInvalid={(event) => event.preventDefault()}
-      onChange={draft.remember}
+      onInput={(event) => {
+        const target = event.target;
+        if (
+          (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
+          target.name
+        ) {
+          clearFieldError(target.name);
+        }
+        syncProgress();
+      }}
+      onChange={() => {
+        draft.remember();
+        syncProgress();
+      }}
       noValidate
-      className="relative flex flex-col gap-3"
+      className="relative flex flex-col gap-4"
     >
-      <fieldset disabled={isPending} className="flex min-w-0 flex-col gap-3">
+      <fieldset disabled={isPending} className="flex min-w-0 flex-col gap-4">
+        <ProgressCard progress={progress} />
+
         {draft.saved || draft.failed ? (
-          <div className="rounded-md border border-white/20 bg-white/[0.04] px-3 py-2.5" data-sell-draft="">
+          <div
+            className="rounded-xl border border-white/15 bg-ink px-4 py-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.22)]"
+            data-sell-draft=""
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p role="status" className="text-xs leading-relaxed text-cream/80">
-                {draft.failure === "erase" ? "Não conseguimos apagar o rascunho guardado neste navegador." : draft.failed ? "Não conseguimos guardar o preenchimento neste navegador." : draft.restored ? "Seu preenchimento foi recuperado." : "Preenchimento guardado nesta aba."}
+              <p role="status" className="text-sm font-medium leading-relaxed text-cream">
+                {draft.failure === "erase"
+                  ? "Não conseguimos apagar o rascunho guardado neste navegador."
+                  : draft.failed
+                    ? "Não conseguimos guardar o preenchimento neste navegador."
+                    : draft.restored
+                      ? "Seu preenchimento foi recuperado."
+                      : "Preenchimento guardado nesta aba."}
               </p>
-              <button type="button" onClick={() => { draft.discard(); setErrors({}); setFormError(""); }}
-                className="min-h-11 px-2 text-xs text-cream underline decoration-white/30 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Apagar preenchimento</button>
+              <button
+                type="button"
+                onClick={() => {
+                  draft.discard();
+                  setErrors({});
+                  setFormError("");
+                  setProgress(INITIAL_PROGRESS);
+                }}
+                className="min-h-11 rounded-lg border border-white/20 px-3.5 text-sm font-medium text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                Apagar preenchimento
+              </button>
             </div>
-            {!draft.failed ? <p className="text-xs leading-relaxed text-cream/75">Os textos ficam guardados por até 24 horas nesta aba (se recarregar a página, escolha as fotos novamente).</p> : null}
+            {!draft.failed ? (
+              <p className="mt-1.5 text-xs leading-relaxed text-cream/75">
+                Os textos ficam guardados por até 24 horas nesta aba (se recarregar a página, escolha as fotos novamente).
+              </p>
+            ) : null}
           </div>
         ) : null}
+
         <HoneypotWebsiteField id="website" />
 
-        <FormBlock title="Seus dados" hint="Nome e telefone para o retorno.">
+        <FormBlock
+          step={1}
+          title="Seus dados"
+          hint="Nome e WhatsApp para retornarmos com a avaliação."
+          done={progress.contactDone}
+          summary={`${progress.contactCount}/2`}
+        >
           <Field label="Seu nome" error={errors.name} htmlFor="name">
             <input
               id="name"
               name="name"
               required
               autoComplete="name"
+              enterKeyHint="next"
               placeholder="Nome completo"
-              className={inputClass}
+              className={inputToneClass(Boolean(errors.name))}
             />
           </Field>
 
-          <Field label="Telefone / WhatsApp" error={errors.phone} htmlFor="phone">
+          <Field label="WhatsApp com DDD" error={errors.phone} htmlFor="phone">
             <input
               id="phone"
               name="phone"
               required
               inputMode="tel"
               autoComplete="tel"
+              enterKeyHint="next"
               value={phone}
-              onChange={(event) => setPhone(formatPhoneBR(event.target.value))}
+              onChange={(event) => {
+                clearFieldError("phone");
+                setPhone(formatPhoneBR(event.target.value));
+              }}
               placeholder="(00) 00000-0000"
-              className={inputClass}
+              className={inputToneClass(Boolean(errors.phone))}
             />
           </Field>
         </FormBlock>
 
-        <FormBlock title="O veículo" hint="Informe marca, modelo e ano para iniciar o contato. Placa e fotos podem vir depois.">
+        <FormBlock
+          step={2}
+          title="Dados do veículo"
+          hint="Só marca, modelo e ano para começar. Placa e fotos podem ficar para depois."
+          done={progress.vehicleDone}
+          summary={`${progress.vehicleCount}/3`}
+        >
           <Field label="Marca do veículo" error={errors.brand} htmlFor="brand">
             <input
               id="brand"
               name="brand"
               required
+              autoComplete="off"
+              enterKeyHint="next"
               placeholder="Ex.: Volkswagen"
-              className={inputClass}
+              className={inputToneClass(Boolean(errors.brand))}
             />
           </Field>
 
@@ -283,8 +417,10 @@ export function SellForm({
               id="model"
               name="model"
               required
+              autoComplete="off"
+              enterKeyHint="next"
               placeholder="Ex.: Golf GTI"
-              className={inputClass}
+              className={inputToneClass(Boolean(errors.model))}
             />
           </Field>
 
@@ -295,68 +431,109 @@ export function SellForm({
               required
               inputMode="numeric"
               maxLength={4}
+              enterKeyHint="done"
               placeholder="Ex.: 2021"
-              className={inputClass}
+              className={inputToneClass(Boolean(errors.year))}
             />
           </Field>
-
         </FormBlock>
 
-        <details open={Boolean(errors.plate)} className="group border border-white/20">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-sm text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
-            <span>Complementar com placa, km ou fotos (opcional)</span>
-            <span aria-hidden="true" className="shrink-0 text-cream/75 transition-transform group-open:rotate-180">⌄</span>
+        <details
+          ref={detailsRef}
+          className="group overflow-hidden rounded-xl border border-white/15 bg-ink shadow-[0_10px_28px_rgba(0,0,0,0.24)]"
+        >
+          <summary className="flex min-h-[64px] cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-left transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand sm:px-5 [&::-webkit-details-marker]:hidden">
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                aria-hidden="true"
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-display text-sm font-bold ${
+                  progress.optionalCount > 0
+                    ? "bg-brand text-cream"
+                    : "border border-white/20 bg-asphalt text-cream/85"
+                }`}
+              >
+                {progress.optionalCount > 0 ? `+${progress.optionalCount}` : "3"}
+              </span>
+              <div className="min-w-0">
+                <span className="block font-display text-base font-semibold leading-snug text-cream">
+                  Complementar com placa, km ou fotos (opcional)
+                </span>
+                <span className="mt-0.5 block text-sm text-cream/75">
+                  Toque para abrir só se quiser agilizar a avaliação.
+                </span>
+              </div>
+            </div>
+            <span
+              aria-hidden="true"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-asphalt text-base text-cream/80 transition-transform group-open:rotate-180"
+            >
+              ⌄
+            </span>
           </summary>
-          <FormBlock title="Detalhes para a avaliação">
-            <Field label="Placa do veículo" error={errors.plate} htmlFor="plate" optional>
-              <input
-                id="plate"
-                name="plate"
-                autoComplete="off"
-                spellCheck={false}
-                value={plate}
-                onChange={(event) => setPlate(formatPlateInput(event.target.value))}
-                placeholder="ABC-1234 ou ABC1D23"
-                className={`${inputClass} uppercase`}
-                aria-describedby="plate-hint"
-              />
-              <p id="plate-hint" className="mt-1.5 text-xs text-cream/75">
-                Pode enviar depois. Se informar, use ABC-1234 ou ABC1D23.
-              </p>
-            </Field>
 
-            <Field label="Quilometragem" error={errors.km} htmlFor="km" optional>
-              <input
-                id="km"
-                name="km"
-                inputMode="numeric"
-                value={km}
-                onChange={(event) => {
-                  const digits = event.target.value.replace(/\D/g, "");
-                  setKm(digits ? formatNumberBR(Number(digits)) : "");
-                }}
-                placeholder="Ex.: 45.000"
-                className={inputClass}
-              />
-            </Field>
+          <div className="border-t border-white/10 p-4 sm:p-5">
+            <p className="text-sm leading-relaxed text-cream/75">
+              Nenhum destes campos é obrigatório. Se preferir, combinamos tudo pelo WhatsApp depois.
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-x-5">
+              <Field label="Placa do veículo" error={errors.plate} htmlFor="plate" optional>
+                <input
+                  id="plate"
+                  name="plate"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={plate}
+                  onChange={(event) => {
+                    clearFieldError("plate");
+                    setPlate(formatPlateInput(event.target.value));
+                  }}
+                  placeholder="ABC-1234 ou ABC1D23"
+                  className={`${inputToneClass(Boolean(errors.plate))} uppercase`}
+                  aria-describedby="plate-hint"
+                />
+                <p id="plate-hint" className="mt-2 text-sm leading-snug text-cream/75">
+                  Pode mandar depois. Se informar, use ABC-1234 ou ABC1D23.
+                </p>
+              </Field>
 
-            <div className="lg:col-span-2">
-              <Field label="Observações" error={errors.notes} htmlFor="notes" optional>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  rows={4}
-                  defaultValue={interestNote ?? ""}
-                  placeholder="Conte o estado do veículo, itens opcionais, se há débitos, se quer vender ou trocar..."
-                  className={`${inputClass} resize-y`}
+              <Field label="Quilometragem" error={errors.km} htmlFor="km" optional>
+                <input
+                  id="km"
+                  name="km"
+                  inputMode="numeric"
+                  value={km}
+                  onChange={(event) => {
+                    clearFieldError("km");
+                    const digits = event.target.value.replace(/\D/g, "");
+                    setKm(digits ? formatNumberBR(Number(digits)) : "");
+                  }}
+                  placeholder="Ex.: 45.000"
+                  className={inputToneClass(Boolean(errors.km))}
                 />
               </Field>
-            </div>
 
-            <div className="lg:col-span-2">
-              <SellPhotoUpload disabled={isPending} onBusyChange={setPhotoBusy} onUrlsChange={setPhotoUrls} />
+              <div className="lg:col-span-2">
+                <Field label="Observações" error={errors.notes} htmlFor="notes" optional>
+                  <textarea
+                    id="notes"
+                    name="notes"
+                    rows={4}
+                    defaultValue={interestNote ?? ""}
+                    placeholder="Conte o estado do veículo, itens extras, se quer vender ou trocar..."
+                    className={`${inputToneClass(Boolean(errors.notes))} min-h-[120px] resize-y`}
+                  />
+                </Field>
+              </div>
+
+              <div className="lg:col-span-2">
+                <SellPhotoUpload
+                  disabled={isPending}
+                  onBusyChange={setPhotoBusy}
+                  onUrlsChange={setPhotoUrls}
+                />
+              </div>
             </div>
-          </FormBlock>
+          </div>
         </details>
 
         {interestVehicleId ? (
@@ -364,45 +541,141 @@ export function SellForm({
         ) : null}
         <input type="hidden" name="source" value="vender" />
 
-        <div className="border border-white/20 bg-ink p-4 sm:p-5">
-          <p className="text-sm leading-relaxed text-cream/80">
-            Este é o contato inicial. Podemos pedir placa, fotos e mais detalhes para avaliar tabela, histórico e conservação. Depois,
-            retornamos no telefone informado, das 8h às 23h. Sem taxa e sem
-            compromisso.
-          </p>
-          {formError ? <p className="mt-4 text-sm leading-relaxed text-brand-light" role="alert">{formError}</p> : null}
-          <div className="mt-4 flex flex-col gap-3">
-            <button
-              type="submit"
-              disabled={!ready || isPending || photoBusy}
-              aria-busy={isPending}
-              className="min-h-[52px] w-full bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-70 touch-manipulation"
-            >
-              {isPending
-                ? "Enviando..."
-                : photoBusy
-                  ? "Enviando fotos… aguarde"
-                  : "Solicitar avaliação"}
-            </button>
-            <SiteLeadHit contentName="Vender/Trocar">
-              <WhatsAppButton
-                size="lg"
-                variant="outline"
-                className="w-full"
-                trackingLabel="vender"
-                message={WHATSAPP_MESSAGES.sell}
+        <div className="overflow-hidden rounded-xl border border-white/20 bg-ink shadow-[0_14px_36px_rgba(0,0,0,0.36)]">
+          <div className="h-1 bg-brand-gradient" aria-hidden="true" />
+          <div className="p-4 sm:p-6">
+            <h3 className="font-display text-base font-bold text-cream sm:text-lg">
+              O que acontece depois do envio
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-cream/85 sm:text-base">
+              A gente analisa tabela, histórico e conservação e retorna no telefone
+              informado pelo WhatsApp, das 8h às 23h — sem taxa e sem compromisso.
+              Se precisar, pedimos placa ou fotos na conversa.
+            </p>
+            {formError ? (
+              <p
+                className="mt-4 rounded-lg border border-brand-light/40 bg-brand/10 px-4 py-3 text-sm font-medium leading-relaxed text-brand-light"
+                role="alert"
               >
-                Prefiro chamar no WhatsApp
-              </WhatsAppButton>
-            </SiteLeadHit>
+                {formError}
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-col gap-3">
+              <button
+                type="submit"
+                disabled={!ready || isPending || photoBusy}
+                aria-busy={isPending}
+                className="min-h-[56px] w-full rounded-lg bg-brand px-7 py-4 font-display text-base font-semibold uppercase tracking-wide text-cream shadow-[0_10px_24px_rgba(217,21,25,0.32)] transition hover:bg-brand-dark active:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:opacity-70 touch-manipulation"
+              >
+                {isPending
+                  ? "Enviando..."
+                  : photoBusy
+                    ? "Enviando fotos… aguarde"
+                    : "Solicitar avaliação"}
+              </button>
+              <SiteLeadHit contentName="Vender/Trocar">
+                <WhatsAppButton
+                  size="lg"
+                  variant="outline"
+                  className="w-full rounded-lg"
+                  trackingLabel="vender"
+                  message={WHATSAPP_MESSAGES.sell}
+                >
+                  Prefiro chamar no WhatsApp
+                </WhatsAppButton>
+              </SiteLeadHit>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-cream/75">
+              Seus dados são usados apenas para o contato da avaliação. Não enviamos
+              spam nem compartilhamos com terceiros.
+            </p>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-cream/75">
-            Seus dados são usados apenas para o contato da avaliação. Não enviamos
-            spam nem compartilhamos com terceiros.
-          </p>
         </div>
       </fieldset>
     </form>
+  );
+}
+
+function ProgressCard({ progress }: { progress: SellFormProgress }) {
+  const pills = [
+    {
+      step: "1",
+      label: "Seus dados",
+      active: progress.contactDone,
+      detail: progress.contactDone ? "Pronto" : `${progress.contactCount}/2`,
+    },
+    {
+      step: "2",
+      label: "Veículo",
+      active: progress.vehicleDone,
+      detail: progress.vehicleDone ? "Pronto" : `${progress.vehicleCount}/3`,
+    },
+    {
+      step: "3",
+      label: "Extras",
+      active: progress.optionalCount > 0,
+      detail:
+        progress.optionalCount > 0 ? `+${progress.optionalCount}` : "Opcional",
+    },
+  ];
+
+  return (
+    <div
+      className="rounded-xl border border-white/15 bg-ink p-4 shadow-[0_8px_24px_rgba(0,0,0,0.24)] sm:p-5"
+      data-sell-progress=""
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="font-display text-sm font-semibold text-cream sm:text-base">
+          {progress.statusText}
+        </p>
+        <span className="font-display text-sm font-bold text-brand-light">
+          {progress.essentialFilled} de {progress.essentialTotal}
+        </span>
+      </div>
+
+      <div
+        role="progressbar"
+        aria-label="Progresso dos campos essenciais"
+        aria-valuemin={0}
+        aria-valuemax={progress.essentialTotal}
+        aria-valuenow={progress.essentialFilled}
+        className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10"
+      >
+        <div
+          className="h-full rounded-full bg-brand-gradient transition-[width] duration-300"
+          style={{ width: `${progress.percent}%` }}
+        />
+      </div>
+
+      <ol className="mt-3.5 grid grid-cols-3 gap-1.5 sm:gap-2">
+        {pills.map((item) => (
+          <li
+            key={item.step}
+            className={`min-w-0 rounded-lg border px-2 py-2 text-left transition sm:px-3 ${
+              item.active
+                ? "border-brand/50 bg-brand/[0.12]"
+                : "border-white/10 bg-asphalt/80"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span
+                className={`font-display text-xs font-bold ${
+                  item.active ? "text-brand-light" : "text-cream/75"
+                }`}
+              >
+                {item.active && item.step !== "3" ? "✓" : item.step}
+              </span>
+              <span className="truncate text-[11px] font-medium text-cream/75">
+                {item.detail}
+              </span>
+            </div>
+            <p className="mt-0.5 truncate font-display text-xs font-semibold text-cream sm:text-sm">
+              {item.label}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -423,45 +696,59 @@ function AfterSend({
     ? `Olá! Acabei de enviar os dados do meu ${vehicle.brand} ${vehicle.model} ${vehicle.year} pelo site para avaliação.`
     : WHATSAPP_MESSAGES.sell;
   return (
-    <div ref={containerRef} tabIndex={-1} aria-labelledby="sell-form-receipt-heading" className="scroll-mt-24 overflow-hidden border border-brand/40 bg-ink outline-none" aria-live="polite">
-      <div className="h-1 bg-brand" aria-hidden="true" />
-      <div className="p-4 sm:p-6">
+    <div
+      ref={containerRef}
+      tabIndex={-1}
+      aria-labelledby="sell-form-receipt-heading"
+      className="scroll-mt-24 overflow-hidden rounded-xl border border-brand/40 bg-ink shadow-[0_14px_36px_rgba(0,0,0,0.36)] outline-none"
+      aria-live="polite"
+    >
+      <div className="h-1 bg-brand-gradient" aria-hidden="true" />
+      <div className="p-5 sm:p-6">
         <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand-light">
           {mode === "queued" ? "Sem conexão" : "Pedido recebido"}
         </p>
-        <h2 id="sell-form-receipt-heading" className="mt-2 font-display text-xl font-bold tracking-tight text-cream">
+        <h2
+          id="sell-form-receipt-heading"
+          className="mt-2 font-display text-2xl font-bold tracking-tight text-cream"
+        >
           {mode === "queued" ? "Avaliação guardada neste aparelho" : "Solicitação enviada"}
         </h2>
+        {vehicle ? (
+          <p className="mt-2 inline-flex rounded-lg border border-white/15 bg-asphalt px-3.5 py-2 font-display text-sm font-semibold text-cream">
+            {vehicle.brand} {vehicle.model} {vehicle.year}
+          </p>
+        ) : null}
         {mode === "queued" ? (
-          <p className="mt-3 text-sm leading-relaxed text-cream/80">
+          <p className="mt-3 text-base leading-relaxed text-cream/85">
             Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.
           </p>
         ) : (
-          <ol className="mt-4 grid gap-1.5">
-            <li className="border border-white/15 bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/80">
+          <ol className="mt-4 grid gap-2.5">
+            <li className="rounded-lg border border-white/15 bg-asphalt px-4 py-3.5 text-sm leading-relaxed text-cream/85 sm:text-base">
               <span className="font-display font-semibold text-cream">
-                Recebemos os dados do veículo.
+                1. Recebemos os dados do veículo.
               </span>{" "}
               {sellReceivedLine(photoCount)}
             </li>
-            <li className="border border-white/15 bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/80">
+            <li className="rounded-lg border border-white/15 bg-asphalt px-4 py-3.5 text-sm leading-relaxed text-cream/85 sm:text-base">
               <span className="font-display font-semibold text-cream">
-                A loja avalia sem taxa e sem compromisso.
+                2. A loja avalia sem taxa e sem compromisso.
               </span>{" "}
               Tabela, histórico e estado de conservação.
             </li>
-            <li className="border border-white/15 bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/80">
+            <li className="rounded-lg border border-white/15 bg-asphalt px-4 py-3.5 text-sm leading-relaxed text-cream/85 sm:text-base">
               <span className="font-display font-semibold text-cream">
-                O retorno sai no telefone informado, das 8h às 23h.
+                3. O retorno sai no telefone informado, das 8h às 23h.
               </span>{" "}
               Se quiser adiantar, chame no WhatsApp {site.phoneLabel}.
             </li>
           </ol>
         )}
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="mt-5 flex flex-col gap-3">
           <WhatsAppButton
             size="lg"
-            className="w-full"
+            className="w-full rounded-lg"
             trackingLabel="vender"
             message={whatsAppMessage}
           >
@@ -470,7 +757,7 @@ function AfterSend({
           <button
             type="button"
             onClick={onAnother}
-            className="min-h-[48px] w-full border border-white/25 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
+            className="min-h-[56px] w-full rounded-lg border border-white/25 px-5 py-3.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
           >
             Enviar outro veículo
           </button>
@@ -481,21 +768,62 @@ function AfterSend({
 }
 
 function FormBlock({
+  step,
   title,
   hint,
+  done,
+  summary,
   children,
 }: {
+  step: number;
   title: string;
   hint?: string;
+  done?: boolean;
+  summary?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="border border-white/20 bg-ink p-4 sm:p-5">
-      <h3 className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand-light">
-        {title}
-      </h3>
-      {hint ? <p className="mt-1 text-sm leading-snug text-cream/75">{hint}</p> : null}
-      <div className="mt-4 grid gap-4 lg:grid-cols-2 lg:gap-x-5">{children}</div>
+    <section
+      className={`overflow-hidden rounded-xl border bg-ink p-4 shadow-[0_10px_28px_rgba(0,0,0,0.26)] transition sm:p-5 ${
+        done ? "border-brand/45" : "border-white/15"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden="true"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-display text-sm font-bold ${
+              done
+                ? "bg-brand text-cream shadow-[0_4px_12px_rgba(217,21,25,0.35)]"
+                : "border border-brand/40 bg-brand/15 text-brand-light"
+            }`}
+          >
+            {done ? "✓" : step}
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-display text-lg font-bold leading-snug text-cream">
+              {title}
+            </h3>
+            {hint ? (
+              <p className="mt-1 text-sm leading-relaxed text-cream/75">{hint}</p>
+            ) : null}
+          </div>
+        </div>
+        {summary ? (
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-1 font-display text-xs font-semibold ${
+              done
+                ? "bg-brand/20 text-brand-light"
+                : "border border-white/15 bg-asphalt text-cream/75"
+            }`}
+          >
+            {done ? "Pronto" : summary}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-x-5">
+        {children}
+      </div>
     </section>
   );
 }
@@ -533,21 +861,28 @@ function Field({
     <div>
       <label
         htmlFor={htmlFor}
-        className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.1em] text-cream/85"
+        className="mb-2 flex flex-wrap items-baseline gap-1.5 text-base font-semibold leading-snug text-cream"
       >
-        {label}
+        <span>{label}</span>
         {optional ? (
-          <span className="ml-1 normal-case font-normal text-cream/75">(opcional)</span>
+          <span className="text-sm font-normal text-cream/70">(opcional)</span>
         ) : (
-          <span className="ml-1 text-brand-light" aria-hidden="true">
+          <span className="text-brand-light" aria-hidden="true">
             *
           </span>
         )}
       </label>
       {decorated}
       {error ? (
-        <p id={errorId} className="mt-1.5 text-xs text-brand-light" role="alert">
-          {error}
+        <p
+          id={errorId}
+          className="mt-2 flex items-start gap-2 rounded-md border border-brand-light/35 bg-brand/10 px-3 py-2 text-sm font-medium leading-snug text-brand-light"
+          role="alert"
+        >
+          <span aria-hidden="true" className="shrink-0 font-display font-bold">
+            !
+          </span>
+          <span>{error}</span>
         </p>
       ) : null}
     </div>
