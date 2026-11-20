@@ -61,12 +61,12 @@ const ICONS: Record<SiteLinkKind, (props: { className?: string }) => React.React
 const BASE =
   "group flex min-h-[58px] w-full items-center gap-3.5 rounded-2xl px-4 py-3.5 font-display text-base font-semibold touch-manipulation transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:scale-[0.99]";
 
-/** Estoque = vermelho da loja; WhatsApp = verde oficial com texto branco; resto = card elevado. */
+/** Estoque = vermelho da loja; WhatsApp = verde oficial com texto escuro; resto = card elevado. */
 const LOOK: Record<SiteLinkKind, string> = {
   estoque:
     "border border-brand-light/40 bg-brand text-white shadow-[0_14px_30px_-10px_rgba(217,21,25,0.6)] hover:-translate-y-0.5 hover:bg-brand-dark active:bg-brand-dark",
   whatsapp:
-    "border border-white/15 bg-[#25D366] text-white shadow-[0_14px_30px_-10px_rgba(37,211,102,0.45)] hover:-translate-y-0.5 hover:bg-[#1FB858] active:bg-[#1BA84E]",
+    "border border-white/15 bg-[#25D366] text-asphalt shadow-[0_14px_30px_-10px_rgba(37,211,102,0.45)] hover:-translate-y-0.5 hover:bg-[#1FB858] active:bg-[#1BA84E]",
   facebook:
     "border border-white/15 bg-ink/95 text-cream shadow-[0_10px_24px_-12px_rgba(0,0,0,0.8)] hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.08]",
   olx:
@@ -79,7 +79,7 @@ const LOOK: Record<SiteLinkKind, string> = {
 
 const ICON_BADGE: Record<SiteLinkKind, string> = {
   estoque: "bg-white/15 text-white",
-  whatsapp: "bg-white/20 text-white",
+  whatsapp: "bg-asphalt/10 text-asphalt",
   facebook: "border border-white/15 bg-white/[0.06] text-cream",
   olx: "border border-brand/35 bg-brand/15 text-brand-light",
   instagram:
@@ -101,7 +101,6 @@ export function LinksHub({ links }: { links: readonly SiteLink[] }) {
         const kind = siteLinkKind(link.href);
         const Icon = ICONS[kind];
         const internal = isInternalHref(link.href);
-        const highlighted = kind === "estoque" || kind === "whatsapp";
         return (
           <li key={`${index}-${link.href}`}>
             {/* <a> simples: links internos abrem na mesma aba e a página não carrega rastreadores. */}
@@ -120,7 +119,13 @@ export function LinksHub({ links }: { links: readonly SiteLink[] }) {
               </span>
               <span className="min-w-0 flex-1 break-words">{link.label}</span>
               <IconArrowRight
-                className={`h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 ${highlighted ? "text-white/95" : "text-cream/70 group-hover:text-cream"}`}
+                className={`h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 ${
+                  kind === "estoque"
+                    ? "text-white/95"
+                    : kind === "whatsapp"
+                      ? "text-asphalt/90"
+                      : "text-cream/70 group-hover:text-cream"
+                }`}
               />
             </a>
           </li>

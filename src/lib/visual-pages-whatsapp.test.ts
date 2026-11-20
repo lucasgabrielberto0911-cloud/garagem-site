@@ -43,15 +43,15 @@ function sampleVehicle(overrides: Partial<VehicleCardRecord> = {}): VehicleCardR
   };
 }
 
-test("WhatsAppButton solid usa verde #25D366 com letra branca e alvo >=56px no lg", () => {
+test("WhatsAppButton solid usa verde #25D366 com letra escura e alvo >=56px no lg", () => {
   const htmlLg = renderToStaticMarkup(
     createElement(WhatsAppButton, { size: "lg" }, "Falar no WhatsApp"),
   );
   assert.match(htmlLg, /bg-\[#25D366\]/);
-  assert.match(htmlLg, /\btext-white\b/);
+  assert.match(htmlLg, /\btext-asphalt\b/);
   assert.match(htmlLg, /min-h-\[56px\]/);
   assert.doesNotMatch(htmlLg, /\bbg-brand\b/);
-  assert.doesNotMatch(htmlLg, /\btext-asphalt\b/);
+  assert.doesNotMatch(htmlLg, /\btext-white\b/);
   assert.doesNotMatch(htmlLg, /gold|yellow|#ffd/i);
 
   const htmlOutline = renderToStaticMarkup(
@@ -68,14 +68,18 @@ test("HomeAssistantButton permanece vermelho cheio com texto branco e >=56px", (
   assert.doesNotMatch(html, /#25D366|emerald|green/i);
 });
 
-test("LinksHub usa WhatsApp verde #25D366 com texto branco e Estoque vermelho", () => {
+test("LinksHub usa WhatsApp verde #25D366 com texto/ícone escuros e Estoque vermelho", () => {
   const html = renderToStaticMarkup(
     createElement(LinksHub, { links: DEFAULT_LINKS }),
   );
-  assert.match(html, /bg-\[#25D366\] text-white/);
+  assert.match(html, /bg-\[#25D366\] text-asphalt/);
+  assert.match(html, /bg-asphalt\/10 text-asphalt/);
   assert.match(html, /bg-brand text-white/);
   assert.match(html, /min-h-\[58px\]/);
-  assert.doesNotMatch(html, /bg-\[#25D366\][^"]*text-asphalt/);
+  assert.doesNotMatch(html, /bg-\[#25D366\][^"]*text-white/);
+  const whatsappLinkMatch = html.match(/<a[^>]*bg-\[#25D366\][\s\S]*?<\/a>/);
+  assert.ok(whatsappLinkMatch, "link verde do WhatsApp deve existir no LinksHub");
+  assert.doesNotMatch(whatsappLinkMatch[0], /\btext-white\b/);
 });
 
 test("RealStockPreview renderiza fotos 4:3 com fundo desfocado, sem <ul>/<nav> e sem preço quando vendido", () => {

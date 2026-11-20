@@ -39,7 +39,7 @@ test("/links mostra o hub com os 5 links padrão, sem o cromo do site", async ({
         return { bg: css.backgroundColor, color: css.color };
       }),
     )
-    .toEqual({ bg: "rgb(37, 211, 102)", color: "rgb(255, 255, 255)" });
+    .toEqual({ bg: "rgb(37, 211, 102)", color: "rgb(13, 13, 15)" });
 
   // Interno na mesma aba; externos em nova aba, sem opener.
   await expect(hub.getByRole("link", { name: "Ver estoque" })).not.toHaveAttribute("target", /.+/);

@@ -926,7 +926,7 @@ test("ficha do celular sem repetição: ano no título, sem chip de opcionais, f
   assert.match(blocks([...specs, { label: "Portas", value: "4" }]), />Ficha técnica</);
 });
 
-test("ajuste fino de contraste e separação: WhatsApp branco no verde, preço nítido e faixas sem cards", () => {
+test("ajuste fino de contraste e separação: WhatsApp escuro no verde, preço nítido e faixas sem cards", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const bar = readSrc("components/site/VehicleMobileBar.tsx");
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
@@ -937,8 +937,8 @@ test("ajuste fino de contraste e separação: WhatsApp branco no verde, preço n
   const verified = readSrc("components/site/VehicleVerifiedInfo.tsx");
   const css = readSrc("app/globals.css");
 
-  assert.match(bar, /bg-\[#25D366\][^"]*text-white/);
-  assert.doesNotMatch(bar, /bg-\[#25D366\][^"]*text-asphalt/);
+  assert.match(bar, /bg-\[#25D366\][^"]*text-asphalt/);
+  assert.doesNotMatch(bar, /bg-\[#25D366\][^"]*text-white/);
 
   assert.match(css, /\[data-ficha-price\]\s*\{\s*color:\s*#ff6265;/);
   assert.doesNotMatch(dossier, /rounded-2xl/);

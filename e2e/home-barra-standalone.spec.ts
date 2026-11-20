@@ -224,7 +224,7 @@ test("home: três botões grandes no topo; assistente é um botão vermelho que 
     expect(Math.abs(boxes[0].width - boxes[2].width)).toBeLessThan(2);
   }
 
-  // WhatsApp principal no topo: verde #25D366 com texto branco, contrastando com o assistente vermelho.
+  // WhatsApp principal no topo: verde #25D366 com texto escuro, contrastando com o assistente vermelho.
   // Remove o ponteiro antes de medir a cor base (#25D366; hover é #1FB858).
   await page.mouse.move(0, 0);
   await expect
@@ -234,7 +234,7 @@ test("home: três botões grandes no topo; assistente é um botão vermelho que 
         return { bg: css.backgroundColor, color: css.color };
       }),
     )
-    .toEqual({ bg: "rgb(37, 211, 102)", color: "rgb(255, 255, 255)" });
+    .toEqual({ bg: "rgb(37, 211, 102)", color: "rgb(13, 13, 15)" });
 
   // Botão de verdade: fundo vermelho cheio (--brand), texto branco, sem sublinhado.
   const style = await assistant.evaluate((el) => {
