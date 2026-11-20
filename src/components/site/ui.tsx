@@ -172,11 +172,11 @@ export function WhatsAppButton({
     size === "lg"
       ? "min-h-[56px] px-7 py-4 text-sm sm:text-base"
       : "min-h-[48px] px-5 py-3 text-xs sm:text-sm";
-  // CTA principal de WhatsApp: fundo verde oficial (#25D366) com texto branco para
-  // contrastar com os CTAs vermelhos da marca (ex.: assistente e ver estoque).
+  // CTA principal de WhatsApp: fundo verde oficial (#25D366) com texto escuro para
+  // alto contraste e distinção dos CTAs vermelhos da marca (ex.: assistente e ver estoque).
   const look =
     variant === "solid"
-      ? "bg-[#25D366] text-white shadow-[0_8px_24px_rgba(37,211,102,0.28)] hover:bg-[#1FB858] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:bg-[#1BA84E]"
+      ? "bg-[#25D366] text-asphalt shadow-[0_8px_24px_rgba(37,211,102,0.28)] hover:bg-[#1FB858] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:bg-[#1BA84E]"
       : "border border-white/20 text-cream hover:border-[#25D366]/70 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt";
 
   return (
