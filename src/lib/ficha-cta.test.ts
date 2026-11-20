@@ -925,3 +925,51 @@ test("ficha do celular sem repetição: ano no título, sem chip de opcionais, f
   assert.match(onlyRepeated, />Atendimento</);
   assert.match(blocks([...specs, { label: "Portas", value: "4" }]), />Ficha técnica</);
 });
+
+test("ajuste fino de contraste e separação: WhatsApp branco no verde, preço nítido e faixas sem cards", () => {
+  const bar = readSrc("components/site/VehicleMobileBar.tsx");
+  const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
+  const similar = readSrc("components/site/SimilarVehicles.tsx");
+  const css = readSrc("app/globals.css");
+
+  assert.match(bar, /bg-\[#25D366\][^"]*text-white/);
+  assert.doesNotMatch(bar, /bg-\[#25D366\][^"]*text-asphalt/);
+
+  assert.match(css, /\[data-ficha-price\]\s*\{\s*color:\s*#ff6265;/);
+  assert.doesNotMatch(dossier, /rounded-2xl/);
+  assert.doesNotMatch(similar, /border-white\/5|hover:text-brand-orange/);
+
+  const html = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        hours: site.hours,
+        fullLabel: "Honda Civic LXR",
+        path: "/estoque/civic",
+        sold: false,
+        price: 74900,
+        yearModel: 2015,
+        make: "Honda",
+        model: "Civic",
+        vehicleId: "v1",
+        description: "Sedã conservado.",
+        accessories: ["Ar-condicionado"],
+        specs: [{ label: "Portas", value: "4" }],
+        conditions: DEFAULT_VEHICLE_CONDITIONS,
+        quickActions: {
+          contentPath: "/estoque/civic",
+          video: "video",
+          finance: "finance",
+          trade: "trade",
+        },
+      }),
+    ),
+  );
+  // Próximos passos e Atendimento alternam faixa sem somar borda horizontal; blocos consecutivos no mesmo fundo usam divisória sutil.
+  assert.match(html, /bg-ink\/70[^"]*" id="proximos-passos"/);
+  assert.match(html, /bg-ink\/70[^"]*" id="atendimento"/);
+  assert.match(html, /border-t border-white\/12[^"]*" id="especificacoes"/);
+  assert.doesNotMatch(html, /border-t border-white\/12[^"]*" id="detalhes"/);
+  assert.match(html, /<section class="py-5  border-t border-white\/12"><h2[^>]*>Itens e acessórios<\/h2>/);
+});

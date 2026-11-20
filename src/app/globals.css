@@ -2097,6 +2097,10 @@ html[data-consent="essential"] .site-consent {
  * Preço da ficha: glow vermelho suave atrás (sem reflexo sobre o texto).
  * Só transform/opacity; desligado com prefers-reduced-motion.
  */
+[data-ficha-price] {
+  color: #ff6265;
+}
+
 .ficha-price {
   position: relative;
   display: inline-block;
@@ -2112,7 +2116,7 @@ html[data-consent="essential"] .site-consent {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(232, 24, 28, 0.32) 0%, transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(232, 24, 28, 0.22) 0%, transparent 70%);
   opacity: 0.25;
   animation: assistantGlow 4.6s ease-in-out 2s infinite both;
 }

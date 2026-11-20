@@ -212,17 +212,17 @@ export function VehicleAccessoryChips({ items }: { items: readonly string[] }) {
   return (
     <div data-accessory-chips>
     {groups.map(({ group, items }) => <section key={group} aria-label={group} data-accessory-group={group}>
-    {group !== "Outros opcionais" ? <h3 className="mt-4 font-display text-sm font-semibold text-cream">{group}</h3> : null}
+    {group !== "Outros opcionais" ? <h3 className="mt-4 font-display text-sm font-semibold tracking-wide text-cream/90">{group}</h3> : null}
     <ul className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
       {items.map((item, index) => (
         <li
           key={item}
           data-accessory-chip={group === "Facilidades" ? undefined : ""}
-          className={`flex min-h-[44px] items-center gap-2.5 sm:min-h-[52px] rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-cream ${chipSpanClass(index, items.length)}`}
+          className={`flex min-h-[44px] items-center gap-2.5 sm:min-h-[52px] rounded-lg border border-white/15 bg-ink/80 px-3 py-2 text-cream ${chipSpanClass(index, items.length)}`}
         >
           <svg
             viewBox="0 0 24 24"
-            className="h-5 w-5 shrink-0 text-brand-light sm:h-8 sm:w-8 sm:rounded-md sm:bg-white/[0.06] sm:p-1.5"
+            className="h-5 w-5 shrink-0 text-brand-light sm:h-8 sm:w-8 sm:rounded-md sm:bg-white/[0.08] sm:p-1.5"
             fill="none"
             stroke="currentColor"
             strokeWidth={1.7}

@@ -372,16 +372,16 @@ export default async function VehicleDetailPage({
 
             <section
               data-ficha-section="especificacoes"
-              className="ficha-jump-target hidden border-t border-white/20 pt-5 lg:mt-6 lg:block"
+              className="ficha-jump-target hidden border-t border-white/12 pt-5 lg:mt-6 lg:block"
             >
               {/* Só o que o card ao lado não mostra (motor, portas...). Sem dado novo, fica só o "Anunciado hoje". */}
               {sheet.length > 0 ? (
-                <h2 className="font-display text-base font-semibold text-cream">
+                <h2 className="font-display text-lg font-bold tracking-tight text-cream">
                   Ficha técnica
                 </h2>
               ) : null}
               {vehicle.createdAt || updatedLabel ? (
-                <p className={`text-sm text-cream/80${sheet.length > 0 ? " mt-1" : ""}`}>
+                <p className={`text-sm text-muted${sheet.length > 0 ? " mt-1" : ""}`}>
                   <ListedAgo
                     listedAt={
                       vehicle.createdAt
@@ -400,11 +400,11 @@ export default async function VehicleDetailPage({
                   {sheet.map((spec) => (
                     <div
                       key={spec.label}
-                      className="min-w-0 border border-white/20 bg-ink px-3 py-2.5"
+                      className="min-w-0 border border-white/15 bg-ink px-3 py-2.5"
                     >
-                      <dt className="text-sm text-cream/75">{spec.label}</dt>
+                      <dt className="text-sm font-normal text-muted">{spec.label}</dt>
                       {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
-                      <dd className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:break-word]">
+                      <dd className="mt-0.5 font-display text-[15px] font-bold leading-snug text-cream [overflow-wrap:break-word]">
                         {spec.value}
                       </dd>
                     </div>
@@ -420,7 +420,7 @@ export default async function VehicleDetailPage({
               >
                 {hasAboutText && description ? (
                   <div>
-                    <h2 className="font-display text-base font-semibold text-cream">
+                    <h2 className="font-display text-lg font-bold tracking-tight text-cream">
                       Sobre o veículo
                     </h2>
                     <VehicleDescription
@@ -436,7 +436,7 @@ export default async function VehicleDetailPage({
                   <div
                     id="opcionais-desktop"
                     data-ficha-opcionais=""
-                    className={`ficha-jump-target ${hasAboutText ? "mt-8 border-t border-white/20 pt-6" : ""}`}
+                    className={`ficha-jump-target ${hasAboutText ? "mt-8 border-t border-white/12 pt-6" : ""}`}
                   >
                     <h2 className="flex flex-wrap items-baseline gap-x-3 font-display text-xl font-bold tracking-tight text-cream">
                       Itens e acessórios
@@ -497,19 +497,19 @@ export default async function VehicleDetailPage({
                     {title}
                   </h1>
                   {yearBadge !== SPEC_EMPTY ? (
-                    <span className="inline-flex shrink-0 items-center border border-white/20 bg-ink px-2 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap lg:bg-asphalt/80 lg:px-2.5">
+                    <span className="inline-flex shrink-0 items-center border border-white/25 bg-ink px-2 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap lg:bg-asphalt/80 lg:px-2.5">
                       {yearBadge}
                     </span>
                   ) : null}
                 </div>
                 {vehicle.version?.trim() ? (
-                  <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-cream/80 lg:text-[15px] lg:leading-snug">{collapseWhitespace(vehicle.version ?? "")}</p>
+                  <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-muted lg:text-[15px] lg:leading-snug">{collapseWhitespace(vehicle.version ?? "")}</p>
                 ) : null}
               </div>
 
               <p
                 data-ficha-price=""
-                className="-mt-1 font-display text-[1.75rem] font-bold leading-none tracking-tight text-brand-light lg:mt-0 lg:text-[2.25rem]"
+                className="-mt-1 font-display text-[1.75rem] font-bold leading-none tracking-tight tabular-nums text-brand-light lg:mt-0 lg:text-[2.25rem]"
               >
                 {sold ? (
                   <span className="text-base text-cream/80">Já vendido</span>
@@ -533,7 +533,7 @@ export default async function VehicleDetailPage({
                   <Link
                     href="#mesma-faixa"
                     prefetch={false}
-                    className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-orange"
+                    className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark"
                   >
                     Ver opções e pedir parecido
                   </Link>
@@ -581,13 +581,13 @@ export default async function VehicleDetailPage({
                         Falar no WhatsApp
                       </WhatsAppButton>
                     </VehicleLeadHit>
-                    <p className="mt-2 text-center text-sm leading-relaxed text-cream/80">
+                    <p className="mt-2 text-center text-sm leading-relaxed text-muted">
                       Abre o WhatsApp com este anúncio — modelo, ano e preço.
                     </p>
                   </div>
 
                   {/* Financiamento, troca, vídeo e visita: à vista, em estilo discreto para não competir com o botão principal. */}
-                  <div data-ficha-more-actions="" className="hidden border-t border-white/20 pt-3 lg:block">
+                  <div data-ficha-more-actions="" className="hidden border-t border-white/12 pt-3 lg:block">
                     <VehicleQuickActions
                       contentId={vehicle.id}
                       contentSlug={canonicalSlug}
@@ -613,7 +613,7 @@ export default async function VehicleDetailPage({
                       <Link
                         href={`/troca?carro=${encodeURIComponent(canonicalSlug)}`}
                         prefetch={false}
-                        className="inline-flex items-center text-cream/80 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand"
+                        className="inline-flex items-center text-cream/90 underline decoration-white/35 underline-offset-4 transition hover:text-cream hover:decoration-brand"
                       >
                         Tem carro pra dar na troca?
                       </Link>
@@ -644,7 +644,7 @@ export default async function VehicleDetailPage({
                 />
               </div>
 
-              <p className="hidden text-sm leading-relaxed text-cream/80 lg:block">
+              <p className="hidden text-sm leading-relaxed text-muted lg:block">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
                   : `Valores sujeitos a alteração. Financiamento e cartão com análise de crédito; condições pelo WhatsApp ${site.whatsappLabel}.`}
@@ -659,11 +659,11 @@ export default async function VehicleDetailPage({
                   conditions={conditions}
                 />
                 {/* Fecha a coluna: o botão do card já saiu da tela quando a pessoa chega aqui. */}
-                <div data-ficha-second-cta="" className="mt-6 border-t border-white/20 pt-5">
-                  <p className="font-display text-base font-semibold text-cream">
+                <div data-ficha-second-cta="" className="mt-6 border-t border-white/12 pt-5">
+                  <p className="font-display text-lg font-bold tracking-tight text-cream">
                     Ficou com alguma dúvida?
                   </p>
-                  <p className="mt-1 text-sm leading-snug text-cream/80">
+                  <p className="mt-1 text-sm leading-snug text-muted">
                     A loja responde sobre este anúncio pelo WhatsApp.
                   </p>
                   <VehicleLeadHit

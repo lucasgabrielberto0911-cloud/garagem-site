@@ -146,9 +146,12 @@ export function VehicleMobileSummary({
         ) : null}
       </div>
       {version ? (
-        <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-cream/80">{version}</p>
+        <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-muted">{version}</p>
       ) : null}
-      <p className="mt-1.5 font-display text-[1.75rem] font-bold leading-none tracking-tight text-brand-light">
+      <p
+        data-ficha-price=""
+        className="mt-1.5 font-display text-[1.75rem] font-bold leading-none tracking-tight tabular-nums text-brand-light"
+      >
         {sold ? (
           <span className="text-base text-cream/80">Já vendido</span>
         ) : (
@@ -183,20 +186,28 @@ function DossierBlock({
   children,
   section,
   id,
+  surface = "base",
+  divider = "none",
 }: {
   title: string;
   children: ReactNode;
   section?: "especificacoes" | "detalhes";
   id?: string;
+  surface?: "base" | "alt";
+  divider?: "top" | "none";
 }) {
+  const surfaceClass =
+    surface === "alt" ? "-mx-4 bg-ink/70 px-4 sm:-mx-6 sm:px-6" : "";
+  const dividerClass = divider === "top" ? "border-t border-white/12" : "";
+
   return (
     <section
-      className={`border-b border-white/20 py-5${section ? " ficha-jump-target" : ""}`}
+      className={`py-5 ${surfaceClass} ${dividerClass}${section ? " ficha-jump-target" : ""}`.trim()}
       id={id ?? section}
       data-ficha-section={section}
     >
-      <h2 className="mb-3 font-display text-lg font-semibold tracking-tight text-cream">{title}</h2>
-      <div className="text-[15px] leading-relaxed text-cream/80">{children}</div>
+      <h2 className="mb-3 font-display text-lg font-bold tracking-tight text-cream">{title}</h2>
+      <div className="text-[15px] leading-relaxed text-cream/90">{children}</div>
     </section>
   );
 }
@@ -281,25 +292,28 @@ export function VehicleMobileBlocks({
   const hasAbout =
     !!description &&
     visibleDescriptionSegments(description, summaryFacts, specs).length > 0;
+  const hasSteps = !sold && !!quickActions;
+  const hasBaseBeforeDetails =
+    verified.length > 0 || hasAbout || accessories.length > 0;
 
   return (
     <div className="mt-2 pb-6 lg:hidden">
       {extraSpecs.length === 0 && listedLine ? (
         // Sem ficha técnica, o "Anunciado hoje · Atualizado em..." continua como linha solta.
-        <p className="border-b border-white/20 pb-4 text-sm tracking-wide text-cream/80">{listedLine}</p>
+        <p className="border-t border-white/12 pb-4 pt-4 text-sm tracking-wide text-muted">{listedLine}</p>
       ) : null}
       {extraSpecs.length > 0 ? (
-        <DossierBlock title="Ficha técnica" section="especificacoes">
+        <DossierBlock title="Ficha técnica" section="especificacoes" divider="top">
           {listedLine ? (
-            <p className="mb-3 text-sm tracking-wide text-cream/80">{listedLine}</p>
+            <p className="mb-3 text-sm tracking-wide text-muted">{listedLine}</p>
           ) : null}
           <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
             {extraSpecs.map((spec) => (
-              <div key={spec.label} className="min-w-0 border border-white/20 bg-ink px-3 py-2.5">
-                <dt className="text-sm font-medium text-cream/75">{spec.label}</dt>
+              <div key={spec.label} className="min-w-0 border border-white/15 bg-ink px-3 py-2.5">
+                <dt className="text-sm font-normal text-muted">{spec.label}</dt>
                 <dd
-                  className={`mt-1 font-display text-sm leading-snug [overflow-wrap:break-word] ${
-                    spec.empty ? "font-medium text-cream/80" : "font-semibold text-cream"
+                  className={`mt-1 font-display text-[15px] leading-snug [overflow-wrap:break-word] ${
+                    spec.empty ? "font-medium text-muted" : "font-bold text-cream"
                   }`}
                 >
                   {spec.value}
@@ -310,8 +324,8 @@ export function VehicleMobileBlocks({
         </DossierBlock>
       ) : null}
 
-      {!sold && quickActions ? (
-        <DossierBlock title="Próximos passos" id="proximos-passos">
+      {hasSteps ? (
+        <DossierBlock title="Próximos passos" id="proximos-passos" surface="alt">
           <div>
             <VehicleQuickActions
               contentId={vehicleId}
@@ -344,13 +358,20 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {verified.length > 0 ? (
-        <DossierBlock title={verifiedHeading ?? "Verificado neste carro"}>
+        <DossierBlock
+          title={verifiedHeading ?? "Verificado neste carro"}
+          divider={hasSteps ? "none" : "top"}
+        >
           <VehicleVerifiedList items={verified} alt={fullLabel} showVideoHint={!sold} />
         </DossierBlock>
       ) : null}
 
       {hasAbout ? (
-        <DossierBlock title="Sobre o veículo" section="detalhes">
+        <DossierBlock
+          title="Sobre o veículo"
+          section="detalhes"
+          divider={verified.length > 0 || !hasSteps ? "top" : "none"}
+        >
           <VehicleDescription text={description!} summaryFacts={summaryFacts} specRows={specs} hideEmoji />
         </DossierBlock>
       ) : null}
@@ -359,6 +380,7 @@ export function VehicleMobileBlocks({
         <DossierBlock
           title="Itens e acessórios"
           section={hasAbout ? undefined : "detalhes"}
+          divider={hasAbout || verified.length > 0 || !hasSteps ? "top" : "none"}
         >
           <div id="opcionais" className="scroll-mt-24">
             <VehicleFeatures items={accessories} />
@@ -367,19 +389,22 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {!sold ? (
-        <details className="group border-b border-white/20" data-vistoria-garantia="">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
+        <details
+          className={`group${hasBaseBeforeDetails || !hasSteps ? " border-t border-white/12" : ""}`}
+          data-vistoria-garantia=""
+        >
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-[15px] font-semibold text-cream [&::-webkit-details-marker]:hidden">
             <span>Saiba mais sobre vistoria e garantia</span>
             <span
               aria-hidden="true"
-              className="text-cream/80 transition-transform duration-200 group-open:rotate-180"
+              className="text-cream transition-transform duration-200 group-open:rotate-180"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" />
               </svg>
             </span>
           </summary>
-          <div className="pb-4 text-[15px] leading-relaxed text-cream/80">
+          <div className="pb-4 text-[15px] leading-relaxed text-cream/90">
             <h3 className="font-display text-sm font-semibold text-cream">{STORE_INSPECTION_LABEL}</h3>
             {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
               <p className="mt-1.5 text-cream">{inspectionNote}</p>
@@ -396,7 +421,7 @@ export function VehicleMobileBlocks({
                     <p className="font-display text-sm font-semibold text-cream">
                       {item.label}
                     </p>
-                    <p className="mt-1 text-cream/80">
+                    <p className="mt-1 text-cream/85">
                       {item.label.toLocaleLowerCase("pt-BR") === "garantia" && warranty
                         ? warranty
                         : item.text}
@@ -409,12 +434,12 @@ export function VehicleMobileBlocks({
         </details>
       ) : null}
 
-      <DossierBlock title="Atendimento" id="atendimento">
-        <p className="flex items-start gap-2 text-cream">
+      <DossierBlock title="Atendimento" id="atendimento" surface="alt">
+        <p className="flex items-start gap-2 font-medium text-cream">
           <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
           <span>Atendemos Linhares, Aracruz e Grande Vitória</span>
         </p>
-        <p className="mt-1.5">
+        <p className="mt-1.5 text-cream/85">
           Combinamos o atendimento pelo WhatsApp. {hours}
         </p>
         {!sold && path.startsWith("/estoque/") ? (
@@ -424,7 +449,7 @@ export function VehicleMobileBlocks({
                 path.slice("/estoque/".length).split(/[?#]/)[0].replace(/\/+$/, ""),
               )}`}
               prefetch={false}
-              className="inline-flex min-h-11 items-center text-cream/85 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand"
+              className="inline-flex min-h-11 items-center text-cream/90 underline decoration-white/35 underline-offset-4 transition hover:text-cream hover:decoration-brand"
             >
               Tem carro pra dar na troca?
             </Link>

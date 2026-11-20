@@ -43,7 +43,7 @@ export function VehicleKeyFacts({
   if (facts.length === 0 && !color) return null;
   const surfaceBg =
     onInk === "lg" ? "bg-ink lg:bg-asphalt/80" : onInk ? "bg-asphalt/80" : "bg-ink";
-  const surface = `border border-white/20 px-2.5 ${surfaceBg}`;
+  const surface = `border border-white/15 px-2.5 ${surfaceBg}`;
   const hasHiddenYear = hideYearBelowLg && facts.some((fact) => fact.label === "Ano");
   const mobileFactCount = hasHiddenYear
     ? facts.filter((fact) => fact.label !== "Ano").length
@@ -79,9 +79,9 @@ export function VehicleKeyFacts({
             data-key-fact={isHiddenYearOnMobile ? undefined : fact.label}
             className={`min-w-0 py-2 ${surface} ${isHiddenYearOnMobile ? "hidden lg:block " : ""}${spanClass}`.trim()}
           >
-            <dt className="text-sm font-medium text-cream/75">{fact.label}</dt>
+            <dt className="text-sm font-normal text-muted">{fact.label}</dt>
             <dd
-              className={`mt-0.5 font-display text-sm font-semibold leading-tight text-cream sm:text-[15px] ${
+              className={`mt-0.5 font-display text-[15px] font-bold leading-tight text-cream sm:text-base ${
                 fact.label === "Ano"
                   ? "whitespace-nowrap"
                   : "[overflow-wrap:break-word]"
@@ -89,7 +89,7 @@ export function VehicleKeyFacts({
             >
               {breakAfterSlash(fact.value)}
               {fact.label === "KM" && !/\bkm\b/i.test(fact.value) ? (
-                <span className="font-medium text-cream/75"> km</span>
+                <span className="font-medium text-muted"> km</span>
               ) : null}
             </dd>
           </div>
@@ -104,12 +104,12 @@ export function VehicleKeyFacts({
               : `col-span-full flex min-w-0 items-baseline gap-2 py-1.5 ${surface}`
           }
         >
-          <dt className="shrink-0 text-sm font-medium text-cream/75">Cor</dt>
+          <dt className="shrink-0 text-sm font-normal text-muted">Cor</dt>
           <dd
             className={
               colorFillsMobileCell
-                ? "mt-0.5 min-w-0 font-display text-sm font-semibold leading-tight text-cream [overflow-wrap:break-word] sm:text-[15px] lg:mt-0 lg:leading-snug lg:sm:text-sm"
-                : "min-w-0 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:break-word]"
+                ? "mt-0.5 min-w-0 font-display text-[15px] font-bold leading-tight text-cream [overflow-wrap:break-word] sm:text-base lg:mt-0 lg:text-[15px] lg:leading-snug"
+                : "min-w-0 font-display text-[15px] font-bold leading-snug text-cream [overflow-wrap:break-word]"
             }
           >
             {color}

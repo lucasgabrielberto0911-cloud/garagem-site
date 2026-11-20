@@ -56,7 +56,7 @@ function FactGroup({ lines, hideEmoji }: { lines: DescriptionFact[]; hideEmoji: 
         </ul>
       ) : null}
       {specs.length > 0 ? (
-        <ul className="divide-y divide-white/10 border border-white/20 bg-ink/40">
+        <ul className="divide-y divide-white/10 border border-white/15 bg-ink/60">
           {specs.map((line) => {
             const labeled = splitLabeled(line.text);
             if (!labeled) return null;
@@ -71,10 +71,10 @@ function FactGroup({ lines, hideEmoji }: { lines: DescriptionFact[]; hideEmoji: 
                   </span>
                 )}
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium text-cream/80">
+                  <span className="block text-sm font-normal text-muted">
                     {labeled.label}
                   </span>
-                  <span className="mt-0.5 block text-[15px] font-medium leading-snug text-cream">
+                  <span className="mt-0.5 block text-[15px] font-semibold leading-snug text-cream">
                     {labeled.value}
                   </span>
                 </span>
