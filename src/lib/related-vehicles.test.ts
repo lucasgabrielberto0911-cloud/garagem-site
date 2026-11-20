@@ -409,13 +409,20 @@ test("ficha pede só três relacionados e a grade não deixa card órfão no des
     ),
   );
   assert.equal((html.match(/listing-card-item/g) ?? []).length, 3);
+  assert.match(html, /lg:grid-cols-3/);
 
   const viewed = renderToStaticMarkup(
     createElement(
       FavoritesProvider,
       null,
-      createElement(VehicleGrid, { vehicles: cards, desktopCols: 4, lgVisibleCount: 3 }),
+      createElement(VehicleGrid, { vehicles: cards, desktopCols: 4 }),
     ),
   );
-  assert.equal((viewed.match(/lg:max-xl:hidden/g) ?? []).length, 1);
+  assert.match(viewed, /grid-cols-2/);
+  assert.match(viewed, /lg:grid-cols-4/);
+  assert.doesNotMatch(viewed, /lg:grid-cols-3|lg:max-xl:hidden/);
+  assert.equal((viewed.match(/listing-card-item/g) ?? []).length, 4);
+
+  const recentPanel = readSrc("components/site/RecentlyViewedPanel.tsx");
+  assert.doesNotMatch(recentPanel, /lgVisibleCount/);
 });

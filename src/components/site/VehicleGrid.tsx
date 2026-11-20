@@ -2,14 +2,13 @@ import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard
 import { featuredBadgeIds } from "@/lib/vehicle-display";
 import type { WhatsAppCarPageOrigin } from "@/lib/whatsapp-car-message";
 
-/** Mesmas margens e o mesmo card em todas as listas, com duas colunas no celular. */
+/** Mesmas margens e o mesmo card em todas as listas, com duas colunas no celular e 4 no desktop. */
 export function VehicleGrid({
   vehicles,
   priorityCount = 0,
   returnTo,
-  desktopCols = 3,
+  desktopCols = 4,
   destaqueLimit = 3,
-  lgVisibleCount,
   hideInterest = false,
   pageOrigin,
 }: {
@@ -18,8 +17,6 @@ export function VehicleGrid({
   returnTo?: string;
   desktopCols?: 3 | 4;
   destaqueLimit?: number;
-  /** Esconde os cards a partir deste índice só entre lg e xl, para a última linha não ficar com card órfão. */
-  lgVisibleCount?: number;
   /** Esconde o "Tenho interesse" dos cards (ficha: o card só abre o anúncio). */
   hideInterest?: boolean;
   /** Origem curta da página para a mensagem do WhatsApp (ex.: "home", "card do estoque"). */
@@ -28,13 +25,13 @@ export function VehicleGrid({
   photoLayout?: "default" | "stock";
 }) {
   const destaqueIds = featuredBadgeIds(vehicles, destaqueLimit);
-  const cols = desktopCols === 4 ? "lg:grid-cols-3 xl:grid-cols-4" : "lg:grid-cols-3";
+  const cols = desktopCols === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4";
   return (
     <div className={`listing-card-grid grid grid-cols-2 ${cols}`}>
       {vehicles.map((vehicle, index) => {
         const high = index === 0 && priorityCount > 0;
         return (
-          <div key={vehicle.id} className={`listing-card-item min-w-0${lgVisibleCount !== undefined && index >= lgVisibleCount ? " lg:max-xl:hidden" : ""}`}>
+          <div key={vehicle.id} className="listing-card-item min-w-0">
             <VehicleCard
               vehicle={vehicle}
               priority={high}
