@@ -132,7 +132,7 @@ export function RecentlyViewedPanel({
           </button>
         </div>
       ) : current.vehicles.length ? (
-        <VehicleGrid vehicles={current.vehicles} desktopCols={4} lgVisibleCount={3} destaqueLimit={0} pageOrigin={pageOrigin} />
+        <VehicleGrid vehicles={current.vehicles} desktopCols={4} destaqueLimit={0} pageOrigin={pageOrigin} />
       ) : (
         <p role="status" className="py-3 text-sm leading-relaxed text-cream/80">
           Esses anúncios não estão disponíveis agora. Você pode continuar escolhendo no estoque.

@@ -21,7 +21,7 @@ export function VehicleCardSkeleton() {
 
 export function VehicleCardSkeletonGrid({ count = 8 }: { count?: number; largePhoto?: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-x-2.5 gap-y-3.5 lg:grid-cols-3 lg:gap-x-3">
+    <div className="grid grid-cols-2 gap-x-2.5 gap-y-3.5 lg:grid-cols-4 lg:gap-x-3">
       {Array.from({ length: count }).map((_, index) => (
         <VehicleCardSkeleton key={index} />
       ))}

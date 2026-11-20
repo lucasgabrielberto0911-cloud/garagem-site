@@ -80,6 +80,53 @@ test("selos sem reticências e cards da mesma linha com a mesma largura e foto 4
   }
 });
 
+test("desktop (lg e xl): no mínimo 4 carros por linha no estoque e nos destaques da home", async ({ page }) => {
+  if (page.viewportSize()!.width < 1024) {
+    await page.goto("/estoque");
+    const mobileCols = await page.locator("[data-estoque-list] .listing-card-grid").evaluate(
+      (el) => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length,
+    );
+    expect(mobileCols).toBeLessThanOrEqual(2);
+    return;
+  }
+  for (const width of [1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of [
+      { path: "/estoque", grid: "[data-estoque-list] .listing-card-grid" },
+      { path: "/", grid: "#destaques .listing-card-grid" },
+    ]) {
+      await page.goto(route.path);
+      const grid = page.locator(route.grid);
+      const items = grid.locator(".listing-card-item");
+      await expect(items.first()).toBeVisible();
+      const total = await items.count();
+      const metrics = await grid.evaluate((gridEl) => {
+        const tracks = getComputedStyle(gridEl).gridTemplateColumns.trim().split(/\s+/);
+        const gridWidth = gridEl.getBoundingClientRect().width;
+        const rows = new Map<number, number[]>();
+        gridEl.querySelectorAll(".listing-card-item").forEach((el) => {
+          const rect = el.getBoundingClientRect();
+          const key = Math.round(rect.top);
+          rows.set(key, [...(rows.get(key) ?? []), rect.width]);
+        });
+        return {
+          columnCount: tracks.length,
+          gridWidth,
+          firstRow: Array.from(rows.entries()).sort((a, b) => a[0] - b[0])[0]?.[1] ?? [],
+          overflow: document.documentElement.scrollWidth > window.innerWidth,
+        };
+      });
+      expect(metrics.overflow, `${route.path} @ ${width}px sem overflow`).toBe(false);
+      expect(metrics.columnCount, `${route.path} @ ${width}px >= 4 colunas`).toBeGreaterThanOrEqual(4);
+      expect(metrics.firstRow.length, `${route.path} @ ${width}px`).toBeGreaterThanOrEqual(Math.min(4, total));
+      for (const w of metrics.firstRow) {
+        expect(Math.abs(w - metrics.firstRow[0])).toBeLessThanOrEqual(1);
+        expect(w).toBeLessThanOrEqual(metrics.gridWidth / 4 + 1);
+      }
+    }
+  }
+});
+
 test("home no celular: três botões grandes empilhados logo no topo", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 640, "layout só do celular");
   await page.goto("/");

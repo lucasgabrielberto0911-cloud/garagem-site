@@ -271,8 +271,22 @@ test("VehicleGrid entrega o mesmo anúncio em todas as listas, sem uma variante 
       vehicles: [sampleVehicle()], photoLayout,
     })),
   );
-  assert.equal(renderGrid("default"), renderGrid("stock"));
-  assert.match(renderGrid("default"), /grid-cols-2/);
+  const html = renderGrid("default");
+  assert.equal(html, renderGrid("stock"));
+  assert.match(html, /grid-cols-2/);
+  assert.match(html, /lg:grid-cols-4/);
+  assert.doesNotMatch(html, /lg:grid-cols-3/);
+
+  const threeCols = renderToStaticMarkup(
+    createElement(FavoritesProvider, null, createElement(VehicleGrid, {
+      vehicles: [sampleVehicle()], desktopCols: 3,
+    })),
+  );
+  assert.match(threeCols, /grid-cols-2/);
+  assert.match(threeCols, /lg:grid-cols-3/);
+  assert.doesNotMatch(threeCols, /lg:grid-cols-4/);
+
+  assert.match(readSrc("components/site/VehicleCardSkeleton.tsx"), /lg:grid-cols-4/);
   for (const source of [
     "app/(catalog)/page.tsx",
     "components/site/StockInfiniteList.tsx",

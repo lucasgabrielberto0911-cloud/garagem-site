@@ -52,7 +52,7 @@ export function SimilarVehicles({
       </div>
       {vehicles.length > 0 ? (
         <div className="mt-5">
-          <VehicleGrid vehicles={vehicles.slice(0, 3)} hideInterest />
+          <VehicleGrid vehicles={vehicles.slice(0, 3)} desktopCols={3} hideInterest />
         </div>
       ) : null}
       {whatsapp ? (
