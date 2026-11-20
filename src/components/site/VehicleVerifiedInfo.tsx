@@ -26,7 +26,7 @@ export function VehicleVerifiedList({
             <p className="font-display text-sm font-semibold text-cream">
               {item.label}
             </p>
-            <p className="mt-1 text-[15px] leading-relaxed text-cream/90 [overflow-wrap:anywhere]">
+            <p className="mt-1 text-[15px] leading-relaxed text-cream/95 [overflow-wrap:anywhere]">
               {item.text}
             </p>
             {item.photos.length > 0 ? (
@@ -50,7 +50,7 @@ export function VehicleVerifiedList({
         ))}
       </ul>
       {showVideoHint ? (
-        <p className="text-sm text-cream/80">
+        <p className="text-sm text-muted">
           Quer ver algum detalhe específico? Peça um vídeo pelo WhatsApp.
         </p>
       ) : null}
@@ -73,16 +73,16 @@ export function VehicleVerifiedSection({
   return (
     <section
       aria-labelledby="ficha-verificado-titulo"
-      className="hidden border-t border-white/20 pt-5 lg:mt-6 lg:block"
+      className="hidden border-t border-white/[0.12] pt-5 lg:mt-6 lg:block"
     >
       <h2
         id="ficha-verificado-titulo"
-        className="flex items-center gap-2 font-display text-base font-semibold text-cream"
+        className="flex items-center gap-2 font-display text-lg font-bold tracking-tight text-cream"
       >
         <IconShieldCheck className="h-4 w-4 text-brand-light" />
         {heading}
       </h2>
-      <p className="mt-1 text-sm text-cream/80">
+      <p className="mt-1 text-sm text-muted">
         Informações da loja sobre este exemplar.
       </p>
       <div className="mt-3">

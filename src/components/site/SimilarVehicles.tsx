@@ -32,7 +32,7 @@ export function SimilarVehicles({
     <section
       id="mesma-faixa"
       data-similar-vehicles=""
-      className="mt-10 scroll-mt-24 border-t border-white/5 pt-8 sm:mt-12 sm:pt-10"
+      className="mt-10 scroll-mt-24 border-t border-white/[0.12] pt-8 sm:mt-12 sm:pt-10"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -44,7 +44,7 @@ export function SimilarVehicles({
         <Link
           href={stockHref}
           prefetch={false}
-          className="inline-flex min-h-[44px] items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-orange"
+          className="inline-flex min-h-[44px] items-center gap-1.5 font-display text-sm font-semibold uppercase tracking-wide text-brand-light transition hover:text-cream"
         >
           Ver a faixa no estoque
           <IconArrowRight className="h-3.5 w-3.5" />

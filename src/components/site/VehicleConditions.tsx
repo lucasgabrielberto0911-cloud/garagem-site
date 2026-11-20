@@ -38,9 +38,9 @@ export function VehicleConditions({
   return (
     <section
       aria-label={conditions.title}
-      className="hidden border-t border-white/20 pt-5 lg:mt-6 lg:block"
+      className="hidden border-t border-white/[0.12] pt-5 lg:mt-6 lg:block"
     >
-      <h2 className="font-display text-base font-semibold text-cream">
+      <h2 className="font-display text-lg font-bold tracking-tight text-cream">
         {conditions.title}
       </h2>
       {items.length > 0 ? (
@@ -55,7 +55,7 @@ export function VehicleConditions({
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
                 <span>
                   <span className="font-display font-semibold text-cream">{item.label}</span>
-                  <span className="text-cream/80">
+                  <span className="text-cream/85">
                     {" · "}
                     {conditionText(item, warranty)}
                   </span>
@@ -65,7 +65,7 @@ export function VehicleConditions({
           })}
         </ul>
       ) : (
-        <p className="mt-3 line-clamp-3 text-sm leading-snug text-cream/80">{intro}</p>
+        <p className="mt-3 line-clamp-3 text-sm leading-snug text-cream/85">{intro}</p>
       )}
     </section>
   );

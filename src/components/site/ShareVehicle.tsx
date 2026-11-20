@@ -54,7 +54,7 @@ export function ShareVehicle({ title, path, className = "", variant = "default" 
         disabled={busy}
         aria-busy={busy}
         aria-label="Compartilhar anúncio"
-        className={`inline-flex min-h-[44px] items-center text-muted underline-offset-4 transition hover:text-cream hover:underline touch-manipulation disabled:opacity-60 ${className}`}
+        className={`inline-flex min-h-[44px] items-center text-cream/85 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand touch-manipulation disabled:opacity-60 ${className}`}
       >
         {copied ? "Link copiado" : "Compartilhar"}
       </button>
