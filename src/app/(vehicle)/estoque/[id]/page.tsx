@@ -288,7 +288,7 @@ export default async function VehicleDetailPage({
         {sold ? (
           <div
             role="status"
-            className="mb-4 border border-brand-orange/40 bg-brand-orange/10 px-4 py-3 sm:px-5"
+            className="mb-4 rounded-2xl border border-brand/40 bg-brand/10 px-4 py-3.5 sm:px-5 lg:rounded-none lg:py-3"
           >
             <p className="font-display text-sm font-semibold text-cream sm:text-base">
               Este veículo já foi vendido
@@ -463,8 +463,12 @@ export default async function VehicleDetailPage({
           <aside className="ficha-aside order-2 min-w-0">
             {/* Sem sticky: o card rola junto com a página (um scroll só).
                 O resumo do topo (com o único h1 visível) serve celular e desktop. */}
-            <div className="pb-3 pt-3 lg:border lg:border-white/20 lg:bg-ink lg:p-5 xl:p-6">
-              <div className="ficha-mobile-sheet flex flex-col gap-2.5 lg:gap-4">
+            <div className="relative mt-1.5 overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b from-[#1C1C22] via-ink to-[#131317] px-3.5 pb-4 pt-2.5 shadow-[0_14px_34px_rgba(0,0,0,0.45)] lg:mt-0 lg:overflow-visible lg:rounded-none lg:border-white/20 lg:bg-ink lg:bg-none lg:p-5 lg:shadow-none xl:p-6">
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-brand-gradient lg:hidden"
+              />
+              <div className="ficha-mobile-sheet flex flex-col gap-2 lg:gap-4">
               <div className="hidden flex-wrap items-center gap-2 lg:flex">
                 <span className="font-display text-sm font-semibold uppercase tracking-wider text-brand-light">
                   {vehicleCategoryLabel(vehicle.category)}
@@ -474,7 +478,7 @@ export default async function VehicleDetailPage({
                     Vendido
                   </span>
                 ) : vehicle.status === "reservado" ? (
-                  <span className="bg-brand-orange px-2 py-0.5 font-display text-sm font-semibold uppercase tracking-wider text-asphalt">
+                  <span className="bg-brand px-2 py-0.5 font-display text-sm font-semibold uppercase tracking-wider text-white">
                     Reservado
                   </span>
                 ) : null}
@@ -493,23 +497,23 @@ export default async function VehicleDetailPage({
               </div>
               <div data-ficha-title-block="">
                 <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 lg:gap-x-3">
-                  <h1 className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream lg:text-[1.75rem] lg:leading-tight">
+                  <h1 className="break-normal whitespace-normal font-display text-[1.35rem] font-bold leading-snug tracking-tight text-cream lg:text-[1.75rem] lg:leading-tight">
                     {title}
                   </h1>
                   {yearBadge !== SPEC_EMPTY ? (
-                    <span className="inline-flex shrink-0 items-center border border-white/20 bg-ink px-2 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap lg:bg-asphalt/80 lg:px-2.5">
+                    <span className="inline-flex shrink-0 items-center rounded-md border border-brand/35 bg-brand/15 px-2.5 py-0.5 font-display text-sm font-semibold tabular-nums text-cream whitespace-nowrap lg:rounded-none lg:border-white/20 lg:bg-asphalt/80">
                       {yearBadge}
                     </span>
                   ) : null}
                 </div>
                 {vehicle.version?.trim() ? (
-                  <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-cream/80 lg:text-[15px] lg:leading-snug">{collapseWhitespace(vehicle.version ?? "")}</p>
+                  <p className="mt-0.5 break-normal whitespace-normal text-sm leading-snug text-cream/80 lg:mt-1 lg:text-[15px]">{collapseWhitespace(vehicle.version ?? "")}</p>
                 ) : null}
               </div>
 
               <p
                 data-ficha-price=""
-                className="-mt-1 font-display text-[1.75rem] font-bold leading-none tracking-tight text-brand-light lg:mt-0 lg:text-[2.25rem]"
+                className="-mt-1 font-display text-[1.875rem] font-extrabold leading-none tracking-tight text-brand-light lg:mt-0 lg:text-[2.25rem] lg:font-bold"
               >
                 {sold ? (
                   <span className="text-base text-cream/80">Já vendido</span>
@@ -533,7 +537,7 @@ export default async function VehicleDetailPage({
                   <Link
                     href="#mesma-faixa"
                     prefetch={false}
-                    className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-orange"
+                    className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-brand-dark"
                   >
                     Ver opções e pedir parecido
                   </Link>
@@ -702,6 +706,7 @@ export default async function VehicleDetailPage({
           hours={publicSite.hours}
           fullLabel={fullLabel}
           path={path}
+          vehicleSlug={canonicalSlug}
           sold={sold}
           catalog={inCatalog}
           status={vehicle.status}
@@ -735,6 +740,7 @@ export default async function VehicleDetailPage({
               : {
                   contentPath: path,
                   ...autoHit,
+                  interest: whatsapp.interest,
                   video: whatsapp.video,
                   finance: whatsapp.finance,
                   trade: whatsapp.trade,

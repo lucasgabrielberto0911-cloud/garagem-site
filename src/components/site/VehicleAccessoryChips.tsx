@@ -218,7 +218,7 @@ export function VehicleAccessoryChips({ items }: { items: readonly string[] }) {
         <li
           key={item}
           data-accessory-chip={group === "Facilidades" ? undefined : ""}
-          className={`flex min-h-[44px] items-center gap-2.5 sm:min-h-[52px] rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-cream ${chipSpanClass(index, items.length)}`}
+          className={`flex min-h-[46px] items-center gap-2.5 rounded-xl border border-white/12 bg-asphalt/65 px-3 py-2 text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:min-h-[52px] lg:min-h-[44px] lg:rounded-lg lg:border-white/10 lg:bg-white/[0.04] lg:shadow-none ${chipSpanClass(index, items.length)}`}
         >
           <svg
             viewBox="0 0 24 24"
