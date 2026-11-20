@@ -460,7 +460,7 @@ test("WhatsApp: clique interceptado conserva veículo, origem e eventos do catá
   });
   await page.goto(`${vehiclePath(samples[0])}?utm_source=instagram`);
   const link = page.viewportSize()!.width < 1024
-    ? page.locator("[data-vehicle-mobile-bar] #ficha-whatsapp")
+    ? page.getByRole("link", { name: /^Chamar no WhatsApp/ })
     : page.locator('[data-ficha-page] aside').getByRole("link", { name: "Falar no WhatsApp", exact: true });
   await link.click();
   await expect.poll(() => destinos.length).toBe(1);

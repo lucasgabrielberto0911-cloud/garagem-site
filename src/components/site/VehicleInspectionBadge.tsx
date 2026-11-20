@@ -18,7 +18,7 @@ export function VehicleInspectionBadge({
   return (
     <p
       data-inspection-badge=""
-      className={`flex w-full items-start gap-2.5 rounded-xl border border-emerald-400/45 bg-emerald-500/15 px-3.5 py-2.5 font-display text-sm font-semibold leading-snug text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] lg:rounded-none lg:px-3 lg:shadow-none ${className}`}
+      className={`flex w-full items-start gap-2 border border-emerald-400/45 bg-emerald-500/15 px-3 py-2.5 font-display text-sm font-semibold leading-snug text-emerald-50 ${className}`}
     >
       <IconShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
       <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>

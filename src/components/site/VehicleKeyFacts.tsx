@@ -42,12 +42,8 @@ export function VehicleKeyFacts({
 }) {
   if (facts.length === 0 && !color) return null;
   const surfaceBg =
-    onInk === "lg"
-      ? "rounded-xl border border-white/12 bg-asphalt/70 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:rounded-none lg:border-white/20 lg:bg-asphalt/80 lg:px-2.5 lg:shadow-none"
-      : onInk
-        ? "border border-white/20 bg-asphalt/80 px-2.5"
-        : "rounded-xl border border-white/12 bg-asphalt/70 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:rounded-none lg:border-white/20 lg:bg-ink lg:px-2.5 lg:shadow-none";
-  const surface = surfaceBg;
+    onInk === "lg" ? "bg-ink lg:bg-asphalt/80" : onInk ? "bg-asphalt/80" : "bg-ink";
+  const surface = `border border-white/20 px-2.5 ${surfaceBg}`;
   const hasHiddenYear = hideYearBelowLg && facts.some((fact) => fact.label === "Ano");
   const mobileFactCount = hasHiddenYear
     ? facts.filter((fact) => fact.label !== "Ano").length
@@ -60,7 +56,7 @@ export function VehicleKeyFacts({
     <dl
       data-key-facts=""
       data-ficha-section={specAnchor ? "especificacoes" : undefined}
-      className={`grid grid-cols-2 gap-2 lg:gap-1.5 ${WIDE_COLS[Math.min(facts.length, 4)]}${specAnchor ? " ficha-jump-target" : ""} ${className}`}
+      className={`grid grid-cols-2 gap-1.5 ${WIDE_COLS[Math.min(facts.length, 4)]}${specAnchor ? " ficha-jump-target" : ""} ${className}`}
     >
       {facts.map((fact, index) => {
         const isHiddenYearOnMobile = hasHiddenYear && fact.label === "Ano";
@@ -81,11 +77,11 @@ export function VehicleKeyFacts({
           <div
             key={fact.label}
             data-key-fact={isHiddenYearOnMobile ? undefined : fact.label}
-            className={`min-w-0 py-2.5 lg:py-2 ${surface} ${isHiddenYearOnMobile ? "hidden lg:block " : ""}${spanClass}`.trim()}
+            className={`min-w-0 py-2 ${surface} ${isHiddenYearOnMobile ? "hidden lg:block " : ""}${spanClass}`.trim()}
           >
             <dt className="text-sm font-medium text-cream/75">{fact.label}</dt>
             <dd
-              className={`mt-0.5 font-display text-[15px] font-bold leading-tight text-cream lg:text-sm lg:font-semibold sm:text-[15px] ${
+              className={`mt-0.5 font-display text-sm font-semibold leading-tight text-cream sm:text-[15px] ${
                 fact.label === "Ano"
                   ? "whitespace-nowrap"
                   : "[overflow-wrap:break-word]"
@@ -104,16 +100,16 @@ export function VehicleKeyFacts({
           data-key-fact="Cor"
           className={
             colorFillsMobileCell
-              ? `min-w-0 py-2.5 lg:py-1.5 ${surface} lg:col-span-full lg:flex lg:items-baseline lg:gap-2`
-              : `col-span-full flex min-w-0 items-baseline gap-2 py-2 lg:py-1.5 ${surface}`
+              ? `min-w-0 py-2 ${surface} lg:col-span-full lg:flex lg:items-baseline lg:gap-2 lg:py-1.5`
+              : `col-span-full flex min-w-0 items-baseline gap-2 py-1.5 ${surface}`
           }
         >
           <dt className="shrink-0 text-sm font-medium text-cream/75">Cor</dt>
           <dd
             className={
               colorFillsMobileCell
-                ? "mt-0.5 min-w-0 font-display text-[15px] font-bold leading-tight text-cream [overflow-wrap:break-word] sm:text-[15px] lg:mt-0 lg:text-sm lg:font-semibold lg:leading-snug"
-                : "min-w-0 font-display text-[15px] font-bold leading-snug text-cream [overflow-wrap:break-word] lg:text-sm lg:font-semibold"
+                ? "mt-0.5 min-w-0 font-display text-sm font-semibold leading-tight text-cream [overflow-wrap:break-word] sm:text-[15px] lg:mt-0 lg:leading-snug lg:sm:text-sm"
+                : "min-w-0 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:break-word]"
             }
           >
             {color}

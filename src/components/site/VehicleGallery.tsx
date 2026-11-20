@@ -213,7 +213,7 @@ export function VehicleGallery({
 
   return (
     <div ref={rootRef} className="gallery-root">
-      <div className="gallery-frame relative aspect-[4/3] overflow-hidden border-y border-white/15 bg-ink lg:border lg:border-white/20">
+      <div className="gallery-frame relative aspect-[4/3] overflow-hidden border border-white/20 bg-ink">
         <ul
           ref={scrollerRef}
           className="gallery-strip absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
@@ -333,15 +333,10 @@ export function VehicleGallery({
           })}
         </ul>
 
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-20 bg-gradient-to-t from-asphalt/75 via-asphalt/25 to-transparent"
-        />
-
         <button
           type="button"
           onClick={() => setZoomOpen(true)}
-          className="absolute bottom-2.5 left-[max(0.625rem,env(safe-area-inset-left,0px))] z-[2] flex min-h-11 items-center gap-2 rounded-xl border border-asphalt/15 bg-cream/95 px-3.5 font-display text-sm font-semibold text-asphalt shadow-[0_6px_18px_rgba(0,0,0,0.45)] transition touch-manipulation hover:bg-white hover:ring-2 hover:ring-brand active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex min-h-11 items-center gap-2 rounded-lg border border-asphalt/15 bg-cream/95 px-3.5 font-display text-sm font-semibold text-asphalt shadow-[0_4px_14px_rgba(0,0,0,0.45)] transition touch-manipulation hover:bg-white hover:ring-2 hover:ring-brand active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <ExpandIcon />
           {total > 1 ? `Ver as ${total} fotos` : "Ampliar foto"}
@@ -354,7 +349,7 @@ export function VehicleGallery({
               onClick={() => goTo(activeRef.current - 1)}
               aria-label="Foto anterior"
               disabled={active === 0}
-              className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-asphalt/80 text-cream shadow-[0_4px_14px_rgba(0,0,0,0.45)] backdrop-blur-sm transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+              className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/40 bg-asphalt/90 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
             >
               <Arrow direction="left" />
             </button>
@@ -363,27 +358,17 @@ export function VehicleGallery({
               onClick={() => goTo(activeRef.current + 1)}
               aria-label="Próxima foto"
               disabled={active === total - 1}
-              className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-asphalt/80 text-cream shadow-[0_4px_14px_rgba(0,0,0,0.45)] backdrop-blur-sm transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+              className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/40 bg-asphalt/90 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
             >
               <Arrow direction="right" />
             </button>
 
             <span
-              className="pointer-events-none absolute bottom-3 right-2.5 z-[2] rounded-full border border-white/25 bg-asphalt/85 px-3 py-1 font-display text-sm font-semibold tabular-nums text-cream shadow-[0_4px_12px_rgba(0,0,0,0.4)] backdrop-blur-sm lg:bottom-auto lg:top-2.5"
+              className="pointer-events-none absolute bottom-2 right-2 z-[2] rounded-md border border-white/30 bg-asphalt/90 px-2.5 py-1 text-sm font-semibold tabular-nums text-cream lg:bottom-auto lg:top-2"
               aria-live="polite"
             >
               {active + 1}/{total}
             </span>
-
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[3px] bg-white/15 lg:hidden"
-            >
-              <div
-                className="h-full bg-brand transition-[width] duration-200"
-                style={{ width: `${((active + 1) / total) * 100}%` }}
-              />
-            </div>
           </>
         ) : null}
       </div>
