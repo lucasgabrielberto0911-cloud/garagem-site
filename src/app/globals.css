@@ -141,9 +141,22 @@ body {
     padding-top: calc(4.5rem + 2px + env(safe-area-inset-top, 0px));
   }
 
+  /*
+   * Na home o hero começa com o degradê vermelho logo abaixo do header.
+   * 4.5rem (72px) + 1px de borda no celular e 4.75rem (76px) + 1px no desktop
+   * eliminam a faixa preta entre o header e .hero-red-black.
+   */
+  body:has([data-home-page]) .pt-site-header {
+    padding-top: calc(4.5rem + 1px + env(safe-area-inset-top, 0px));
+  }
+
   @media (min-width: 1024px) {
     .pt-site-header {
       padding-top: 6.5rem; /* barra 76px + folga para o hero não colar no menu */
+    }
+
+    body:has([data-home-page]) .pt-site-header {
+      padding-top: calc(4.75rem + 1px + env(safe-area-inset-top, 0px));
     }
 
     /*

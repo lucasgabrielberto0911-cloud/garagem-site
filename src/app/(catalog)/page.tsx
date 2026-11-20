@@ -5,7 +5,6 @@ import { JsonLd } from "@/components/JsonLd";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
 import { Testimonials } from "@/components/site/Testimonials";
-import { TrustBadges } from "@/components/site/TrustBadges";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles";
 import { SiteLeadHit } from "@/lib/funnel-events";
@@ -26,6 +25,7 @@ import {
   IconInstagram,
   IconMapPin,
   IconShieldCheck,
+  IconSwap,
 } from "@/components/site/icons";
 import { buildPageMetadata, itemListJsonLd, localBusinessJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
@@ -42,6 +42,13 @@ export const metadata = buildPageMetadata({
   description: HOME_SEO_DESCRIPTION,
   path: "/",
 });
+
+const HERO_HIGHLIGHTS = [
+  { Icon: IconShieldCheck, label: "Garantia de 3 meses motor e câmbio" },
+  { Icon: IconClipboardCheck, label: "Vistoria da loja" },
+  { Icon: IconSwap, label: "Aceitamos seu carro na troca" },
+  { Icon: IconHandshake, label: "Financiamos em até 60x" },
+] as const;
 
 const REASONS = [
   {
@@ -78,8 +85,8 @@ export default async function HomePage() {
           })}
         />
       ) : null}
-      {/* 1. HERO — só o título e três botões grandes */}
-      <section className="hero-red-black relative isolate overflow-hidden">
+      {/* 1. HERO — título, pontos principais e três botões grandes */}
+      <section data-home-page="" className="hero-red-black relative isolate overflow-hidden">
         <div className="hero-color-field" aria-hidden="true">
           <span className="hero-red-orb hero-red-orb-1" />
           <span className="hero-red-orb hero-red-orb-2" />
@@ -90,6 +97,17 @@ export default async function HomePage() {
           <h1 className="max-w-3xl font-display text-xl font-semibold leading-snug tracking-tight text-cream sm:text-3xl sm:leading-[1.12]">
             Seminovos com procedência. Atendemos Linhares, Aracruz e Grande Vitória.
           </h1>
+          <ul
+            data-hero-highlights=""
+            className="mt-3 mb-1 flex flex-wrap items-center gap-x-5 gap-y-2 text-base leading-snug text-cream/90 sm:mt-4 sm:mb-0"
+          >
+            {HERO_HIGHLIGHTS.map(({ Icon, label }) => (
+              <li key={label} className="inline-flex items-center gap-2">
+                <Icon className="h-[18px] w-[18px] shrink-0 text-brand-light" />
+                <span>{label}</span>
+              </li>
+            ))}
+          </ul>
           {/* Alvo de toque de 56px: acima de 44pt (Apple) e 48dp (Material). */}
           <div className="hero-cta mt-4 grid max-w-xl grid-cols-1 gap-3 sm:mt-5 lg:max-w-4xl lg:grid-cols-3 lg:gap-4">
             <SiteLeadHit contentName="Home Hero">
@@ -206,12 +224,7 @@ export default async function HomePage() {
 
       <Container><RecentlyViewedVehicles /></Container>
 
-      {/* 3. SELOS DE CONFIANÇA */}
-      <Section spacing="snug" className="border-t border-white/5">
-        <TrustBadges compact />
-      </Section>
-
-      {/* 4. POR QUE ESCOLHER A GARAGEM */}
+      {/* 3. POR QUE ESCOLHER A GARAGEM */}
       <Section spacing="snug" className="border-t border-white/5 bg-ink/40">
         <SectionHeading
           eyebrow="Diferenciais"
