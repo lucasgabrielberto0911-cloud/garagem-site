@@ -38,7 +38,7 @@ export function VehicleConditions({
   return (
     <section
       aria-label={conditions.title}
-      className="hidden border-t border-white/12 pt-5 lg:mt-6 lg:block"
+      className="hidden border-t border-white/[0.12] pt-5 lg:mt-6 lg:block"
     >
       <h2 className="font-display text-lg font-bold tracking-tight text-cream">
         {conditions.title}

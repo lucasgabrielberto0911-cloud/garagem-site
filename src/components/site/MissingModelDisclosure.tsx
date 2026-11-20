@@ -23,7 +23,7 @@ export function MissingModelDisclosure({ children }: { children: ReactNode }) {
     <details
       ref={ref}
       open
-      className="group mt-10 border-t border-white/12 sm:mt-12 lg:border-t-0"
+      className="group mt-10 border-t border-white/[0.12] sm:mt-12 lg:border-t-0"
       data-missing-model=""
     >
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-base font-semibold text-cream lg:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream">

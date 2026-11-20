@@ -24,7 +24,7 @@ export function VehicleTrustNotes({
     <ul
       aria-label="Garantia e vistoria"
       data-trust-notes=""
-      className={`grid gap-1.5 ${compact ? "" : "border-y border-white/12 py-3"} ${className}`}
+      className={`grid gap-1.5 ${compact ? "" : "border-y border-white/[0.12] py-3"} ${className}`}
     >
       {notes.map(({ Icon, label }) => (
         <li

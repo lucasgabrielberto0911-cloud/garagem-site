@@ -73,7 +73,7 @@ export function VehicleVerifiedSection({
   return (
     <section
       aria-labelledby="ficha-verificado-titulo"
-      className="hidden border-t border-white/12 pt-5 lg:mt-6 lg:block"
+      className="hidden border-t border-white/[0.12] pt-5 lg:mt-6 lg:block"
     >
       <h2
         id="ficha-verificado-titulo"

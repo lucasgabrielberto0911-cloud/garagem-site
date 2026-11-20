@@ -372,7 +372,7 @@ export default async function VehicleDetailPage({
 
             <section
               data-ficha-section="especificacoes"
-              className="ficha-jump-target hidden border-t border-white/12 pt-5 lg:mt-6 lg:block"
+              className="ficha-jump-target hidden border-t border-white/[0.12] pt-5 lg:mt-6 lg:block"
             >
               {/* Só o que o card ao lado não mostra (motor, portas...). Sem dado novo, fica só o "Anunciado hoje". */}
               {sheet.length > 0 ? (
@@ -436,7 +436,7 @@ export default async function VehicleDetailPage({
                   <div
                     id="opcionais-desktop"
                     data-ficha-opcionais=""
-                    className={`ficha-jump-target ${hasAboutText ? "mt-8 border-t border-white/12 pt-6" : ""}`}
+                    className={`ficha-jump-target ${hasAboutText ? "mt-8 border-t border-white/[0.12] pt-6" : ""}`}
                   >
                     <h2 className="flex flex-wrap items-baseline gap-x-3 font-display text-xl font-bold tracking-tight text-cream">
                       Itens e acessórios
@@ -587,7 +587,7 @@ export default async function VehicleDetailPage({
                   </div>
 
                   {/* Financiamento, troca, vídeo e visita: à vista, em estilo discreto para não competir com o botão principal. */}
-                  <div data-ficha-more-actions="" className="hidden border-t border-white/12 pt-3 lg:block">
+                  <div data-ficha-more-actions="" className="hidden border-t border-white/[0.12] pt-3 lg:block">
                     <VehicleQuickActions
                       contentId={vehicle.id}
                       contentSlug={canonicalSlug}
@@ -659,7 +659,7 @@ export default async function VehicleDetailPage({
                   conditions={conditions}
                 />
                 {/* Fecha a coluna: o botão do card já saiu da tela quando a pessoa chega aqui. */}
-                <div data-ficha-second-cta="" className="mt-6 border-t border-white/12 pt-5">
+                <div data-ficha-second-cta="" className="mt-6 border-t border-white/[0.12] pt-5">
                   <p className="font-display text-lg font-bold tracking-tight text-cream">
                     Ficou com alguma dúvida?
                   </p>

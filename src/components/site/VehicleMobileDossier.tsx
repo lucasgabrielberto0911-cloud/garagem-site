@@ -198,11 +198,11 @@ function DossierBlock({
 }) {
   const surfaceClass =
     surface === "alt" ? "-mx-4 bg-ink/70 px-4 sm:-mx-6 sm:px-6" : "";
-  const dividerClass = divider === "top" ? "border-t border-white/12" : "";
+  const dividerClass = divider === "top" ? "border-t border-white/[0.12]" : "";
 
   return (
     <section
-      className={`py-5 ${surfaceClass} ${dividerClass}${section ? " ficha-jump-target" : ""}`.trim()}
+      className={["py-5", surfaceClass, dividerClass, section ? "ficha-jump-target" : ""].filter(Boolean).join(" ")}
       id={id ?? section}
       data-ficha-section={section}
     >
@@ -300,7 +300,7 @@ export function VehicleMobileBlocks({
     <div className="mt-2 pb-6 lg:hidden">
       {extraSpecs.length === 0 && listedLine ? (
         // Sem ficha técnica, o "Anunciado hoje · Atualizado em..." continua como linha solta.
-        <p className="border-t border-white/12 pb-4 pt-4 text-sm tracking-wide text-muted">{listedLine}</p>
+        <p className="border-t border-white/[0.12] pb-4 pt-4 text-sm tracking-wide text-muted">{listedLine}</p>
       ) : null}
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha técnica" section="especificacoes" divider="top">
@@ -390,7 +390,7 @@ export function VehicleMobileBlocks({
 
       {!sold ? (
         <details
-          className={`group${hasBaseBeforeDetails || !hasSteps ? " border-t border-white/12" : ""}`}
+          className={`group${hasBaseBeforeDetails || !hasSteps ? " border-t border-white/[0.12]" : ""}`}
           data-vistoria-garantia=""
         >
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-[15px] font-semibold text-cream [&::-webkit-details-marker]:hidden">

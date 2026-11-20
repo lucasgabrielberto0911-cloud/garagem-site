@@ -32,7 +32,7 @@ export function SimilarVehicles({
     <section
       id="mesma-faixa"
       data-similar-vehicles=""
-      className="mt-10 scroll-mt-24 border-t border-white/12 pt-8 sm:mt-12 sm:pt-10"
+      className="mt-10 scroll-mt-24 border-t border-white/[0.12] pt-8 sm:mt-12 sm:pt-10"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>

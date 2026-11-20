@@ -927,9 +927,14 @@ test("ficha do celular sem repetição: ano no título, sem chip de opcionais, f
 });
 
 test("ajuste fino de contraste e separação: WhatsApp branco no verde, preço nítido e faixas sem cards", () => {
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const bar = readSrc("components/site/VehicleMobileBar.tsx");
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
   const similar = readSrc("components/site/SimilarVehicles.tsx");
+  const disclosure = readSrc("components/site/MissingModelDisclosure.tsx");
+  const conditions = readSrc("components/site/VehicleConditions.tsx");
+  const trust = readSrc("components/site/VehicleTrustNotes.tsx");
+  const verified = readSrc("components/site/VehicleVerifiedInfo.tsx");
   const css = readSrc("app/globals.css");
 
   assert.match(bar, /bg-\[#25D366\][^"]*text-white/);
@@ -938,6 +943,20 @@ test("ajuste fino de contraste e separação: WhatsApp branco no verde, preço n
   assert.match(css, /\[data-ficha-price\]\s*\{\s*color:\s*#ff6265;/);
   assert.doesNotMatch(dossier, /rounded-2xl/);
   assert.doesNotMatch(similar, /border-white\/5|hover:text-brand-orange/);
+
+  // Tailwind 3 não tem /12 na escala padrão (deixaria a borda #e5e7eb opaca do Preflight); usar /[0.12].
+  for (const [name, src] of [
+    ["page.tsx", page],
+    ["VehicleMobileDossier.tsx", dossier],
+    ["SimilarVehicles.tsx", similar],
+    ["MissingModelDisclosure.tsx", disclosure],
+    ["VehicleConditions.tsx", conditions],
+    ["VehicleTrustNotes.tsx", trust],
+    ["VehicleVerifiedInfo.tsx", verified],
+  ] as const) {
+    assert.doesNotMatch(src, /\bborder-white\/12\b/, name);
+    assert.match(src, /border-white\/\[0\.12\]/, name);
+  }
 
   const html = renderToStaticMarkup(
     createElement(
@@ -969,7 +988,7 @@ test("ajuste fino de contraste e separação: WhatsApp branco no verde, preço n
   // Próximos passos e Atendimento alternam faixa sem somar borda horizontal; blocos consecutivos no mesmo fundo usam divisória sutil.
   assert.match(html, /bg-ink\/70[^"]*" id="proximos-passos"/);
   assert.match(html, /bg-ink\/70[^"]*" id="atendimento"/);
-  assert.match(html, /border-t border-white\/12[^"]*" id="especificacoes"/);
-  assert.doesNotMatch(html, /border-t border-white\/12[^"]*" id="detalhes"/);
-  assert.match(html, /<section class="py-5  border-t border-white\/12"><h2[^>]*>Itens e acessórios<\/h2>/);
+  assert.match(html, /border-t border-white\/\[0\.12\][^"]*" id="especificacoes"/);
+  assert.doesNotMatch(html, /border-t border-white\/\[0\.12\][^"]*" id="detalhes"/);
+  assert.match(html, /<section class="py-5 border-t border-white\/\[0\.12\]"><h2[^>]*>Itens e acessórios<\/h2>/);
 });
