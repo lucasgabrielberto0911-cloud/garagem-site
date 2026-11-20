@@ -203,6 +203,26 @@ test("home: três botões grandes no topo; assistente é um botão vermelho que 
 }) => {
   await page.goto("/");
 
+  // Hero começa colado na borda de baixo do header, sem faixa preta entre os dois.
+  const headerBox = (await page.getByRole("banner").boundingBox())!;
+  const heroBox = (await page.locator("section[data-home-page].hero-red-black").boundingBox())!;
+  expect(Math.abs(heroBox.y - (headerBox.y + headerBox.height))).toBeLessThanOrEqual(1);
+
+  // Pontos pontuais aparecem entre o H1 e os 3 botões grandes.
+  const h1Box = (await page.locator("h1").boundingBox())!;
+  const highlights = page.locator("[data-hero-highlights]");
+  await expect(highlights).toBeVisible();
+  for (const label of [
+    "Garantia de 3 meses motor e câmbio",
+    "Vistoria da loja",
+    "Aceitamos seu carro na troca",
+    "Financiamos em até 60x",
+  ]) {
+    await expect(highlights.getByText(label, { exact: true })).toBeVisible();
+  }
+  const highlightsBox = (await highlights.boundingBox())!;
+  expect(highlightsBox.y).toBeGreaterThanOrEqual(h1Box.y + h1Box.height);
+
   const whatsapp = page.locator(".hero-cta").getByRole("link", { name: "Falar no WhatsApp" });
   const stock = page.locator(".hero-cta").getByRole("link", { name: "Ver estoque", exact: true });
   const assistant = page.locator(".hero-cta").getByRole("button", { name: "Pergunte ao assistente" });
@@ -213,6 +233,7 @@ test("home: três botões grandes no topo; assistente é um botão vermelho que 
     expect(box.height).toBeGreaterThanOrEqual(56);
     boxes.push(box);
   }
+  expect(boxes[0].y).toBeGreaterThanOrEqual(highlightsBox.y + highlightsBox.height);
   if (page.viewportSize()!.width >= 1024) {
     // Desktop: lado a lado, na mesma linha.
     expect(Math.abs(boxes[0].y - boxes[1].y)).toBeLessThan(2);
