@@ -263,29 +263,33 @@ export function FounderSection({
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_36%,rgba(217,21,25,0.28),transparent_68%)]"
             />
-            <Image
-              ref={imgRef}
-              src={portrait}
-              alt="Elias Clovis Gonçalves dos Santos Neto, dono e sócio-administrador da Garagem"
-              fill
-              loading="eager"
-              sizes="(min-width: 1024px) 450px, (min-width: 640px) 448px, 100vw"
-              quality={90}
-              unoptimized={
-                portrait.startsWith(PUBLIC_PHOTO_PREFIX) ||
-                /^https?:\/\//i.test(portrait)
-              }
+            <div
+              className="absolute inset-0"
               style={activeCutoutStyle ?? undefined}
-              className={[
-                activeCutoutStyle
-                  ? "object-contain"
-                  : "object-cover object-[50%_20%]",
-                "transition-opacity duration-150",
-                isPortraitReady
-                  ? "opacity-100"
-                  : "[@media(scripting:enabled)]:opacity-0",
-              ].join(" ")}
-            />
+            >
+              <Image
+                ref={imgRef}
+                src={portrait}
+                alt="Elias Clovis Gonçalves dos Santos Neto, dono e sócio-administrador da Garagem"
+                fill
+                loading="eager"
+                sizes="(min-width: 1024px) 450px, (min-width: 640px) 448px, 100vw"
+                quality={90}
+                unoptimized={
+                  portrait.startsWith(PUBLIC_PHOTO_PREFIX) ||
+                  /^https?:\/\//i.test(portrait)
+                }
+                className={[
+                  activeCutoutStyle
+                    ? "object-contain"
+                    : "object-cover object-[50%_20%]",
+                  "transition-opacity duration-150",
+                  isPortraitReady
+                    ? "opacity-100"
+                    : "[@media(scripting:enabled)]:opacity-0",
+                ].join(" ")}
+              />
+            </div>
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 bottom-0 h-1/5 bg-gradient-to-t from-ink/75 via-ink/20 to-transparent"

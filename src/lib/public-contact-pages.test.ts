@@ -532,6 +532,7 @@ test("FounderSection evita salto no SSR e garante fallback silencioso em taint/d
   );
 
   // SSR mantém espaço 4:5 reservado e oculta só o <img> quando JS está ativo, sem display:none/visibility:hidden
+  assert.match(ssrHtml, /<div class="absolute inset-0"><img\b/);
   const imgTag = ssrHtml.match(/<img\b[^>]*>/)?.[0] ?? "";
   const imgClassAttr = imgTag.match(/class="([^"]*)"/)?.[1] ?? "";
   const imgClasses = imgClassAttr.split(/\s+/).filter(Boolean);
@@ -542,6 +543,20 @@ test("FounderSection evita salto no SSR e garante fallback silencioso em taint/d
   assert.equal(imgClasses.includes("invisible"), false);
   assert.match(founderSource, /opacity-100/);
   assert.match(founderSource, /FRAMING_FALLBACK_TIMEOUT_MS/);
+
+  // Next 16 (dev) proíbe style.width/height custom em <Image fill>: estilo de recorte deve ficar no wrapper absolute inset-0
+  const imageTag = extractOpeningTag(founderSource, "ref={imgRef}", "enclosing", "<Image");
+  assert.match(imageTag, /\bfill\b/);
+  assert.doesNotMatch(imageTag, /\bstyle=/);
+  const wrapperTag = extractOpeningTag(
+    founderSource,
+    "style={activeCutoutStyle ?? undefined}",
+    "enclosing",
+    "<div",
+  );
+  assert.ok(classTokens(wrapperTag).includes("absolute"));
+  assert.ok(classTokens(wrapperTag).includes("inset-0"));
+  assert.ok(founderSource.indexOf(wrapperTag) < founderSource.indexOf(imageTag));
 
   // Simula canvas tainted (SecurityError no getImageData) e falha de decodificação (drawImage)
   const originalDocument = globalThis.document;
