@@ -40,140 +40,142 @@ export default async function ContatoPage() {
   );
 
   return (
-    <div data-clear-fab="">
+    <div data-clear-fab="" className="clear-fab-screen lg:py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Início", path: "/" },
           { name: "Contato", path: "/contato" },
         ])}
       />
-      <div className="clear-fab-screen lg:py-12">
-        <Container className="pt-5 lg:pt-0">
-          <div className="mx-auto max-w-4xl">
-            <PageHeader
-              compact
-              eyebrow="Contato"
-              title={`Fale com a ${publicSite.name}`}
-              description="Atendemos Linhares, Aracruz e Grande Vitória. Compare o estoque no assistente; fale com a equipe e feche no WhatsApp."
-            />
-
-            <section
-              aria-labelledby="contato-whatsapp"
-              className="mt-5 overflow-hidden bg-ink sm:mt-8"
-            >
-              <div className="h-1 bg-brand" aria-hidden="true" />
-              <div className="p-5 sm:p-8">
-                <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand-light">
-                  Canal da loja
-                </p>
-                <h2
-                  id="contato-whatsapp"
-                  className="mt-1.5 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl"
-                >
-                  WhatsApp — resposta mais rápida
-                </h2>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-cream/80 sm:text-base">
-                  Para vídeo, financiamento e condições, troca ou fechamento, o canal é o WhatsApp.
-                </p>
-
-                <div className="mt-5">
-                  <SiteLeadHit contentName="Contato">
-                    <WhatsAppButton
-                      size="lg"
-                      className="w-full"
-                      trackingLabel="contato"
-                      message={WHATSAPP_MESSAGES.general}
-                    >
-                      Chamar no WhatsApp
-                    </WhatsAppButton>
-                  </SiteLeadHit>
-                </div>
-
-                {phone ? (
-                  <a
-                    href={telUrl()}
-                    className="group mt-4 flex min-h-[56px] items-center justify-between gap-3 bg-white/[0.04] px-4 py-3 touch-manipulation transition hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
-                        Telefone
-                      </span>
-                      <span className="mt-1 block font-display text-2xl font-bold leading-none tracking-tight text-brand-light tabular-nums sm:text-3xl">
-                        {phone.label}
-                      </span>
-                    </span>
-                    <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-cream/90">
-                      Ligar
-                      <IconArrowRight className="h-4 w-4 text-brand-light transition group-hover:translate-x-0.5" />
-                    </span>
-                  </a>
-                ) : null}
-              </div>
-            </section>
-          </div>
-        </Container>
-      </div>
-
-      <Container className="mt-6 pb-8 lg:mt-0 lg:pb-12">
+      <Container className="pt-5 lg:pt-0">
         <div className="mx-auto max-w-4xl">
-          <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream/80">
-            Outros canais e atendimento
-          </h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <Channel
-              label={physical ? "Endereço" : "Atendimento"}
-              className="sm:col-span-2"
-            >
-              <p className="font-display text-base font-semibold text-cream">
-                {publicSite.address}
-              </p>
-              {physical ? null : (
-                <p className="mt-2 text-sm font-normal leading-relaxed text-cream/80">
-                  Não temos showroom físico. Você escolhe no site, tira dúvidas e
-                  pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
-                  ou retirada. Atendemos Linhares, Aracruz e Grande Vitória.
-                </p>
-              )}
-            </Channel>
-            <Channel label="Horário" className="sm:col-span-2">
-              {sameHours ? (
-                <p className="font-display text-base font-semibold text-cream">
-                  {publicSite.hours}
-                </p>
-              ) : (
-                <dl className="space-y-1.5">
-                  {hourRows.map((row) => (
-                    <div key={row.label} className="flex justify-between gap-4">
-                      <dt className="font-normal text-cream/75">{row.label}</dt>
-                      <dd className="font-display font-semibold">{row.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-            </Channel>
-            <Channel
-              label="Instagram"
-              href={publicSite.instagramUrl}
-              external
-            >
-              <p className="font-display font-semibold">{publicSite.instagram}</p>
-            </Channel>
-            <Channel
-              label={emailCopy.label}
-              href={emailReady ? `mailto:${publicSite.email}` : undefined}
-            >
-              <p className="break-words font-display font-semibold">
-                {publicSite.email}
-              </p>
-              <p className="mt-1 text-xs font-normal leading-relaxed text-cream/75">
-                {emailCopy.hint}
-              </p>
-            </Channel>
-          </div>
+          <PageHeader
+            compact
+            eyebrow="Contato"
+            title={`Fale com a ${publicSite.name}`}
+            description="Atendemos Linhares, Aracruz e Grande Vitória. Compare o estoque no assistente; fale com a equipe e feche no WhatsApp."
+          />
 
-          <p className="mt-6 text-xs leading-relaxed text-cream/75">
-            {publicSite.legalName} — CNPJ {publicSite.cnpj}
-          </p>
+          <section
+            aria-labelledby="contato-whatsapp"
+            className="mt-5 overflow-hidden bg-ink sm:mt-8"
+          >
+            <div className="h-1 bg-brand" aria-hidden="true" />
+            <div className="p-5 sm:p-8">
+              <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand-light">
+                Canal da loja
+              </p>
+              <h2
+                id="contato-whatsapp"
+                className="mt-1.5 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl"
+              >
+                WhatsApp — resposta mais rápida
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-cream/80 sm:text-base">
+                Para vídeo, financiamento e condições, troca ou fechamento, o canal é o WhatsApp.
+              </p>
+
+              <div className="mt-5">
+                <SiteLeadHit contentName="Contato">
+                  <WhatsAppButton
+                    size="lg"
+                    className="w-full"
+                    trackingLabel="contato"
+                    message={WHATSAPP_MESSAGES.general}
+                  >
+                    Chamar no WhatsApp
+                  </WhatsAppButton>
+                </SiteLeadHit>
+              </div>
+
+              {phone ? (
+                <a
+                  href={telUrl()}
+                  className="group mt-4 flex min-h-[56px] items-center justify-between gap-3 bg-white/[0.04] px-4 py-3 touch-manipulation transition hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
+                      Telefone
+                    </span>
+                    <span className="mt-1 block font-display text-2xl font-bold leading-none tracking-tight text-brand-light tabular-nums sm:text-3xl">
+                      {phone.label}
+                    </span>
+                  </span>
+                  <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-cream/90">
+                    Ligar
+                    <IconArrowRight className="h-4 w-4 text-brand-light transition group-hover:translate-x-0.5" />
+                  </span>
+                </a>
+              ) : null}
+            </div>
+          </section>
+
+          <section
+            aria-labelledby="contato-outros-canais"
+            className="mt-7 sm:mt-10 lg:mt-12"
+          >
+            <h2
+              id="contato-outros-canais"
+              className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream/80"
+            >
+              Outros canais e atendimento
+            </h2>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <Channel
+                label={physical ? "Endereço" : "Atendimento"}
+                className="sm:col-span-2"
+              >
+                <p className="font-display text-base font-semibold text-cream">
+                  {publicSite.address}
+                </p>
+                {physical ? null : (
+                  <p className="mt-2 text-sm font-normal leading-relaxed text-cream/80">
+                    Não temos showroom físico. Você escolhe no site, tira dúvidas e
+                    pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
+                    ou retirada. Atendemos Linhares, Aracruz e Grande Vitória.
+                  </p>
+                )}
+              </Channel>
+              <Channel label="Horário" className="sm:col-span-2">
+                {sameHours ? (
+                  <p className="font-display text-base font-semibold text-cream">
+                    {publicSite.hours}
+                  </p>
+                ) : (
+                  <dl className="space-y-1.5">
+                    {hourRows.map((row) => (
+                      <div key={row.label} className="flex justify-between gap-4">
+                        <dt className="font-normal text-cream/75">{row.label}</dt>
+                        <dd className="font-display font-semibold">{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </Channel>
+              <Channel
+                label="Instagram"
+                href={publicSite.instagramUrl}
+                external
+              >
+                <p className="font-display font-semibold">{publicSite.instagram}</p>
+              </Channel>
+              <Channel
+                label={emailCopy.label}
+                href={emailReady ? `mailto:${publicSite.email}` : undefined}
+              >
+                <p className="break-words font-display font-semibold">
+                  {publicSite.email}
+                </p>
+                <p className="mt-1 text-xs font-normal leading-relaxed text-cream/75">
+                  {emailCopy.hint}
+                </p>
+              </Channel>
+            </div>
+
+            <p className="mt-6 text-xs leading-relaxed text-cream/75">
+              {publicSite.legalName} — CNPJ {publicSite.cnpj}
+            </p>
+          </section>
         </div>
       </Container>
     </div>

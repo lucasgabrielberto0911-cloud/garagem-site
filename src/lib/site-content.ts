@@ -2,7 +2,13 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { isPublicPhotoSource } from "@/lib/public-photo-source";
+import {
+  PHOTO_R2_ORIGIN,
+  PHOTO_STORAGE_ORIGIN,
+  isPublicPhotoBlob,
+  publicPhotoR2Origin,
+  validPublicPhotoKey,
+} from "@/lib/public-photo-url";
 import { resolveSiteLinks, type SiteLink } from "@/lib/site-links";
 import {
   FAQ_ITEMS,
@@ -38,22 +44,46 @@ export type SiteContent = {
   links: SiteLink[];
 };
 
-const FOUNDER_PHOTO_HOST = "vesmqhyxautgtvgccweo.supabase.co";
+const FOUNDER_PHOTO_BRANDING_MAX_LENGTH = 300;
+const FOUNDER_PHOTO_URL_MAX_LENGTH = 500;
+const FOUNDER_PHOTO_OBJECT_PREFIX = "/storage/v1/object/public/veiculos/";
 
 export function parseFounderPhotoUrl(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const value = raw.trim();
-  if (!value) return null;
-  if (value.startsWith("/branding/") && !value.includes("..")) {
-    return value.slice(0, 300);
+  if (!value || value.includes("..") || value.includes("\\")) return null;
+  if (value.startsWith("/branding/")) {
+    return value.length <= FOUNDER_PHOTO_BRANDING_MAX_LENGTH ? value : null;
   }
-  if (isPublicPhotoSource(value)) {
-    return value.slice(0, 500);
-  }
+  if (value.length > FOUNDER_PHOTO_URL_MAX_LENGTH) return null;
   try {
     const url = new URL(value);
-    if (url.protocol === "https:" && url.hostname === FOUNDER_PHOTO_HOST) {
-      return url.toString().slice(0, 500);
+    if (url.protocol !== "https:") return null;
+    if (url.username || url.password || url.search || url.hash || url.port) {
+      return null;
+    }
+
+    const r2Origins = new Set([PHOTO_R2_ORIGIN, publicPhotoR2Origin()]);
+    if (r2Origins.has(url.origin)) {
+      const parts = url.pathname.slice(1).split("/").map(decodeURIComponent);
+      return validPublicPhotoKey(parts) ? `${url.origin}/${parts.join("/")}` : null;
+    }
+
+    if (isPublicPhotoBlob(value)) {
+      return url.toString();
+    }
+
+    if (
+      url.origin === PHOTO_STORAGE_ORIGIN &&
+      url.pathname.startsWith(FOUNDER_PHOTO_OBJECT_PREFIX)
+    ) {
+      const parts = url.pathname
+        .slice(FOUNDER_PHOTO_OBJECT_PREFIX.length)
+        .split("/")
+        .map(decodeURIComponent);
+      return validPublicPhotoKey(parts)
+        ? `${PHOTO_STORAGE_ORIGIN}${FOUNDER_PHOTO_OBJECT_PREFIX}${parts.join("/")}`
+        : null;
     }
   } catch {
     return null;

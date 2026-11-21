@@ -119,10 +119,11 @@ test("polimento em /sobre, /contato e SiteFooter evita repetições, filtros ine
   assert.match(sobre, /Atendemos Linhares, Aracruz e Grande Vitória/);
   assert.doesNotMatch(sobre, /publicSite\.region/);
 
-  // /contato: Horário e endereço/atendimento sem duplicação na mesma tela
+  // /contato: Horário e endereço/atendimento sem duplicação na mesma tela e sem vão forçado de 100dvh entre seções
   assert.equal((contato.match(/label="Horário"/g) ?? []).length, 1);
   assert.equal((contato.match(/publicSite\.address/g) ?? []).length, 2); // só isPhysicalAddress(...) + 1 exibição
   assert.doesNotMatch(contato, /border border-white\/20/);
+  assert.match(contato, /<div data-clear-fab="" className="clear-fab-screen lg:py-12">/);
 
   // SiteFooter: WhatsApp na coluna Contato tem ícone e navegação desktop usa 2 colunas
   assert.match(footer, /<TrackedWhatsAppLink[\s\S]*?<IconWhatsApp/);
@@ -130,11 +131,20 @@ test("polimento em /sobre, /contato e SiteFooter evita repetições, filtros ine
   assert.doesNotMatch(footer, /Seminovos com procedência em \{/);
 });
 
-test("FounderSection sem foto colapsa sem img nem coluna preta; parseFounderPhotoUrl aceita R2, Blob, Storage e /branding", () => {
+test("FounderSection sem foto ou com URL legada inválida colapsa sem img nem coluna preta; parseFounderPhotoUrl valida origens e caminhos", () => {
   const withoutPhoto = renderToStaticMarkup(createElement(FounderSection, { photoUrl: null }));
   assert.doesNotMatch(withoutPhoto, /<img\b/);
   assert.doesNotMatch(withoutPhoto, /bg-black/);
   assert.match(withoutPhoto, /Elias Clovis Gonçalves dos Santos Neto/);
+
+  const invalidLegacy = renderToStaticMarkup(
+    createElement(FounderSection, {
+      photoUrl: `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/outro-bucket/foto.webp`,
+    }),
+  );
+  assert.doesNotMatch(invalidLegacy, /<img\b/);
+  assert.doesNotMatch(invalidLegacy, /bg-black/);
+  assert.doesNotMatch(invalidLegacy, /placeholder-car\.png/);
 
   assert.equal(parseFounderPhotoUrl("/branding/elias.webp"), "/branding/elias.webp");
   assert.equal(
@@ -150,4 +160,34 @@ test("FounderSection sem foto colapsa sem img nem coluna preta; parseFounderPhot
     `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/elias.webp`,
   );
   assert.equal(parseFounderPhotoUrl("https://evil.example/foto.webp"), null);
+  assert.equal(parseFounderPhotoUrl("https://pub-outro-bucket.r2.dev/foto.webp"), null);
+  assert.equal(
+    parseFounderPhotoUrl(`${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/outro-bucket/foto.webp`),
+    null,
+  );
+  assert.equal(parseFounderPhotoUrl(`${PHOTO_STORAGE_ORIGIN}/rest/v1/site_settings`), null);
+  assert.equal(
+    parseFounderPhotoUrl(`${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/elias.webp?download=1`),
+    null,
+  );
+  assert.equal(
+    parseFounderPhotoUrl(`${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/elias.webp#frag`),
+    null,
+  );
+  assert.equal(
+    parseFounderPhotoUrl("https://user:pass@vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/elias.webp"),
+    null,
+  );
+  assert.equal(
+    parseFounderPhotoUrl(`${PHOTO_STORAGE_ORIGIN}:8443/storage/v1/object/public/veiculos/elias.webp`),
+    null,
+  );
+  assert.equal(
+    parseFounderPhotoUrl(`${PHOTO_R2_ORIGIN}/${"a".repeat(500)}.webp`),
+    null,
+  );
+  assert.equal(
+    parseFounderPhotoUrl(`/branding/${"a".repeat(300)}.webp`),
+    null,
+  );
 });

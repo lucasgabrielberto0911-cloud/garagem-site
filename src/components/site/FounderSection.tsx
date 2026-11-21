@@ -4,12 +4,20 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { PUBLIC_PHOTO_PREFIX, publicPhotoSrc } from "@/lib/public-photo-url";
 
+const VEHICLE_PLACEHOLDER_PATH = "/branding/placeholder-car.png";
+
 export function FounderSection({
   photoUrl,
 }: {
   photoUrl?: string | null;
 }) {
-  const portrait = photoUrl?.trim() ? publicPhotoSrc(photoUrl.trim()) : null;
+  const rawPhotoUrl = photoUrl?.trim() || null;
+  const resolvedPortrait = rawPhotoUrl ? publicPhotoSrc(rawPhotoUrl) : null;
+  const portrait =
+    resolvedPortrait === VEHICLE_PLACEHOLDER_PATH &&
+    rawPhotoUrl !== VEHICLE_PLACEHOLDER_PATH
+      ? null
+      : resolvedPortrait;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const showPortrait = Boolean(portrait && failedSrc !== portrait);
