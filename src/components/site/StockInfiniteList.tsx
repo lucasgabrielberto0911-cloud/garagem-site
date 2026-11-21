@@ -15,7 +15,7 @@ import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
 import { requestJson } from "@/lib/request-json";
-import type { VehicleCardRecord } from "@/lib/stock-query";
+import { STOCK_PRIORITY_COUNT, type VehicleCardRecord } from "@/lib/stock-query";
 import { clearStockPosition, readStockPosition, restoreStockPosition, type StockPosition } from "@/lib/stock-return";
 
 type StockQuery = Record<string, string | undefined>;
@@ -227,7 +227,7 @@ export function StockInfiniteList({
           <MemoVehicleGrid
             vehicles={vehicles}
             returnTo={returnTo}
-            priorityCount={1}
+            priorityCount={STOCK_PRIORITY_COUNT}
             photoLayout="stock"
           />
         </HideStockCardInterest>

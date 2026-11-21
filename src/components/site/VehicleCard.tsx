@@ -2,6 +2,7 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
+import { isValidLqipDataUri } from "@/lib/photo-lqip-cache";
 import { isNewListing } from "@/lib/vehicle-badges";
 import { formatBrandName, formatCurrencyBRL, formatModelName } from "@/lib/format";
 import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
@@ -44,6 +45,8 @@ export function VehicleCard({
   vehicle,
   priority = false,
   eager = false,
+  preloadImage,
+  decoding,
   returnTo,
   showDestaque = false,
   hideInterest = false,
@@ -52,6 +55,8 @@ export function VehicleCard({
   vehicle: VehicleCardData;
   priority?: boolean;
   eager?: boolean;
+  preloadImage?: boolean;
+  decoding?: "sync" | "async" | "auto";
   returnTo?: string;
   showDestaque?: boolean;
   /** Ficha: o card só abre o anúncio, sem a faixa "Tenho interesse". */
@@ -64,6 +69,8 @@ export function VehicleCard({
   const display = formatVehicleDisplay(vehicle);
   const card = publicCardFacts(vehicle);
   const cover = coverSrc(vehicle.photos);
+  const rawLqip = vehicle.photos?.[0]?.lqip;
+  const lqip = isValidLqipDataUri(rawLqip) ? rawLqip : null;
   const badge = STATUS_BADGE[vehicle.status];
   const facts = new Map(card.facts.map((fact) => [fact.label, fact]));
   const version = card.version;
@@ -95,7 +102,15 @@ export function VehicleCard({
         returnTo={returnTo}
         className="listing-card-main"
       >
-        <div className="listing-card-photo relative aspect-[4/3] overflow-hidden bg-asphalt" data-vehicle-photo="">
+        <div className="listing-card-photo relative aspect-[4/3] overflow-hidden" data-vehicle-photo="">
+          {lqip ? (
+            <div
+              aria-hidden="true"
+              data-photo-lqip=""
+              className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center blur-md"
+              style={{ backgroundImage: `url("${lqip}")` }}
+            />
+          ) : null}
           <VehicleImage
             src={cover}
             srcSet={coverSrcSet(vehicle.photos)}
@@ -107,6 +122,9 @@ export function VehicleCard({
             sizes={CARD_SIZES}
             priority={priority}
             eager={eager}
+            preloadImage={preloadImage}
+            decoding={decoding}
+            fadeIn
             className="object-cover"
           />
         </div>

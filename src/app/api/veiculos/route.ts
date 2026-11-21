@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { attachCachedPhotoLqip } from "@/lib/photo-lqip-cache";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
 
 const MAX_IDS = 60;
@@ -20,14 +21,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const vehicles = await queryPublicVehicleCards({
+    const rawVehicles = await queryPublicVehicleCards({
       where: { id: { in: ids }, status: { not: "vendido" } },
     });
 
     const order = new Map(ids.map((id, index) => [id, index]));
-    vehicles.sort(
+    rawVehicles.sort(
       (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
     );
+    const vehicles = attachCachedPhotoLqip(rawVehicles);
 
     return NextResponse.json(
       { vehicles },

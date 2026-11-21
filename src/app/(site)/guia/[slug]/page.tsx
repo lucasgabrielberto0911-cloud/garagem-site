@@ -4,6 +4,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { ButtonLink, Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SEO_GUIDES, getSeoGuide, pickGuideVehicles } from "@/lib/seo-guides";
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { getCityShowcaseVehicles } from "@/lib/vehicles";
 
@@ -29,7 +30,9 @@ export default async function GuiaPage({ params }: Props) {
   const guide = getSeoGuide(slug);
   if (!guide) notFound();
   const path = `/guia/${guide.slug}`;
-  const vehicles = pickGuideVehicles(await getCityShowcaseVehicles(), guide.models);
+  const vehicles = await enrichVehiclesWithLqip(
+    pickGuideVehicles(await getCityShowcaseVehicles(), guide.models),
+  );
 
   return (
     <Container className="py-12">

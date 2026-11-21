@@ -7,6 +7,7 @@ import { StockCatalogGate } from "@/components/site/StockCatalogGate";
 import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
 import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles";
 import { Container, PageHeader } from "@/components/site/ui";
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
 import { breadcrumbJsonLd, buildPageMetadata, itemListJsonLd } from "@/lib/seo";
 import { ESTOQUE_SEO_TITLE, SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 import { site } from "@/lib/site";
@@ -25,7 +26,11 @@ export default async function EstoquePage() {
     getStockPage({ page: 1 }),
     getStockCatalogLinks(),
   ]);
-  const listed = catalog.length > 0 ? catalog : stock.vehicles;
+  const initialStock = {
+    ...stock,
+    vehicles: await enrichVehiclesWithLqip(stock.vehicles),
+  };
+  const listed = catalog.length > 0 ? catalog : initialStock.vehicles;
 
   return (
     <div data-stock-page="" className="stock-page stock-compact-opening py-2 lg:pt-2 lg:pb-6">
@@ -51,7 +56,7 @@ export default async function EstoquePage() {
         />
 
         <div className="mt-3 lg:mt-4">
-          <EstoqueBrowse initialStock={stock} />
+          <EstoqueBrowse initialStock={initialStock} />
         </div>
 
         <RecentlyViewedVehicles />

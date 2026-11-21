@@ -4,6 +4,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { Container, PageHeader, ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { BUYING_GUIDES } from "@/lib/buying-guides";
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
 import { getCityShowcaseVehicles } from "@/lib/vehicles";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 export const revalidate = 3600;
@@ -19,7 +20,7 @@ export default async function Page({ params }: Props) {
   const { slug } = await params;
   const guide = BUYING_GUIDES.find(item => item.slug === slug);
   if (!guide) notFound();
-  const vehicles = (await getCityShowcaseVehicles()).slice(0, 3);
+  const vehicles = await enrichVehiclesWithLqip((await getCityShowcaseVehicles()).slice(0, 3));
   return <Container className="py-12">
     <JsonLd data={breadcrumbJsonLd([{ name: "Início", path: "/" }, { name: "Guias de compra", path: "/guias" }, { name: guide.title, path: `/guias/${slug}` }])} />
     <PageHeader eyebrow="Garagem · Espírito Santo" title={guide.title} description={guide.description} />

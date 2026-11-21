@@ -25,6 +25,8 @@ import {
   itemListJsonLd,
   serviceCityJsonLd,
 } from "@/lib/seo";
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
+import { HOME_PRIORITY_COUNT } from "@/lib/stock-query";
 import { getCityShowcaseVehicles } from "@/lib/vehicles";
 
 export const revalidate = 3600;
@@ -75,7 +77,9 @@ export default async function SeminovosCidadePage({
     question: item.question,
     answer: item.answer,
   }));
-  const featured = await getCityShowcaseVehicles();
+  const featured = await getCityShowcaseVehicles().then((list) =>
+    enrichVehiclesWithLqip(list, { limit: 6 }),
+  );
 
   return (
     <div className="py-12 lg:py-16">
@@ -141,7 +145,7 @@ export default async function SeminovosCidadePage({
             ) : (
               <VehicleGrid
                 vehicles={featured.slice(0, 6)}
-                priorityCount={2}
+                priorityCount={HOME_PRIORITY_COUNT}
                 returnTo={path}
               />
             )}

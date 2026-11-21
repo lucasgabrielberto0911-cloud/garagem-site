@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useRef } from "react";
 import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 
 import { supabaseOriginalSrc } from "@/lib/stock-query";
@@ -8,6 +9,8 @@ import { RecoverableVehicleImage } from "@/components/RecoverableVehicleImage";
 /**
  * Capa remota sem o wrapper do next/image.
  * Se o recorte do Storage falhar, troca para a cópia pública limitada a 1280 px.
+ * Com `fadeIn`, o HTML SSR mantém a foto visível (sem depender de JS); após a
+ * hidratação, só imagens ainda pendentes aguardam `load` para aparecer com fade.
  */
 export function NativeRemoteFillImage({
   src,
@@ -20,6 +23,7 @@ export function NativeRemoteFillImage({
   className,
   priority,
   eager = false,
+  fadeIn = false,
   decoding,
   recoverable = false,
   onReady,
@@ -35,15 +39,29 @@ export function NativeRemoteFillImage({
   className?: string;
   priority?: boolean;
   eager?: boolean;
+  fadeIn?: boolean;
   decoding?: "sync" | "async" | "auto";
   recoverable?: boolean;
   onReady?: () => void;
   onErrorState?: () => void;
 }) {
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useLayoutEffect(() => {
+    if (!fadeIn || recoverable) return;
+    const img = imgRef.current;
+    if (!img) return;
+    // Fotos já em cache ou concluídas antes da hidratação permanecem visíveis.
+    img.dataset.photoState = img.complete ? "ready" : "loading";
+  }, [fadeIn, recoverable, src, srcSet, mobileSrcSet]);
+
   if (recoverable) return <RecoverableVehicleImage key={src} src={src} alt={alt} width={width} height={height} sizes={sizes} srcSet={srcSet} mobileSrcSet={mobileSrcSet} className={className} priority={priority} eager={eager} decoding={decoding} onReady={onReady} onErrorState={onErrorState} />;
+
+  const fadeClass = fadeIn ? " vehicle-photo-fade" : "";
   const image = (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      ref={imgRef}
       src={src}
       srcSet={srcSet}
       sizes={srcSet ? sizes : undefined}
@@ -52,14 +70,26 @@ export function NativeRemoteFillImage({
       height={height}
       loading={priority || eager ? "eager" : "lazy"}
       decoding={decoding ?? (priority ? "sync" : "async")}
-      fetchPriority={priority ? "high" : "low"}
+      fetchPriority={priority ? "high" : eager ? "auto" : "low"}
       draggable={false}
-      className={`absolute inset-0 h-full w-full ${className ?? ""}`}
+      className={`absolute inset-0 h-full w-full${fadeClass} ${className ?? ""}`}
+      onLoad={(event) => {
+        if (fadeIn) event.currentTarget.dataset.photoState = "ready";
+        onReady?.();
+      }}
       onError={(event) => {
         const image = event.currentTarget;
-        if (image.dataset.fallbackUsed === "1") return;
+        if (image.dataset.fallbackUsed === "1") {
+          if (fadeIn) image.dataset.photoState = "ready";
+          onErrorState?.();
+          return;
+        }
         const fallback = publicVehiclePhotoSrc(supabaseOriginalSrc(image.currentSrc || image.src));
-        if (!fallback || fallback === image.src) return;
+        if (!fallback || fallback === image.src) {
+          if (fadeIn) image.dataset.photoState = "ready";
+          onErrorState?.();
+          return;
+        }
         image.dataset.fallbackUsed = "1";
         // Sem isto o <picture> insistiria no recorte que acabou de falhar.
         image.closest("picture")?.querySelectorAll("source").forEach((source) => source.removeAttribute("srcset"));

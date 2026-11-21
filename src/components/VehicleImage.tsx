@@ -14,6 +14,8 @@ export function VehicleImage({
   className = "",
   priority = false,
   eager = false,
+  preloadImage,
+  fadeIn = false,
   decoding,
   srcSet,
   mobileSrcSet,
@@ -39,10 +41,14 @@ export function VehicleImage({
    * (upload ou transformação do Storage) e não passam por /_next/image.
    */
   unoptimized?: boolean;
-  /** Primeira foto visível: preload, alta prioridade e decodificação imediata. */
+  /** Fotos principais da 1ª dobra: alta prioridade e carregamento imediato. */
   priority?: boolean;
-  /** Foto da primeira dobra que não é o LCP: baixa cedo, sem disputar a capa. */
+  /** Demais fotos da 1ª dobra: carregam cedo com prioridade normal (auto). */
   eager?: boolean;
+  /** Controla `<link rel="preload">` separado de `priority` (padrão: acompanha `priority`). */
+  preloadImage?: boolean;
+  /** Aplica fade-in suave sobre o LQIP/placeholder quando o JS hidrata (sem depender de JS). */
+  fadeIn?: boolean;
   decoding?: "sync" | "async" | "auto";
   /**
    * Aceito por compatibilidade e ignorado.
@@ -54,10 +60,10 @@ export function VehicleImage({
   const finalSet = publicPhotoSrcSet(srcSet, publicVehiclePhotoSrc);
   const mobileSet = publicPhotoSrcSet(mobileSrcSet, publicVehiclePhotoSrc);
 
-  // Só a capa do LCP entra no preload e na prioridade alta. A segunda
-  // foto da primeira dobra ainda baixa cedo, mas com prioridade baixa,
-  // para não dividir a rede lenta com a capa.
-  if (priority) {
+  // Só a capa do LCP entra no preload. A 2ª foto pode usar fetchPriority="high"
+  // sem duplicar <link rel="preload">; o restante da 1ª dobra usa eager + auto.
+  const shouldPreload = preloadImage ?? priority;
+  if (shouldPreload) {
     const options = { as: "image" as const, fetchPriority: "high" as const,
       imageSizes: finalSet || mobileSet ? sizes : undefined };
     if (mobileSet) {
@@ -81,6 +87,7 @@ export function VehicleImage({
         className={className}
         priority={priority}
         eager={eager}
+        fadeIn={fadeIn}
         decoding={decoding}
         recoverable={recoverable}
         onReady={onReady}
@@ -99,7 +106,7 @@ export function VehicleImage({
       className={className}
       loading={priority || eager ? "eager" : "lazy"}
       decoding={decoding ?? (priority ? "sync" : "async")}
-      fetchPriority={priority ? "high" : "low"}
+      fetchPriority={priority ? "high" : eager ? "auto" : "low"}
     />
   );
 }

@@ -12,7 +12,73 @@ import { formatStockModelLabel } from "@/lib/vehicle-display";
 /** O estoque atual cabe na primeira leva; a rolagem infinita atende lotes maiores. */
 export const STOCK_PAGE_SIZE = 16;
 
-export type VehicleCardPhoto = { url: string; thumbnailUrl?: string | null };
+/**
+ * Quantidade de cards carregados cedo na primeira dobra (web.dev/articles/fetch-priority).
+ * Celular (2 col): 2 linhas = 4 cards; desktop (4 col): 1ª linha + início da 2ª = 6–8.
+ * 6 cobre toda a 1ª dobra móvel e 1,5 linha no desktop sem congestionar 4G lento.
+ */
+export const STOCK_PRIORITY_COUNT = 6;
+/** Home e landings têm hero acima da grade; 4 cards completam a 1ª dobra. */
+export const HOME_PRIORITY_COUNT = 4;
+
+export type CardImageLoadingPlan = {
+  /** Só o 1º card (LCP) recebe <link rel="preload">. */
+  preload: boolean;
+  /** Os 2 primeiros cards visíveis sobem com fetchPriority="high". */
+  priority: boolean;
+  /** Demais cards da 1ª dobra carregam eager com prioridade normal (auto). */
+  eager: boolean;
+  loading: "eager" | "lazy";
+  fetchPriority: "high" | "auto" | "low";
+  decoding: "sync" | "async";
+};
+
+/**
+ * Política de rede da grade de cards:
+ * - índice 0: preload + fetchPriority="high" + loading="eager" + decoding="sync"
+ * - índice 1 (se priorityCount >= 2): sem preload + fetchPriority="high" + loading="eager"
+ * - índices 2..(priorityCount - 1): loading="eager" + fetchPriority="auto" (não "low")
+ * - restante: loading="lazy" + fetchPriority="low"
+ */
+export function cardImageLoadingPlan(index: number, priorityCount: number): CardImageLoadingPlan {
+  const safeCount = Math.max(0, Math.floor(priorityCount));
+  if (safeCount > 0 && index >= 0 && index < Math.min(2, safeCount)) {
+    const isLcp = index === 0;
+    return {
+      preload: isLcp,
+      priority: true,
+      eager: false,
+      loading: "eager",
+      fetchPriority: "high",
+      decoding: isLcp ? "sync" : "async",
+    };
+  }
+  if (safeCount > 0 && index >= 0 && index < safeCount) {
+    return {
+      preload: false,
+      priority: false,
+      eager: true,
+      loading: "eager",
+      fetchPriority: "auto",
+      decoding: "async",
+    };
+  }
+  return {
+    preload: false,
+    priority: false,
+    eager: false,
+    loading: "lazy",
+    fetchPriority: "low",
+    decoding: "async",
+  };
+}
+
+export type VehicleCardPhoto = {
+  url: string;
+  thumbnailUrl?: string | null;
+  /** Prévia borrada inline (data:image/webp;base64,...) gerada no servidor. */
+  lqip?: string | null;
+};
 
 export type VehicleCardRecord = {
   id: string;
@@ -48,14 +114,15 @@ export const GALLERY_HERO_SIZES =
   "(min-width: 1440px) 704px, (min-width: 1024px) calc((100vw - 96px) * 0.524), 100vw";
 
 /**
- * Card dentro do mesmo container: 2 colunas, 3 no lg, 4 no xl da home.
- * No estoque o lg tem sidebar, então o card é menor — esta medida é o
- * teto da home, para o celular não pedir a foto do desktop.
- * A coluna no celular tem ~173px. O slot corresponde à largura real;
- * o <picture> limita a capa móvel a 480px para evitar arquivos de desktop.
+ * Card na grade real do site (Container max-w-[90rem] = 1440px):
+ * - < 640px: 2 colunas, px-4 (32px) + 1 gap de 10px = 42px -> ~174px em 390px
+ *   (o <picture> ainda limita o celular ao 480w para não baixar 960w em 3x)
+ * - 640–1023px: 2 colunas, px-6 (48px) + 1 gap de 10px = 58px
+ * - 1024–1439px: 4 colunas (lg:grid-cols-4), px-8 (64px) + 3 gaps de 12px = 100px
+ * - >= 1440px: (1440 - 100) / 4 = 335px
  */
 export const CARD_SIZES =
-  "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 2)";
+  "(min-width: 1440px) 335px, (min-width: 1024px) calc((100vw - 100px) / 4), (min-width: 640px) calc((100vw - 58px) / 2), calc((100vw - 42px) / 2)";
 
 const SUPABASE_OBJECT_PUBLIC = "/storage/v1/object/public/";
 const SUPABASE_RENDER_PUBLIC = "/storage/v1/render/image/public/";

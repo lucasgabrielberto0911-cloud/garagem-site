@@ -1,4 +1,5 @@
 import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard";
+import { cardImageLoadingPlan } from "@/lib/stock-query";
 import { featuredBadgeIds } from "@/lib/vehicle-display";
 import type { WhatsAppCarPageOrigin } from "@/lib/whatsapp-car-message";
 
@@ -29,13 +30,15 @@ export function VehicleGrid({
   return (
     <div className={`listing-card-grid grid grid-cols-2 ${cols}`}>
       {vehicles.map((vehicle, index) => {
-        const high = index === 0 && priorityCount > 0;
+        const loadingPlan = cardImageLoadingPlan(index, priorityCount);
         return (
           <div key={vehicle.id} className="listing-card-item min-w-0">
             <VehicleCard
               vehicle={vehicle}
-              priority={high}
-              eager={!high && index < priorityCount}
+              priority={loadingPlan.priority}
+              eager={loadingPlan.eager}
+              preloadImage={loadingPlan.preload}
+              decoding={loadingPlan.decoding}
               returnTo={returnTo}
               showDestaque={destaqueIds.has(vehicle.id)}
               hideInterest={hideInterest}

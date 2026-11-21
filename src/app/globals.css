@@ -525,7 +525,29 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   min-width: 0;
   color: var(--cream);
 }
-.listing-card-photo { width: 100%; }
+/* Fundo neutro suave da foto enquanto carrega ou sem LQIP (sem quadrado preto chapado). */
+.listing-card-photo {
+  width: 100%;
+  background-color: #1f1f24;
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.03) 48%,
+    rgba(255, 255, 255, 0.09) 100%
+  );
+}
+/* Entrada suave sobre o LQIP; sem JS o atributo não existe e a foto já entra visível. */
+.vehicle-photo-fade {
+  transition: opacity 280ms ease-out;
+}
+.vehicle-photo-fade[data-photo-state="loading"] {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vehicle-photo-fade {
+    transition: none;
+  }
+}
 /* Selos ficam na linha da marca (área de texto), nunca sobre a foto. Só o primeiro aparece, para a
    linha não crescer e as linhas do subgrid continuarem alinhadas entre os cards. */
 .listing-card-brand-row {

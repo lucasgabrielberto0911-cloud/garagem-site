@@ -155,7 +155,7 @@ test("medidas públicas batem com o layout e com o upload", () => {
   );
   assert.equal(
     CARD_SIZES,
-    "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 2)",
+    "(min-width: 1440px) 335px, (min-width: 1024px) calc((100vw - 100px) / 4), (min-width: 640px) calc((100vw - 58px) / 2), calc((100vw - 42px) / 2)",
   );
   const card = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "../components/site/VehicleCard.tsx"),
@@ -173,7 +173,7 @@ test("medidas públicas batem com o layout e com o upload", () => {
     "utf8",
   );
   assert.match(image, /loading=\{priority \|\| eager \? "eager" : "lazy"\}/);
-  assert.match(image, /fetchPriority=\{priority \? "high" : "low"\}/);
+  assert.match(image, /fetchPriority=\{priority \? "high" : eager \? "auto" : "low"\}/);
   const layout = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "../app/layout.tsx"),
     "utf8",
