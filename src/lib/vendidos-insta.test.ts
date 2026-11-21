@@ -9,7 +9,7 @@ import { InstaDeliveriesGrid } from "@/components/site/InstaDeliveriesGrid";
 import {
   INSTA_DELIVERIES_PAGE_SIZE,
   formatInstaAlt,
-  formatInstaCaption,
+  formatInstaLabels,
   nextInstaDeliveriesCount,
   sliceInstaDeliveries,
   type InstaDeliveryItem,
@@ -18,54 +18,82 @@ import {
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const readRepoFile = (rel: string) => readFileSync(join(repoRoot, rel), "utf8");
 
-test("formatInstaCaption e formatInstaAlt formatam modelo, só marca e vazio", () => {
-  assert.equal(
-    formatInstaCaption({ brand: "Chevrolet", model: "Onix" }),
-    "Onix vendido",
+function readWebpDimensions(filePath: string): { width: number; height: number } | null {
+  const buf = readFileSync(filePath);
+  if (
+    buf.length < 30 ||
+    buf.toString("ascii", 0, 4) !== "RIFF" ||
+    buf.toString("ascii", 8, 12) !== "WEBP"
+  ) {
+    return null;
+  }
+  const chunk = buf.toString("ascii", 12, 16);
+  if (chunk === "VP8 ") {
+    return {
+      width: buf.readUInt16LE(26) & 0x3fff,
+      height: buf.readUInt16LE(28) & 0x3fff,
+    };
+  }
+  if (chunk === "VP8L") {
+    const bits = buf.readUInt32LE(21);
+    return {
+      width: (bits & 0x3fff) + 1,
+      height: ((bits >> 14) & 0x3fff) + 1,
+    };
+  }
+  if (chunk === "VP8X") {
+    return {
+      width: 1 + (buf[24] | (buf[25] << 8) | (buf[26] << 16)),
+      height: 1 + (buf[27] | (buf[28] << 8) | (buf[29] << 16)),
+    };
+  }
+  return null;
+}
+
+test("formatInstaLabels e formatInstaAlt formatam marca+modelo, só modelo, só marca e vazio", () => {
+  assert.deepEqual(
+    formatInstaLabels({ brand: "Chevrolet", model: "Onix" }),
+    { eyebrow: "Chevrolet", title: "Onix" },
   );
   assert.equal(
     formatInstaAlt({ brand: "Chevrolet", model: "Onix" }),
-    "Chevrolet Onix vendido pela Sua Garagem",
+    "Chevrolet Onix entregue a cliente da Sua Garagem",
   );
 
-  assert.equal(
-    formatInstaCaption({ brand: "Ford", model: "EcoSport" }),
-    "EcoSport vendido",
-  );
-  assert.equal(
-    formatInstaCaption({ brand: "Nissan", model: "Kicks Sense" }),
-    "Kicks Sense vendido",
+  assert.deepEqual(
+    formatInstaLabels({ brand: "Nissan", model: "Kicks Sense" }),
+    { eyebrow: "Nissan", title: "Kicks Sense" },
   );
   assert.equal(
     formatInstaAlt({ brand: "Nissan", model: "Kicks Sense" }),
-    "Nissan Kicks Sense vendido pela Sua Garagem",
+    "Nissan Kicks Sense entregue a cliente da Sua Garagem",
   );
 
-  assert.equal(
-    formatInstaCaption({ brand: null, model: "Onix" }),
-    "Onix vendido",
+  assert.deepEqual(
+    formatInstaLabels({ brand: null, model: "Onix" }),
+    { eyebrow: null, title: "Onix" },
   );
   assert.equal(
     formatInstaAlt({ brand: null, model: "Onix" }),
-    "Onix vendido pela Sua Garagem",
+    "Onix entregue a cliente da Sua Garagem",
   );
 
-  assert.equal(
-    formatInstaCaption({ brand: "BMW", model: null }),
-    "BMW vendido",
+  assert.deepEqual(
+    formatInstaLabels({ brand: "BMW", model: null }),
+    { eyebrow: null, title: "BMW" },
   );
   assert.equal(
     formatInstaAlt({ brand: "BMW", model: null }),
-    "BMW vendido pela Sua Garagem",
+    "BMW entregue a cliente da Sua Garagem",
   );
 
-  assert.equal(
-    formatInstaCaption({ brand: null, model: null }),
-    "Vendido",
+  assert.deepEqual(
+    formatInstaLabels({ brand: null, model: null }),
+    { eyebrow: null, title: "Veículo entregue" },
   );
   assert.equal(
     formatInstaAlt({ brand: null, model: null }),
-    "Veículo vendido pela Sua Garagem",
+    "Veículo entregue a cliente da Sua Garagem",
   );
 });
 
@@ -80,43 +108,55 @@ test("sliceInstaDeliveries e nextInstaDeliveriesCount paginam de 24 em 24 até o
   assert.equal(sliceInstaDeliveries(items, -5).length, 0);
 });
 
-test("manifesto vendidos-insta.json tem 288 itens válidos, ordenados e com webp local", () => {
+test("manifesto vendidos-insta.json tem 282 itens válidos, ordenados, ids únicos e webp 600x750", () => {
   const data = JSON.parse(
     readRepoFile("src/data/vendidos-insta.json"),
   ) as InstaDeliveryItem[];
-  assert.equal(data.length, 288);
+  assert.equal(data.length, 282);
 
   const webpFiles = readdirSync(join(repoRoot, "public/vendidos-insta")).filter(
     (name) => name.endsWith(".webp"),
   );
-  assert.equal(webpFiles.length, 288);
+  assert.equal(webpFiles.length, data.length);
 
+  const seenIds = new Set<string>();
   for (let i = 0; i < data.length; i++) {
     const item = data[i];
     assert.ok(item.id, `id ausente no índice ${i}`);
+    assert.ok(!seenIds.has(item.id), `id duplicado: ${item.id}`);
+    seenIds.add(item.id);
     assert.match(item.date, /^\d{4}-\d{2}-\d{2}$/);
     assert.match(item.src, /^\/vendidos-insta\/.+\.webp$/);
-    assert.match(item.href, /^https:\/\/www\.instagram\.com\/(?:p|reel|tv)\//);
-    assert.ok(
-      existsSync(join(repoRoot, "public", item.src)),
-      `arquivo ausente: public${item.src}`,
+    assert.equal("href" in item, false, `campo href não deve existir em ${item.id}`);
+    assert.equal("year" in item, false, `campo year não deve existir em ${item.id}`);
+
+    const diskPath = join(repoRoot, "public", item.src);
+    assert.ok(existsSync(diskPath), `arquivo ausente: public${item.src}`);
+    const dims = readWebpDimensions(diskPath);
+    assert.deepEqual(
+      dims,
+      { width: 600, height: 750 },
+      `dimensão inesperada em ${item.src}`,
     );
+
     if (i > 0) {
       assert.ok(
         data[i - 1].date >= item.date,
         `ordem incorreta entre ${data[i - 1].date} e ${item.date}`,
       );
     }
-    const caption = formatInstaCaption(item);
-    assert.match(caption, /(?:\bvendido|^Vendido)$/);
-    assert.doesNotMatch(caption, /R\$\s*\d|\bsimul\w*\b|loja digital|\b\d{4}\b/i);
+
+    const labels = formatInstaLabels(item);
+    assert.ok(labels.title.length > 0);
+    const fullLabel = [labels.eyebrow, labels.title].filter(Boolean).join(" ");
+    assert.doesNotMatch(fullLabel, /R\$\s*\d|\bsimul\w*\b|loja digital/i);
 
     const alt = formatInstaAlt(item);
-    assert.match(alt, /vendido pela Sua Garagem$/);
+    assert.match(alt, /entregue a cliente da Sua Garagem$/);
   }
 });
 
-test("InstaDeliveriesGrid renderiza 24 iniciais, 4 eager, botão Ver mais e some quando acaba", () => {
+test("InstaDeliveriesGrid renderiza 24 iniciais, 4 eager (1ª high), selo VENDIDO, Ver mais e some ao acabar", () => {
   const data = JSON.parse(
     readRepoFile("src/data/vendidos-insta.json"),
   ) as InstaDeliveryItem[];
@@ -127,6 +167,12 @@ test("InstaDeliveriesGrid renderiza 24 iniciais, 4 eager, botão Ver mais e some
   assert.equal((fullHtml.match(/<li\b/g) ?? []).length, 24);
   assert.equal((fullHtml.match(/loading="eager"/g) ?? []).length, 4);
   assert.equal((fullHtml.match(/loading="lazy"/g) ?? []).length, 20);
+  assert.equal(
+    (fullHtml.match(/<img\b[^>]*fetchpriority="high"/gi) ?? []).length,
+    1,
+  );
+  assert.equal((fullHtml.match(/data-sold-badge=""/g) ?? []).length, 24);
+  assert.equal((fullHtml.match(/>VENDIDO<\/span>/g) ?? []).length, 24);
   assert.doesNotMatch(fullHtml, /<a\b|instagram\.com|Mostrando/i);
   assert.match(fullHtml, />Ver mais<\/button>/);
 
@@ -137,18 +183,24 @@ test("InstaDeliveriesGrid renderiza 24 iniciais, 4 eager, botão Ver mais e some
   assert.doesNotMatch(shortHtml, /Ver mais/);
 });
 
-test("página /vendidos mantém só a grade de fotos, 4 colunas no desktop e sem seções extras", () => {
+test("página /vendidos segue visual limpo sem bordas nos cards, 4 colunas no desktop e CTA WhatsApp no fim", () => {
   const pageSrc = readRepoFile("src/app/(site)/vendidos/page.tsx");
   const gridSrc = readRepoFile("src/components/site/InstaDeliveriesGrid.tsx");
 
   assert.ok(pageSrc.includes("InstaDeliveriesGrid"));
-  assert.match(pageSrc, /title="Vendidos"/);
+  assert.ok(pageSrc.includes("WhatsAppButton"));
+  assert.ok(pageSrc.includes("Clientes que já saíram de carro novo da Garagem"));
   assert.doesNotMatch(
     pageSrc,
     /getSoldShowcaseData|getSiteStats|WantedVehicleCta|Veículos vendidos recentemente|Entregas registradas|Galeria de entregas em atualização/,
   );
-  assert.match(gridSrc, /grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4/);
-  assert.match(gridSrc, /bg-white\/5/);
+  assert.match(gridSrc, /grid-cols-2 .*lg:grid-cols-4/);
+  assert.match(gridSrc, /aspect-\[4\/5\]/);
+  assert.match(gridSrc, /width=\{600\}/);
+  assert.match(gridSrc, /height=\{750\}/);
+  assert.match(gridSrc, /min-h-\[56px\]/);
+  assert.match(gridSrc, /bg-brand\b/);
+  assert.doesNotMatch(gridSrc, /\bborder(?:-[a-z0-9/]+)?\b/);
   assert.doesNotMatch(gridSrc, /<a\b|Mostrando|instagram\.com/i);
 
   for (const src of [pageSrc, gridSrc]) {
