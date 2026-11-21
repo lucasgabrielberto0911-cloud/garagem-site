@@ -1,7 +1,18 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { stubPageFotos } from "./stub-fotos";
 
-test("galeria /vendidos exibe título, fotos 4:5 com selo VENDIDO, 24 iniciais, +24 em Ver mais, 4 colunas no desktop e 2 no mobile", async ({
+const totalDeliveries = (
+  JSON.parse(
+    readFileSync(
+      join(process.cwd(), "src/data/vendidos-insta.json"),
+      "utf8",
+    ),
+  ) as unknown[]
+).length;
+
+test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO aria-hidden, 24 iniciais, +24 em Ver mais, 4 colunas no desktop e 2 no mobile", async ({
   page,
   request,
 }) => {
@@ -30,23 +41,74 @@ test("galeria /vendidos exibe título, fotos 4:5 com selo VENDIDO, 24 iniciais, 
   await expect(grid.locator("a")).toHaveCount(0);
   await expect(page.locator('main a[href*="instagram.com"]')).toHaveCount(0);
 
-  await expect(items.nth(0).locator("img")).toHaveAttribute("loading", "eager");
-  await expect(items.nth(0).locator("img")).toHaveAttribute(
-    "fetchpriority",
-    "high",
-  );
+  const firstImg = items.nth(0).locator("img");
+  await expect(firstImg).toHaveAttribute("loading", "eager");
+  await expect(firstImg).toHaveAttribute("fetchpriority", "high");
+  await expect(firstImg).toHaveAttribute("decoding", "async");
   await expect(items.nth(3).locator("img")).toHaveAttribute("loading", "eager");
   await expect(items.nth(4).locator("img")).toHaveAttribute("loading", "lazy");
-  await expect(items.first().locator("img")).toHaveAttribute(
+  await expect(items.nth(9).locator("img")).toHaveAttribute("loading", "lazy");
+  await expect(firstImg).toHaveAttribute(
     "alt",
     /entregue a cliente da Sua Garagem$/,
   );
+
+  // srcset responsivo com 360w e 600w + camada LQIP borrada + fundo sem preto chapado.
+  const firstSrcSet = (await firstImg.getAttribute("srcset")) ?? "";
+  expect(firstSrcSet).toContain("360w");
+  expect(firstSrcSet).toContain("600w");
+
+  const firstLqip = items.nth(0).locator("[data-delivery-lqip]");
+  await expect(firstLqip).toHaveCount(1);
+  const lqipStyle = await firstLqip.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return {
+      backgroundImage: style.backgroundImage,
+      filter: style.filter,
+    };
+  });
+  expect(lqipStyle.backgroundImage).toMatch(/data:image\/webp;base64,/);
+  expect(lqipStyle.filter).toContain("blur");
+
+  const photoBoxStyle = await items
+    .nth(0)
+    .locator("[data-delivery-photo-box]")
+    .evaluate((el) => {
+      const style = getComputedStyle(el);
+      return {
+        backgroundImage: style.backgroundImage,
+        backgroundColor: style.backgroundColor,
+      };
+    });
+  expect(photoBoxStyle.backgroundImage).toMatch(/linear-gradient/i);
+  expect(photoBoxStyle.backgroundColor).not.toBe("rgb(0, 0, 0)");
+  expect(photoBoxStyle.backgroundColor).not.toBe("rgb(13, 13, 15)");
+
+  // Fotos carregadas ficam totalmente visíveis (opacity 1).
+  for (let i = 0; i < 4; i++) {
+    await expect
+      .poll(() =>
+        items
+          .nth(i)
+          .locator("img")
+          .evaluate((img) => {
+            const el = img as HTMLImageElement;
+            return (
+              el.complete &&
+              el.naturalWidth > 0 &&
+              getComputedStyle(el).opacity === "1"
+            );
+          }),
+      )
+      .toBe(true);
+  }
 
   const badges = items.locator("[data-sold-badge]");
   await expect(badges).toHaveCount(24);
   for (let i = 0; i < 4; i++) {
     await expect(badges.nth(i)).toBeVisible();
     await expect(badges.nth(i)).toHaveText("VENDIDO");
+    await expect(badges.nth(i)).toHaveAttribute("aria-hidden", "true");
   }
 
   const ratios = await items.locator("img").evaluateAll((imgs) =>
@@ -85,12 +147,13 @@ test("galeria /vendidos exibe título, fotos 4:5 com selo VENDIDO, 24 iniciais, 
 
   await loadMoreBtn.click();
   await expect(items).toHaveCount(48);
+  await expect(items.nth(24).locator("img")).toHaveAttribute("loading", "lazy");
 
   if (viewportWidth >= 1024) {
-    for (let step = 48; step < 282; step += 24) {
+    for (let step = 48; step < totalDeliveries; step += 24) {
       await loadMoreBtn.click();
     }
-    await expect(items).toHaveCount(282);
+    await expect(items).toHaveCount(totalDeliveries);
     await expect(loadMoreBtn).toHaveCount(0);
   }
 
@@ -111,4 +174,64 @@ test("galeria /vendidos exibe título, fotos 4:5 com selo VENDIDO, 24 iniciais, 
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
   expect(hasOverflow).toBe(false);
+});
+
+test("galeria /vendidos: foto nunca fica presa em opacity 0 mesmo se o evento load não disparar", async ({
+  page,
+}) => {
+  const width = page.viewportSize()?.width ?? 0;
+  test.skip(
+    width !== 390 && width !== 1440,
+    "Validação focada em celular (390) e desktop (1440)",
+  );
+
+  await page.addInitScript(() =>
+    localStorage.setItem("garagem_consent", "essential"),
+  );
+  await stubPageFotos(page);
+
+  const secondItem = (
+    JSON.parse(
+      readFileSync(
+        join(process.cwd(), "src/data/vendidos-insta.json"),
+        "utf8",
+      ),
+    ) as Array<{ id: string }>
+  )[1];
+
+  let releaseStalled!: () => void;
+  const stalledGate = new Promise<void>((resolve) => {
+    releaseStalled = resolve;
+  });
+  const stalledPattern = `**/vendidos-insta/*${secondItem.id}*.webp`;
+  await page.route(stalledPattern, async (route) => {
+    await stalledGate;
+    await route
+      .fulfill({
+        contentType: "image/png",
+        path: "public/branding/placeholder-car.png",
+      })
+      .catch(() => {});
+  });
+
+  try {
+    await page.goto("/vendidos", { waitUntil: "domcontentloaded" });
+    const stalledImg = page
+      .locator("[data-insta-deliveries-grid] > li")
+      .nth(1)
+      .locator("img");
+    await expect
+      .poll(
+        () =>
+          stalledImg.evaluate((el) => ({
+            state: (el as HTMLElement).dataset.photoState ?? "",
+            opacity: getComputedStyle(el).opacity,
+          })),
+        { timeout: 5000 },
+      )
+      .toEqual({ state: "ready", opacity: "1" });
+  } finally {
+    releaseStalled();
+    await page.unroute(stalledPattern);
+  }
 });

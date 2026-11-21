@@ -4,6 +4,8 @@ export type InstaDeliveryItem = {
   brand: string | null;
   model: string | null;
   src: string;
+  srcSmall: string;
+  lqip: string;
 };
 
 export type InstaDeliveryLabels = {
@@ -14,6 +16,34 @@ export type InstaDeliveryLabels = {
 };
 
 export const INSTA_DELIVERIES_PAGE_SIZE = 24;
+
+/** Larguras reais do card na grade: 4 colunas no desktop (container 90rem) e 2 no celular. */
+export const INSTA_DELIVERIES_SIZES =
+  "(min-width: 1440px) 326px, (min-width: 1024px) 23vw, (min-width: 640px) 45vw, 46vw";
+
+/** Salvaguarda para nunca deixar foto presa em opacity 0 se o evento load não disparar. */
+export const INSTA_DELIVERY_FADE_FALLBACK_MS = 2500;
+
+const SAFE_WEBP_DATA_URI = /^data:image\/webp;base64,[A-Za-z0-9+/=]+$/;
+
+/** Valida se o LQIP é um data URI WebP compacto e seguro para uso em background-image. */
+export function isValidInstaLqip(
+  value: string | null | undefined,
+): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length < 400 &&
+    SAFE_WEBP_DATA_URI.test(value)
+  );
+}
+
+/** Monta o srcset responsivo com a miniatura 360w e a foto completa 600w. */
+export function buildInstaSrcSet(
+  item: Pick<InstaDeliveryItem, "srcSmall" | "src">,
+): string {
+  return `${item.srcSmall} 360w, ${item.src} 600w`;
+}
 
 /**
  * Rótulos exibidos abaixo da foto:

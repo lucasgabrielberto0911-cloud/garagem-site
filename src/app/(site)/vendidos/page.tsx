@@ -44,7 +44,7 @@ export default function VendidosPage() {
             className="mx-auto mt-3.5 h-1 w-16 rounded-full bg-brand-gradient"
             aria-hidden="true"
           />
-          <p className="mx-auto mt-3.5 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
+          <p className="mx-auto mt-3.5 max-w-xl text-balance text-base leading-relaxed text-muted sm:text-lg">
             Clientes que já saíram de carro novo da Garagem
           </p>
         </header>

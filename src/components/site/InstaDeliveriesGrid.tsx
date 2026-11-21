@@ -1,14 +1,133 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   INSTA_DELIVERIES_PAGE_SIZE,
+  INSTA_DELIVERIES_SIZES,
+  INSTA_DELIVERY_FADE_FALLBACK_MS,
+  buildInstaSrcSet,
   formatInstaAlt,
   formatInstaLabels,
+  isValidInstaLqip,
   nextInstaDeliveriesCount,
   sliceInstaDeliveries,
   type InstaDeliveryItem,
 } from "@/lib/vendidos-insta";
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+function DeliveryPhoto({
+  item,
+  isFirst,
+  isEager,
+}: {
+  item: InstaDeliveryItem;
+  isFirst: boolean;
+  isEager: boolean;
+}) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const srcSet = buildInstaSrcSet(item);
+  const safeLqip = isValidInstaLqip(item.lqip) ? item.lqip : null;
+
+  useIsomorphicLayoutEffect(() => {
+    const img = imgRef.current;
+    if (!img) return;
+    // Fotos já em cache ou concluídas antes da hidratação permanecem visíveis.
+    if (img.complete) {
+      img.dataset.photoState = "ready";
+      return;
+    }
+    img.dataset.photoState = "loading";
+
+    const reveal = () => {
+      img.dataset.photoState = "ready";
+    };
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const armFallbackTimer = () => {
+      if (img.complete) {
+        reveal();
+        return;
+      }
+      if (timer !== undefined) return;
+      timer = setTimeout(reveal, INSTA_DELIVERY_FADE_FALLBACK_MS);
+    };
+
+    let observer: IntersectionObserver | undefined;
+    if (isEager || typeof IntersectionObserver === "undefined") {
+      armFallbackTimer();
+    } else {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            observer?.disconnect();
+            observer = undefined;
+            armFallbackTimer();
+          }
+        },
+        { rootMargin: "300px" },
+      );
+      observer.observe(img);
+    }
+
+    const onPageShow = () => {
+      if (img.complete) reveal();
+      else armFallbackTimer();
+    };
+    window.addEventListener("pageshow", onPageShow);
+
+    return () => {
+      if (timer !== undefined) clearTimeout(timer);
+      observer?.disconnect();
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [isEager, item.src, srcSet]);
+
+  return (
+    <div
+      data-delivery-photo-box=""
+      className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-ink bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-white/[0.02] shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)] transition-shadow duration-300 motion-reduce:transition-none lg:group-hover:shadow-[0_18px_40px_-10px_rgba(217,21,25,0.5)]"
+    >
+      {safeLqip ? (
+        <span
+          aria-hidden="true"
+          data-delivery-lqip=""
+          className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center blur-[12px]"
+          style={{ backgroundImage: `url("${safeLqip}")` }}
+        />
+      ) : null}
+      {/* eslint-disable-next-line @next/next/no-img-element -- webp estático 360w/600w local com LQIP inline */}
+      <img
+        ref={imgRef}
+        src={item.src}
+        srcSet={srcSet}
+        sizes={INSTA_DELIVERIES_SIZES}
+        alt={formatInstaAlt(item)}
+        width={600}
+        height={750}
+        loading={isEager ? "eager" : "lazy"}
+        fetchPriority={isFirst ? "high" : undefined}
+        decoding="async"
+        draggable={false}
+        onLoad={(event) => {
+          event.currentTarget.dataset.photoState = "ready";
+        }}
+        onError={(event) => {
+          event.currentTarget.dataset.photoState = "ready";
+        }}
+        className="relative z-[1] h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out data-[photo-state=loading]:opacity-0 motion-reduce:transition-none lg:motion-safe:group-hover:scale-[1.03]"
+      />
+      <span
+        aria-hidden="true"
+        data-sold-badge=""
+        className="pointer-events-none absolute left-2 top-2 z-[2] inline-block -rotate-2 rounded-sm bg-brand px-2 py-0.5 font-display text-[10px] font-bold uppercase leading-none tracking-[0.12em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.48)] sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-xs"
+      >
+        VENDIDO
+      </span>
+    </div>
+  );
+}
 
 export function InstaDeliveriesGrid({
   items,
@@ -34,6 +153,7 @@ export function InstaDeliveriesGrid({
         {visibleItems.map((item, index) => {
           const labels = formatInstaLabels(item);
           const isNewBatch = index >= animatedFrom;
+          const isEager = !isNewBatch && index < 4;
 
           return (
             <li
@@ -48,39 +168,24 @@ export function InstaDeliveriesGrid({
                   : undefined
               }
             >
-              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-white/[0.06] transition-shadow duration-300 motion-reduce:transition-none lg:group-hover:shadow-[0_16px_36px_-12px_rgba(217,21,25,0.45)]">
-                {/* eslint-disable-next-line @next/next/no-img-element -- webp estático 600x750 local já otimizado */}
-                <img
-                  src={item.src}
-                  alt={formatInstaAlt(item)}
-                  width={600}
-                  height={750}
-                  sizes="(min-width: 1024px) 25vw, 50vw"
-                  loading={index < 4 ? "eager" : "lazy"}
-                  fetchPriority={index === 0 ? "high" : undefined}
-                  decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-500 ease-out motion-reduce:transition-none lg:motion-safe:group-hover:scale-[1.03]"
-                />
-                <span
-                  data-sold-badge=""
-                  className="pointer-events-none absolute left-2.5 top-2.5 inline-block -rotate-2 rounded-sm bg-brand px-2.5 py-1 font-display text-[11px] font-bold uppercase leading-none tracking-[0.12em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.45)] sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-xs"
-                >
-                  VENDIDO
-                </span>
-              </div>
+              <DeliveryPhoto
+                item={item}
+                isFirst={index === 0}
+                isEager={isEager}
+              />
 
               <div className="mt-2.5 px-0.5 sm:mt-3">
                 {labels.eyebrow ? (
                   <p
                     data-delivery-brand=""
-                    className="truncate font-body text-[11px] font-medium uppercase tracking-[0.12em] text-muted sm:text-xs"
+                    className="truncate font-body text-[11px] font-medium uppercase leading-tight tracking-[0.12em] text-muted sm:text-xs"
                   >
                     {labels.eyebrow}
                   </p>
                 ) : null}
                 <p
                   data-delivery-title=""
-                  className={`truncate font-display text-base font-bold leading-snug text-cream sm:text-lg ${
+                  className={`truncate font-display text-[15px] font-bold leading-snug tracking-tight text-cream transition-colors duration-200 motion-reduce:transition-none sm:text-lg lg:group-hover:text-white ${
                     labels.eyebrow ? "mt-0.5" : ""
                   }`}
                 >

@@ -39,31 +39,36 @@ def call(parts):
         except Exception as e:
             time.sleep(3 * (a + 1)); err = e
     raise RuntimeError('falhou')
-rows = list(csv.DictReader(open(os.path.join(D, 'lista.csv'))))
-g = collections.OrderedDict()
-for r in rows: g.setdefault(r['link_post'], []).append(r)
-done = set()
-if os.path.exists(OUT):
-    for l in open(OUT): done.add(json.loads(l)['link'])
-wl = threading.Lock(); usage = collections.Counter()
-def job(item):
-    link, rs = item
-    if link in done: return
-    r0 = rs[0]
-    parts = [{'text': PROMPT.format(data=r0['data_post'], marca=r0['marca'] or '?', modelo=r0['modelo'] or '?')}]
-    for r in rs[:10]:
-        parts.append({'text': 'arquivo: ' + r['arquivo']})
-        parts.append({'inlineData': {'mimeType': 'image/jpeg', 'data': base64.b64encode(open(os.path.join(D, 'small', r['arquivo']), 'rb').read()).decode()}})
-    try:
-        res, u = call(parts)
-    except Exception as e:
-        print('ERRO', link, e, flush=True); return
-    if res.get('melhor_foto') not in [r['arquivo'] for r in rs]: res['melhor_foto'] = next((r['arquivo'] for r in rs if r['tem_cliente'] == 'sim'), rs[0]['arquivo'])
-    res.update(link=link, data=r0['data_post'], fotos=len(rs), tem_cliente_antigo=any(r['tem_cliente'] == 'sim' for r in rs), obs_antigo=r0['obs'])
-    with wl:
-        open(OUT, 'a').write(json.dumps(res, ensure_ascii=False) + '\n')
-        for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount'): usage[k] += u.get(k, 0)
-items = list(g.items())
-if len(sys.argv) > 1: items = items[:int(sys.argv[1])]
-with ThreadPoolExecutor(int(os.environ.get("PAR","8"))) as ex: list(ex.map(job, items))
-print('USO', MODEL, dict(usage), 'linhas', sum(1 for _ in open(OUT)))
+def main():
+    global done
+    rows = list(csv.DictReader(open(os.path.join(D, 'lista.csv'))))
+    g = collections.OrderedDict()
+    for r in rows: g.setdefault(r['link_post'], []).append(r)
+    done = set()
+    if os.path.exists(OUT):
+        for l in open(OUT): done.add(json.loads(l)['link'])
+    wl = threading.Lock(); usage = collections.Counter()
+    def job(item):
+        link, rs = item
+        if link in done: return
+        r0 = rs[0]
+        parts = [{'text': PROMPT.format(data=r0['data_post'], marca=r0['marca'] or '?', modelo=r0['modelo'] or '?')}]
+        for r in rs[:10]:
+            parts.append({'text': 'arquivo: ' + r['arquivo']})
+            parts.append({'inlineData': {'mimeType': 'image/jpeg', 'data': base64.b64encode(open(os.path.join(D, 'small', r['arquivo']), 'rb').read()).decode()}})
+        try:
+            res, u = call(parts)
+        except Exception as e:
+            print('ERRO', link, e, flush=True); return
+        if res.get('melhor_foto') not in [r['arquivo'] for r in rs]: res['melhor_foto'] = next((r['arquivo'] for r in rs if r['tem_cliente'] == 'sim'), rs[0]['arquivo'])
+        res.update(link=link, data=r0['data_post'], fotos=len(rs), tem_cliente_antigo=any(r['tem_cliente'] == 'sim' for r in rs), obs_antigo=r0['obs'])
+        with wl:
+            open(OUT, 'a').write(json.dumps(res, ensure_ascii=False) + '\n')
+            for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount'): usage[k] += u.get(k, 0)
+    items = list(g.items())
+    if len(sys.argv) > 1: items = items[:int(sys.argv[1])]
+    with ThreadPoolExecutor(int(os.environ.get("PAR","8"))) as ex: list(ex.map(job, items))
+    print('USO', MODEL, dict(usage), 'linhas', sum(1 for _ in open(OUT)))
+
+if __name__ == '__main__':
+    main()
