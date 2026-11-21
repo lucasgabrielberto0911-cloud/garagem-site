@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { stubPageFotos } from "./stub-fotos";
 
-test("galeria /vendidos carrega entregas do Instagram, pagina +24, 4 por linha no desktop e sem simular ou preço", async ({
+test("galeria /vendidos exibe só a grade de fotos Vendido, 24 iniciais, +24 em Ver mais, 4 colunas no desktop e 2 no mobile", async ({
   page,
   request,
 }) => {
-  await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
+  await page.addInitScript(() =>
+    localStorage.setItem("garagem_consent", "essential"),
+  );
   await stubPageFotos(page);
 
   const response = await request.get("/vendidos");
@@ -13,70 +15,67 @@ test("galeria /vendidos carrega entregas do Instagram, pagina +24, 4 por linha n
 
   await page.goto("/vendidos");
   await expect(
-    page.getByRole("heading", { name: /Veículos vendidos e clientes/i }),
+    page.getByRole("heading", { level: 1, name: "Vendidos" }),
   ).toBeVisible();
 
-  await expect(
-    page.getByText("Galeria de entregas em atualização"),
-  ).toHaveCount(0);
+  const grid = page.locator("[data-insta-deliveries-grid]");
+  await expect(grid).toBeVisible();
 
-  const instaSection = page.locator("[data-insta-deliveries]");
-  await expect(instaSection).toBeVisible();
-  await expect(
-    instaSection.getByRole("heading", { name: /Clientes que já levaram o seu/i }),
-  ).toBeVisible();
+  const items = grid.locator("> li");
+  await expect(items).toHaveCount(24);
 
-  const instaItems = instaSection.locator("[data-insta-deliveries-grid] > li");
-  await expect(instaItems).toHaveCount(24);
-  await expect(instaSection.locator("[data-insta-deliveries-counter]")).toHaveText(
-    "Mostrando 24 de 369",
+  await expect(grid.locator("a")).toHaveCount(0);
+  await expect(page.locator('main a[href*="instagram.com"]')).toHaveCount(0);
+
+  await expect(items.nth(0).locator("img")).toHaveAttribute("loading", "eager");
+  await expect(items.nth(3).locator("img")).toHaveAttribute("loading", "eager");
+  await expect(items.nth(4).locator("img")).toHaveAttribute("loading", "lazy");
+  await expect(items.first().locator("img")).toHaveAttribute(
+    "alt",
+    /vendido pela Sua Garagem$/,
   );
 
-  const firstLink = instaItems.first().locator("a");
-  await expect(firstLink).toHaveAttribute("href", /^https:\/\/www\.instagram\.com\//);
-  await expect(firstLink).toHaveAttribute("target", "_blank");
-  await expect(firstLink).toHaveAttribute("rel", /noopener/);
-  await expect(firstLink).toHaveAttribute("aria-label", /Instagram/);
-  await expect(firstLink.locator("img")).toHaveAttribute("alt", /^Entrega de /);
+  const captions = await items.locator("p").allInnerTexts();
+  expect(captions).toHaveLength(24);
+  for (const caption of captions) {
+    expect(caption.trim()).toMatch(/(?:\bvendido|^Vendido)$/);
+  }
 
   const viewportWidth = page.viewportSize()?.width ?? 1440;
   const expectedCols = viewportWidth >= 1024 ? 4 : 2;
-  const tops = await instaItems
-    .evaluateAll((els) => els.slice(0, 6).map((el) => Math.round(el.getBoundingClientRect().top)));
+  const tops = await items.evaluateAll((els) =>
+    els.slice(0, 6).map((el) => Math.round(el.getBoundingClientRect().top)),
+  );
   for (let i = 1; i < expectedCols; i++) {
     expect(Math.abs(tops[i] - tops[0])).toBeLessThanOrEqual(2);
   }
   expect(tops[expectedCols]).toBeGreaterThan(tops[0] + 20);
 
-  const loadMoreBtn = instaSection.getByRole("button", { name: "Ver mais entregas" });
+  const loadMoreBtn = page.getByRole("button", { name: "Ver mais" });
   await expect(loadMoreBtn).toBeVisible();
   await loadMoreBtn.click();
-  await expect(instaItems).toHaveCount(48);
-  await expect(instaSection.locator("[data-insta-deliveries-counter]")).toHaveText(
-    "Mostrando 48 de 369",
-  );
+  await expect(items).toHaveCount(48);
+
+  if (viewportWidth >= 1024) {
+    for (let step = 48; step < 288; step += 24) {
+      await loadMoreBtn.click();
+    }
+    await expect(items).toHaveCount(288);
+    await expect(loadMoreBtn).toHaveCount(0);
+  }
 
   const mainText = await page.locator("main").innerText();
+  expect(mainText).not.toMatch(/Mostrando/i);
+  expect(mainText).not.toMatch(/Veículos vendidos recentemente/i);
+  expect(mainText).not.toMatch(/Entregas registradas/i);
+  expect(mainText).not.toMatch(/Galeria de entregas em atualização/i);
+  expect(mainText).not.toMatch(/Ver estoque disponível/i);
+  expect(mainText).not.toMatch(/\+\d[\d.]*\s+veículos vendidos/i);
   expect(mainText).not.toMatch(/\bsimul\w*\b/i);
-
-  const showcaseTexts = await page.locator("[data-sold-showcase]").allInnerTexts();
-  expect(showcaseTexts.length).toBeGreaterThan(0);
-  for (const text of showcaseTexts) {
-    expect(text).not.toMatch(/R\$\s*\d/);
-  }
+  expect(mainText).not.toMatch(/R\$\s*\d/);
 
   const hasOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
   expect(hasOverflow).toBe(false);
-
-  const waLinks = await page
-    .locator('a[href^="https://wa.me/"]')
-    .evaluateAll((elements) =>
-      elements.map((el) => (el as HTMLAnchorElement).href),
-    );
-  expect(waLinks.length).toBeGreaterThan(0);
-  for (const href of waLinks) {
-    expect(new URL(href).searchParams.get("text") ?? "").not.toMatch(/R\$/);
-  }
 });
