@@ -14,24 +14,24 @@ const BADGES = [
 
 export function TrustBadges({ compact = false }: { compact?: boolean }) {
   return (
-    <ul className="mx-auto grid grid-cols-2 gap-px overflow-hidden border border-white/20 bg-white/20 lg:grid-cols-4">
+    <ul className="mx-auto grid grid-cols-1 gap-3 sm:grid-cols-2">
       {BADGES.map(({ Icon, label }) => (
         <li
           key={label}
-          className={`flex flex-col items-center justify-center bg-asphalt px-3 text-center sm:flex-row ${
+          className={`flex items-center bg-ink text-left ${
             compact
-              ? "gap-1.5 py-3 sm:gap-2.5 sm:py-3.5"
-              : "gap-2 py-6 sm:gap-3.5 sm:py-7"
+              ? "gap-2.5 px-4 py-3"
+              : "gap-3.5 px-5 py-4"
           }`}
         >
-          <Icon
-            className={`shrink-0 text-brand-light ${compact ? "h-5 w-5" : "h-6 w-6 sm:h-7 sm:w-7"}`}
-          />
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center bg-brand/10">
+            <Icon
+              className={`text-brand-light ${compact ? "h-4 w-4" : "h-5 w-5"}`}
+            />
+          </span>
           <span
-            className={`font-display font-semibold uppercase text-cream ${
-              compact
-                ? "text-xs leading-tight tracking-wide"
-                : "text-xs tracking-wider sm:text-sm"
+            className={`font-display font-semibold leading-snug text-cream ${
+              compact ? "text-xs" : "text-sm"
             }`}
           >
             {label}

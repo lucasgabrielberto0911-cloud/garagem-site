@@ -4,8 +4,22 @@ import { isPublicPhotoBlob, publicPhotoUpstream, VEHICLE_PHOTO_VARIANT } from ".
 
 const noCache = { "Cache-Control": "no-store" };
 
+export type ServePublicPhotoOptions = {
+  /**
+   * Exceção estrita para a foto única do fundador configurada em SiteSettings
+   * quando ela ainda referencia o Storage legado. Só é avaliada na variante
+   * `original` e jamais libera referências legadas de veículos.
+   */
+  isAllowedLegacyUpstream?: (upstream: string) => Promise<boolean> | boolean;
+};
+
 /** Somente fotos públicas: sem credenciais, redirects ou cabeçalhos do Storage. */
-export async function servePublicPhoto(request: Request, parts: string[], fetcher: typeof fetch = fetch) {
+export async function servePublicPhoto(
+  request: Request,
+  parts: string[],
+  fetcher: typeof fetch = fetch,
+  serveOptions?: ServePublicPhotoOptions,
+) {
   const upstream = publicPhotoUpstream(parts);
   if (!upstream || new URL(request.url).search) return new Response(null, { status: 404, headers: noCache });
   try {
@@ -23,8 +37,15 @@ export async function servePublicPhoto(request: Request, parts: string[], fetche
       headers: upstreamHeaders,
     };
     const fixture = await e2ePhotoFixture();
-    // Referências legadas não podem consumir Storage nem tentar fallback durante o bloqueio.
-    if (!fixture && !isPublicPhotoBlob(upstream)) return new Response(null, { status: 410, headers: noCache });
+    // Referências legadas não podem consumir Storage nem tentar fallback durante o bloqueio,
+    // exceto a foto única do fundador configurada em SiteSettings (cacheada na CDN por 1 ano).
+    const isLegacyStorage = !fixture && !isPublicPhotoBlob(upstream);
+    const allowedLegacy =
+      isLegacyStorage &&
+      parts[0] === "v1" &&
+      parts[1] === "original" &&
+      Boolean(await serveOptions?.isAllowedLegacyUpstream?.(upstream));
+    if (isLegacyStorage && !allowedLegacy) return new Response(null, { status: 410, headers: noCache });
     const response = fixture
       ? new Response(request.method === "HEAD" ? null : new Uint8Array(fixture), { headers: { "Content-Type": "image/png" } })
       : await fetcher(upstream, options);

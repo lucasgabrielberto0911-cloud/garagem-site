@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isPublicPhotoSource } from "@/lib/public-photo-source";
 import { resolveSiteLinks, type SiteLink } from "@/lib/site-links";
 import {
   FAQ_ITEMS,
@@ -45,6 +46,9 @@ export function parseFounderPhotoUrl(raw: unknown): string | null {
   if (!value) return null;
   if (value.startsWith("/branding/") && !value.includes("..")) {
     return value.slice(0, 300);
+  }
+  if (isPublicPhotoSource(value)) {
+    return value.slice(0, 500);
   }
   try {
     const url = new URL(value);

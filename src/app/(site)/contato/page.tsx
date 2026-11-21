@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { JsonLd } from "@/components/JsonLd";
+import { IconArrowRight } from "@/components/site/icons";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { SiteLeadHit } from "@/lib/funnel-events";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
@@ -48,143 +49,132 @@ export default async function ContatoPage() {
       />
       <div className="clear-fab-screen lg:py-12">
         <Container className="pt-5 lg:pt-0">
-          <PageHeader
-            compact
-            eyebrow="Contato"
-            title={`Fale com a ${publicSite.name}`}
-            description="Atendemos Linhares, Aracruz e Grande Vitória. Combinamos o atendimento pelo WhatsApp — todos os dias, das 8h às 23h. Compare o estoque no assistente; fale com a equipe e feche no WhatsApp."
-          />
+          <div className="mx-auto max-w-4xl">
+            <PageHeader
+              compact
+              eyebrow="Contato"
+              title={`Fale com a ${publicSite.name}`}
+              description="Atendemos Linhares, Aracruz e Grande Vitória. Compare o estoque no assistente; fale com a equipe e feche no WhatsApp."
+            />
 
-          <section
-            aria-labelledby="contato-whatsapp"
-            className="mt-4 overflow-hidden border border-white/20 bg-ink sm:mt-8"
-          >
-            <div className="h-1 bg-brand" aria-hidden="true" />
-            <div className="p-3.5 sm:p-6">
-              <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand-light">
-                Canal da loja
-              </p>
-              <h2
-                id="contato-whatsapp"
-                className="mt-1 font-display text-lg font-bold tracking-tight text-cream sm:mt-2 sm:text-2xl"
-              >
-                WhatsApp — resposta mais rápida
-              </h2>
-              <p className="mt-1.5 max-w-xl text-sm leading-snug text-cream/80 sm:text-base sm:leading-relaxed">
-                Para vídeo, financiamento e condições, troca ou fechamento, o canal é o WhatsApp.
-              </p>
-
-              {phone ? (
-                <a
-                  href={telUrl()}
-                  className="mt-3 flex min-h-[56px] items-center justify-between gap-3 border border-white/20 bg-asphalt px-3.5 py-2.5 touch-manipulation transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            <section
+              aria-labelledby="contato-whatsapp"
+              className="mt-5 overflow-hidden bg-ink sm:mt-8"
+            >
+              <div className="h-1 bg-brand" aria-hidden="true" />
+              <div className="p-5 sm:p-8">
+                <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand-light">
+                  Canal da loja
+                </p>
+                <h2
+                  id="contato-whatsapp"
+                  className="mt-1.5 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl"
                 >
-                  <span className="min-w-0">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
-                      Telefone
-                    </span>
-                    <span className="mt-1 block font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand-light sm:text-3xl">
-                      {phone.label}
-                    </span>
-                  </span>
-                  <span className="shrink-0 font-display text-xs font-semibold uppercase tracking-wide text-cream/90">
-                    Ligar
-                  </span>
-                </a>
-              ) : null}
+                  WhatsApp — resposta mais rápida
+                </h2>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-cream/80 sm:text-base">
+                  Para vídeo, financiamento e condições, troca ou fechamento, o canal é o WhatsApp.
+                </p>
 
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <div className="border border-white/20 bg-asphalt px-3.5 py-2.5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
-                    Horário
-                  </p>
-                  <p className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream">
-                    {publicSite.hours}
-                  </p>
+                <div className="mt-5">
+                  <SiteLeadHit contentName="Contato">
+                    <WhatsAppButton
+                      size="lg"
+                      className="w-full"
+                      trackingLabel="contato"
+                      message={WHATSAPP_MESSAGES.general}
+                    >
+                      Chamar no WhatsApp
+                    </WhatsAppButton>
+                  </SiteLeadHit>
                 </div>
-                <div className="border border-white/20 bg-asphalt px-3.5 py-2.5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
-                    {physical ? "Endereço" : "Atendimento"}
-                  </p>
-                  <p className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream">
-                    {publicSite.address}
-                  </p>
-                </div>
-              </div>
 
-              <div className="mt-3">
-                <SiteLeadHit contentName="Contato">
-                  <WhatsAppButton
-                    size="lg"
-                    className="w-full"
-                    trackingLabel="contato"
-                    message={WHATSAPP_MESSAGES.general}
+                {phone ? (
+                  <a
+                    href={telUrl()}
+                    className="group mt-4 flex min-h-[56px] items-center justify-between gap-3 bg-white/[0.04] px-4 py-3 touch-manipulation transition hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   >
-                    Chamar no WhatsApp
-                  </WhatsAppButton>
-                </SiteLeadHit>
+                    <span className="min-w-0">
+                      <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-cream/75">
+                        Telefone
+                      </span>
+                      <span className="mt-1 block font-display text-2xl font-bold leading-none tracking-tight text-brand-light tabular-nums sm:text-3xl">
+                        {phone.label}
+                      </span>
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-cream/90">
+                      Ligar
+                      <IconArrowRight className="h-4 w-4 text-brand-light transition group-hover:translate-x-0.5" />
+                    </span>
+                  </a>
+                ) : null}
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
         </Container>
       </div>
 
       <Container className="mt-6 pb-8 lg:mt-0 lg:pb-12">
-        <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream/80">
-          Outros canais
-        </h2>
-        <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
-          <Channel
-            label={physical ? "Endereço" : "Atendimento"}
-            className="sm:col-span-2"
-          >
-            <p className="font-display font-semibold">{publicSite.address}</p>
-            {physical ? null : (
-              <p className="mt-2 text-sm font-normal leading-relaxed text-cream/80">
-                Não temos showroom físico. Você escolhe no site, tira dúvidas e
-                pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
-                ou retirada. Atendimento online todos os dias, das 8h às 23h, em{" "}
-                {publicSite.region}.
+        <div className="mx-auto max-w-4xl">
+          <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream/80">
+            Outros canais e atendimento
+          </h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Channel
+              label={physical ? "Endereço" : "Atendimento"}
+              className="sm:col-span-2"
+            >
+              <p className="font-display text-base font-semibold text-cream">
+                {publicSite.address}
               </p>
-            )}
-          </Channel>
-          <Channel
-            label="Instagram"
-            href={publicSite.instagramUrl}
-            external
-          >
-            <p className="font-display font-semibold">{publicSite.instagram}</p>
-          </Channel>
-          <Channel
-            label={emailCopy.label}
-            href={emailReady ? `mailto:${publicSite.email}` : undefined}
-          >
-            <p className="break-all font-display font-semibold">
-              {publicSite.email}
-            </p>
-            <p className="mt-1 text-xs font-normal leading-relaxed text-cream/75">
-              {emailCopy.hint}
-            </p>
-          </Channel>
-          <Channel label="Horário" className="sm:col-span-2">
-            {sameHours ? (
-              <p className="font-display font-semibold">{publicSite.hours}</p>
-            ) : (
-              <dl className="space-y-1.5">
-                {hourRows.map((row) => (
-                  <div key={row.label} className="flex justify-between gap-4">
-                    <dt className="font-normal text-cream/75">{row.label}</dt>
-                    <dd className="font-display font-semibold">{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </Channel>
-        </div>
+              {physical ? null : (
+                <p className="mt-2 text-sm font-normal leading-relaxed text-cream/80">
+                  Não temos showroom físico. Você escolhe no site, tira dúvidas e
+                  pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
+                  ou retirada. Atendemos Linhares, Aracruz e Grande Vitória.
+                </p>
+              )}
+            </Channel>
+            <Channel label="Horário" className="sm:col-span-2">
+              {sameHours ? (
+                <p className="font-display text-base font-semibold text-cream">
+                  {publicSite.hours}
+                </p>
+              ) : (
+                <dl className="space-y-1.5">
+                  {hourRows.map((row) => (
+                    <div key={row.label} className="flex justify-between gap-4">
+                      <dt className="font-normal text-cream/75">{row.label}</dt>
+                      <dd className="font-display font-semibold">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Channel>
+            <Channel
+              label="Instagram"
+              href={publicSite.instagramUrl}
+              external
+            >
+              <p className="font-display font-semibold">{publicSite.instagram}</p>
+            </Channel>
+            <Channel
+              label={emailCopy.label}
+              href={emailReady ? `mailto:${publicSite.email}` : undefined}
+            >
+              <p className="break-words font-display font-semibold">
+                {publicSite.email}
+              </p>
+              <p className="mt-1 text-xs font-normal leading-relaxed text-cream/75">
+                {emailCopy.hint}
+              </p>
+            </Channel>
+          </div>
 
-        <p className="mt-6 text-xs leading-relaxed text-cream/75">
-          {publicSite.legalName} — CNPJ {publicSite.cnpj}
-        </p>
+          <p className="mt-6 text-xs leading-relaxed text-cream/75">
+            {publicSite.legalName} — CNPJ {publicSite.cnpj}
+          </p>
+        </div>
       </Container>
     </div>
   );
@@ -203,18 +193,24 @@ function Channel({
   className?: string;
   children: ReactNode;
 }) {
-  const classNames = `block min-h-[52px] border border-white/20 bg-ink px-3 py-3 text-left text-sm leading-snug text-cream touch-manipulation ${
-    href
-      ? "transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+  const interactive = Boolean(href);
+  const classNames = `block min-h-[56px] bg-ink px-5 py-4 text-left text-sm leading-snug text-cream touch-manipulation ${
+    interactive
+      ? "group transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       : ""
   } ${className}`;
   const body = (
-    <>
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cream/75">
-        {label}
-      </p>
-      <div className="mt-1">{children}</div>
-    </>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cream/75">
+          {label}
+        </p>
+        <div className="mt-1.5">{children}</div>
+      </div>
+      {interactive ? (
+        <IconArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-brand-light transition group-hover:translate-x-0.5" />
+      ) : null}
+    </div>
   );
 
   if (!href) {

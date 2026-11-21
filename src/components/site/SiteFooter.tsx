@@ -9,6 +9,7 @@ import {
   IconMail,
   IconMapPin,
   IconPhone,
+  IconWhatsApp,
 } from "@/components/site/icons";
 import {
   NAV_LINKS,
@@ -38,6 +39,8 @@ const MOBILE_FOOTER_LINKS = [
     all.findIndex((other) => other.href === link.href) === index,
 );
 
+const DESKTOP_NAV_ALL = [...NAV_LINKS, ...SECONDARY_LINKS];
+
 export async function SiteFooter() {
   const [site, google] = await Promise.all([
     getPublicSite(),
@@ -50,7 +53,7 @@ export async function SiteFooter() {
   return (
     <footer className="border-t border-white/10 bg-ink">
       <Container className="py-12 lg:py-16">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr_1fr_1fr] lg:items-start lg:gap-8 lg:text-left">
+        <div className="grid gap-10 lg:grid-cols-[1.15fr_1.35fr_0.85fr_1.15fr] lg:items-start lg:gap-8 lg:text-left">
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
             <SiteWordmark size="footer" />
             <div
@@ -58,7 +61,7 @@ export async function SiteFooter() {
               aria-hidden="true"
             />
             <p className="mt-4 max-w-sm font-display text-base font-semibold leading-snug text-cream">
-              Seminovos com procedência em {site.region}
+              Seminovos com procedência
             </p>
             <p className="mt-2 max-w-sm text-sm leading-relaxed text-cream/75">
               Atendemos Linhares, Aracruz e Grande Vitória · todos os dias, das
@@ -71,7 +74,7 @@ export async function SiteFooter() {
               rel="noopener noreferrer"
               className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm text-cream/80 transition hover:text-cream"
             >
-              <IconInstagram className="h-4 w-4" />
+              <IconInstagram className="h-4 w-4 shrink-0" />
               {site.instagram}
             </a>
             {mapsUrl ? (
@@ -79,20 +82,20 @@ export async function SiteFooter() {
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-flex min-h-11 items-center gap-2 text-sm text-cream/80 transition hover:text-cream"
+                className="inline-flex min-h-11 items-center gap-2 text-sm text-cream/80 transition hover:text-cream"
               >
-                <IconMapPin className="h-4 w-4" />
+                <IconMapPin className="h-4 w-4 shrink-0" />
                 Google Maps
               </a>
             ) : null}
           </div>
 
           <div className="hidden sm:block">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+            <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream">
               Navegação
             </h2>
-            <ul className="mt-4 space-y-1">
-              {[...NAV_LINKS, ...SECONDARY_LINKS].map((link) => (
+            <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-0.5">
+              {DESKTOP_NAV_ALL.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -107,10 +110,10 @@ export async function SiteFooter() {
           </div>
 
           <div className="hidden sm:block">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+            <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream">
               Serviços
             </h2>
-            <ul className="mt-4 space-y-1">
+            <ul className="mt-4 space-y-0.5">
               {SERVICES.map((service) => (
                 <li key={service.label}>
                   <Link
@@ -123,10 +126,10 @@ export async function SiteFooter() {
                 </li>
               ))}
             </ul>
-            <h2 className="mt-8 font-display text-sm font-semibold uppercase tracking-wider text-cream">
+            <h2 className="mt-6 font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream">
               Cidades
             </h2>
-            <ul className="mt-3 space-y-1">
+            <ul className="mt-3 space-y-0.5">
               {[
                 { href: "/seminovos/linhares", label: "Linhares" },
                 { href: "/seminovos/aracruz", label: "Aracruz" },
@@ -146,22 +149,32 @@ export async function SiteFooter() {
             <Link
               href={CITIES_DIRECTORY_PATH}
               prefetch={false}
-              className="mt-3 inline-flex min-h-11 items-center justify-center border border-white/15 px-4 text-sm text-cream transition hover:border-brand"
+              className="mt-3 inline-flex min-h-11 items-center justify-center bg-white/[0.06] px-4 text-sm text-cream transition hover:bg-white/[0.12]"
             >
               Ver cidades
             </Link>
           </div>
 
           <div className="hidden sm:block">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+            <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream">
               Contato
             </h2>
-            <ul className="mt-4 space-y-2 text-sm text-muted">
+            <ul className="mt-4 space-y-1 text-sm text-muted">
+              <li>
+                <TrackedWhatsAppLink
+                  href={whatsappUrl()}
+                  trackingLabel="footer"
+                  className="inline-flex min-h-[44px] items-center gap-2.5 font-medium text-cream transition hover:text-[#25D366]"
+                >
+                  <IconWhatsApp className="h-4 w-4 shrink-0 text-[#25D366]" />
+                  <span>WhatsApp</span>
+                </TrackedWhatsAppLink>
+              </li>
               {PHONES.map((phone, index) => (
                 <li key={phone.digits}>
                   <a
                     href={telUrl(index)}
-                    className="inline-flex min-h-[44px] items-center gap-2 transition hover:text-cream"
+                    className="inline-flex min-h-[44px] items-center gap-2.5 tabular-nums transition hover:text-cream"
                   >
                     <IconPhone className="h-4 w-4 shrink-0 text-brand-light" />
                     <span>{phone.label}</span>
@@ -169,22 +182,13 @@ export async function SiteFooter() {
                 </li>
               ))}
               <li>
-                <TrackedWhatsAppLink
-                  href={whatsappUrl()}
-                  trackingLabel="footer"
-                  className="inline-flex min-h-[44px] items-center gap-2 transition hover:text-cream"
-                >
-                  WhatsApp
-                </TrackedWhatsAppLink>
-              </li>
-              <li>
                 <a
                   href={`mailto:${site.email}`}
-                  className="inline-flex min-h-[44px] items-center gap-2 transition hover:text-cream"
+                  className="inline-flex min-h-[44px] items-start gap-2.5 py-2.5 transition hover:text-cream"
                 >
-                  <IconMail className="h-4 w-4 shrink-0 text-brand-light" />
-                  <span className="flex flex-col">
-                    <span>{site.email}</span>
+                  <IconMail className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="break-words">{site.email}</span>
                     <span className="text-[11px] text-muted">{emailCopy.hint}</span>
                   </span>
                 </a>
@@ -195,18 +199,18 @@ export async function SiteFooter() {
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-[44px] items-center gap-2 transition hover:text-cream"
+                    className="inline-flex min-h-[44px] items-center gap-2.5 transition hover:text-cream"
                   >
                     <IconMapPin className="h-4 w-4 shrink-0 text-brand-light" />
                     <span>Google Maps</span>
                   </a>
                 </li>
               ) : null}
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5 py-2">
                 <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
                 <span>{site.address}</span>
               </li>
-              <li className="flex items-center gap-2 text-xs">
+              <li className="flex items-center gap-2.5 py-1.5 text-xs">
                 <IconClock className="h-4 w-4 shrink-0 text-brand-light" />
                 <span>{site.hours}</span>
               </li>
@@ -217,11 +221,17 @@ export async function SiteFooter() {
         {/* Mobile: contato essencial + atalho para a lista de cidades */}
         <div className="mt-8 space-y-3 text-center sm:hidden">
           <nav aria-label="Navegação do rodapé" className="mb-5">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">Navegação e serviços</h2>
+            <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-cream">
+              Navegação e serviços
+            </h2>
             <ul className="mt-3 grid grid-cols-2 gap-2 text-left">
               {MOBILE_FOOTER_LINKS.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} prefetch={false} className="flex min-h-11 items-center border border-white/20 bg-asphalt/50 px-3 text-sm text-cream/85 transition hover:border-white/35 hover:text-cream">
+                  <Link
+                    href={link.href}
+                    prefetch={false}
+                    className="flex min-h-11 items-center bg-white/[0.04] px-3 text-sm text-cream/85 transition hover:bg-white/[0.08] hover:text-cream"
+                  >
                     {link.label}
                   </Link>
                 </li>
@@ -241,7 +251,7 @@ export async function SiteFooter() {
             <a
               key={phone.digits}
               href={telUrl(index)}
-              className="flex min-h-[48px] items-center justify-center gap-2 border border-white/20 bg-asphalt/60 text-sm text-cream transition hover:border-white/35 touch-manipulation"
+              className="flex min-h-[48px] items-center justify-center gap-2 bg-white/[0.04] text-sm tabular-nums text-cream transition hover:bg-white/[0.08] touch-manipulation"
             >
               <IconPhone className="h-4 w-4 text-brand-light" />
               {phone.label}
@@ -249,15 +259,15 @@ export async function SiteFooter() {
           ))}
           <a
             href={`mailto:${site.email}`}
-            className="flex min-h-[48px] items-center justify-center gap-2 border border-white/20 bg-asphalt/60 text-sm text-cream transition hover:border-white/35 touch-manipulation"
+            className="flex min-h-[48px] items-center justify-center gap-2 bg-white/[0.04] px-3 text-sm text-cream transition hover:bg-white/[0.08] touch-manipulation"
           >
-            <IconMail className="h-4 w-4 text-brand-light" />
-            {site.email}
+            <IconMail className="h-4 w-4 shrink-0 text-brand-light" />
+            <span className="break-words">{site.email}</span>
           </a>
           <Link
             href={CITIES_DIRECTORY_PATH}
             prefetch={false}
-            className="flex min-h-[48px] items-center justify-center border border-white/20 bg-asphalt/60 text-sm text-cream transition hover:border-white/35 touch-manipulation"
+            className="flex min-h-[48px] items-center justify-center bg-white/[0.04] text-sm text-cream transition hover:bg-white/[0.08] touch-manipulation"
           >
             Ver cidades
           </Link>
