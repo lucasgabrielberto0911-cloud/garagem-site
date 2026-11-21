@@ -202,6 +202,10 @@ test("home: três botões grandes no topo; assistente é um botão vermelho que 
   page,
 }) => {
   await page.goto("/");
+  // Aguarda fontes e remove o ponteiro antes de medir layout/cores para evitar
+  // deslocamento de carregamento de fonte ou estado hover/scale nos botões.
+  await page.evaluate(() => document.fonts.ready);
+  await page.mouse.move(0, 0);
 
   // Hero começa colado na borda de baixo do header, sem faixa preta entre os dois.
   const headerBox = (await page.getByRole("banner").boundingBox())!;
@@ -226,18 +230,76 @@ test("home: três botões grandes no topo; assistente é um botão vermelho que 
   const whatsapp = page.locator(".hero-cta").getByRole("link", { name: "Falar no WhatsApp" });
   const stock = page.locator(".hero-cta").getByRole("link", { name: "Ver estoque", exact: true });
   const assistant = page.locator(".hero-cta").getByRole("button", { name: "Pergunte ao assistente" });
-  const boxes = [] as { x: number; y: number; width: number; height: number }[];
-  for (const button of [whatsapp, stock, assistant]) {
+  const buttons = [whatsapp, stock, assistant];
+  for (const button of buttons) {
     await expect(button).toBeVisible();
-    const box = (await button.boundingBox())!;
+  }
+
+  type Box = { x: number; y: number; width: number; height: number };
+  const readStableBoxes = async (): Promise<Box[]> => {
+    let previous: Box[] | null = null;
+    let stable: Box[] = [];
+    await expect
+      .poll(async () => {
+        const stillAnimating = await page.locator(".hero-cta").evaluate((el) =>
+          el
+            .getAnimations({ subtree: true })
+            .some((anim) => anim.playState === "running" || anim.pending),
+        );
+        if (stillAnimating) {
+          previous = null;
+          return false;
+        }
+        const current: Box[] = [];
+        for (const button of buttons) {
+          const box = await button.boundingBox();
+          if (!box) {
+            previous = null;
+            return false;
+          }
+          current.push(box);
+        }
+        const stabilized =
+          previous !== null &&
+          current.every((box, i) => {
+            const prev = previous![i];
+            return (
+              Math.abs(box.x - prev.x) < 0.5 &&
+              Math.abs(box.y - prev.y) < 0.5 &&
+              Math.abs(box.width - prev.width) < 0.5 &&
+              Math.abs(box.height - prev.height) < 0.5
+            );
+          });
+        previous = current;
+        if (!stabilized) return false;
+        stable = current;
+        return true;
+      })
+      .toBe(true);
+    return stable;
+  };
+
+  await page.evaluate(() => document.fonts.ready);
+  await page.mouse.move(0, 0);
+  const boxes = await readStableBoxes();
+  for (const box of boxes) {
     expect(box.height).toBeGreaterThanOrEqual(56);
-    boxes.push(box);
   }
   expect(boxes[0].y).toBeGreaterThanOrEqual(highlightsBox.y + highlightsBox.height);
   if (page.viewportSize()!.width >= 1024) {
-    // Desktop: lado a lado, na mesma linha.
-    expect(Math.abs(boxes[0].y - boxes[1].y)).toBeLessThan(2);
-    expect(Math.abs(boxes[1].y - boxes[2].y)).toBeLessThan(2);
+    // Desktop: lado a lado, na mesma linha (compara o centro vertical com tolerância < 4 px
+    // para acomodar pequenas diferenças de altura/borda entre link e button e arredondamento subpixel).
+    await expect
+      .poll(async () => {
+        const current = await readStableBoxes();
+        const centers = current.map((box) => box.y + box.height / 2);
+        return Math.max(
+          Math.abs(centers[0] - centers[1]),
+          Math.abs(centers[1] - centers[2]),
+          Math.abs(centers[0] - centers[2]),
+        );
+      })
+      .toBeLessThan(4);
   } else {
     // Celular: empilhados e de largura total (mesma largura).
     expect(boxes[0].y).toBeLessThan(boxes[1].y);
