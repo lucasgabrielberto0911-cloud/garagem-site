@@ -5,17 +5,12 @@ import { getAdminNoticeSnapshot } from "@/lib/admin-notice-store";
 export async function GET() {
   if (!(await getSession())) return NextResponse.json({}, { status: 401 });
   try {
-    const { count, unanswered30m, unanswered2h, counts } =
-      await getAdminNoticeSnapshot();
+    const { counts } = await getAdminNoticeSnapshot();
     return NextResponse.json(
       {
-        count,
-        unanswered30m,
-        unanswered2h,
+        carWarnings: counts.carros,
         costWarnings: counts.vendas,
-        agenda: counts.hoje + counts.atrasados,
-        notifications:
-          counts.vendas + counts.hoje + counts.atrasados + counts.pedidos,
+        notifications: counts.carros + counts.vendas,
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );
@@ -23,9 +18,7 @@ export async function GET() {
     console.error("[admin/badge] falha ao consultar:", error);
     return NextResponse.json(
       {
-        count: null,
-        unanswered30m: null,
-        unanswered2h: null,
+        carWarnings: null,
         costWarnings: null,
         notifications: null,
       },

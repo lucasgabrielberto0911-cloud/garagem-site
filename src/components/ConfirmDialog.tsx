@@ -48,6 +48,8 @@ export function ConfirmDialog({
       setTyped("");
       return;
     }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     lastFocusRef.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
     const firstInput = panel?.querySelector<HTMLElement>(
@@ -66,6 +68,11 @@ export function ConfirmDialog({
 
     window.addEventListener("keydown", onKey);
     return () => {
+      if (previousOverflow) {
+        document.body.style.overflow = previousOverflow;
+      } else {
+        document.body.style.removeProperty("overflow");
+      }
       window.removeEventListener("keydown", onKey);
       lastFocusRef.current?.focus();
     };

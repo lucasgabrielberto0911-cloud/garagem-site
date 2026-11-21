@@ -1,52 +1,27 @@
 import { Suspense } from "react";
-import { DashboardRefresh } from "@/components/admin/DashboardRefresh";
-import { DashboardTodayBlock } from "@/components/admin/DashboardTodayBlock";
-import { DashboardSalesGoal } from "@/components/admin/DashboardSalesGoal";
-import { adminDate } from "@/lib/admin-date";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
-import { VehicleImage } from "@/components/VehicleImage";
+import { DashboardRefresh } from "@/components/admin/DashboardRefresh";
+import { DashboardSalesGoal } from "@/components/admin/DashboardSalesGoal";
 import {
   IconAlert,
-  IconChevronDown,
-  IconExternal,
-  IconImage,
+  IconCash,
+  IconClock,
   IconPlus,
-  IconStar,
 } from "@/components/admin/icons";
 import {
   AdminPageHeader,
   Badge,
   Card,
-  EmptyState,
-  StatCard,
-  adminStatGrid,
-  btn,
 } from "@/components/admin/ui";
-import { IconQuote } from "@/components/site/icons";
+import { IconCar } from "@/components/site/icons";
+import { adminDate } from "@/lib/admin-date";
+import { getDashboardData } from "@/lib/admin-stats";
 import { getSession } from "@/lib/auth";
 import { MAX_FEATURED_PINS } from "@/lib/featured";
-import { PARKED_MIN_DAYS } from "@/lib/admin-parados";
-import { getDashboardData, STALE_DAYS } from "@/lib/admin-stats";
-import {
-  buildDashboardAlerts,
-  splitDashboardAlerts,
-  type DashboardAlert,
-} from "@/lib/admin-dashboard";
-import { formatCurrencyBRL, formatNumberBR, formatPhoneBR } from "@/lib/format";
-import { LEAD_STATUS_LABEL, LEAD_STATUSES, leadDisplayName, leadHasPhone } from "@/lib/leads";
-import { coverSrc } from "@/lib/stock-query";
-import { vehiclePath } from "@/lib/vehicle-slug";
+import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-const ALERT_ICON: Record<DashboardAlert["icon"], ReactNode> = {
-  alert: <IconAlert className="h-4 w-4" />,
-  image: <IconImage className="h-4 w-4" />,
-  star: <IconStar className="h-4 w-4" />,
-  quote: <IconQuote className="h-4 w-4" />,
-};
 
 export default async function AdminDashboardPage() {
   const session = await getSession();
@@ -56,179 +31,41 @@ export default async function AdminDashboardPage() {
     <Suspense
       fallback={
         <div className="space-y-4" role="status">
-          <p className="text-sm text-cream/80">Carregando visão geral…</p>
+          <p className="text-sm text-cream/80">Carregando central da loja…</p>
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+            <div className="skeleton h-14" />
+            <div className="skeleton h-14" />
+            <div className="skeleton h-14" />
+            <div className="skeleton h-14" />
+          </div>
+          <div className="skeleton h-48" />
           <div className="skeleton h-40" />
-          <div className="skeleton h-64" />
         </div>
       }
     >
-      <DashboardContent />
+      <CentralContent />
     </Suspense>
   );
 }
-async function DashboardContent() {
+
+async function CentralContent() {
   const data = await getDashboardData();
-  const { vehicles, sales, leads, alerts } = data;
-
-  const alertList = data.failures.length
-    ? []
-    : buildDashboardAlerts({ ...alerts, staleDays: STALE_DAYS });
-  for (const vehicle of data.saleGaps)
-    alertList.unshift({
-      key: `sale-gap-${vehicle.id}`,
-      tone: "warning",
-      icon: "alert",
-      title: `${vehicle.brand} ${vehicle.model}: venda não registrada`,
-      description:
-        "Marcar vendido tira o anúncio do estoque. Registre a venda separadamente para contabilizar o faturamento.",
-      href: `/admin/vendas?vehicle=${vehicle.id}`,
-    });
-  for (const lead of [...(data.unansweredLeads?.urgent ?? [])].reverse())
-    alertList.unshift({
-      key: `unanswered-${lead.id}`,
-      tone: "brand",
-      icon: "alert",
-      title:
-        lead.urgency === "atrasado"
-          ? `Lead atrasado (+2h sem resposta): ${leadDisplayName(lead)}`
-          : `Responder lead (+30 min): ${leadDisplayName(lead)}`,
-      description: `${lead.urgencyLabel} · ${lead.vehicleInfo}`,
-      href: `/admin/leads?lead=${lead.id}`,
-    });
-  const { head: alertHead, rest: alertRest } = splitDashboardAlerts(alertList);
-
-  const unansweredHint =
-    (data.unansweredLeads?.overdueCount ?? 0) > 0 ||
-    (data.unansweredLeads?.alertCount ?? 0) > 0
-      ? [
-          data.unansweredLeads.overdueCount > 0
-            ? `${data.unansweredLeads.overdueCount} atrasado(s) (+2h)`
-            : "",
-          data.unansweredLeads.alertCount > 0
-            ? `${data.unansweredLeads.alertCount} há +30 min`
-            : "",
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : `${leads.total} lead(s) no total`;
-
-  const leadsCard = (
-    <StatCard
-      key="leads"
-      label="Leads novos"
-      value={leads.byStatus.novo}
-      hint={unansweredHint}
-      tone={leads.byStatus.novo > 0 ? "brand" : "default"}
-      href="/admin/leads?status=novo"
-    />
+  const hasFailures = data.failures.length > 0;
+  const activeFailed = data.failures.includes("activeVehicles");
+  const maxMonthRevenue = Math.max(
+    1,
+    ...data.monthlySales.map((month) => month.revenue),
   );
-  const availableCard = (
-    <StatCard
-      key="available"
-      label="Disponíveis"
-      value={vehicles.available}
-      hint={`${vehicles.reserved} reservado(s) · ${vehicles.sold} vendido(s)`}
-      href="/admin/veiculos?status=disponivel"
-    />
-  );
-  const secondaryCards = [
-    <StatCard
-      key="stock-value"
-      label="Valor do estoque"
-      value={formatCurrencyBRL(vehicles.stockValue)}
-      hint={
-        [
-          vehicles.ownedAvailable > 0
-            ? `Média ${formatCurrencyBRL(vehicles.averagePrice)}`
-            : vehicles.available > 0
-              ? ""
-              : "Nenhum veículo disponível",
-          vehicles.consignedAvailable > 0
-            ? `${vehicles.consignedAvailable} consignado(s) fora`
-            : "",
-        ]
-          .filter(Boolean)
-          .join(" · ") || undefined
-      }
-    />,
-    <StatCard
-      key="month-sales"
-      label="Vendas no mês"
-      value={sales.monthCount}
-      hint={
-        sales.monthCount > 0
-          ? formatCurrencyBRL(sales.monthRevenue)
-          : "Nenhuma venda registrada"
-      }
-      tone={sales.monthCount > 0 ? "success" : "default"}
-      href="/admin/vendas?period=month"
-    />,
-    <StatCard
-      key="revenue"
-      label="Faturamento total"
-      value={formatCurrencyBRL(sales.revenue)}
-      hint={`${sales.count} venda(s) registrada(s)`}
-    />,
-    <StatCard
-      key="ticket"
-      label="Ticket médio"
-      value={sales.count > 0 ? formatCurrencyBRL(sales.ticket) : "—"}
-      hint="Média por venda fechada"
-    />,
-    <StatCard
-      key="avg-km"
-      label="KM médio do estoque"
-      value={
-        vehicles.available > 0
-          ? `${formatNumberBR(Math.round(vehicles.averageKm))} km`
-          : "—"
-      }
-      hint="Somente veículos disponíveis"
-    />,
-    <StatCard
-      key="featured"
-      label="Em destaque na vitrine"
-      value={vehicles.featured}
-      hint={
-        vehicles.featured === 0
-          ? "Sem fixos · a home gira o estoque a cada 2 dias"
-          : `${vehicles.featured}/${MAX_FEATURED_PINS} fixos na home · resto gira a cada 2 dias`
-      }
-      tone={alerts.noFeatured ? "warning" : "default"}
-      href="/admin/veiculos?tab=destaques"
-    />,
-    <StatCard
-      key="parked"
-      label="Carros parados"
-      value={data.pendingCounts ? data.pendingCounts.parkedOver30 : "—"}
-      hint={`Disponíveis há mais de ${PARKED_MIN_DAYS} dias`}
-      tone={(data.pendingCounts?.parkedOver30 ?? 0) > 0 ? "brand" : "default"}
-      href="/admin/parados"
-    />,
-  ];
 
   return (
     <div className="space-y-5 sm:space-y-6">
       <AdminPageHeader
-        title="Dashboard"
-        subtitle="Resumo da loja hoje."
-        mobileActions="row"
-        actions={
-          <>
-            <Link href="/admin/veiculos/novo" className={btn.primary}>
-              <IconPlus className="h-4 w-4" />
-              Novo veículo
-            </Link>
-            <Link href="/admin/vendas/nova" className={btn.outline}>
-              <span className="sm:hidden">Venda</span>
-              <span className="hidden sm:inline">Registrar venda</span>
-            </Link>
-          </>
-        }
+        title="Central da loja"
+        subtitle="Pendências dos carros, tempo de estoque e resultado do mês."
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-cream/80">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-cream/75">
+        <p>
           Atualizado em{" "}
           {adminDate(new Date(data.updatedAt), {
             dateStyle: "short",
@@ -237,351 +74,291 @@ async function DashboardContent() {
         </p>
         <DashboardRefresh />
       </div>
-      {data.failures.length > 0 ? (
+
+      {/* 1. Botões grandes de ação */}
+      <section aria-label="Ações rápidas">
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          <Link
+            href="/admin/veiculos/novo"
+            className="inline-flex min-h-[56px] items-center justify-center gap-2.5 bg-brand px-4 py-3 font-display text-sm font-semibold text-white transition touch-manipulation hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+          >
+            <IconPlus className="h-5 w-5 shrink-0" />
+            <span>Cadastrar carro</span>
+          </Link>
+          <Link
+            href="/admin/compra"
+            className="inline-flex min-h-[56px] items-center justify-center gap-2.5 border border-white/20 bg-ink px-4 py-3 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-white/40 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <IconCash className="h-5 w-5 shrink-0 text-cream/85" />
+            <span>Avaliar compra</span>
+          </Link>
+          <Link
+            href="/admin/em-preparacao"
+            className="inline-flex min-h-[56px] items-center justify-center gap-2.5 border border-white/20 bg-ink px-4 py-3 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-white/40 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <IconCar className="h-5 w-5 shrink-0 text-cream/85" />
+            <span>Em preparação</span>
+          </Link>
+          <Link
+            href="/admin/parados"
+            className="inline-flex min-h-[56px] items-center justify-center gap-2.5 border border-white/20 bg-ink px-4 py-3 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-white/40 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <IconClock className="h-5 w-5 shrink-0 text-cream/85" />
+            <span>Carros parados</span>
+          </Link>
+        </div>
+      </section>
+
+      {hasFailures ? (
         <p
           role="alert"
-          className="border border-brand-orange/40 bg-brand-orange/10 p-4 text-sm"
+          className="border border-brand/60 bg-brand/10 p-4 text-sm text-cream"
         >
-          Parte dos dados está indisponível. Os indicadores não são mostrados
-          como zero. Tente atualizar; os atalhos continuam disponíveis.
+          Parte dos dados está indisponível. Os indicadores afetados não são
+          mostrados como zero; tente atualizar.
         </p>
       ) : null}
-      {data.failures.length === 0 ? (
-        <>
-          <DashboardTodayBlock
-            dueLeads={data.hoje?.dueLeads ?? data.dueLeads}
-            unansweredLeads={data.hoje?.unansweredLeads ?? []}
-            reservedVehicles={data.hoje?.reservedVehicles ?? []}
-          />
 
-          <DashboardSalesGoal
-            salesGoal={data.salesGoal}
-            leaderboard={data.leaderboard}
-          />
-
-          {/* Celular: 2 números que pedem ação; o resto fica em “Mais números”. */}
-          <section className="space-y-3 lg:hidden" aria-label="Números da loja">
-            <div className={adminStatGrid}>
-              {leadsCard}
-              {availableCard}
+      {/* 2. Pendências dos carros */}
+      {!activeFailed ? (
+        <Card
+          title={`Pendências dos carros${data.pendencies.total > 0 ? ` (${data.pendencies.total})` : ""}`}
+          action={
+            <Link
+              href="/admin/veiculos"
+              className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              Ver todas
+            </Link>
+          }
+        >
+          {data.pendencies.items.length === 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-cream/85">
+              <p>Todos os carros ativos estão com fotos, preço, legenda e compra preenchidos.</p>
+              <Badge tone="success">Tudo em dia</Badge>
             </div>
-            <details className="group border border-white/20 bg-ink/50">
-              <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm text-cream touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
-                <span className="font-display text-xs font-semibold uppercase tracking-wider">
-                  Mais números
-                </span>
-                <span className="flex items-center gap-2 text-xs text-cream/80">
-                  Estoque, vendas, ticket
-                  <IconChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-                </span>
-              </summary>
-              <div className={`${adminStatGrid} border-t border-white/15 p-3`}>
-                {secondaryCards}
-              </div>
-            </details>
-          </section>
-
-          <section
-            className="hidden space-y-4 lg:block"
-            aria-label="Números da loja"
-          >
-            <div className={adminStatGrid}>
-              {availableCard}
-              {secondaryCards[0]}
-              {leadsCard}
-              {secondaryCards[1]}
-            </div>
-            <div className={adminStatGrid}>{secondaryCards.slice(2)}</div>
-          </section>
-        </>
+          ) : (
+            <ul className="divide-y divide-white/10">
+              {data.pendencies.items.map((item) => (
+                <li key={item.key}>
+                  <Link
+                    href={item.href}
+                    className="flex min-h-[52px] flex-wrap items-center justify-between gap-2 py-2.5 transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  >
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <IconAlert className="h-4 w-4 shrink-0 text-red-400" />
+                      <span className="break-words text-sm font-semibold text-cream">
+                        {item.title}
+                      </span>
+                    </span>
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      {item.badges.map((badge) => (
+                        <Badge
+                          key={badge.label}
+                          tone={badge.tone === "brand" ? "brand" : "neutral"}
+                        >
+                          {badge.label}
+                        </Badge>
+                      ))}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       ) : null}
-      <Card collapsed title="Vendas nos últimos seis meses">
-        {data.failures.includes("monthlySales") ? (
-          <p role="status" className="text-sm text-cream/80">
-            Evolução indisponível. Tente atualizar.
-          </p>
-        ) : (
-          <div
-            className="space-y-3"
-            role="img"
-            aria-label="Faturamento mensal dos últimos seis meses, somente vendas registradas"
-          >
-            {data.monthlySales.map((month) => (
-              <div key={month.key} className="space-y-1">
-                <div className="flex flex-wrap justify-between gap-2 text-sm">
-                  <span>
-                    {month.key.slice(5)}/{month.key.slice(0, 4)} · {month.count}{" "}
-                    venda(s)
+
+      {/* 3. Parados por faixa */}
+      {!activeFailed ? (
+        <Card
+          title="Parados por faixa"
+          action={
+            <Link
+              href="/admin/parados"
+              className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              Ver parados
+            </Link>
+          }
+        >
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+            {data.stockAge.bands.map((band) => (
+              <div
+                key={band.id}
+                className="border border-white/15 bg-asphalt/50 p-3"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-display text-xs font-semibold uppercase tracking-wider text-cream/80">
+                    {band.label}
                   </span>
-                  <span className="tabular-nums">
-                    {formatCurrencyBRL(month.revenue)}
+                  <span className="font-display text-xl font-semibold tabular-nums text-cream">
+                    {band.count}
                   </span>
                 </div>
-                <div className="h-2 bg-white/10">
-                  <div
-                    className="h-2 bg-brand"
-                    style={{
-                      width: `${(month.revenue / Math.max(1, ...data.monthlySales.map((m) => m.revenue))) * 100}%`,
-                    }}
-                  />
-                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-cream/75">
+                  {band.suggestion}
+                </p>
               </div>
             ))}
           </div>
-        )}
-      </Card>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card
-          title={`Pendências${alertList.length > 0 ? ` (${alertList.length})` : ""}`}
-          action={
-            alertList.length === 0 && data.failures.length === 0 ? (
-              <Badge tone="success">Tudo em ordem</Badge>
-            ) : null
-          }
-        >
-          {data.pendingCounts ? (
-            <p className="mb-3 text-xs leading-relaxed text-cream/80">
-              {data.pendingCounts.withoutPhotos} sem foto ·{" "}
-              {data.pendingCounts.stale} parados há mais de {STALE_DAYS} dias ·{" "}
-              {data.pendingCounts.missingSales} vendidos sem registro financeiro
-            </p>
-          ) : null}
-          {data.failures.length > 0 && alertList.length === 0 ? (
-            <p className="text-sm text-cream/80">
-              Não foi possível conferir todas as pendências. Atualize os dados
-              para tentar novamente.
-            </p>
-          ) : alertList.length === 0 ? (
-            <p className="text-sm text-cream/80">
-              Nenhuma pendência: estoque com fotos, destaques definidos e dados
-              da loja preenchidos.
-            </p>
-          ) : (
-            <>
-              <ul className="space-y-2.5 text-sm">
-                {alertHead.map((alert) => (
-                  <AlertRow key={alert.key} alert={alert} />
-                ))}
-              </ul>
-              {alertRest.length > 0 ? (
-                <details className="group mt-2.5">
-                  <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-center gap-2 border border-dashed border-white/25 text-xs uppercase tracking-wider text-cream/80 touch-manipulation hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
-                    <span className="group-open:hidden">
-                      Ver mais {alertRest.length}
-                    </span>
-                    <span className="hidden group-open:inline">
-                      Mostrar menos
-                    </span>
-                    <IconChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <ul className="mt-2.5 space-y-2.5 text-sm">
-                    {alertRest.map((alert) => (
-                      <AlertRow key={alert.key} alert={alert} />
-                    ))}
-                  </ul>
-                </details>
-              ) : null}
-            </>
-          )}
-        </Card>
 
-        <Card
-          title="Leads"
-          action={
-            <div className="flex gap-3">
-              <Link
-                href="/admin/agenda"
-                className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              >
-                Agenda
-              </Link>
-              <Link
-                href="/admin/leads"
-                className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              >
-                Ver todos
-              </Link>
-            </div>
-          }
-        >
-          {data.failures.includes("lead.groupBy") ||
-          data.failures.includes("recentLeads") ? (
-            <p role="status" className="text-sm text-cream/80">
-              Não foi possível consultar os contatos. Tente atualizar ou abra
-              Ver todos.
-            </p>
-          ) : leads.total === 0 ? (
-            <p className="text-sm text-cream/80">
-              Nenhum lead ainda. Os pedidos de avaliação da página Vender/Trocar
-              e os de quem não encontrou o modelo aparecem aqui.
-            </p>
-          ) : (
-            <>
-              <ul
-                className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                aria-label="Leads por status"
-              >
-                {LEAD_STATUSES.map((status) => (
-                  <li key={status} className="shrink-0">
+          {data.stockAge.oldest.length > 0 ? (
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-cream/75">
+                Mais antigos no estoque
+              </p>
+              <ul className="divide-y divide-white/10">
+                {data.stockAge.oldest.map((car) => (
+                  <li key={car.id}>
                     <Link
-                      href={`/admin/leads?status=${status}`}
-                      className={`flex min-h-[44px] items-center gap-2 border px-3 text-xs transition touch-manipulation hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                        status === "novo" && leads.byStatus[status] > 0
-                          ? "border-brand/50 text-cream"
-                          : "border-white/20 text-cream/80 hover:text-cream"
-                      }`}
+                      href={car.href}
+                      className="flex min-h-[44px] items-center justify-between gap-3 py-2 text-sm transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     >
-                      <span className="uppercase tracking-wider">
-                        {LEAD_STATUS_LABEL[status]}
+                      <span className="break-words font-medium text-cream">
+                        {car.name}
                       </span>
-                      <span className="font-display text-sm font-bold tabular-nums text-cream">
-                        {leads.byStatus[status]}
+                      <span className="shrink-0 font-display text-xs font-semibold tabular-nums text-red-400">
+                        {car.days} dias
                       </span>
                     </Link>
                   </li>
                 ))}
               </ul>
-              {leads.recent.length > 0 ? (
-                <ul className="mt-3 divide-y divide-white/15 border-t border-white/15">
-                  {leads.recent.map((lead, index) => (
-                    <li
-                      key={lead.id}
-                      className={index >= 3 ? "hidden sm:block" : undefined}
-                    >
-                      <Link
-                        href={`/admin/leads?lead=${encodeURIComponent(lead.id)}`}
-                        className="flex min-h-[56px] items-center justify-between gap-3 py-3 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand last:pb-0"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-cream">
-                            {leadDisplayName(lead)}
-                          </p>
-                          <p className="truncate text-xs text-cream/80">
-                            {leadHasPhone(lead) ? `${formatPhoneBR(lead.phone)} · ` : ""}{lead.vehicleInfo}
-                          </p>
-                        </div>
-                        <Badge
-                          tone={lead.status === "novo" ? "brand" : "neutral"}
-                        >
-                          {LEAD_STATUS_LABEL[
-                            lead.status as keyof typeof LEAD_STATUS_LABEL
-                          ] ?? lead.status}
-                        </Badge>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </>
-          )}
+            </div>
+          ) : null}
         </Card>
-      </div>
+      ) : null}
 
-      <Card
-        className="hidden sm:block"
-        title="Últimos veículos cadastrados"
-        action={
-          <div className="flex gap-3">
-            <Link
-              href="/admin/parados"
-              className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              Carros parados
-            </Link>
-            <Link
-              href="/admin/veiculos"
-              className="inline-flex min-h-[44px] items-center text-xs text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              Gerenciar
-            </Link>
-          </div>
-        }
-      >
-        {data.failures.includes("recentVehicles") ? (
-          <p role="status" className="text-sm text-cream/80">
-            Não foi possível consultar os veículos recentes. Abra Gerenciar ou
-            tente atualizar.
-          </p>
-        ) : data.recentVehicles.length === 0 ? (
-          <EmptyState
-            title="Nenhum veículo cadastrado"
-            description="Cadastre o primeiro veículo para o estoque aparecer no site."
-            action={
-              <Link href="/admin/veiculos/novo" className={btn.primary}>
-                <IconPlus className="h-4 w-4" />
-                Cadastrar veículo
+      {/* 4. Vendas do mês × meta */}
+      {!data.failures.includes("monthSales") ? (
+        <DashboardSalesGoal salesGoal={data.salesGoal} />
+      ) : null}
+
+      {/* 5. Lucro previsto do estoque */}
+      {!activeFailed ? (
+        <Card
+          title="Lucro previsto do estoque"
+          action={
+            data.stockCapital.missingPurchaseCount > 0 ? (
+              <Link
+                href="/admin/veiculos"
+                className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                {data.stockCapital.missingPurchaseCount} carro(s) sem preço de compra
               </Link>
-            }
-          />
-        ) : (
-          <ul className="divide-y divide-white/15 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
-            {data.recentVehicles.map((vehicle) => (
-              <li key={vehicle.id} className="flex items-center gap-1 py-1">
-                <Link
-                  href={`/admin/veiculos/${vehicle.id}`}
-                  className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-2 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                >
-                  <div className="relative h-12 w-16 shrink-0 overflow-hidden bg-asphalt">
-                    <VehicleImage
-                      src={coverSrc(vehicle.photos)}
-                      alt={`${vehicle.brand} ${vehicle.model}`}
-                      fill
-                      sizes="64px"
-                      className="object-cover"
-                    />
+            ) : null
+          }
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-4">
+            <div>
+              <p className="font-display text-3xl font-semibold tabular-nums text-cream">
+                {data.stockCapital.withCostBasisCount > 0
+                  ? formatCurrencyBRL(data.stockCapital.potentialProfit)
+                  : "—"}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-cream/80">
+                Soma de (preço − compra − custos) em{" "}
+                {data.stockCapital.withCostBasisCount} carro(s) próprio(s)
+                disponível(eis) ou reservado(s).
+                {data.stockCapital.consignedCount > 0
+                  ? ` ${data.stockCapital.consignedCount} consignado(s) fora do cálculo.`
+                  : ""}
+              </p>
+            </div>
+            <div className="text-left sm:text-right">
+              <p className="text-xs uppercase tracking-wider text-cream/75">
+                Capital investido (com compra)
+              </p>
+              <p className="mt-0.5 font-display text-lg font-semibold tabular-nums text-cream">
+                {formatCurrencyBRL(data.stockCapital.investedTotal)}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
+      {/* 6. Mais números (recolhido) */}
+      <details className="border border-white/15 bg-ink">
+        <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-sm font-semibold text-cream transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+          <span>Mais números</span>
+          <span className="text-xs font-normal text-cream/75">
+            Valor do estoque, ticket médio, km médio e últimos 6 meses
+          </span>
+        </summary>
+        <div className="space-y-5 border-t border-white/10 p-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="border border-white/10 bg-asphalt/50 p-3">
+              <p className="text-xs text-cream/75">Valor do estoque</p>
+              <p className="mt-1 font-display text-lg font-semibold tabular-nums text-cream">
+                {activeFailed
+                  ? "—"
+                  : formatCurrencyBRL(data.stockCapital.stockValue)}
+              </p>
+            </div>
+            <div className="border border-white/10 bg-asphalt/50 p-3">
+              <p className="text-xs text-cream/75">Ticket médio (mês)</p>
+              <p className="mt-1 font-display text-lg font-semibold tabular-nums text-cream">
+                {data.monthTicket > 0
+                  ? formatCurrencyBRL(data.monthTicket)
+                  : "—"}
+              </p>
+            </div>
+            <div className="border border-white/10 bg-asphalt/50 p-3">
+              <p className="text-xs text-cream/75">Km médio</p>
+              <p className="mt-1 font-display text-lg font-semibold tabular-nums text-cream">
+                {activeFailed || data.stockCapital.averageKm <= 0
+                  ? "—"
+                  : `${formatNumberBR(Math.round(data.stockCapital.averageKm))} km`}
+              </p>
+            </div>
+            <div className="border border-white/10 bg-asphalt/50 p-3">
+              <p className="text-xs text-cream/75">Destaques na vitrine</p>
+              <Link
+                href="/admin/veiculos?tab=destaques"
+                className="mt-1 inline-flex min-h-[44px] items-center font-display text-lg font-semibold tabular-nums text-cream hover:text-red-400"
+              >
+                {data.featured}/{MAX_FEATURED_PINS}
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 font-display text-xs font-semibold uppercase tracking-wider text-cream/80">
+              Vendas nos últimos 6 meses
+            </p>
+            {data.failures.includes("monthlySales") ? (
+              <p role="status" className="text-sm text-cream/80">
+                Evolução indisponível. Tente atualizar.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {data.monthlySales.map((month) => (
+                  <div key={month.key} className="space-y-1">
+                    <div className="flex flex-wrap justify-between gap-2 text-sm">
+                      <span>
+                        {month.key.slice(5)}/{month.key.slice(0, 4)} ·{" "}
+                        {month.count} venda(s)
+                      </span>
+                      <span className="tabular-nums">
+                        {formatCurrencyBRL(month.revenue)}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-white/10">
+                      <div
+                        className="h-2 bg-brand"
+                        style={{
+                          width: `${(month.revenue / maxMonthRevenue) * 100}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-cream">
-                      {vehicle.brand} {vehicle.model}
-                    </p>
-                    <p className="text-xs text-cream/80">
-                      {vehicle.yearModel} · {formatCurrencyBRL(vehicle.price)}
-                    </p>
-                  </div>
-                </Link>
-                <Link
-                  href={vehiclePath(vehicle)}
-                  target="_blank"
-                  aria-label="Ver no site"
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-cream/80 transition touch-manipulation hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                >
-                  <IconExternal className="h-4 w-4" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
-  );
-}
-
-function AlertRow({ alert }: { alert: DashboardAlert }) {
-  const color =
-    alert.tone === "brand"
-      ? "text-brand"
-      : alert.tone === "warning"
-        ? "text-brand-orange"
-        : "text-cream/80";
-
-  return (
-    <li>
-      <Link
-        href={alert.href}
-        className="flex min-h-[48px] items-center gap-3 border border-white/20 px-3 py-2.5 transition touch-manipulation hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:items-start"
-      >
-        <span className={`mt-0.5 shrink-0 ${color}`}>
-          {ALERT_ICON[alert.icon]}
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-medium text-cream">
-            {alert.title}
-          </span>
-          <span className="mt-0.5 hidden text-xs leading-relaxed text-cream/80 sm:block">
-            {alert.description}
-          </span>
-        </span>
-      </Link>
-    </li>
   );
 }

@@ -93,7 +93,6 @@ export function SheetActions({
             icon={<IconCash className="h-4 w-4" />}
             label="Registrar venda completa"
             hint="Abre o formulário atual de venda"
-            tone="warning"
             disabled={busy}
             onClick={run(onMarkSold)}
           />
