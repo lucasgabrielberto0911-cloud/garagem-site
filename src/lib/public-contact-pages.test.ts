@@ -103,3 +103,18 @@ test("contato e vender reservam apenas a altura da bottom nav sem padding morto 
   );
   assert.doesNotMatch(css, /4\.5rem \+ 0\.75rem \+ 2\.75rem/);
 });
+
+test("formulário /vender mantém contraste WCAG AA, foco visível e estado de erro legível", () => {
+  assert.doesNotMatch(sell, /border-white\/20|border-white\/25/);
+  assert.doesNotMatch(photos, /border-white\/20|border-white\/25|bg-asphalt\/50/);
+  assert.match(sell, /border-white\/45/);
+  assert.match(sell, /placeholder:text-cream\/65/);
+  assert.match(sell, /focus:border-brand-light focus:ring-2 focus:ring-brand-light/);
+  assert.match(sell, /border-brand-light ring-1 ring-brand-light/);
+  assert.match(sell, /text-xs font-bold uppercase tracking-\[0\.14em\] text-red-400/);
+  assert.match(sell, /text-xs font-bold uppercase tracking-\[0\.1em\] text-cream/);
+  assert.match(sell, /text-xs font-medium text-red-300/);
+  assert.match(sell, /bg-brand[\s\S]*text-white[\s\S]*focus-visible:ring-white/);
+  assert.match(sell, /border-white\/35 bg-ink/);
+  assert.match(vender, /border-brand\/50 bg-ink/);
+});
