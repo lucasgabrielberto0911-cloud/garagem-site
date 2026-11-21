@@ -1127,6 +1127,36 @@ export const getTestimonials = cache(async (take = 6) => {
   return testimonialsFromSeed().slice(0, take);
 });
 
+const loadSoldFallbackVehiclesCached = unstable_cache(
+  async () => {
+    try {
+      return await findCardVehicles({
+        where: PUBLIC_SITEMAP_VEHICLE_WHERE,
+        orderBy: [{ createdAt: "desc" }, { featured: "desc" }],
+        take: 48,
+      });
+    } catch (error) {
+      if (!isMissingColumnError(error, "historical")) throw error;
+      return findCardVehicles({
+        where: { status: "disponivel" },
+        orderBy: [{ createdAt: "desc" }, { featured: "desc" }],
+        take: 48,
+      });
+    }
+  },
+  ["sold-fallback-vehicles-v1"],
+  PUBLIC_CACHE,
+);
+
+/** Veículos disponíveis para sugerir em links antigos de carros vendidos/apagados. */
+export const getSoldFallbackVehicles = cache(async () =>
+  safeQuery(
+    "estoque alternativo para anúncio vendido",
+    () => loadSoldFallbackVehiclesCached(),
+    [] as VehicleCardRecord[],
+  ),
+);
+
 /** Pré-gera os anúncios ativos no build / ISR. Falha de banco não quebra o build. */
 export async function getPublicVehicleStaticParams() {
   try {

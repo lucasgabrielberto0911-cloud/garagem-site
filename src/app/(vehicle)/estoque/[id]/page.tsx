@@ -59,6 +59,7 @@ import {
   formatVehicleDisplay,
 } from "@/lib/vehicle-display";
 import { isRetiredStockSlug } from "@/lib/retired-listings";
+import { soldOldLinkMetadata } from "@/lib/sold-slug-fallback";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { soldFichaNavLinks } from "@/lib/sold-ficha-nav";
@@ -93,7 +94,7 @@ export async function generateMetadata({
         robots: { index: false, follow: true },
       };
     }
-    return { title: `Veículo não encontrado | ${site.name}` };
+    return soldOldLinkMetadata(id);
   }
 
   return buildVehicleFichaMetadata(vehicle);
