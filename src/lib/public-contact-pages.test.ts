@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
-import { FounderSection } from "@/components/site/FounderSection";
+import {
+  computeFounderCutoutStyle,
+  FounderSection,
+  measureImageAlphaBounds,
+} from "@/components/site/FounderSection";
 import tailwindConfig, { siteBrandColors } from "../../tailwind.config";
 import { PHOTO_BLOB_ORIGIN, PHOTO_R2_ORIGIN, PHOTO_STORAGE_ORIGIN } from "./public-photo-url";
 import { sellReceivedLine } from "./sell-receipt";
@@ -452,5 +456,142 @@ test("formulário /vender mantém contraste WCAG AA, tokens da marca e separaç�
       const ratio = contrastRatio(colorOnInk, ink);
       assert.ok(ratio >= 4.5, `${token} sobre ink tem contraste ${ratio.toFixed(2)}:1 (< 4.5:1)`);
     }
+  }
+});
+
+test("FounderSection usa quadro 4:5 sem fundo preto e /vender mostra Como funciona sem borda", () => {
+  const withPhoto = renderToStaticMarkup(
+    createElement(FounderSection, {
+      photoUrl: `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/elias.webp`,
+    }),
+  );
+  assert.match(withPhoto, /aspect-\[4\/5\]/);
+  assert.doesNotMatch(withPhoto, /bg-black/);
+  assert.match(withPhoto, /object-cover/);
+
+  // Foto normal opaca ou recorte já justo usa o enquadramento padrão object-cover
+  assert.equal(
+    computeFounderCutoutStyle(1200, 1500, {
+      minX: 0,
+      minY: 0,
+      maxX: 1,
+      maxY: 1,
+      transparentRatio: 0,
+    }),
+    null,
+  );
+  assert.equal(
+    computeFounderCutoutStyle(720, 900, {
+      minX: 0.05,
+      minY: 0.04,
+      maxX: 0.95,
+      maxY: 1,
+      transparentRatio: 0.25,
+    }),
+    null,
+  );
+
+  // Recorte assimétrico no canto inferior direito (720x1280) preenche 4:5 sem cortar cabeça nem flutuar borda
+  const cutout = computeFounderCutoutStyle(720, 1280, {
+    minX: 0.485,
+    minY: 0.501,
+    maxX: 0.999,
+    maxY: 0.999,
+    transparentRatio: 0.78,
+  });
+  assert.ok(cutout, "Recorte assimétrico deve receber posicionamento customizado");
+  const widthPct = Number.parseFloat(String(cutout.width));
+  const heightPct = Number.parseFloat(String(cutout.height));
+  const leftPct = Number.parseFloat(String(cutout.left));
+  const topPct = Number.parseFloat(String(cutout.top));
+  assert.ok(widthPct > 150 && widthPct < 180, `Largura esperada ~166%, obtido ${widthPct}%`);
+  assert.ok(Math.abs(leftPct + widthPct - 100) < 0.2, "Borda direita deve encostar sem fenda");
+  assert.ok(topPct + heightPct >= 100, "Base da imagem deve alcançar o fundo do quadro");
+  const headTopPct = topPct + 0.501 * heightPct;
+  assert.ok(headTopPct >= 4 && headTopPct <= 10, `Topo da cabeça deve ter respiro ~6%, obtido ${headTopPct}%`);
+
+  // Passos "Como funciona" em /vender sem bordas
+  const asideStart = vender.indexOf("<aside");
+  const asideEnd = vender.indexOf("</aside>", asideStart);
+  const asideHtml = vender.slice(asideStart, asideEnd);
+  const stepLis = asideHtml.match(/<li\b[^>]*>/g) ?? [];
+  assert.equal(stepLis.length, 1);
+  for (const liTag of stepLis) {
+    const tokens = classTokens(liTag);
+    assert.ok(tokens.includes("bg-ink"));
+    assert.equal(hasBorderClass(tokens), false, `Passo em /vender não deve ter borda: ${liTag}`);
+  }
+});
+
+test("FounderSection evita salto no SSR e garante fallback silencioso em taint/decodificação/timeout", () => {
+  const founderSource = readFileSync("src/components/site/FounderSection.tsx", "utf8");
+  const ssrHtml = renderToStaticMarkup(
+    createElement(FounderSection, {
+      photoUrl: `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/elias.webp`,
+    }),
+  );
+
+  // SSR mantém espaço 4:5 reservado e oculta só o <img> quando JS está ativo, sem display:none/visibility:hidden
+  assert.match(ssrHtml, /<div class="absolute inset-0"><img\b/);
+  const imgTag = ssrHtml.match(/<img\b[^>]*>/)?.[0] ?? "";
+  const imgClassAttr = imgTag.match(/class="([^"]*)"/)?.[1] ?? "";
+  const imgClasses = imgClassAttr.split(/\s+/).filter(Boolean);
+  assert.ok(imgClasses.includes("[@media(scripting:enabled)]:opacity-0"));
+  assert.ok(imgClasses.includes("transition-opacity"));
+  assert.ok(imgClasses.includes("duration-150"));
+  assert.equal(imgClasses.includes("hidden"), false);
+  assert.equal(imgClasses.includes("invisible"), false);
+  assert.match(founderSource, /opacity-100/);
+  assert.match(founderSource, /FRAMING_FALLBACK_TIMEOUT_MS/);
+
+  // Next 16 (dev) proíbe style.width/height custom em <Image fill>: estilo de recorte deve ficar no wrapper absolute inset-0
+  const imageTag = extractOpeningTag(founderSource, "ref={imgRef}", "enclosing", "<Image");
+  assert.match(imageTag, /\bfill\b/);
+  assert.doesNotMatch(imageTag, /\bstyle=/);
+  const wrapperTag = extractOpeningTag(
+    founderSource,
+    "style={activeCutoutStyle ?? undefined}",
+    "enclosing",
+    "<div",
+  );
+  assert.ok(classTokens(wrapperTag).includes("absolute"));
+  assert.ok(classTokens(wrapperTag).includes("inset-0"));
+  assert.ok(founderSource.indexOf(wrapperTag) < founderSource.indexOf(imageTag));
+
+  // Simula canvas tainted (SecurityError no getImageData) e falha de decodificação (drawImage)
+  const originalDocument = globalThis.document;
+  try {
+    const fakeImg = { naturalWidth: 720, naturalHeight: 1280 } as HTMLImageElement;
+
+    globalThis.document = {
+      createElement: () =>
+        ({
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: () => undefined,
+            getImageData: () => {
+              throw new DOMException("Tainted canvas", "SecurityError");
+            },
+          }),
+        }) as unknown as HTMLCanvasElement,
+    } as unknown as Document;
+    assert.equal(measureImageAlphaBounds(fakeImg), null);
+
+    globalThis.document = {
+      createElement: () =>
+        ({
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: () => {
+              throw new Error("Invalid image decode");
+            },
+          }),
+        }) as unknown as HTMLCanvasElement,
+    } as unknown as Document;
+    assert.equal(measureImageAlphaBounds(fakeImg), null);
+  } finally {
+    globalThis.document = originalDocument;
   }
 });

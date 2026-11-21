@@ -96,7 +96,7 @@ export default async function VenderPage({
                 {STEPS.map(({ title, text }, index) => (
                   <li
                     key={title}
-                    className="flex gap-3 border border-white/10 bg-ink px-3.5 py-3"
+                    className="flex gap-3 bg-ink px-3.5 py-3"
                   >
                     <span className="font-display text-sm font-bold leading-5 text-brand-light">
                       {index + 1}
