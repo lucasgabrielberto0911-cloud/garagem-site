@@ -7,7 +7,7 @@ import {
   parseEngineDisplacementLiters,
   typicalConsumptionRange,
 } from "@/lib/chat-consumption";
-import { shortVersion } from "@/lib/vehicle-display";
+import { MOTO_NAME_HINT, shortVersion } from "@/lib/vehicle-display";
 import { DOSSIER_CHIP_LABELS } from "@/lib/vehicle-dossier";
 import { relatedVehicleScore } from "@/lib/related-vehicles";
 import { officialWarrantyDetail } from "@/lib/chat-warranty";
@@ -68,8 +68,7 @@ export const CHAT_STOCK_TAKE = 80;
 /** Linhas no prompt do Gemini — Hobby Functions / payload enxuto. */
 export const CHAT_PROMPT_STOCK_LIMIT = 16;
 
-export const MOTO_NAME_HINT =
-  /\b(biz|bros|titan|twister|crosser|xre|factor|fazer|pcx|nmax|n max|scooter|scooters|motoca|motocicleta|cg(?:\s?\d{2,3})?|fan(?:\s?\d{2,3})?|pop(?:\s?\d{2,3})?|cb(?:\s?\d{2,3})?|fz15|fz25|lander|xtz|ninja|z300|z400|mt03|mt07|r3|yamaha|kawasaki|harley)\b/i;
+export { MOTO_NAME_HINT };
 
 export function chatStockAtCap(count: number, take = CHAT_STOCK_TAKE) {
   return count >= take;
