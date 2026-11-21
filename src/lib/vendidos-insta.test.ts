@@ -7,11 +7,14 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { InstaDeliveriesGrid } from "@/components/site/InstaDeliveriesGrid";
 import {
+  INSTA_DELIVERIES_EAGER_COUNT,
   INSTA_DELIVERIES_PAGE_SIZE,
+  INSTA_DELIVERIES_SIZES,
   INSTA_DELIVERY_FADE_FALLBACK_MS,
   buildInstaSrcSet,
   formatInstaAlt,
   formatInstaLabels,
+  formatInstaLoadedAnnouncement,
   isValidInstaLqip,
   nextInstaDeliveriesCount,
   sliceInstaDeliveries,
@@ -53,14 +56,14 @@ function readWebpDimensions(filePath: string): { width: number; height: number }
   return null;
 }
 
-test("formatInstaLabels e formatInstaAlt formatam marca+modelo, só modelo, só marca e vazio", () => {
+test("formatInstaLabels e formatInstaAlt formatam marca+modelo, só modelo, só marca e vazio sem 'Sua Garagem'", () => {
   assert.deepEqual(
     formatInstaLabels({ brand: "Chevrolet", model: "Onix" }),
     { eyebrow: "Chevrolet", title: "Onix" },
   );
   assert.equal(
     formatInstaAlt({ brand: "Chevrolet", model: "Onix" }),
-    "Chevrolet Onix entregue a cliente da Sua Garagem",
+    "Chevrolet Onix entregue a cliente da Garagem",
   );
 
   assert.deepEqual(
@@ -69,7 +72,7 @@ test("formatInstaLabels e formatInstaAlt formatam marca+modelo, só modelo, só 
   );
   assert.equal(
     formatInstaAlt({ brand: "Nissan", model: "Kicks Sense" }),
-    "Nissan Kicks Sense entregue a cliente da Sua Garagem",
+    "Nissan Kicks Sense entregue a cliente da Garagem",
   );
 
   assert.deepEqual(
@@ -78,7 +81,7 @@ test("formatInstaLabels e formatInstaAlt formatam marca+modelo, só modelo, só 
   );
   assert.equal(
     formatInstaAlt({ brand: null, model: "Onix" }),
-    "Onix entregue a cliente da Sua Garagem",
+    "Onix entregue a cliente da Garagem",
   );
 
   assert.deepEqual(
@@ -87,7 +90,7 @@ test("formatInstaLabels e formatInstaAlt formatam marca+modelo, só modelo, só 
   );
   assert.equal(
     formatInstaAlt({ brand: "BMW", model: null }),
-    "BMW entregue a cliente da Sua Garagem",
+    "BMW entregue a cliente da Garagem",
   );
 
   assert.deepEqual(
@@ -96,13 +99,22 @@ test("formatInstaLabels e formatInstaAlt formatam marca+modelo, só modelo, só 
   );
   assert.equal(
     formatInstaAlt({ brand: null, model: null }),
-    "Veículo entregue a cliente da Sua Garagem",
+    "Veículo entregue a cliente da Garagem",
   );
 });
 
-test("sliceInstaDeliveries, nextInstaDeliveriesCount, buildInstaSrcSet e isValidInstaLqip", () => {
+test("sliceInstaDeliveries, nextInstaDeliveriesCount, buildInstaSrcSet, sizes, anúncio e isValidInstaLqip", () => {
   assert.equal(INSTA_DELIVERIES_PAGE_SIZE, 24);
+  assert.equal(INSTA_DELIVERIES_EAGER_COUNT, 4);
   assert.ok(INSTA_DELIVERY_FADE_FALLBACK_MS >= 1500);
+  assert.ok(INSTA_DELIVERIES_SIZES.includes("(min-width: 1024px) 22vw"));
+  assert.ok(!INSTA_DELIVERIES_SIZES.includes("23vw"));
+
+  assert.equal(formatInstaLoadedAnnouncement(0), "");
+  assert.equal(formatInstaLoadedAnnouncement(1), "Mais 1 entrega carregada");
+  assert.equal(formatInstaLoadedAnnouncement(11), "Mais 11 entregas carregadas");
+  assert.equal(formatInstaLoadedAnnouncement(24), "Mais 24 entregas carregadas");
+
   const items = Array.from({ length: 60 }, (_, idx) => idx);
   assert.equal(sliceInstaDeliveries(items, 24).length, 24);
   assert.equal(nextInstaDeliveriesCount(24, items.length), 48);
@@ -131,11 +143,11 @@ test("sliceInstaDeliveries, nextInstaDeliveriesCount, buildInstaSrcSet e isValid
   );
 });
 
-test("manifesto vendidos-insta.json tem N itens válidos, src (600x750), srcSmall (360x450), lqip compacto e arquivos sem sobras", () => {
+test("manifesto vendidos-insta.json tem 275 itens válidos com campo art, src (600x750), srcSmall (360x450), lqip compacto e arquivos sem sobras", () => {
   const data = JSON.parse(
     readRepoFile("src/data/vendidos-insta.json"),
   ) as InstaDeliveryItem[];
-  assert.ok(data.length >= 24, `manifesto deve ter ao menos 24 itens (obtido ${data.length})`);
+  assert.equal(data.length, 275);
 
   const webpFiles = new Set(
     readdirSync(join(repoRoot, "public/vendidos-insta")).filter((name) =>
@@ -156,6 +168,11 @@ test("manifesto vendidos-insta.json tem N itens válidos, src (600x750), srcSmal
     assert.ok(!seenIds.has(item.id), `id duplicado: ${item.id}`);
     seenIds.add(item.id);
     assert.match(item.date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(
+      typeof item.art,
+      "boolean",
+      `campo art booleano ausente em ${item.id}`,
+    );
     assert.match(item.src, /^\/vendidos-insta\/.+\.webp$/);
     assert.match(item.srcSmall, /^\/vendidos-insta\/.+-360\.webp$/);
     assert.ok(
@@ -202,13 +219,16 @@ test("manifesto vendidos-insta.json tem N itens válidos, src (600x750), srcSmal
     assert.doesNotMatch(fullLabel, /R\$\s*\d|\bsimul\w*\b|loja digital/i);
 
     const alt = formatInstaAlt(item);
-    assert.match(alt, /entregue a cliente da Sua Garagem$/);
+    assert.match(alt, /entregue a cliente da Garagem$/);
+    assert.doesNotMatch(alt, /Sua Garagem/i);
   }
 
+  assert.ok(data.some((item) => item.art), "manifesto deve conter itens com art=true");
+  assert.ok(data.some((item) => !item.art), "manifesto deve conter itens com art=false");
   assert.equal(referencedFiles.size, webpFiles.size);
 });
 
-test("InstaDeliveriesGrid renderiza 24 iniciais, srcset 360w/600w, LQIP seguro sem ocultar no SSR, 4 eager (1ª high) e selo aria-hidden", () => {
+test("InstaDeliveriesGrid renderiza 24 iniciais, srcset 360w/600w, LQIP só nas lazy, 4 eager (1ª high), selo só quando art=false e aria-live polite", () => {
   const data = JSON.parse(
     readRepoFile("src/data/vendidos-insta.json"),
   ) as InstaDeliveryItem[];
@@ -216,6 +236,7 @@ test("InstaDeliveriesGrid renderiza 24 iniciais, srcset 360w/600w, LQIP seguro s
   const fullHtml = renderToStaticMarkup(
     createElement(InstaDeliveriesGrid, { items: data }),
   );
+  const expectedInitialBadges = data.slice(0, 24).filter((item) => !item.art).length;
   assert.equal((fullHtml.match(/<li\b/g) ?? []).length, 24);
   assert.equal((fullHtml.match(/loading="eager"/g) ?? []).length, 4);
   assert.equal((fullHtml.match(/loading="lazy"/g) ?? []).length, 20);
@@ -227,43 +248,83 @@ test("InstaDeliveriesGrid renderiza 24 iniciais, srcset 360w/600w, LQIP seguro s
     (fullHtml.match(/<img\b[^>]*\bsrcset="[^"]*360w, [^"]*600w"/gi) ?? []).length,
     24,
   );
-  assert.equal((fullHtml.match(/data-delivery-lqip=""/g) ?? []).length, 24);
+  assert.equal(
+    (fullHtml.match(/data-delivery-lqip=""/g) ?? []).length,
+    20,
+    "LQIP deve existir apenas nas 20 fotos lazy (não nas 4 eager)",
+  );
   assert.doesNotMatch(fullHtml, /data-photo-state="loading"/);
   assert.equal(
     (fullHtml.match(/aria-hidden="true"[^>]*data-sold-badge=""/g) ?? []).length,
-    24,
+    expectedInitialBadges,
   );
-  assert.equal((fullHtml.match(/>VENDIDO<\/span>/g) ?? []).length, 24);
-  assert.doesNotMatch(fullHtml, /<a\b|instagram\.com|Mostrando/i);
+  assert.equal((fullHtml.match(/>VENDIDO<\/span>/g) ?? []).length, expectedInitialBadges);
+  assert.match(fullHtml, /aria-live="polite"/);
+  assert.doesNotMatch(fullHtml, /<a\b|instagram\.com|Mostrando|Sua Garagem/i);
   assert.match(fullHtml, />Ver mais<\/button>/);
 
-  const shortHtml = renderToStaticMarkup(
-    createElement(InstaDeliveriesGrid, { items: data.slice(0, 10) }),
+  // Lista mista (art=true e art=false): selo aparece apenas nos itens sem arte.
+  const artItem = data.find((item) => item.art);
+  const plainItem = data.find((item) => !item.art);
+  assert.ok(artItem && plainItem);
+  const mixedItems = [
+    { ...artItem, id: "art-1" },
+    { ...plainItem, id: "plain-1" },
+    { ...artItem, id: "art-2" },
+    { ...plainItem, id: "plain-2" },
+    { ...plainItem, id: "plain-3" },
+  ];
+  const mixedHtml = renderToStaticMarkup(
+    createElement(InstaDeliveriesGrid, { items: mixedItems }),
   );
-  assert.equal((shortHtml.match(/<li\b/g) ?? []).length, 10);
-  assert.doesNotMatch(shortHtml, /Ver mais/);
+  assert.equal((mixedHtml.match(/data-sold-badge=""/g) ?? []).length, 3);
+  assert.equal(
+    (mixedHtml.match(/aria-hidden="true"[^>]*data-sold-badge=""/g) ?? []).length,
+    3,
+  );
+  assert.equal((mixedHtml.match(/>VENDIDO<\/span>/g) ?? []).length, 3);
+  assert.equal(
+    (mixedHtml.match(/data-delivery-lqip=""/g) ?? []).length,
+    1,
+    "apenas o 5º item (lazy) deve receber LQIP",
+  );
+  assert.doesNotMatch(mixedHtml, /Ver mais/);
 
-  // LQIP malicioso nunca é injetado em background-image.
+  // LQIP malicioso em item lazy nunca é injetado em background-image.
   const unsafeHtml = renderToStaticMarkup(
     createElement(InstaDeliveriesGrid, {
-      items: [{ ...data[0], lqip: '") ; background: red; ("' }],
+      items: [
+        ...data.slice(0, 4),
+        { ...data[4], lqip: '") ; background: red; ("' },
+      ],
     }),
   );
   assert.doesNotMatch(unsafeHtml, /data-delivery-lqip/);
 });
 
-test("página /vendidos segue visual limpo sem bordas nos cards, text-balance, 4 colunas no desktop e CTA WhatsApp no fim", () => {
+test("página /vendidos segue visual limpo sem bordas nos cards, payload enxuto sem date, marca Garagem e proteção de LCP", () => {
   const pageSrc = readRepoFile("src/app/(site)/vendidos/page.tsx");
   const gridSrc = readRepoFile("src/components/site/InstaDeliveriesGrid.tsx");
 
   assert.ok(pageSrc.includes("InstaDeliveriesGrid"));
   assert.ok(pageSrc.includes("WhatsAppButton"));
-  assert.ok(pageSrc.includes("Clientes que já saíram de carro novo da Garagem"));
+  assert.ok(
+    pageSrc.includes("Clientes que já saíram da Garagem de carro ou moto novos"),
+  );
+  assert.ok(
+    pageSrc.includes("Fotos de clientes com os veículos vendidos pela Garagem."),
+  );
+  assert.doesNotMatch(pageSrc, /Sua Garagem/i);
+  assert.match(pageSrc, /\.map\(/);
+  assert.doesNotMatch(pageSrc, /\bdate\b/);
   assert.match(pageSrc, /text-balance/);
   assert.doesNotMatch(
     pageSrc,
     /getSoldShowcaseData|getSiteStats|WantedVehicleCta|Veículos vendidos recentemente|Entregas registradas|Galeria de entregas em atualização/,
   );
+  assert.match(gridSrc, /if \(isEager\) return;/);
+  assert.match(gridSrc, /!item\.art/);
+  assert.match(gridSrc, /aria-live="polite"/);
   assert.match(gridSrc, /grid-cols-2 .*lg:grid-cols-4/);
   assert.match(gridSrc, /aspect-\[4\/5\]/);
   assert.match(gridSrc, /width=\{600\}/);

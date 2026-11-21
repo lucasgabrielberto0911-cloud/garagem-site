@@ -8,6 +8,10 @@ from PIL import Image, ImageOps
 SRC = '/workspace/vendidos-insta'; D = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(D, 'public', 'vendidos-insta'); os.makedirs(OUT, exist_ok=True)
 W, H = 600, 750
+# Exclusões manuais (revisão de design do Opus, 21/11): moldura/colagem/telefone antigo de terceiros.
+EXCLUIR = {'CzV937JuEtM', 'C14c3CTOoV9', 'C1cElT6u6Pt', 'C0_oUSOOlCi', 'C6tXfFVusPS'}
+# Ajuste manual de recorte vertical (fração do topo) quando o automático encosta o título na borda.
+TOPO_MANUAL = {'DfibFMqCdOd': 0.17}
 MARCAS = {'vw': 'Volkswagen', 'volks': 'Volkswagen', 'gm': 'Chevrolet', 'chevy': 'Chevrolet'}
 def crop(im, foco, top_frac=None, centro_v=False):
     iw, ih = im.size; tr = W / H
@@ -33,7 +37,7 @@ items = []; resumo = []
 for r in rows:
     code = re.search(r'/(?:p|reel|tv)/([^/]+)/', r['link']).group(1)
     v = ver.get(r['link'], {})
-    keep = r.get('tipo') == 'entrega' and v.get('pessoa_com_carro') is True and bool(v.get('foto'))
+    keep = r.get('tipo') == 'entrega' and v.get('pessoa_com_carro') is True and bool(v.get('foto')) and code not in EXCLUIR
     if keep: r = dict(r, melhor_foto=v['foto'], foco=v.get('foco') or r.get('foco'), texto_grande=v.get('texto_grande'))
     r['pessoa_com_carro'] = v.get('pessoa_com_carro')
     brand = clean(r.get('marca')); model = clean(r.get('modelo'))
@@ -42,13 +46,13 @@ for r in rows:
     if not keep: continue
     name = f"{r['data']}-{code}.webp"
     im = ImageOps.exif_transpose(Image.open(os.path.join(SRC, r['melhor_foto']))).convert('RGB')
-    out = crop(im, r.get('foco'), rt.get(r['melhor_foto']), bool(r.get('texto_grande')))
+    out = crop(im, r.get('foco'), TOPO_MANUAL.get(code, rt.get(r['melhor_foto'])), bool(r.get('texto_grande')))
     out.save(os.path.join(OUT, name), 'WEBP', quality=74, method=6)
     small = name.replace('.webp', '-360.webp')
     out.resize((360, 450), Image.LANCZOS).save(os.path.join(OUT, small), 'WEBP', quality=72, method=6)
     b = io.BytesIO(); out.resize((16, 20), Image.LANCZOS).save(b, 'WEBP', quality=40)
     lqip = 'data:image/webp;base64,' + base64.b64encode(b.getvalue()).decode()
-    items.append(dict(id=code, date=r['data'], brand=brand, model=model, src=f'/vendidos-insta/{name}', srcSmall=f'/vendidos-insta/{small}', lqip=lqip))
+    items.append(dict(id=code, date=r['data'], brand=brand, model=model, src=f'/vendidos-insta/{name}', srcSmall=f'/vendidos-insta/{small}', lqip=lqip, art=bool(r.get('texto_grande'))))
 items.sort(key=lambda x: x['date'], reverse=True)
 json.dump(items, open(os.path.join(D, 'vendidos-insta.json'), 'w'), ensure_ascii=False, indent=1)
 resumo.sort(key=lambda x: x['data'], reverse=True)

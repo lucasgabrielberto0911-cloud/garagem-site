@@ -3,16 +3,21 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { stubPageFotos } from "./stub-fotos";
 
-const totalDeliveries = (
-  JSON.parse(
-    readFileSync(
-      join(process.cwd(), "src/data/vendidos-insta.json"),
-      "utf8",
-    ),
-  ) as unknown[]
-).length;
+type DeliveryEntry = {
+  id: string;
+  art: boolean;
+};
 
-test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO aria-hidden, 24 iniciais, +24 em Ver mais, 4 colunas no desktop e 2 no mobile", async ({
+const deliveries = JSON.parse(
+  readFileSync(
+    join(process.cwd(), "src/data/vendidos-insta.json"),
+    "utf8",
+  ),
+) as DeliveryEntry[];
+
+const totalDeliveries = deliveries.length;
+
+test("galeria /vendidos exibe título, subtítulo, fotos 4:5 com srcset/LQIP só nas lazy, selo VENDIDO só sem arte, 24 iniciais, +24 com aria-live, 4 colunas no desktop e 2 no mobile", async ({
   page,
   request,
 }) => {
@@ -29,8 +34,12 @@ test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO
     page.getByRole("heading", { level: 1, name: "Vendidos" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Clientes que já saíram de carro novo da Garagem"),
+    page.getByText("Clientes que já saíram da Garagem de carro ou moto novos"),
   ).toBeVisible();
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    "Fotos de clientes com os veículos vendidos pela Garagem.",
+  );
 
   const grid = page.locator("[data-insta-deliveries-grid]");
   await expect(grid).toBeVisible();
@@ -48,19 +57,27 @@ test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO
   await expect(items.nth(3).locator("img")).toHaveAttribute("loading", "eager");
   await expect(items.nth(4).locator("img")).toHaveAttribute("loading", "lazy");
   await expect(items.nth(9).locator("img")).toHaveAttribute("loading", "lazy");
-  await expect(firstImg).toHaveAttribute(
-    "alt",
-    /entregue a cliente da Sua Garagem$/,
-  );
 
-  // srcset responsivo com 360w e 600w + camada LQIP borrada + fundo sem preto chapado.
+  const firstAlt = (await firstImg.getAttribute("alt")) ?? "";
+  expect(firstAlt).toMatch(/entregue a cliente da Garagem$/);
+  expect(firstAlt).not.toMatch(/Sua Garagem/i);
+
+  const firstSizes = (await firstImg.getAttribute("sizes")) ?? "";
+  expect(firstSizes).toContain("22vw");
+  expect(firstSizes).not.toContain("23vw");
+
+  // srcset responsivo com 360w e 600w; LQIP apenas nas lazy (não nas 4 eager).
   const firstSrcSet = (await firstImg.getAttribute("srcset")) ?? "";
   expect(firstSrcSet).toContain("360w");
   expect(firstSrcSet).toContain("600w");
 
-  const firstLqip = items.nth(0).locator("[data-delivery-lqip]");
-  await expect(firstLqip).toHaveCount(1);
-  const lqipStyle = await firstLqip.evaluate((el) => {
+  for (let i = 0; i < 4; i++) {
+    await expect(items.nth(i).locator("[data-delivery-lqip]")).toHaveCount(0);
+  }
+
+  const firstLazyLqip = items.nth(4).locator("[data-delivery-lqip]");
+  await expect(firstLazyLqip).toHaveCount(1);
+  const lqipStyle = await firstLazyLqip.evaluate((el) => {
     const style = getComputedStyle(el);
     return {
       backgroundImage: style.backgroundImage,
@@ -84,7 +101,7 @@ test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO
   expect(photoBoxStyle.backgroundColor).not.toBe("rgb(0, 0, 0)");
   expect(photoBoxStyle.backgroundColor).not.toBe("rgb(13, 13, 15)");
 
-  // Fotos carregadas ficam totalmente visíveis (opacity 1).
+  // Fotos eager nunca recebem data-photo-state="loading" e ficam totalmente visíveis.
   for (let i = 0; i < 4; i++) {
     await expect
       .poll(() =>
@@ -96,6 +113,7 @@ test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO
             return (
               el.complete &&
               el.naturalWidth > 0 &&
+              el.dataset.photoState !== "loading" &&
               getComputedStyle(el).opacity === "1"
             );
           }),
@@ -103,12 +121,18 @@ test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO
       .toBe(true);
   }
 
-  const badges = items.locator("[data-sold-badge]");
-  await expect(badges).toHaveCount(24);
-  for (let i = 0; i < 4; i++) {
-    await expect(badges.nth(i)).toBeVisible();
-    await expect(badges.nth(i)).toHaveText("VENDIDO");
-    await expect(badges.nth(i)).toHaveAttribute("aria-hidden", "true");
+  // Selo VENDIDO ausente quando item.art === true e presente nos demais.
+  const expectedInitialBadges = deliveries
+    .slice(0, 24)
+    .filter((item) => !item.art).length;
+  await expect(items.locator("[data-sold-badge]")).toHaveCount(
+    expectedInitialBadges,
+  );
+  const firstArtIndex = deliveries.findIndex((item) => item.art);
+  if (firstArtIndex >= 0 && firstArtIndex < 24) {
+    await expect(
+      items.nth(firstArtIndex).locator("[data-sold-badge]"),
+    ).toHaveCount(0);
   }
 
   const ratios = await items.locator("img").evaluateAll((imgs) =>
@@ -145,9 +169,29 @@ test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO
   );
   expect(btnHeight).toBeGreaterThanOrEqual(56);
 
+  const liveStatus = page.locator("[data-deliveries-status]");
+  await expect(liveStatus).toHaveAttribute("aria-live", "polite");
+
   await loadMoreBtn.click();
   await expect(items).toHaveCount(48);
+  await expect(liveStatus).toHaveText("Mais 24 entregas carregadas");
   await expect(items.nth(24).locator("img")).toHaveAttribute("loading", "lazy");
+
+  // Após carregar o 2º lote, confere selo VENDIDO nos itens com art === false.
+  const expectedAfterMoreBadges = deliveries
+    .slice(0, 48)
+    .filter((item) => !item.art).length;
+  expect(expectedAfterMoreBadges).toBeGreaterThan(0);
+  await expect(items.locator("[data-sold-badge]")).toHaveCount(
+    expectedAfterMoreBadges,
+  );
+  const firstPlainIndex = deliveries.findIndex((item) => !item.art);
+  expect(firstPlainIndex).toBeGreaterThanOrEqual(0);
+  expect(firstPlainIndex).toBeLessThan(48);
+  const plainBadge = items.nth(firstPlainIndex).locator("[data-sold-badge]");
+  await expect(plainBadge).toHaveCount(1);
+  await expect(plainBadge).toHaveText("VENDIDO");
+  await expect(plainBadge).toHaveAttribute("aria-hidden", "true");
 
   if (viewportWidth >= 1024) {
     for (let step = 48; step < totalDeliveries; step += 24) {
@@ -176,7 +220,7 @@ test("galeria /vendidos exibe título, fotos 4:5 com LQIP e srcset, selo VENDIDO
   expect(hasOverflow).toBe(false);
 });
 
-test("galeria /vendidos: foto nunca fica presa em opacity 0 mesmo se o evento load não disparar", async ({
+test("galeria /vendidos: 1ª foto eager nunca entra em loading após hidratação e foto lazy travada é revelada pelo fallback", async ({
   page,
 }) => {
   const width = page.viewportSize()?.width ?? 0;
@@ -190,21 +234,17 @@ test("galeria /vendidos: foto nunca fica presa em opacity 0 mesmo se o evento lo
   );
   await stubPageFotos(page);
 
-  const secondItem = (
-    JSON.parse(
-      readFileSync(
-        join(process.cwd(), "src/data/vendidos-insta.json"),
-        "utf8",
-      ),
-    ) as Array<{ id: string }>
-  )[1];
+  const firstItem = deliveries[0];
+  const fifthItem = deliveries[4];
 
   let releaseStalled!: () => void;
   const stalledGate = new Promise<void>((resolve) => {
     releaseStalled = resolve;
   });
-  const stalledPattern = `**/vendidos-insta/*${secondItem.id}*.webp`;
-  await page.route(stalledPattern, async (route) => {
+  const firstPattern = `**/vendidos-insta/*${firstItem.id}*.webp`;
+  const fifthPattern = `**/vendidos-insta/*${fifthItem.id}*.webp`;
+
+  const stallHandler = async (route: import("@playwright/test").Route) => {
     await stalledGate;
     await route
       .fulfill({
@@ -212,18 +252,40 @@ test("galeria /vendidos: foto nunca fica presa em opacity 0 mesmo se o evento lo
         path: "public/branding/placeholder-car.png",
       })
       .catch(() => {});
-  });
+  };
+  await page.route(firstPattern, stallHandler);
+  await page.route(fifthPattern, stallHandler);
 
   try {
     await page.goto("/vendidos", { waitUntil: "domcontentloaded" });
-    const stalledImg = page
+    const firstImg = page
       .locator("[data-insta-deliveries-grid] > li")
-      .nth(1)
+      .nth(0)
       .locator("img");
+    const lazyImg = page
+      .locator("[data-insta-deliveries-grid] > li")
+      .nth(4)
+      .locator("img");
+
+    // Aguarda a hidratação rodar o useLayoutEffect na foto lazy (índice 4).
+    await expect
+      .poll(() => lazyImg.getAttribute("data-photo-state"), { timeout: 5000 })
+      .toMatch(/^(loading|ready)$/);
+
+    const firstState = await firstImg.evaluate((el) => ({
+      complete: (el as HTMLImageElement).complete,
+      state: (el as HTMLElement).dataset.photoState ?? "",
+      opacity: getComputedStyle(el).opacity,
+    }));
+    expect(firstState.complete).toBe(false);
+    expect(firstState.state).not.toBe("loading");
+    expect(firstState.opacity).toBe("1");
+
+    await lazyImg.scrollIntoViewIfNeeded();
     await expect
       .poll(
         () =>
-          stalledImg.evaluate((el) => ({
+          lazyImg.evaluate((el) => ({
             state: (el as HTMLElement).dataset.photoState ?? "",
             opacity: getComputedStyle(el).opacity,
           })),
@@ -232,6 +294,7 @@ test("galeria /vendidos: foto nunca fica presa em opacity 0 mesmo se o evento lo
       .toEqual({ state: "ready", opacity: "1" });
   } finally {
     releaseStalled();
-    await page.unroute(stalledPattern);
+    await page.unroute(firstPattern);
+    await page.unroute(fifthPattern);
   }
 });

@@ -2,16 +2,18 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
+  INSTA_DELIVERIES_EAGER_COUNT,
   INSTA_DELIVERIES_PAGE_SIZE,
   INSTA_DELIVERIES_SIZES,
   INSTA_DELIVERY_FADE_FALLBACK_MS,
   buildInstaSrcSet,
   formatInstaAlt,
   formatInstaLabels,
+  formatInstaLoadedAnnouncement,
   isValidInstaLqip,
   nextInstaDeliveriesCount,
   sliceInstaDeliveries,
-  type InstaDeliveryItem,
+  type InstaDeliveryClientItem,
 } from "@/lib/vendidos-insta";
 
 const useIsomorphicLayoutEffect =
@@ -22,15 +24,17 @@ function DeliveryPhoto({
   isFirst,
   isEager,
 }: {
-  item: InstaDeliveryItem;
+  item: InstaDeliveryClientItem;
   isFirst: boolean;
   isEager: boolean;
 }) {
   const imgRef = useRef<HTMLImageElement>(null);
   const srcSet = buildInstaSrcSet(item);
-  const safeLqip = isValidInstaLqip(item.lqip) ? item.lqip : null;
+  // Fade e LQIP só nas fotos lazy; as eager já vêm pintadas pelo servidor (LCP).
+  const safeLqip = !isEager && isValidInstaLqip(item.lqip) ? item.lqip : null;
 
   useIsomorphicLayoutEffect(() => {
+    if (isEager) return;
     const img = imgRef.current;
     if (!img) return;
     // Fotos já em cache ou concluídas antes da hidratação permanecem visíveis.
@@ -55,7 +59,7 @@ function DeliveryPhoto({
     };
 
     let observer: IntersectionObserver | undefined;
-    if (isEager || typeof IntersectionObserver === "undefined") {
+    if (typeof IntersectionObserver === "undefined") {
       armFallbackTimer();
     } else {
       observer = new IntersectionObserver(
@@ -110,21 +114,31 @@ function DeliveryPhoto({
         fetchPriority={isFirst ? "high" : undefined}
         decoding="async"
         draggable={false}
-        onLoad={(event) => {
-          event.currentTarget.dataset.photoState = "ready";
-        }}
-        onError={(event) => {
-          event.currentTarget.dataset.photoState = "ready";
-        }}
+        onLoad={
+          isEager
+            ? undefined
+            : (event) => {
+                event.currentTarget.dataset.photoState = "ready";
+              }
+        }
+        onError={
+          isEager
+            ? undefined
+            : (event) => {
+                event.currentTarget.dataset.photoState = "ready";
+              }
+        }
         className="relative z-[1] h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out data-[photo-state=loading]:opacity-0 motion-reduce:transition-none lg:motion-safe:group-hover:scale-[1.03]"
       />
-      <span
-        aria-hidden="true"
-        data-sold-badge=""
-        className="pointer-events-none absolute left-2 top-2 z-[2] inline-block -rotate-2 rounded-sm bg-brand px-2 py-0.5 font-display text-[10px] font-bold uppercase leading-none tracking-[0.12em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.48)] sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-xs"
-      >
-        VENDIDO
-      </span>
+      {!item.art ? (
+        <span
+          aria-hidden="true"
+          data-sold-badge=""
+          className="pointer-events-none absolute left-2 top-2 z-[2] inline-block -rotate-2 rounded-sm bg-brand px-2 py-0.5 font-display text-[10px] font-bold uppercase leading-none tracking-[0.12em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.48)] sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-xs"
+        >
+          VENDIDO
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -133,13 +147,17 @@ export function InstaDeliveriesGrid({
   items,
   pageSize = INSTA_DELIVERIES_PAGE_SIZE,
 }: {
-  items: readonly InstaDeliveryItem[];
+  items: readonly InstaDeliveryClientItem[];
   pageSize?: number;
 }) {
   const [visibleCount, setVisibleCount] = useState(() =>
     Math.min(pageSize, items.length),
   );
   const [animatedFrom, setAnimatedFrom] = useState(items.length);
+  const [announcement, setAnnouncement] = useState<{
+    added: number;
+    seq: number;
+  } | null>(null);
 
   const visibleItems = sliceInstaDeliveries(items, visibleCount);
   const hasMore = visibleItems.length < items.length;
@@ -153,7 +171,7 @@ export function InstaDeliveriesGrid({
         {visibleItems.map((item, index) => {
           const labels = formatInstaLabels(item);
           const isNewBatch = index >= animatedFrom;
-          const isEager = !isNewBatch && index < 4;
+          const isEager = !isNewBatch && index < INSTA_DELIVERIES_EAGER_COUNT;
 
           return (
             <li
@@ -197,15 +215,38 @@ export function InstaDeliveriesGrid({
         })}
       </ul>
 
+      <p
+        aria-live="polite"
+        aria-atomic="true"
+        data-deliveries-status=""
+        className="sr-only"
+      >
+        {announcement ? (
+          <span key={announcement.seq}>
+            {formatInstaLoadedAnnouncement(announcement.added)}
+          </span>
+        ) : null}
+      </p>
+
       {hasMore ? (
         <div className="mt-10 flex justify-center sm:mt-12">
           <button
             type="button"
             onClick={() => {
-              setAnimatedFrom(visibleCount);
-              setVisibleCount((current) =>
-                nextInstaDeliveriesCount(current, items.length, pageSize),
+              const nextCount = nextInstaDeliveriesCount(
+                visibleCount,
+                items.length,
+                pageSize,
               );
+              const added = nextCount - visibleCount;
+              setAnimatedFrom(visibleCount);
+              setVisibleCount(nextCount);
+              if (added > 0) {
+                setAnnouncement((prev) => ({
+                  added,
+                  seq: (prev?.seq ?? 0) + 1,
+                }));
+              }
             }}
             className="inline-flex min-h-[56px] w-full items-center justify-center rounded-md bg-brand px-10 py-4 font-display text-base font-bold uppercase tracking-wide text-white shadow-[0_12px_28px_-8px_rgba(217,21,25,0.5)] transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:bg-brand-dark touch-manipulation motion-reduce:transition-none sm:w-auto sm:min-w-[240px]"
           >

@@ -5,15 +5,29 @@ import { Container, WhatsAppButton } from "@/components/site/ui";
 import vendidosInstaData from "@/data/vendidos-insta.json";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
-import type { InstaDeliveryItem } from "@/lib/vendidos-insta";
+import {
+  INSTA_DELIVERIES_EAGER_COUNT,
+  type InstaDeliveryClientItem,
+  type InstaDeliveryItem,
+} from "@/lib/vendidos-insta";
 
-const instaDeliveries: readonly InstaDeliveryItem[] = vendidosInstaData;
+const instaDeliveries: readonly InstaDeliveryClientItem[] = (
+  vendidosInstaData as readonly InstaDeliveryItem[]
+).map(({ id, brand, model, src, srcSmall, lqip, art }, index) => ({
+  id,
+  brand,
+  model,
+  src,
+  srcSmall,
+  lqip: index < INSTA_DELIVERIES_EAGER_COUNT ? null : lqip,
+  art,
+}));
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Vendidos | ${site.name}`,
-  description: "Fotos de clientes com os veículos vendidos pela Sua Garagem.",
+  description: "Fotos de clientes com os veículos vendidos pela Garagem.",
   path: "/vendidos",
 });
 
@@ -45,7 +59,7 @@ export default function VendidosPage() {
             aria-hidden="true"
           />
           <p className="mx-auto mt-3.5 max-w-xl text-balance text-base leading-relaxed text-muted sm:text-lg">
-            Clientes que já saíram de carro novo da Garagem
+            Clientes que já saíram da Garagem de carro ou moto novos
           </p>
         </header>
 

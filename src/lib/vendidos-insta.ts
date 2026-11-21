@@ -6,6 +6,18 @@ export type InstaDeliveryItem = {
   src: string;
   srcSmall: string;
   lqip: string;
+  art: boolean;
+};
+
+/** Subconjunto mínimo enviado ao client component (sem `date` nem campos ociosos). */
+export type InstaDeliveryClientItem = {
+  id: string;
+  brand: string | null;
+  model: string | null;
+  src: string;
+  srcSmall: string;
+  lqip: string | null;
+  art: boolean;
 };
 
 export type InstaDeliveryLabels = {
@@ -16,10 +28,11 @@ export type InstaDeliveryLabels = {
 };
 
 export const INSTA_DELIVERIES_PAGE_SIZE = 24;
+export const INSTA_DELIVERIES_EAGER_COUNT = 4;
 
 /** Larguras reais do card na grade: 4 colunas no desktop (container 90rem) e 2 no celular. */
 export const INSTA_DELIVERIES_SIZES =
-  "(min-width: 1440px) 326px, (min-width: 1024px) 23vw, (min-width: 640px) 45vw, 46vw";
+  "(min-width: 1440px) 326px, (min-width: 1024px) 22vw, (min-width: 640px) 45vw, 46vw";
 
 /** Salvaguarda para nunca deixar foto presa em opacity 0 se o evento load não disparar. */
 export const INSTA_DELIVERY_FADE_FALLBACK_MS = 2500;
@@ -40,7 +53,7 @@ export function isValidInstaLqip(
 
 /** Monta o srcset responsivo com a miniatura 360w e a foto completa 600w. */
 export function buildInstaSrcSet(
-  item: Pick<InstaDeliveryItem, "srcSmall" | "src">,
+  item: Pick<InstaDeliveryClientItem, "srcSmall" | "src">,
 ): string {
   return `${item.srcSmall} 360w, ${item.src} 600w`;
 }
@@ -53,7 +66,7 @@ export function buildInstaSrcSet(
  * - Sem marca nem modelo: "Veículo entregue"
  */
 export function formatInstaLabels(
-  item: Pick<InstaDeliveryItem, "brand" | "model">,
+  item: Pick<InstaDeliveryClientItem, "brand" | "model">,
 ): InstaDeliveryLabels {
   const brand = item.brand?.trim() || null;
   const model = item.model?.trim() || null;
@@ -72,17 +85,25 @@ export function formatInstaLabels(
 
 /**
  * Texto alternativo da imagem:
- * "{Marca Modelo} entregue a cliente da Sua Garagem" ou
- * "Veículo entregue a cliente da Sua Garagem".
+ * "{Marca Modelo} entregue a cliente da Garagem" ou
+ * "Veículo entregue a cliente da Garagem".
  */
 export function formatInstaAlt(
-  item: Pick<InstaDeliveryItem, "brand" | "model">,
+  item: Pick<InstaDeliveryClientItem, "brand" | "model">,
 ): string {
   const parts = [item.brand?.trim(), item.model?.trim()].filter(Boolean);
   if (parts.length > 0) {
-    return `${parts.join(" ")} entregue a cliente da Sua Garagem`;
+    return `${parts.join(" ")} entregue a cliente da Garagem`;
   }
-  return "Veículo entregue a cliente da Sua Garagem";
+  return "Veículo entregue a cliente da Garagem";
+}
+
+/** Mensagem para região aria-live="polite" após carregar mais entregas. */
+export function formatInstaLoadedAnnouncement(added: number): string {
+  const safeAdded = Math.max(0, Math.trunc(added));
+  if (safeAdded === 0) return "";
+  if (safeAdded === 1) return "Mais 1 entrega carregada";
+  return `Mais ${safeAdded} entregas carregadas`;
 }
 
 /** Fatia os itens visíveis respeitando limites seguros. */
