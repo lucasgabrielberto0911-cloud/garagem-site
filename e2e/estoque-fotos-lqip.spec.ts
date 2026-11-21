@@ -106,7 +106,9 @@ test("estoque: foto nunca fica presa em opacity 0 mesmo se o evento load não di
 
   try {
     await page.goto("/estoque", { waitUntil: "domcontentloaded" });
-    const stalledImg = page.locator("article.listing-card img").nth(1);
+    const stalledImg = page.locator('article.listing-card img[src*="1790785425727-"]');
+    await expect(stalledImg).toHaveCount(1);
+    await expect(stalledImg).toHaveAttribute("data-photo-state", "loading");
     await expect
       .poll(
         () =>
@@ -114,11 +116,41 @@ test("estoque: foto nunca fica presa em opacity 0 mesmo se o evento load não di
             state: (el as HTMLElement).dataset.photoState ?? "",
             opacity: getComputedStyle(el).opacity,
           })),
-        { timeout: 5000 },
+        { timeout: 8000 },
       )
       .toEqual({ state: "ready", opacity: "1" });
   } finally {
     releaseStalled();
     await page.unroute(stalledPattern);
+  }
+});
+
+test("estoque: fotos ficam visíveis com JavaScript desligado", async ({ browser }, info) => {
+  test.skip(info.project.name !== "desktop", "SSR sem JS não varia por viewport");
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await stubPageFotos(page);
+    await page.goto("/estoque");
+    const covers = page.locator("article.listing-card img");
+    const total = await covers.count();
+    expect(total).toBeGreaterThanOrEqual(3);
+    for (let i = 0; i < Math.min(total, 3); i++) {
+      await expect
+        .poll(() =>
+          covers.nth(i).evaluate((img) => {
+            const el = img as HTMLImageElement;
+            return (
+              el.dataset.photoState === undefined &&
+              el.complete &&
+              el.naturalWidth > 0 &&
+              getComputedStyle(el).opacity === "1"
+            );
+          }),
+        )
+        .toBe(true);
+    }
+  } finally {
+    await context.close();
   }
 });

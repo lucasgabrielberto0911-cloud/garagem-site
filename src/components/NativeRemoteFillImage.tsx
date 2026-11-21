@@ -91,9 +91,9 @@ export function NativeRemoteFillImage({
       observer.observe(img);
     }
 
-    const onPageShow = () => {
+    const onPageShow = (event: PageTransitionEvent) => {
       if (img.complete) reveal();
-      else armFallbackTimer();
+      else if (event.persisted) armFallbackTimer();
     };
     window.addEventListener("pageshow", onPageShow);
 
