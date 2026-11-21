@@ -90,7 +90,7 @@ export default async function SobrePage() {
         <PageHeader
           eyebrow="Sobre nós"
           title={publicSite.name}
-          description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region}.`}
+          description="Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência e negociação clara. Atendemos Linhares, Aracruz e Grande Vitória."
         />
 
         <div className="mt-6 flex justify-center">
@@ -101,7 +101,7 @@ export default async function SobrePage() {
           </SiteLeadHit>
         </div>
 
-        <p className="mx-auto mt-6 max-w-3xl border border-white/20 bg-ink px-4 py-3 text-center text-sm leading-relaxed text-cream/80">
+        <p className="mx-auto mt-6 max-w-3xl bg-white/[0.04] px-5 py-3.5 text-center text-sm leading-relaxed text-cream/80">
           <span className="font-semibold text-cream">Elias Netto</span>, dono e sócio-administrador
           {" · "}
           {publicSite.legalName}
@@ -111,32 +111,21 @@ export default async function SobrePage() {
 
         <FounderSection photoUrl={siteContent.founderPhotoUrl} />
 
-        <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/20 sm:mt-12 sm:aspect-[16/9]">
-          {/* eslint-disable-next-line @next/next/no-img-element -- estático, sem cota /_next/image */}
-          <img
-            src="/branding/hero-bg.webp"
-            alt={`Estoque e atendimento da ${publicSite.name}`}
-            width={1600}
-            height={900}
-            decoding="async"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+        <div className="mx-auto mt-8 max-w-5xl bg-white/[0.04] px-6 py-7 text-center sm:mt-10 sm:px-10 sm:py-8">
           <div
-            className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/40 to-transparent"
+            className="mx-auto mb-4 h-0.5 w-14 bg-brand-gradient"
             aria-hidden="true"
           />
-          <div className="absolute inset-x-0 bottom-0 p-4 text-center sm:p-8">
-            <p className="font-display text-base font-semibold text-cream sm:text-xl">
-              Procedência. Clareza. Resultado.
-            </p>
-            <p className="mx-auto mt-1.5 max-w-lg text-xs text-cream/85 sm:mt-2 sm:text-sm">
-              Compra, venda, troca e financiamento com o rigor de quem trata
-              cada negócio com seriedade — do primeiro contato à entrega.
-            </p>
-          </div>
+          <p className="font-display text-lg font-semibold tracking-tight text-cream sm:text-xl">
+            Procedência. Clareza. Resultado.
+          </p>
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-cream/80">
+            Compra, venda, troca e financiamento com o rigor de quem trata
+            cada negócio com seriedade — do primeiro contato à entrega.
+          </p>
         </div>
 
-        <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/20 bg-white/20 sm:grid-cols-4">
+        <ul className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-px bg-white/[0.08] sm:mt-10 sm:grid-cols-4">
           {highlightStats.map((stat) => (
             <li
               key={stat.label}
@@ -164,13 +153,13 @@ export default async function SobrePage() {
         <div className="mx-auto mt-14 max-w-5xl lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-12">
           <nav
             aria-label="Índice da página"
-            className="mb-8 flex justify-center gap-2 overflow-x-auto pb-1 scrollbar-hide lg:sticky lg:top-24 lg:mb-0 lg:flex-col lg:justify-start lg:overflow-visible lg:pb-0"
+            className="mb-8 flex justify-center gap-2 overflow-x-auto pb-1 scrollbar-hide lg:sticky lg:top-24 lg:mb-0 lg:flex-col lg:justify-start lg:gap-1 lg:overflow-visible lg:pb-0"
           >
             {TOC.map((item) => (
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="inline-flex min-h-11 shrink-0 items-center border border-white/20 px-3 font-display text-xs font-semibold uppercase tracking-wider text-cream/80 transition hover:border-brand hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:w-full"
+                className="inline-flex min-h-11 shrink-0 items-center bg-white/[0.04] px-3.5 font-display text-xs font-semibold uppercase tracking-wider text-cream/80 transition hover:bg-white/[0.09] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:w-full lg:bg-transparent lg:px-3 lg:hover:bg-white/[0.05]"
               >
                 {item.label}
               </a>
@@ -192,8 +181,8 @@ export default async function SobrePage() {
                     A {publicSite.name} nasceu da paixão por veículos e da vontade de
                     fazer diferente: vender seminovo com informação clara, respeito
                     ao cliente e zero enrolação. Ao longo de mais de duas décadas,
-                    construímos uma trajetória marcada pela confiança de famílias em{" "}
-                    {publicSite.region} e em todo o {publicSite.state}.
+                    construímos uma trajetória marcada pela confiança de famílias em
+                    Linhares, Aracruz, Grande Vitória e em todo o {publicSite.state}.
                   </p>
                   <p>
                     Foram mais de 1.000 veículos entregues — cada um com atenção à
@@ -202,9 +191,9 @@ export default async function SobrePage() {
                     volta para indicar um amigo.
                   </p>
                   <p>
-                    Hoje atendemos{" "}
+                    Hoje{" "}
                     <strong className="text-cream">
-                      Linhares, Aracruz e Grande Vitória
+                      atendemos Linhares, Aracruz e Grande Vitória
                     </strong>{" "}
                     e combinamos o atendimento pelo WhatsApp, todos os dias, das
                     8h às 23h. A vitrine está no site, a conversa no WhatsApp e o
@@ -235,8 +224,9 @@ export default async function SobrePage() {
                     <strong className="font-display font-semibold text-cream">
                       Visão.
                     </strong>{" "}
-                      Ser referência de confiança em seminovos em {publicSite.region}: a Garagem em que o cliente confia para negociar com
-                    clareza e sair satisfeito.
+                    Ser referência de confiança em seminovos — atendemos Linhares,
+                    Aracruz e Grande Vitória para que cada cliente negocie com
+                    clareza e saia satisfeito.
                   </p>
                   <p>
                     <strong className="font-display font-semibold text-cream">
@@ -262,19 +252,19 @@ export default async function SobrePage() {
                 Qualidade e atendimento não são slogan: são o jeito como fechamos
                 cada negócio. Você merece clareza, agilidade e um time que resolve.
               </p>
-              <ul className="mt-8 grid gap-5 sm:grid-cols-2">
+              <ul className="mt-8 grid gap-4 sm:grid-cols-2">
                 {DIFERENCIAIS.map(({ Icon, title, text }) => (
                   <li
                     key={title}
-                    className="flex flex-col items-center border border-white/20 bg-ink p-6 text-center lg:items-start lg:text-left"
+                    className="flex flex-col items-center bg-ink p-6 text-center lg:items-start lg:text-left"
                   >
-                    <span className="inline-flex h-11 w-11 items-center justify-center bg-brand/10">
+                    <span className="inline-flex h-10 w-10 items-center justify-center bg-brand/10">
                       <Icon className="h-5 w-5 text-brand-light" />
                     </span>
-                    <h3 className="mt-5 font-display text-base font-semibold text-cream">
+                    <h3 className="mt-4 font-display text-base font-semibold text-cream">
                       {title}
                     </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-cream/80">{text}</p>
+                    <p className="mt-2.5 text-sm leading-relaxed text-cream/80">{text}</p>
                   </li>
                 ))}
               </ul>
@@ -282,60 +272,59 @@ export default async function SobrePage() {
 
             <section
               id="como-funciona"
-              className="mt-14 scroll-mt-28 border border-brand/30 bg-ink p-8 text-center sm:p-10 lg:text-left"
+              className="mt-14 scroll-mt-28 overflow-hidden bg-ink text-center lg:text-left"
             >
-              <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-                Como funciona o atendimento da Garagem
-              </h2>
-              <div
-                className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
-                aria-hidden="true"
-              />
-              <ol className="mx-auto mt-8 grid max-w-3xl gap-6 text-left sm:grid-cols-3 lg:mx-0">
-                {[
-                  {
-                    step: "01",
-                    title: "Escolha no site",
-                    text: "Navegue no estoque, filtre por marca, ano e valor e salve seus favoritos.",
-                  },
-                  {
-                    step: "02",
-                    title: "Fale no WhatsApp",
-                    text: "Peça vídeo, tire dúvidas, avalie troca ou financiamento — respondemos das 8h às 23h.",
-                  },
-                  {
-                    step: "03",
-                    title: "Feche com segurança",
-                    text: "Combinamos visita ou entrega, documentação e pagamento com acompanhamento completo.",
-                  },
-                ].map((item) => (
-                  <li key={item.step} className="text-center sm:text-left">
-                    <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light">
-                      {item.step}
-                    </p>
-                    <h3 className="mt-2 font-display text-base font-semibold text-cream">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-cream/80">
-                      {item.text}
-                    </p>
-                  </li>
-                ))}
-              </ol>
+              <div className="h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
+              <div className="p-7 sm:p-10">
+                <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+                  Como funciona o atendimento da Garagem
+                </h2>
+                <ol className="mx-auto mt-7 grid max-w-3xl gap-6 text-left sm:grid-cols-3 lg:mx-0">
+                  {[
+                    {
+                      step: "01",
+                      title: "Escolha no site",
+                      text: "Navegue no estoque, veja fotos e detalhes e salve seus favoritos.",
+                    },
+                    {
+                      step: "02",
+                      title: "Fale no WhatsApp",
+                      text: "Peça vídeo, tire dúvidas, avalie troca ou financiamento — respondemos das 8h às 23h.",
+                    },
+                    {
+                      step: "03",
+                      title: "Feche com segurança",
+                      text: "Combinamos visita ou entrega, documentação e pagamento com acompanhamento completo.",
+                    },
+                  ].map((item) => (
+                    <li key={item.step} className="text-center sm:text-left">
+                      <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light">
+                        {item.step}
+                      </p>
+                      <h3 className="mt-2 font-display text-base font-semibold text-cream">
+                        {item.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-cream/80">
+                        {item.text}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </section>
 
-            <div className="mt-12">
+            <div className="mt-10">
               <TrustBadges />
             </div>
 
             <div
               id="dados"
-              className="mt-12 scroll-mt-28 border border-white/20 bg-ink p-6 text-center lg:text-left"
+              className="mt-10 scroll-mt-28 bg-white/[0.04] p-6 text-center sm:p-7 lg:text-left"
             >
               <h2 className="font-display text-base font-semibold text-cream">
                 Dados da empresa
               </h2>
-              <dl className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <dt className="text-xs uppercase tracking-wider text-cream/75">
                     Razão social

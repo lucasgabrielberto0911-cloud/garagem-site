@@ -42,6 +42,31 @@ test("rotas legadas recusam GET e HEAD sem consultar o Storage nem tentar fallba
   }
 });
 
+test("exceção isAllowedLegacyUpstream libera só o original da foto do fundador, nunca variantes nem outras chaves", async () => {
+  const founderBytes = new Uint8Array([82, 73, 70, 70, 9, 8, 7]);
+  let calls = 0;
+  const fetcher: typeof fetch = async (url) => {
+    calls++;
+    assert.equal(url, original);
+    return new Response(founderBytes, { headers: { "Content-Type": "image/webp" } });
+  };
+  const allowOnlyFounder = { isAllowedLegacyUpstream: (upstream: string) => upstream === original };
+
+  const ok = await servePublicPhoto(request(own), ["v1", "original", key], fetcher, allowOnlyFounder);
+  assert.equal(ok.status, 200);
+  assert.equal(calls, 1);
+  assert.deepEqual(new Uint8Array(await ok.arrayBuffer()), founderBytes);
+  assert.equal(ok.headers.get("cache-control"), "public, max-age=31536000, s-maxage=31536000, immutable");
+
+  // Variantes derivadas ou outra chave legada continuam bloqueadas em 410 sem chamar fetcher.
+  const otherKey = "1790028541547-aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.webp";
+  const blockedOther = await servePublicPhoto(request(own), ["v1", "original", otherKey], fetcher, allowOnlyFounder);
+  assert.equal(blockedOther.status, 410);
+  const blockedVariant = await servePublicPhoto(request(own), ["v1", "1280-contain-q78", key], fetcher, allowOnlyFounder);
+  assert.equal(blockedVariant.status, 410);
+  assert.equal(calls, 1);
+});
+
 test("GET mantém os bytes e remove noindex, cookies e cache do Storage; HEAD é equivalente", async () => {
   const bytes = new Uint8Array([82, 73, 70, 70, 1, 2, 3]);
   let calls = 0;

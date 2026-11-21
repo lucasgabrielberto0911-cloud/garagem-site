@@ -1,35 +1,70 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { PUBLIC_PHOTO_PREFIX, publicPhotoSrc } from "@/lib/public-photo-url";
+
+const VEHICLE_PLACEHOLDER_PATH = "/branding/placeholder-car.png";
 
 export function FounderSection({
   photoUrl,
 }: {
   photoUrl?: string | null;
 }) {
-  const portrait = photoUrl?.trim() ? publicPhotoSrc(photoUrl.trim()) : null;
+  const rawPhotoUrl = photoUrl?.trim() || null;
+  const resolvedPortrait = rawPhotoUrl ? publicPhotoSrc(rawPhotoUrl) : null;
+  const portrait =
+    resolvedPortrait === VEHICLE_PLACEHOLDER_PATH &&
+    rawPhotoUrl !== VEHICLE_PLACEHOLDER_PATH
+      ? null
+      : resolvedPortrait;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const showPortrait = Boolean(portrait && failedSrc !== portrait);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!portrait || !img) return;
+
+    const markFailed = () => setFailedSrc(portrait);
+    if (img.complete && img.naturalWidth === 0 && Boolean(img.currentSrc)) {
+      markFailed();
+      return;
+    }
+
+    img.addEventListener("error", markFailed);
+    return () => {
+      img.removeEventListener("error", markFailed);
+    };
+  }, [portrait]);
 
   return (
     <section
       id="por-tras"
       aria-labelledby="titulo-por-tras"
-      className="mx-auto mt-10 max-w-5xl scroll-mt-28 overflow-hidden border border-white/20 bg-black sm:mt-12"
+      className="mx-auto mt-10 max-w-5xl scroll-mt-28 overflow-hidden bg-ink sm:mt-12"
     >
       <div
         className={
-          portrait
+          showPortrait
             ? "grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
             : ""
         }
       >
-        {portrait ? (
-          <div className="relative min-h-[420px] bg-black sm:min-h-[520px] lg:order-2 lg:min-h-full">
+        {showPortrait && portrait ? (
+          <div className="relative min-h-[380px] bg-black sm:min-h-[480px] lg:order-2 lg:min-h-full">
             <Image
+              ref={imgRef}
               src={portrait}
               alt="Elias Clovis Gonçalves dos Santos Neto, dono e sócio-administrador da Garagem"
               fill
+              loading="eager"
               sizes="(min-width: 1024px) 480px, 100vw"
               quality={90}
-              unoptimized={portrait.startsWith(PUBLIC_PHOTO_PREFIX) || /^https?:\/\//i.test(portrait)}
+              unoptimized={
+                portrait.startsWith(PUBLIC_PHOTO_PREFIX) ||
+                /^https?:\/\//i.test(portrait)
+              }
               className="object-contain object-bottom"
             />
           </div>
@@ -37,7 +72,7 @@ export function FounderSection({
 
         <div
           className={
-            portrait
+            showPortrait
               ? "flex flex-col justify-center px-6 py-10 sm:px-10 sm:py-12 lg:order-1 lg:px-12 lg:py-14"
               : "mx-auto max-w-3xl px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14"
           }
