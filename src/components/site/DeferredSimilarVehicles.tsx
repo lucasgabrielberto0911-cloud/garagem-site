@@ -1,3 +1,4 @@
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
 import { getRelatedVehicles } from "@/lib/vehicles";
 import { SimilarVehicles } from "./SimilarVehicles";
 
@@ -8,6 +9,6 @@ export async function DeferredSimilarVehicles({
 }: Omit<Parameters<typeof SimilarVehicles>[0], "vehicles"> & {
   query: Parameters<typeof getRelatedVehicles>;
 }) {
-  const vehicles = await getRelatedVehicles(...query);
+  const vehicles = await enrichVehiclesWithLqip(await getRelatedVehicles(...query));
   return <SimilarVehicles {...props} vehicles={vehicles} />;
 }

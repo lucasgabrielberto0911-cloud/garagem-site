@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { attachCachedPhotoLqip } from "@/lib/photo-lqip-cache";
 import { getStockPage } from "@/lib/vehicles";
 import { parseStockFilters, STOCK_PAGE_SIZE } from "@/lib/stock-query";
 
@@ -17,10 +18,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (result.error) throw new Error("Consulta do estoque indisponível");
+    const vehicles = attachCachedPhotoLqip(result.vehicles);
 
     return NextResponse.json(
       {
-        vehicles: result.vehicles,
+        vehicles,
         total: result.total,
         page: result.page,
         pageSize: result.pageSize,

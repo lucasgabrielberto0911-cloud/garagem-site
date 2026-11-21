@@ -31,6 +31,8 @@ import { buildPageMetadata, itemListJsonLd, localBusinessJsonLd, websiteJsonLd }
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getGoogleReviews, getPublishedFaq } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
+import { HOME_PRIORITY_COUNT } from "@/lib/stock-query";
 import { getFeaturedVehicles, getTestimonials } from "@/lib/vehicles";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { HOME_SEO_DESCRIPTION, HOME_SEO_TITLE } from "@/lib/seo-local";
@@ -73,6 +75,7 @@ export default async function HomePage() {
     getFeaturedVehicles(MAX_HOME_FEATURED),
     getPublicSite(),
   ]);
+  const featuredWithLqip = await enrichVehiclesWithLqip(featured);
 
   return (
     <>
@@ -189,8 +192,8 @@ export default async function HomePage() {
             )
           ) : (
             <VehicleGrid
-              vehicles={featured}
-              priorityCount={1}
+              vehicles={featuredWithLqip}
+              priorityCount={HOME_PRIORITY_COUNT}
               desktopCols={4}
               destaqueLimit={0}
               pageOrigin="home"

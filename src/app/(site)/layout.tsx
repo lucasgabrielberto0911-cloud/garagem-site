@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { preconnect } from "react-dom";
 import { CookieConsent } from "@/components/CookieConsent";
 import { DeferredMarketing } from "@/components/DeferredMarketing";
 import { MarketingScripts } from "@/components/MarketingScripts";
@@ -9,6 +10,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { OfflineLeadFlush } from "@/components/site/OfflineLeadFlush";
 import { DeferredSiteChat } from "@/components/site/DeferredSiteChat";
 import { FavoritesProvider } from "@/lib/favorites";
+import { publicPhotoR2Origin } from "@/lib/public-photo-url";
 import { localBusinessJsonLd } from "@/lib/seo";
 import { getGoogleReviews } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
@@ -24,6 +26,9 @@ async function SiteJsonLd() {
 export default function SiteLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Imagens do estoque vêm no-cors do R2; preconnect antecipa DNS+TLS (web.dev/articles/optimize-lcp).
+  preconnect(publicPhotoR2Origin());
+
   return (
     <FavoritesProvider>
       <div className="site-shell flex min-h-app-screen flex-col" data-stock-scroll="">

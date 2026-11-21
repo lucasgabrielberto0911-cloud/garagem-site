@@ -17,6 +17,8 @@ import {
   buildPageMetadata,
   itemListJsonLd,
 } from "@/lib/seo";
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
+import { HOME_PRIORITY_COUNT } from "@/lib/stock-query";
 import { getFeaturedVehicles } from "@/lib/vehicles";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 
@@ -30,7 +32,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function SeminovosHubPage() {
-  const featured = await getFeaturedVehicles(MAX_HOME_FEATURED);
+  const featured = await enrichVehiclesWithLqip(await getFeaturedVehicles(MAX_HOME_FEATURED));
   const path = "/seminovos";
 
   return (
@@ -107,7 +109,7 @@ export default async function SeminovosHubPage() {
             ) : (
               <VehicleGrid
                 vehicles={featured}
-                priorityCount={2}
+                priorityCount={HOME_PRIORITY_COUNT}
                 returnTo={path}
               />
             )}

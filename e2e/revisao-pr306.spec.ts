@@ -18,15 +18,17 @@ test("ficha disponível e vendida têm um H1 acessível em qualquer viewport", a
   }
 });
 
-test("cards mantêm uma capa prioritária e as seguintes em lazy loading", async ({ page }) => {
+test("cards mantêm 2 capas prioritárias e a 1ª dobra em carregamento imediato", async ({ page }) => {
   for (const path of ["/", "/estoque"]) {
     await page.goto(path);
     const covers = page.locator("article.listing-card img");
     await expect(covers.first()).toHaveAttribute("fetchpriority", "high");
     await expect(covers.first()).toHaveAttribute("loading", "eager");
-    await expect(covers.nth(1)).toHaveAttribute("fetchpriority", "low");
-    await expect(covers.nth(1)).toHaveAttribute("loading", "lazy");
-    await expect(page.locator('article.listing-card img[fetchpriority="high"]')).toHaveCount(1);
+    await expect(covers.nth(1)).toHaveAttribute("fetchpriority", "high");
+    await expect(covers.nth(1)).toHaveAttribute("loading", "eager");
+    await expect(covers.nth(2)).toHaveAttribute("fetchpriority", "auto");
+    await expect(covers.nth(2)).toHaveAttribute("loading", "eager");
+    await expect(page.locator('article.listing-card img[fetchpriority="high"]')).toHaveCount(2);
     if (page.viewportSize()!.width < 640) {
       const source = page.locator('article.listing-card source[media="(max-width: 639px)"]').first();
       await expect(source).toHaveAttribute("srcset", /480w$/);

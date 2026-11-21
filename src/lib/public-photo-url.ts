@@ -2,6 +2,19 @@
 import { galleryPreviewObjectPath } from "./gallery-preview-path";
 export const PHOTO_STORAGE_ORIGIN = "https://vesmqhyxautgtvgccweo.supabase.co";
 export const PHOTO_BLOB_ORIGIN = "https://t6ze7ss5b2a5svfd.public.blob.vercel-storage.com";
+export const PHOTO_R2_ORIGIN = "https://pub-92a1bcb633c0472bbd89ca0f450e5935.r2.dev";
+
+/** Origem HTTPS pública do R2 da loja (usa R2_PUBLIC_URL quando configurado). */
+export function publicPhotoR2Origin(): string {
+  const configured = process.env.R2_PUBLIC_URL?.trim();
+  if (configured) {
+    try {
+      const parsed = new URL(configured);
+      if (parsed.protocol === "https:") return parsed.origin;
+    } catch {}
+  }
+  return PHOTO_R2_ORIGIN;
+}
 
 /** Só o Blob público da loja pode ser buscado pelo servidor. */
 export function isPublicPhotoBlob(value: string) {

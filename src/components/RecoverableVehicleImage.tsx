@@ -70,7 +70,7 @@ export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet
     // eslint-disable-next-line @next/next/no-img-element -- mantém as variantes públicas existentes
     <img ref={imageRef} key={state.attempt} src={state.original ?? src} srcSet={state.original ? undefined : srcSet}
       sizes={!state.original && srcSet ? sizes : undefined} alt={alt} width={width} height={height}
-      loading={priority || eager || state.attempt > 0 ? "eager" : "lazy"} decoding={decoding ?? (priority ? "sync" : "async")} fetchPriority={priority ? "high" : "low"}
+      loading={priority || eager || state.attempt > 0 ? "eager" : "lazy"} decoding={decoding ?? (priority ? "sync" : "async")} fetchPriority={priority ? "high" : eager ? "auto" : "low"}
       draggable={false} className={`absolute inset-0 h-full w-full ${className ?? ""}`}
       onLoad={event => notifyReady(event.currentTarget)}
       onError={event => failedImage(event.currentTarget)} />
