@@ -237,6 +237,15 @@ test("FounderSection sem foto ou com URL legada inválida colapsa sem img nem co
   assert.doesNotMatch(invalidLegacy, /bg-black/);
   assert.doesNotMatch(invalidLegacy, /placeholder-car\.png/);
 
+  const validLegacy = renderToStaticMarkup(
+    createElement(FounderSection, {
+      photoUrl: `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/elias.webp`,
+    }),
+  );
+  assert.match(validLegacy, /<img\b[^>]*src="\/fotos\/v1\/original\/elias\.webp"/);
+  assert.match(validLegacy, /<img\b[^>]*loading="eager"/);
+  assert.doesNotMatch(validLegacy, /placeholder-car\.png/);
+
   assert.equal(parseFounderPhotoUrl("/branding/elias.webp"), "/branding/elias.webp");
   assert.equal(
     parseFounderPhotoUrl(`${PHOTO_R2_ORIGIN}/1790-elias.webp`),

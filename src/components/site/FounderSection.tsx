@@ -24,9 +24,18 @@ export function FounderSection({
 
   useEffect(() => {
     const img = imgRef.current;
-    if (portrait && img && img.complete && img.naturalWidth === 0) {
-      setFailedSrc(portrait);
+    if (!portrait || !img) return;
+
+    const markFailed = () => setFailedSrc(portrait);
+    if (img.complete && img.naturalWidth === 0 && Boolean(img.currentSrc)) {
+      markFailed();
+      return;
     }
+
+    img.addEventListener("error", markFailed);
+    return () => {
+      img.removeEventListener("error", markFailed);
+    };
   }, [portrait]);
 
   return (
@@ -49,13 +58,13 @@ export function FounderSection({
               src={portrait}
               alt="Elias Clovis Gonçalves dos Santos Neto, dono e sócio-administrador da Garagem"
               fill
+              loading="eager"
               sizes="(min-width: 1024px) 480px, 100vw"
               quality={90}
               unoptimized={
                 portrait.startsWith(PUBLIC_PHOTO_PREFIX) ||
                 /^https?:\/\//i.test(portrait)
               }
-              onError={() => setFailedSrc(portrait)}
               className="object-contain object-bottom"
             />
           </div>
