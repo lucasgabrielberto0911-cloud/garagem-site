@@ -114,7 +114,7 @@ export default async function VenderPage({
           </div>
 
           <section className="lg:mt-10">
-            <div className="mb-6 border border-brand/50 bg-ink p-4 sm:p-5">
+            <div className="mb-6 bg-ink p-4 sm:p-5">
               <h2 className="font-display text-lg font-bold tracking-tight text-cream">
                 Prefere falar direto no WhatsApp?
               </h2>

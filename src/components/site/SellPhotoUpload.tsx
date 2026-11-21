@@ -131,9 +131,9 @@ export function SellPhotoUpload({ disabled, onBusyChange, onUrlsChange }: { disa
     </label>
     <input id="photos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple disabled={disabled || busy || atMaxPhotos} aria-describedby="photos-hint" className="sr-only"
       onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; select(files); }} />
-    {limitNotice ? <p role="alert" className="mt-2 text-xs font-medium leading-relaxed text-red-300">{limitNotice}</p> : null}
+    {limitNotice ? <p role="alert" className="mt-2 text-xs font-medium leading-relaxed text-brand-light">{limitNotice}</p> : null}
     <ul className="mt-3 space-y-3">
-      {jobs.map((job, index) => <li key={job.id} className="rounded-lg border border-white/35 bg-asphalt p-3" data-photo-phase={job.phase}>
+      {jobs.map((job, index) => <li key={job.id} className="rounded-lg bg-asphalt p-3" data-photo-phase={job.phase}>
         <div className="flex items-start gap-3">
           {job.previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
