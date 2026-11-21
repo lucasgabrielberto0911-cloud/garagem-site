@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { formatCustomerVehicleWhatsAppText } from "./site";
 import {
   parseSoldVehicleSlug,
   selectSimilarVehiclesForSoldSlug,
   soldOldLinkMetadata,
-  soldOldLinkWhatsAppMessage,
   type SoldFallbackCandidate,
 } from "./sold-slug-fallback";
 
@@ -89,7 +89,7 @@ test("identifica slugs de motos com cilindrada", () => {
   assert.equal(fazer.label, "Yamaha Fazer 250 2022");
 });
 
-test("slugs de lixo ou sem padrão de carro devolvem label null sem inventar modelo", () => {
+test("slugs de lixo, palavras arbitrárias ou placas após marca válida devolvem label null", () => {
   const garbageSlugs = [
     "",
     "   ",
@@ -101,6 +101,11 @@ test("slugs de lixo ou sem padrão de carro devolvem label null sem inventar mod
     "toyota",
     "toyota-12345",
     "toyota-flex-2020",
+    "toyota-lixo-2022",
+    "honda-ofensa-2023",
+    "volkswagen-abc1d23-2021",
+    "mercedes-benz-c-lixo-2019",
+    "yamaha-motocicleta-2022",
     "foo-bar-baz-9999",
   ];
 
@@ -112,26 +117,35 @@ test("slugs de lixo ou sem padrão de carro devolvem label null sem inventar mod
   }
 });
 
-test("gera mensagem pré-preenchida de WhatsApp natural para carro, moto e genérico", () => {
-  const carMsg = soldOldLinkWhatsAppMessage(
-    parseSoldVehicleSlug(`toyota-yaris-xl-plus-2022-${SAMPLE_CUID}`),
-  );
+test("gera mensagem pré-preenchida via site.ts para carro, moto e genérico", () => {
+  const carParsed = parseSoldVehicleSlug(`toyota-yaris-xl-plus-2022-${SAMPLE_CUID}`);
   assert.equal(
-    carMsg,
-    "Oi! Vi o anúncio do Toyota Yaris 2022 que já foi vendido. Tem algum parecido?",
+    formatCustomerVehicleWhatsAppText({
+      label: carParsed.label,
+      isMoto: carParsed.isMoto,
+      sold: true,
+    }),
+    "Oi! Vi que o Toyota Yaris 2022 já foi vendido no site da Garagem e quero ver opções parecidas no estoque.",
   );
 
-  const motoMsg = soldOldLinkWhatsAppMessage(
-    parseSoldVehicleSlug(`honda-cg-160-start-2023-${SAMPLE_CUID}`),
-  );
+  const motoParsed = parseSoldVehicleSlug(`honda-cg-160-start-2023-${SAMPLE_CUID}`);
   assert.equal(
-    motoMsg,
-    "Oi! Vi o anúncio da Honda CG 160 2023 que já foi vendida. Tem alguma parecida?",
+    formatCustomerVehicleWhatsAppText({
+      label: motoParsed.label,
+      isMoto: motoParsed.isMoto,
+      sold: true,
+    }),
+    "Oi! Vi que a Honda CG 160 2023 já foi vendida no site da Garagem e quero ver opções parecidas no estoque.",
   );
 
-  const genericMsg = soldOldLinkWhatsAppMessage(parseSoldVehicleSlug("asdfgh-lixo-123"));
-  assert.match(genericMsg, /anúncio antigo/);
-  assert.doesNotMatch(genericMsg, /asdfgh|lixo/i);
+  const genericParsed = parseSoldVehicleSlug("toyota-lixo-2022");
+  const genericMsg = formatCustomerVehicleWhatsAppText({
+    label: genericParsed.label,
+    isMoto: genericParsed.isMoto,
+    sold: true,
+  });
+  assert.match(genericMsg, /anúncio já vendido/);
+  assert.doesNotMatch(genericMsg, /toyota|lixo/i);
 });
 
 test("metadados de link antigo sempre usam noindex, follow e não emitem canonical", () => {
@@ -144,7 +158,7 @@ test("metadados de link antigo sempre usam noindex, follow e não emitem canonic
   });
   assert.equal(carMeta.alternates, undefined);
 
-  const garbageMeta = soldOldLinkMetadata("asdfgh-lixo-123");
+  const garbageMeta = soldOldLinkMetadata("toyota-lixo-2022");
   assert.equal(garbageMeta.title, "Anúncio indisponível | Garagem");
   assert.deepEqual(garbageMeta.robots, {
     index: false,
@@ -184,13 +198,39 @@ test("seleciona até 4 disponíveis priorizando mesma marca, modelo e proximidad
   const picked = selectSimilarVehiclesForSoldSlug(stock, parsed, 4);
 
   assert.equal(picked.length, 4);
-  // Mesmo modelo + mesma marca primeiro, depois outra opção da mesma marca, depois ano mais próximo (2014, 2016).
   assert.deepEqual(
     picked.map((v) => v.id),
     ["civic-2015", "hrv-2016", "duster-2014", "onix-2016"],
   );
-  // Nunca inclui vendido nem reservado.
   assert.ok(picked.every((v) => v.status === "disponivel"));
+});
+
+test("regra de paridade no celular: estoque com 3 disponíveis retorna 2; com 1 retorna 1", () => {
+  const three: SoldFallbackCandidate[] = [
+    makeCandidate({ id: "civic-2015", brand: "Honda", model: "Civic", yearModel: 2015 }),
+    makeCandidate({ id: "hrv-2016", brand: "Honda", model: "HR-V", yearModel: 2016 }),
+    makeCandidate({ id: "duster-2014", brand: "Renault", model: "Duster", yearModel: 2014 }),
+  ];
+
+  const pickedFromThree = selectSimilarVehiclesForSoldSlug(
+    three,
+    parseSoldVehicleSlug(`honda-civic-2014-${SAMPLE_CUID}`),
+    4,
+  );
+  assert.deepEqual(
+    pickedFromThree.map((v) => v.id),
+    ["civic-2015", "hrv-2016"],
+  );
+
+  const pickedFromOne = selectSimilarVehiclesForSoldSlug(
+    [three[0]!],
+    parseSoldVehicleSlug(`toyota-yaris-2022-${SAMPLE_CUID}`),
+    4,
+  );
+  assert.deepEqual(
+    pickedFromOne.map((v) => v.id),
+    ["civic-2015"],
+  );
 });
 
 test("sem mesma marca no estoque, prioriza ano mais próximo e depois mais recentes", () => {
@@ -222,7 +262,7 @@ test("slug de lixo devolve os 4 disponíveis mais recentes e estoque vazio devol
 
   const picked = selectSimilarVehiclesForSoldSlug(
     stock,
-    parseSoldVehicleSlug("asdfgh-lixo-123"),
+    parseSoldVehicleSlug("toyota-lixo-2022"),
     4,
   );
   assert.deepEqual(

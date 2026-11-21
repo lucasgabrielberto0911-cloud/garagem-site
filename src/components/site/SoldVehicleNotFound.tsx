@@ -4,10 +4,10 @@ import { usePathname } from "next/navigation";
 import { ButtonLink, Container, WhatsAppButton } from "@/components/site/ui";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import type { VehicleCardData } from "@/components/site/VehicleCard";
+import { formatCustomerVehicleWhatsAppText } from "@/lib/site";
 import {
   parseSoldVehicleSlug,
   selectSimilarVehiclesForSoldSlug,
-  soldOldLinkWhatsAppMessage,
 } from "@/lib/sold-slug-fallback";
 
 export function SoldVehicleNotFound({
@@ -18,7 +18,11 @@ export function SoldVehicleNotFound({
   const pathname = usePathname() ?? "";
   const parsed = parseSoldVehicleSlug(pathname);
   const similarVehicles = selectSimilarVehiclesForSoldSlug(vehicles, parsed, 4);
-  const whatsappMessage = soldOldLinkWhatsAppMessage(parsed);
+  const whatsappMessage = formatCustomerVehicleWhatsAppText({
+    label: parsed.label,
+    isMoto: parsed.isMoto,
+    sold: true,
+  });
 
   const eyebrow = parsed.label ?? "Anúncio encerrado";
   const heading = parsed.label
@@ -84,13 +88,21 @@ export function SoldVehicleNotFound({
               </h2>
               <div className="mt-2 h-px w-8 bg-brand" aria-hidden="true" />
             </div>
-            <VehicleGrid
-              vehicles={similarVehicles}
-              desktopCols={4}
-              priorityCount={2}
-              returnTo="/estoque"
-              pageOrigin="card do estoque"
-            />
+            <div
+              className={
+                similarVehicles.length === 1
+                  ? "[&_.listing-card-item]:!col-span-1"
+                  : undefined
+              }
+            >
+              <VehicleGrid
+                vehicles={similarVehicles}
+                desktopCols={4}
+                priorityCount={2}
+                returnTo="/estoque"
+                pageOrigin="card do estoque"
+              />
+            </div>
           </section>
         ) : null}
       </Container>

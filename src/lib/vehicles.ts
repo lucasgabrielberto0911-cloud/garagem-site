@@ -1133,18 +1133,18 @@ const loadSoldFallbackVehiclesCached = unstable_cache(
       return await findCardVehicles({
         where: PUBLIC_SITEMAP_VEHICLE_WHERE,
         orderBy: [{ createdAt: "desc" }, { featured: "desc" }],
-        take: 48,
+        take: 16,
       });
     } catch (error) {
       if (!isMissingColumnError(error, "historical")) throw error;
       return findCardVehicles({
         where: { status: "disponivel" },
         orderBy: [{ createdAt: "desc" }, { featured: "desc" }],
-        take: 48,
+        take: 16,
       });
     }
   },
-  ["sold-fallback-vehicles-v1"],
+  ["sold-fallback-vehicles-v2"],
   PUBLIC_CACHE,
 );
 

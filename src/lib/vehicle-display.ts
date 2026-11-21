@@ -750,7 +750,7 @@ const COLOR_CANONICAL: Record<string, string> = {
 };
 
 /** Modelos equivalentes no estoque que devem compartilhar um único rótulo/filtro. */
-const MODEL_CANONICAL: Record<string, string> = {
+export const MODEL_CANONICAL: Record<string, string> = {
   "fazer 250": "Fazer 250",
   "fazer fz25": "Fazer 250",
   "fazer fz-25": "Fazer 250",
@@ -759,6 +759,44 @@ const MODEL_CANONICAL: Record<string, string> = {
   "fz-25": "Fazer 250",
   "fz 25": "Fazer 250",
 };
+
+/** Prefixos/modelos de moto inequívocos compartilhados entre chat e parser de slug. */
+export const MOTO_MODEL_PREFIXES = new Set([
+  "biz", "bros", "titan", "twister", "crosser", "xre", "factor", "fazer",
+  "pcx", "nmax", "cg", "fan", "pop", "cb", "fz15", "fz25", "lander", "xtz",
+  "ninja", "z300", "z400", "mt03", "mt07", "r3",
+]);
+
+export const MOTO_NAME_HINT =
+  /\b(biz|bros|titan|twister|crosser|xre|factor|fazer|pcx|nmax|n max|scooter|scooters|motoca|motocicleta|cg(?:\s?\d{2,3})?|fan(?:\s?\d{2,3})?|pop(?:\s?\d{2,3})?|cb(?:\s?\d{2,3})?|fz15|fz25|lander|xtz|ninja|z300|z400|mt03|mt07|r3|yamaha|kawasaki|harley)\b/i;
+
+/** Regras de carroceria por modelo trabalhadas pela loja (compartilhadas com o feed da Meta e fallback de slugs). */
+export const CATALOG_BODY_RULES: Array<{ style: string; pattern: RegExp }> = [
+  {
+    style: "WAGON",
+    pattern: /weekend|spacefox|\bsw\b|perua|parati|variant/,
+  },
+  {
+    style: "PICKUP",
+    pattern:
+      /saveiro|strada|montana|oroch|hilux|ranger|\bs[- ]?10\b|amarok|toro|frontier|\bl200\b|pickup|caminhon/,
+  },
+  {
+    style: "SUV",
+    pattern:
+      /hr-?v|pulse|kicks|nivus|creta|compass|tracker|t-?cross|renegade|duster|ecosport|captur|tucson|sportage|\bsw4\b|pajero|outlander|rav4|cr-?v|\bsuv\b|crossover/,
+  },
+  {
+    style: "SEDAN",
+    pattern:
+      /hb20s|prisma|siena|civic|corolla|lancer|voyage|logan|onix plus|cronos|city\b|virtus|jetta|sentra|cruze|cobalt|versa|sedan/,
+  },
+  {
+    style: "HATCHBACK",
+    pattern:
+      /\bmobi\b|palio|\bhb20\b|argo|\bonix\b|\bgol\b|\bfox\b|\bup\b|\bka\b|\buno\b|celta|corsa|sandero|\bfit\b|march|\bpolo\b|etios|hatch/,
+  },
+];
 
 export function formatStockModelLabel(model: string | null | undefined) {
   const trimmed = collapseWhitespace(model ?? "");
