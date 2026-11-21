@@ -348,6 +348,10 @@ test("VehicleCard renderiza LQIP seguro atrás do <img>, nunca oculta foto no SS
   assert.match(css, /\.listing-card-photo\s*\{[\s\S]*?linear-gradient\(/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.vehicle-photo-fade\s*\{\s*transition:\s*none;/);
 
+  const remoteFill = readSrc("components/NativeRemoteFillImage.tsx");
+  assert.match(remoteFill, /PHOTO_FADE_FALLBACK_MS/);
+  assert.match(remoteFill, /addEventListener\("pageshow"/);
+
   const siteLayout = readSrc("app/(site)/layout.tsx");
   assert.match(siteLayout, /preconnect\(publicPhotoR2Origin\(\)\)/);
   assert.doesNotMatch(siteLayout, /preconnect\(publicPhotoR2Origin\(\),\s*\{[^}]*crossOrigin/);

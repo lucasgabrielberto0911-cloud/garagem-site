@@ -1,14 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { stubPageFotos } from "./stub-fotos";
 import { PHOTO_R2_ORIGIN } from "../src/lib/public-photo-url";
 import { STOCK_PRIORITY_COUNT } from "../src/lib/stock-query";
 
 test.beforeEach(async ({ page }) => {
-  await page.route("**/fotos/**", (route) =>
-    route.fulfill({
-      contentType: "image/png",
-      path: "public/branding/placeholder-car.png",
-    }),
-  );
+  await stubPageFotos(page);
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
 });
 
@@ -25,10 +21,22 @@ test("estoque: prévia borrada (LQIP), fallback sem preto chapado, prioridades d
   await expect(preconnectLink).toHaveCount(1);
   expect(await preconnectLink.getAttribute("crossorigin")).toBeNull();
 
-  // 2. Prioridade de rede: 1ª e 2ª fotos em high+eager; demais da 1ª dobra em eager+auto; abaixo lazy+low.
+  // 2. Prioridade de rede: preload só na 1ª; 1ª e 2ª em high+eager; demais da 1ª dobra em eager+auto; abaixo lazy+low.
   const covers = page.locator("article.listing-card img");
   const total = await covers.count();
   expect(total).toBeGreaterThanOrEqual(3);
+
+  const firstSrc = (await covers.nth(0).getAttribute("src")) ?? "";
+  const secondSrc = (await covers.nth(1).getAttribute("src")) ?? "";
+  const preloadTargets = await page
+    .locator('head link[rel="preload"][as="image"]')
+    .evaluateAll((els) =>
+      els.map((el) => `${el.getAttribute("href") ?? ""} ${el.getAttribute("imagesrcset") ?? ""}`.trim()),
+    );
+  expect(preloadTargets.length).toBeGreaterThanOrEqual(1);
+  expect(preloadTargets.length).toBeLessThanOrEqual(2);
+  expect(preloadTargets.some((target) => target.includes(firstSrc))).toBe(true);
+  expect(preloadTargets.some((target) => target.includes(secondSrc))).toBe(false);
 
   await expect(covers.nth(0)).toHaveAttribute("fetchpriority", "high");
   await expect(covers.nth(0)).toHaveAttribute("loading", "eager");
@@ -76,5 +84,41 @@ test("estoque: prévia borrada (LQIP), fallback sem preto chapado, prioridades d
         }),
       )
       .toBe(true);
+  }
+});
+
+test("estoque: foto nunca fica presa em opacity 0 mesmo se o evento load não disparar", async ({
+  page,
+}) => {
+  const width = page.viewportSize()?.width ?? 0;
+  test.skip(width !== 390 && width !== 1440, "Validação focada em celular (390) e desktop (1440)");
+
+  let releaseStalled!: () => void;
+  const stalledGate = new Promise<void>((resolve) => {
+    releaseStalled = resolve;
+  });
+  // Segura a 2ª capa (Duster da amostra E2E) sem responder para simular load que não dispara.
+  const stalledPattern = "**/fotos/**1790785425727-*";
+  await page.route(stalledPattern, async (route) => {
+    await stalledGate;
+    await route.fulfill({ contentType: "image/png", path: "public/branding/placeholder-car.png" }).catch(() => {});
+  });
+
+  try {
+    await page.goto("/estoque", { waitUntil: "domcontentloaded" });
+    const stalledImg = page.locator("article.listing-card img").nth(1);
+    await expect
+      .poll(
+        () =>
+          stalledImg.evaluate((el) => ({
+            state: (el as HTMLElement).dataset.photoState ?? "",
+            opacity: getComputedStyle(el).opacity,
+          })),
+        { timeout: 5000 },
+      )
+      .toEqual({ state: "ready", opacity: "1" });
+  } finally {
+    releaseStalled();
+    await page.unroute(stalledPattern);
   }
 });

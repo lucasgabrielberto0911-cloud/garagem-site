@@ -12,6 +12,8 @@ import { RecoverableVehicleImage } from "@/components/RecoverableVehicleImage";
  * Com `fadeIn`, o HTML SSR mantém a foto visível (sem depender de JS); após a
  * hidratação, só imagens ainda pendentes aguardam `load` para aparecer com fade.
  */
+export const PHOTO_FADE_FALLBACK_MS = 2500;
+
 export function NativeRemoteFillImage({
   src,
   alt,
@@ -52,8 +54,55 @@ export function NativeRemoteFillImage({
     const img = imgRef.current;
     if (!img) return;
     // Fotos já em cache ou concluídas antes da hidratação permanecem visíveis.
-    img.dataset.photoState = img.complete ? "ready" : "loading";
-  }, [fadeIn, recoverable, src, srcSet, mobileSrcSet]);
+    if (img.complete) {
+      img.dataset.photoState = "ready";
+      return;
+    }
+    img.dataset.photoState = "loading";
+
+    const reveal = () => {
+      img.dataset.photoState = "ready";
+    };
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const armFallbackTimer = () => {
+      if (img.complete) {
+        reveal();
+        return;
+      }
+      if (timer !== undefined) return;
+      timer = setTimeout(reveal, PHOTO_FADE_FALLBACK_MS);
+    };
+
+    let observer: IntersectionObserver | undefined;
+    if (priority || eager || typeof IntersectionObserver === "undefined") {
+      armFallbackTimer();
+    } else {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            observer?.disconnect();
+            observer = undefined;
+            armFallbackTimer();
+          }
+        },
+        { rootMargin: "300px" },
+      );
+      observer.observe(img);
+    }
+
+    const onPageShow = () => {
+      if (img.complete) reveal();
+      else armFallbackTimer();
+    };
+    window.addEventListener("pageshow", onPageShow);
+
+    return () => {
+      if (timer !== undefined) clearTimeout(timer);
+      observer?.disconnect();
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [fadeIn, recoverable, priority, eager, src, srcSet, mobileSrcSet]);
 
   if (recoverable) return <RecoverableVehicleImage key={src} src={src} alt={alt} width={width} height={height} sizes={sizes} srcSet={srcSet} mobileSrcSet={mobileSrcSet} className={className} priority={priority} eager={eager} decoding={decoding} onReady={onReady} onErrorState={onErrorState} />;
 

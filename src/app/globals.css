@@ -528,7 +528,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 /* Fundo neutro suave da foto enquanto carrega ou sem LQIP (sem quadrado preto chapado). */
 .listing-card-photo {
   width: 100%;
-  background-color: #1f1f24;
+  background-color: var(--ink);
   background-image: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.08) 0%,

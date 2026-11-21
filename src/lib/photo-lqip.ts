@@ -48,6 +48,8 @@ class LqipMissError extends Error {
   }
 }
 
+const inFlightLqip = new Map<string, Promise<string | undefined>>();
+
 /** Converte um buffer de imagem em data URI WebP 16×12 q40. */
 export async function lqipFromImageBuffer(input: Buffer | Uint8Array): Promise<string> {
   const bytes = await sharp(input, { limitInputPixels: 40_000_000 })
@@ -110,54 +112,68 @@ export async function generatePhotoLqip(
     if (cached) return cached;
   }
 
-  try {
-    let sourceBuffer: Buffer | null = null;
-
-    if (!options?.fetcher) {
-      // No E2E local, evita qualquer egresso de rede usando a fixture versionada.
-      const fixture = await e2ePhotoFixture();
-      if (fixture) sourceBuffer = fixture;
-    }
-
-    if (!sourceBuffer) {
-      const fetcher = options?.fetcher ?? fetch;
-      const timeoutMs = Math.max(50, options?.timeoutMs ?? DEFAULT_LQIP_TIMEOUT_MS);
-      const controller = new AbortController();
-      const timer = setTimeout(
-        () => controller.abort(new DOMException("Tempo esgotado", "TimeoutError")),
-        timeoutMs,
-      );
-      try {
-        const response = await fetcher(url, {
-          method: "GET",
-          redirect: "error",
-          cache: "force-cache",
-          headers: { Accept: "image/webp,image/jpeg,image/png" },
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          await response.body?.cancel();
-          return undefined;
-        }
-        const contentType = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
-        if (contentType && !ALLOWED_IMAGE_TYPES.has(contentType)) {
-          await response.body?.cancel();
-          return undefined;
-        }
-        sourceBuffer = await readBoundedBuffer(response, MAX_LQIP_SOURCE_BYTES);
-      } finally {
-        clearTimeout(timer);
-      }
-    }
-
-    if (!sourceBuffer) return undefined;
-    const dataUri = await lqipFromImageBuffer(sourceBuffer);
-    if (!isValidLqipDataUri(dataUri)) return undefined;
-    setCachedPhotoLqip(url, dataUri);
-    return dataUri;
-  } catch {
-    return undefined;
+  const canShareInFlight = !options?.fetcher && !options?.skipCache && options?.timeoutMs === undefined;
+  if (canShareInFlight) {
+    const pending = inFlightLqip.get(url);
+    if (pending) return pending;
   }
+
+  const run = (async (): Promise<string | undefined> => {
+    try {
+      let sourceBuffer: Buffer | null = null;
+
+      if (!options?.fetcher) {
+        // No E2E local, evita qualquer egresso de rede usando a fixture versionada.
+        const fixture = await e2ePhotoFixture();
+        if (fixture) sourceBuffer = fixture;
+      }
+
+      if (!sourceBuffer) {
+        const fetcher = options?.fetcher ?? fetch;
+        const timeoutMs = Math.max(50, options?.timeoutMs ?? DEFAULT_LQIP_TIMEOUT_MS);
+        const controller = new AbortController();
+        const timer = setTimeout(
+          () => controller.abort(new DOMException("Tempo esgotado", "TimeoutError")),
+          timeoutMs,
+        );
+        try {
+          const response = await fetcher(url, {
+            method: "GET",
+            redirect: "error",
+            // O Data Cache guarda apenas o data URI compacto (~250 B) via unstable_cache, sem duplicar o binário bruto.
+            cache: "no-store",
+            headers: { Accept: "image/webp,image/jpeg,image/png" },
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            await response.body?.cancel();
+            return undefined;
+          }
+          const contentType = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+          if (contentType && !ALLOWED_IMAGE_TYPES.has(contentType)) {
+            await response.body?.cancel();
+            return undefined;
+          }
+          sourceBuffer = await readBoundedBuffer(response, MAX_LQIP_SOURCE_BYTES);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      if (!sourceBuffer) return undefined;
+      const dataUri = await lqipFromImageBuffer(sourceBuffer);
+      if (!isValidLqipDataUri(dataUri)) return undefined;
+      setCachedPhotoLqip(url, dataUri);
+      return dataUri;
+    } catch {
+      return undefined;
+    } finally {
+      if (canShareInFlight) inFlightLqip.delete(url);
+    }
+  })();
+
+  if (canShareInFlight) inFlightLqip.set(url, run);
+  return run;
 }
 
 const loadPhotoLqipCached = unstable_cache(
@@ -184,7 +200,9 @@ export async function getPhotoLqip(url: string | null | undefined): Promise<stri
     }
     return undefined;
   } catch (error) {
-    if (error instanceof LqipMissError) return undefined;
+    if (error instanceof LqipMissError || (error instanceof Error && error.name === "LqipMissError")) {
+      return undefined;
+    }
     // Fora do runtime do Next (ex.: testes ou scripts), cai na geração direta com cache em memória.
     return generatePhotoLqip(url);
   }
