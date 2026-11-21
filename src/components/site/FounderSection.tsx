@@ -9,6 +9,7 @@ const VEHICLE_PLACEHOLDER_PATH = "/branding/placeholder-car.png";
 const PORTRAIT_FRAME_ASPECT = 4 / 5;
 const ALPHA_SAMPLE_WIDTH = 96;
 const ALPHA_THRESHOLD = 20;
+const FRAMING_FALLBACK_TIMEOUT_MS = 2000;
 
 export interface AlphaBounds {
   minX: number;
@@ -70,6 +71,7 @@ export function measureImageAlphaBounds(
       transparentRatio: transparentCount / totalPixels,
     };
   } catch {
+    // Fallback silencioso para origem externa sem CORS (SecurityError/taint) ou falha de decodificação.
     return null;
   }
 }
@@ -175,21 +177,33 @@ export function FounderSection({
       ? null
       : resolvedPortrait;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const [cutoutFrame, setCutoutFrame] = useState<{
+  const [framing, setFraming] = useState<{
     src: string;
-    style: CSSProperties;
+    style: CSSProperties | null;
   } | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const showPortrait = Boolean(portrait && failedSrc !== portrait);
-  const activeCutoutStyle =
-    cutoutFrame && cutoutFrame.src === portrait ? cutoutFrame.style : null;
+  const isPortraitReady = framing?.src === portrait;
+  const activeCutoutStyle = isPortraitReady ? framing.style : null;
 
   useEffect(() => {
     const img = imgRef.current;
     if (!portrait || !img) return;
 
-    const markFailed = () => setFailedSrc(portrait);
+    let fallbackTimer: number | undefined;
+    const clearFallbackTimer = () => {
+      if (fallbackTimer !== undefined) {
+        window.clearTimeout(fallbackTimer);
+        fallbackTimer = undefined;
+      }
+    };
+
+    const markFailed = () => {
+      clearFallbackTimer();
+      setFailedSrc(portrait);
+    };
     const updateFraming = () => {
+      clearFallbackTimer();
       const bounds = measureImageAlphaBounds(img);
       const nextStyle = bounds
         ? computeFounderCutoutStyle(
@@ -198,7 +212,8 @@ export function FounderSection({
             bounds,
           )
         : null;
-      setCutoutFrame(nextStyle ? { src: portrait, style: nextStyle } : null);
+      // Fallback: se o canvas falhar (SecurityError/taint, decodificação) ou for foto opaca, revela com enquadramento padrão.
+      setFraming({ src: portrait, style: nextStyle });
     };
 
     if (img.complete) {
@@ -211,9 +226,19 @@ export function FounderSection({
       }
     }
 
+    if (!(img.complete && img.naturalWidth > 0)) {
+      fallbackTimer = window.setTimeout(() => {
+        // Fallback de timeout: nunca mantém o retrato oculto caso o evento load atrase ou não dispare.
+        setFraming((current) =>
+          current?.src === portrait ? current : { src: portrait, style: null },
+        );
+      }, FRAMING_FALLBACK_TIMEOUT_MS);
+    }
+
     img.addEventListener("error", markFailed);
     img.addEventListener("load", updateFraming);
     return () => {
+      clearFallbackTimer();
       img.removeEventListener("error", markFailed);
       img.removeEventListener("load", updateFraming);
     };
@@ -251,11 +276,15 @@ export function FounderSection({
                 /^https?:\/\//i.test(portrait)
               }
               style={activeCutoutStyle ?? undefined}
-              className={
+              className={[
                 activeCutoutStyle
                   ? "object-contain"
-                  : "object-cover object-[50%_20%]"
-              }
+                  : "object-cover object-[50%_20%]",
+                "transition-opacity duration-150",
+                isPortraitReady
+                  ? "opacity-100"
+                  : "[@media(scripting:enabled)]:opacity-0",
+              ].join(" ")}
             />
             <div
               aria-hidden="true"

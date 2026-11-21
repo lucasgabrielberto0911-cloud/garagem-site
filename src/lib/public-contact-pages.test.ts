@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
-import { computeFounderCutoutStyle, FounderSection } from "@/components/site/FounderSection";
+import {
+  computeFounderCutoutStyle,
+  FounderSection,
+  measureImageAlphaBounds,
+} from "@/components/site/FounderSection";
 import tailwindConfig, { siteBrandColors } from "../../tailwind.config";
 import { PHOTO_BLOB_ORIGIN, PHOTO_R2_ORIGIN, PHOTO_STORAGE_ORIGIN } from "./public-photo-url";
 import { sellReceivedLine } from "./sell-receipt";
@@ -516,5 +520,63 @@ test("FounderSection usa quadro 4:5 sem fundo preto e /vender mostra Como funcio
     const tokens = classTokens(liTag);
     assert.ok(tokens.includes("bg-ink"));
     assert.equal(hasBorderClass(tokens), false, `Passo em /vender não deve ter borda: ${liTag}`);
+  }
+});
+
+test("FounderSection evita salto no SSR e garante fallback silencioso em taint/decodificação/timeout", () => {
+  const founderSource = readFileSync("src/components/site/FounderSection.tsx", "utf8");
+  const ssrHtml = renderToStaticMarkup(
+    createElement(FounderSection, {
+      photoUrl: `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/elias.webp`,
+    }),
+  );
+
+  // SSR mantém espaço 4:5 reservado e oculta só o <img> quando JS está ativo, sem display:none/visibility:hidden
+  const imgTag = ssrHtml.match(/<img\b[^>]*>/)?.[0] ?? "";
+  const imgClassAttr = imgTag.match(/class="([^"]*)"/)?.[1] ?? "";
+  const imgClasses = imgClassAttr.split(/\s+/).filter(Boolean);
+  assert.ok(imgClasses.includes("[@media(scripting:enabled)]:opacity-0"));
+  assert.ok(imgClasses.includes("transition-opacity"));
+  assert.ok(imgClasses.includes("duration-150"));
+  assert.equal(imgClasses.includes("hidden"), false);
+  assert.equal(imgClasses.includes("invisible"), false);
+  assert.match(founderSource, /opacity-100/);
+  assert.match(founderSource, /FRAMING_FALLBACK_TIMEOUT_MS/);
+
+  // Simula canvas tainted (SecurityError no getImageData) e falha de decodificação (drawImage)
+  const originalDocument = globalThis.document;
+  try {
+    const fakeImg = { naturalWidth: 720, naturalHeight: 1280 } as HTMLImageElement;
+
+    globalThis.document = {
+      createElement: () =>
+        ({
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: () => undefined,
+            getImageData: () => {
+              throw new DOMException("Tainted canvas", "SecurityError");
+            },
+          }),
+        }) as unknown as HTMLCanvasElement,
+    } as unknown as Document;
+    assert.equal(measureImageAlphaBounds(fakeImg), null);
+
+    globalThis.document = {
+      createElement: () =>
+        ({
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: () => {
+              throw new Error("Invalid image decode");
+            },
+          }),
+        }) as unknown as HTMLCanvasElement,
+    } as unknown as Document;
+    assert.equal(measureImageAlphaBounds(fakeImg), null);
+  } finally {
+    globalThis.document = originalDocument;
   }
 });
