@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import vendidosInsta from "../data/vendidos-insta.json";
 import { formatCustomerVehicleWhatsAppText } from "./site";
 import {
   parseSoldVehicleSlug,
@@ -7,6 +8,7 @@ import {
   soldOldLinkMetadata,
   type SoldFallbackCandidate,
 } from "./sold-slug-fallback";
+import { vehicleSlug } from "./vehicle-slug";
 
 const SAMPLE_CUID = "cmshv22g9000fl204fk6qz9l2";
 
@@ -273,5 +275,68 @@ test("slug de lixo devolve os 4 disponíveis mais recentes e estoque vazio devol
   assert.deepEqual(
     selectSimilarVehiclesForSoldSlug([], parseSoldVehicleSlug("toyota-yaris-2022"), 4),
     [],
+  );
+});
+
+test("extrai modelos populares do catálogo, variações adicionadas e rejeita tokens corrompidos", () => {
+  const popularCases: Array<[string, { label: string; model: string; isMoto: boolean }]> = [
+    [`chevrolet-onix-lt-1-0-2021-${SAMPLE_CUID}`, { label: "Chevrolet Onix 2021", model: "Onix", isMoto: false }],
+    [`volkswagen-gol-1-6-msi-2020-${SAMPLE_CUID}`, { label: "Volkswagen Gol 2020", model: "Gol", isMoto: false }],
+    [`volkswagen-polo-comfortline-200-tsi-2022-${SAMPLE_CUID}`, { label: "Volkswagen Polo 2022", model: "Polo", isMoto: false }],
+    [`volkswagen-fox-connect-1-6-2019-${SAMPLE_CUID}`, { label: "Volkswagen Fox 2019", model: "Fox", isMoto: false }],
+    [`honda-fit-exl-1-5-cvt-2018-${SAMPLE_CUID}`, { label: "Honda Fit 2018", model: "Fit", isMoto: false }],
+    [`honda-city-ex-1-5-2020-${SAMPLE_CUID}`, { label: "Honda City 2020", model: "City", isMoto: false }],
+    [`fiat-mobi-like-1-0-2022-${SAMPLE_CUID}`, { label: "Fiat Mobi 2022", model: "Mobi", isMoto: false }],
+    [`fiat-uno-attractive-1-0-2019-${SAMPLE_CUID}`, { label: "Fiat Uno 2019", model: "Uno", isMoto: false }],
+    [`ford-ka-se-1-0-2020-${SAMPLE_CUID}`, { label: "Ford Ka 2020", model: "Ka", isMoto: false }],
+    [`renault-kwid-zen-1-0-2023-${SAMPLE_CUID}`, { label: "Renault Kwid 2023", model: "Kwid", isMoto: false }],
+    [`chevrolet-s-10-ltz-2-8-diesel-2021-${SAMPLE_CUID}`, { label: "Chevrolet S10 2021", model: "S10", isMoto: false }],
+    [`chevrolet-s10-ls-2-8-2020-${SAMPLE_CUID}`, { label: "Chevrolet S10 2020", model: "S10", isMoto: false }],
+    [`renault-stepway-intense-1-6-2022-${SAMPLE_CUID}`, { label: "Renault Stepway 2022", model: "Stepway", isMoto: false }],
+    [`mitsubishi-asx-2-0-4x2-2018-${SAMPLE_CUID}`, { label: "Mitsubishi ASX 2018", model: "ASX", isMoto: false }],
+    [`hyundai-i30-2-0-automatico-2012-${SAMPLE_CUID}`, { label: "Hyundai i30 2012", model: "i30", isMoto: false }],
+    [`volkswagen-crossfox-1-6-2015-${SAMPLE_CUID}`, { label: "Volkswagen CrossFox 2015", model: "CrossFox", isMoto: false }],
+    [`volkswagen-polo-sedan-1-6-2014-${SAMPLE_CUID}`, { label: "Volkswagen Polo Sedan 2014", model: "Polo Sedan", isMoto: false }],
+    [`honda-cbx-250-twister-2008-${SAMPLE_CUID}`, { label: "Honda CBX 250 2008", model: "CBX 250", isMoto: true }],
+    [`honda-crf-230f-2019-${SAMPLE_CUID}`, { label: "Honda CRF 230F 2019", model: "CRF 230F", isMoto: true }],
+  ];
+
+  for (const [slug, expected] of popularCases) {
+    const parsed = parseSoldVehicleSlug(slug);
+    assert.equal(parsed.isVehicleLike, true, `esperado veículo para ${slug}`);
+    assert.equal(parsed.label, expected.label, `label de ${slug}`);
+    assert.equal(parsed.model, expected.model, `model de ${slug}`);
+    assert.equal(parsed.isMoto, expected.isMoto, `isMoto de ${slug}`);
+  }
+
+  for (const corrupted of [
+    "fiat-bmobib-2022",
+    "volkswagen-bgolb-2020",
+    "chevrolet-bonixb-2021",
+    "fiat-bsuvb-2022",
+  ]) {
+    const parsed = parseSoldVehicleSlug(corrupted);
+    assert.equal(parsed.isVehicleLike, false, `não deve aceitar ${corrupted}`);
+    assert.equal(parsed.label, null, `label deve ser null para ${corrupted}`);
+  }
+});
+
+test("cobre os slugs derivados do histórico de vendidos-insta.json", () => {
+  let withLabel = 0;
+  for (const item of vendidosInsta) {
+    const slug = vehicleSlug({
+      id: SAMPLE_CUID,
+      brand: item.brand,
+      model: item.model,
+      yearModel: 2020,
+    });
+    if (parseSoldVehicleSlug(slug).label !== null) {
+      withLabel += 1;
+    }
+  }
+  assert.ok(vendidosInsta.length > 0);
+  assert.ok(
+    withLabel >= Math.floor(vendidosInsta.length * 0.95),
+    `esperado >= 95% de cobertura em vendidos-insta.json, obteve ${withLabel}/${vendidosInsta.length}`,
   );
 });

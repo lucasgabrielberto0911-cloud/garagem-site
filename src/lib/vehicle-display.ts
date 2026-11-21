@@ -798,6 +798,18 @@ export const CATALOG_BODY_RULES: Array<{ style: string; pattern: RegExp }> = [
   },
 ];
 
+/** Lista limpa de tokens de modelos de carro das regras do catálogo (sem termos genéricos nem regex). */
+export const CATALOG_CAR_MODEL_TOKENS: readonly string[] = [
+  "spacefox", "parati", "variant",
+  "saveiro", "strada", "montana", "oroch", "hilux", "ranger", "s10", "amarok", "toro", "frontier", "l200",
+  "hrv", "pulse", "kicks", "nivus", "creta", "compass", "tracker", "tcross", "renegade", "duster", "ecosport",
+  "captur", "tucson", "sportage", "sw4", "pajero", "outlander", "rav4", "crv",
+  "hb20s", "prisma", "siena", "civic", "corolla", "lancer", "voyage", "logan", "cronos", "city",
+  "virtus", "jetta", "sentra", "cruze", "cobalt", "versa",
+  "mobi", "palio", "hb20", "argo", "onix", "gol", "fox", "up", "ka", "uno",
+  "celta", "corsa", "sandero", "fit", "march", "polo", "etios",
+];
+
 export function formatStockModelLabel(model: string | null | undefined) {
   const trimmed = collapseWhitespace(model ?? "");
   if (!trimmed) return "";

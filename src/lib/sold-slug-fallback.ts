@@ -7,7 +7,7 @@ import {
 } from "@/lib/format";
 import { site } from "@/lib/site";
 import {
-  CATALOG_BODY_RULES,
+  CATALOG_CAR_MODEL_TOKENS,
   MODEL_CANONICAL,
   MOTO_MODEL_PREFIXES,
 } from "@/lib/vehicle-display";
@@ -41,14 +41,14 @@ const MOTO_ONLY_BRAND_KEYS = new Set([
 
 const MOTO_MODELS = new Set([
   ...MOTO_MODEL_PREFIXES,
-  "cbr", "nxr", "adv", "sahara", "tornado", "falcon", "nc", "mt", "mt09",
+  "cbr", "cbx", "crf", "nxr", "adv", "sahara", "tornado", "falcon", "nc", "mt", "mt09",
   "xmax", "neo", "fluo", "r15", "r1", "versys", "z650", "z900", "vulcan",
   "gsx", "vstrom", "intruder", "burgman", "meteor", "himalayan", "hunter",
   "interceptor", "dominar", "ybr", "tenere", "sh", "elite",
 ]);
 
 const MOTO_ACRONYM_MODELS = new Set([
-  "cg", "cb", "cbr", "xre", "nxr", "pcx", "adv", "nc", "mt", "gsx", "xtz", "sh",
+  "cg", "cb", "cbr", "cbx", "crf", "xre", "nxr", "pcx", "adv", "nc", "mt", "gsx", "xtz", "sh",
 ]);
 
 const COMPOUND_MODELS: Record<string, string> = {
@@ -65,7 +65,8 @@ const COMPOUND_MODELS: Record<string, string> = {
   "pajero sport": "Pajero Sport", "pajero tr4": "Pajero TR4",
   "pajero full": "Pajero Full", "pajero dakar": "Pajero Dakar",
   "l200 triton": "L200 Triton", "eclipse cross": "Eclipse Cross",
-  "sandero stepway": "Sandero Stepway", "palio weekend": "Palio Weekend",
+  "sandero stepway": "Sandero Stepway", "polo sedan": "Polo Sedan",
+  "s 10": "S10", "palio weekend": "Palio Weekend",
   "ka sedan": "Ka Sedan", "c4 cactus": "C4 Cactus", "c4 lounge": "C4 Lounge",
   "c4 picasso": "C4 Picasso", "c3 aircross": "C3 Aircross",
   "tiggo 2": "Tiggo 2", "tiggo 3x": "Tiggo 3x", "tiggo 5x": "Tiggo 5x",
@@ -83,9 +84,10 @@ const COMPOUND_MODELS: Record<string, string> = {
 };
 
 const SPECIAL_SINGLE_MODELS: Record<string, string> = {
-  up: "Up", sw4: "SW4", rav4: "RAV4", ix35: "ix35", crv: "CR-V",
-  hrv: "HR-V", wrv: "WR-V", zrv: "ZR-V", tcross: "T-Cross", tr4: "TR4",
+  up: "Up", sw4: "SW4", rav4: "RAV4", ix35: "ix35", i30: "i30", asx: "ASX",
+  crv: "CR-V", hrv: "HR-V", wrv: "WR-V", zrv: "ZR-V", tcross: "T-Cross", tr4: "TR4",
   s10: "S10", l200: "L200", hb20: "HB20", hb20s: "HB20S", hb20x: "HB20X",
+  crossfox: "CrossFox", spacefox: "SpaceFox",
   "320i": "320i", "328i": "328i", "118i": "118i", "120i": "120i",
   xc40: "XC40", xc60: "XC60", xc90: "XC90", c40: "C40", ex30: "EX30",
 };
@@ -99,6 +101,7 @@ const EXTRA_CAR_MODELS = (
   "territory maverick edge focus fiesta i30 veloster azera elantra captiva spin " +
   "equinox trailblazer astra vectra meriva zafira agile classic punto linea bravo " +
   "idea doblo freemont ducato clio megane fluence kardian master kangoo livina tiida " +
+  "kwid stepway crossfox asx " +
   "206 207 208 307 308 408 500 2008 3008 5008 c3 c4 basalt picanto cerato sorento " +
   "soul stonic niro carnival bongo vitara jimny swift sx4 impreza forester outback " +
   "wrx x1 x2 x3 x4 x5 x6 a1 a3 a4 a5 q3 q5 q7 q8 evoque defender discovery velar " +
@@ -113,12 +116,7 @@ const KNOWN_CAR_MODELS: Map<string, string> = (() => {
     if (!clean || clean.includes(" ") || GENERIC_BODY_TOKENS.has(clean)) return;
     map.set(clean, SPECIAL_SINGLE_MODELS[clean] ?? formatModelName(clean));
   };
-  for (const rule of CATALOG_BODY_RULES) {
-    for (const part of rule.pattern.source.split("|")) {
-      const cleaned = part.replace(/\b|\[[- ]\]\?|\?/g, "").replace(/[^a-z0-9 ]/gi, "");
-      register(cleaned);
-    }
-  }
+  for (const token of CATALOG_CAR_MODEL_TOKENS) register(token);
   for (const token of EXTRA_CAR_MODELS) register(token);
   for (const key of Object.keys(SPECIAL_SINGLE_MODELS)) register(key);
   return map;
