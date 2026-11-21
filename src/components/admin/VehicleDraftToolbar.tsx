@@ -117,7 +117,7 @@ export function VehicleDraftToolbar({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((current) => !current)}
-          className={`min-h-6 touch-manipulation underline-offset-2 hover:underline ${
+          className={`inline-flex min-h-[44px] items-center py-2 touch-manipulation underline-offset-2 hover:underline ${
             failed ? "text-red-400" : "text-muted"
           }`}
         >
@@ -129,7 +129,7 @@ export function VehicleDraftToolbar({
               type="button"
               disabled={disabled || pending}
               onClick={() => void save()}
-              className="min-h-6 text-cream underline underline-offset-2 disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center px-1 py-2 text-cream underline underline-offset-2 touch-manipulation disabled:opacity-50"
             >
               Guardar agora
             </button>
@@ -139,7 +139,7 @@ export function VehicleDraftToolbar({
               onClick={async () => {
                 if (await save()) router.push("/admin/veiculos");
               }}
-              className="min-h-6 text-cream underline underline-offset-2 disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center px-1 py-2 text-cream underline underline-offset-2 touch-manipulation disabled:opacity-50"
             >
               Guardar e sair
             </button>

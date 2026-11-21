@@ -110,7 +110,7 @@ export function SiteSettingsForm({
       ref={formRef}
       onSubmit={submit}
       onChange={() => setDirty(true)}
-      className="space-y-4 pb-36 lg:pb-0"
+      className={`space-y-4 ${dirty ? "pb-44 lg:pb-0" : "pb-6 lg:pb-0"}`}
       noValidate
     >
       <fieldset disabled={isPending || uploading} className="min-w-0 space-y-4">
@@ -297,11 +297,11 @@ export function SiteSettingsForm({
         />
 
         <div
-          className={`fixed inset-x-0 bottom-admin-nav z-20 mt-2 border-t border-white/10 bg-ink/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur ${
+          className={
             dirty
-              ? "lg:sticky lg:bottom-0 lg:mx-0 lg:border lg:border-white/10 lg:bg-ink/95 lg:px-4 lg:py-3"
-              : "lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:pb-0"
-          }`}
+              ? "fixed inset-x-0 bottom-admin-nav z-20 mt-2 border-t border-white/10 bg-ink/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur lg:sticky lg:bottom-0 lg:mx-0 lg:border lg:border-white/10 lg:bg-ink/95 lg:px-4 lg:py-3"
+              : "mt-2 border border-white/10 bg-ink/70 px-4 py-3 lg:border-0 lg:bg-transparent lg:p-0"
+          }
         >
           <div className="flex flex-wrap items-center gap-3">
             <button
