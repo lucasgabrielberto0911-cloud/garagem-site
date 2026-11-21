@@ -104,11 +104,11 @@ export function SiteContentEditor({
           </p>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <label className={`${btn.outline} cursor-pointer`}>
+          <label className={`${btn.outline} relative cursor-pointer focus-within:ring-2 focus-within:ring-brand`}>
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              className="sr-only"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               disabled={uploadingFounder}
               onChange={(event) => {
                 void uploadFounderPhoto(event.target.files?.[0]);
