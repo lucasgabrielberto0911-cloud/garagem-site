@@ -114,11 +114,11 @@ export default async function VenderPage({
           </div>
 
           <section className="lg:mt-10">
-            <div className="mb-6 border border-brand/30 bg-ink p-4 sm:p-5">
+            <div className="mb-6 bg-ink p-4 sm:p-5">
               <h2 className="font-display text-lg font-bold tracking-tight text-cream">
                 Prefere falar direto no WhatsApp?
               </h2>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted">
+              <p className="mt-1.5 text-sm leading-relaxed text-cream/85">
                 Sem formulário: você manda as fotos e os dados do carro na conversa e a gente avalia por lá.
               </p>
               <div className="mt-4">
@@ -133,7 +133,7 @@ export default async function VenderPage({
                   </WhatsAppButton>
                 </SiteLeadHit>
               </div>
-              <p className="mt-4 text-xs text-muted">Ou, se preferir, preencha o formulário abaixo.</p>
+              <p className="mt-4 text-xs text-cream/85">Ou, se preferir, preencha o formulário abaixo.</p>
             </div>
             <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
               Dados do seu veículo

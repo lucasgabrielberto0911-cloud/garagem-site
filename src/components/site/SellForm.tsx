@@ -32,8 +32,16 @@ import { sellReceivedLine } from "@/lib/sell-receipt";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { SiteLeadHit } from "@/lib/funnel-events";
 
-const inputClass =
-  "w-full min-h-[48px] border border-white/25 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation placeholder:text-cream/60 focus:border-brand focus-visible:ring-2 focus-visible:ring-brand";
+const inputBaseClass =
+  "w-full min-h-[48px] border bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation placeholder:text-cream/65 focus:border-brand-light focus:ring-2 focus:ring-brand-light";
+
+function fieldInputClass(hasError: boolean): string {
+  return `${inputBaseClass} ${
+    hasError
+      ? "border-brand-light ring-1 ring-brand-light"
+      : "border-white/45 hover:border-white/65"
+  }`;
+}
 
 export function SellForm({
   interestNote,
@@ -227,15 +235,15 @@ export function SellForm({
     >
       <fieldset disabled={isPending} className="flex min-w-0 flex-col gap-3">
         {draft.saved || draft.failed ? (
-          <div className="rounded-md border border-white/20 bg-white/[0.04] px-3 py-2.5" data-sell-draft="">
+          <div className="rounded-md bg-white/[0.04] px-3 py-2.5" data-sell-draft="">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p role="status" className="text-xs leading-relaxed text-cream/80">
+              <p role="status" className="text-xs leading-relaxed text-cream/90">
                 {draft.failure === "erase" ? "Não conseguimos apagar o rascunho guardado neste navegador." : draft.failed ? "Não conseguimos guardar o preenchimento neste navegador." : draft.restored ? "Seu preenchimento foi recuperado." : "Preenchimento guardado nesta aba."}
               </p>
               <button type="button" onClick={() => { draft.discard(); setErrors({}); setFormError(""); }}
-                className="min-h-11 px-2 text-xs text-cream underline decoration-white/30 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Apagar preenchimento</button>
+                className="min-h-11 px-2 text-xs font-medium text-cream underline decoration-white/60 underline-offset-4 hover:text-brand-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light">Apagar preenchimento</button>
             </div>
-            {!draft.failed ? <p className="text-xs leading-relaxed text-cream/75">Os textos ficam guardados por até 24 horas nesta aba (se recarregar a página, escolha as fotos novamente).</p> : null}
+            {!draft.failed ? <p className="text-xs leading-relaxed text-cream/85">Os textos ficam guardados por até 24 horas nesta aba (se recarregar a página, escolha as fotos novamente).</p> : null}
           </div>
         ) : null}
         <HoneypotWebsiteField id="website" />
@@ -248,7 +256,7 @@ export function SellForm({
               required
               autoComplete="name"
               placeholder="Nome completo"
-              className={inputClass}
+              className={fieldInputClass(Boolean(errors.name))}
             />
           </Field>
 
@@ -262,7 +270,7 @@ export function SellForm({
               value={phone}
               onChange={(event) => setPhone(formatPhoneBR(event.target.value))}
               placeholder="(00) 00000-0000"
-              className={inputClass}
+              className={fieldInputClass(Boolean(errors.phone))}
             />
           </Field>
         </FormBlock>
@@ -274,7 +282,7 @@ export function SellForm({
               name="brand"
               required
               placeholder="Ex.: Volkswagen"
-              className={inputClass}
+              className={fieldInputClass(Boolean(errors.brand))}
             />
           </Field>
 
@@ -284,7 +292,7 @@ export function SellForm({
               name="model"
               required
               placeholder="Ex.: Golf GTI"
-              className={inputClass}
+              className={fieldInputClass(Boolean(errors.model))}
             />
           </Field>
 
@@ -296,16 +304,16 @@ export function SellForm({
               inputMode="numeric"
               maxLength={4}
               placeholder="Ex.: 2021"
-              className={inputClass}
+              className={fieldInputClass(Boolean(errors.year))}
             />
           </Field>
 
         </FormBlock>
 
-        <details open={Boolean(errors.plate)} className="group border border-white/20">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-sm text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+        <details open={Boolean(errors.plate)} className="group bg-ink">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-sm font-semibold text-cream transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light [&::-webkit-details-marker]:hidden">
             <span>Complementar com placa, km ou fotos (opcional)</span>
-            <span aria-hidden="true" className="shrink-0 text-cream/75 transition-transform group-open:rotate-180">⌄</span>
+            <span aria-hidden="true" className="shrink-0 font-bold text-cream transition-transform group-open:rotate-180">⌄</span>
           </summary>
           <FormBlock title="Detalhes para a avaliação">
             <Field label="Placa do veículo" error={errors.plate} htmlFor="plate" optional>
@@ -317,10 +325,10 @@ export function SellForm({
                 value={plate}
                 onChange={(event) => setPlate(formatPlateInput(event.target.value))}
                 placeholder="ABC-1234 ou ABC1D23"
-                className={`${inputClass} uppercase`}
+                className={`${fieldInputClass(Boolean(errors.plate))} uppercase`}
                 aria-describedby="plate-hint"
               />
-              <p id="plate-hint" className="mt-1.5 text-xs text-cream/75">
+              <p id="plate-hint" className="mt-1.5 text-xs text-cream/85">
                 Pode enviar depois. Se informar, use ABC-1234 ou ABC1D23.
               </p>
             </Field>
@@ -336,7 +344,7 @@ export function SellForm({
                   setKm(digits ? formatNumberBR(Number(digits)) : "");
                 }}
                 placeholder="Ex.: 45.000"
-                className={inputClass}
+                className={fieldInputClass(Boolean(errors.km))}
               />
             </Field>
 
@@ -348,7 +356,7 @@ export function SellForm({
                   rows={4}
                   defaultValue={interestNote ?? ""}
                   placeholder="Conte o estado do veículo, itens opcionais, se há débitos, se quer vender ou trocar..."
-                  className={`${inputClass} resize-y`}
+                  className={`${fieldInputClass(Boolean(errors.notes))} resize-y`}
                 />
               </Field>
             </div>
@@ -364,19 +372,19 @@ export function SellForm({
         ) : null}
         <input type="hidden" name="source" value="vender" />
 
-        <div className="border border-white/20 bg-ink p-4 sm:p-5">
-          <p className="text-sm leading-relaxed text-cream/80">
+        <div className="bg-ink p-4 sm:p-5">
+          <p className="text-sm leading-relaxed text-cream/90">
             Este é o contato inicial. Podemos pedir placa, fotos e mais detalhes para avaliar tabela, histórico e conservação. Depois,
             retornamos no telefone informado, das 8h às 23h. Sem taxa e sem
             compromisso.
           </p>
-          {formError ? <p className="mt-4 text-sm leading-relaxed text-brand-light" role="alert">{formError}</p> : null}
+          {formError ? <p className="mt-4 text-sm font-medium leading-relaxed text-brand-light" role="alert">{formError}</p> : null}
           <div className="mt-4 flex flex-col gap-3">
             <button
               type="submit"
               disabled={!ready || isPending || photoBusy}
               aria-busy={isPending}
-              className="min-h-[52px] w-full bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-70 touch-manipulation"
+              className="min-h-[52px] w-full bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:opacity-70 touch-manipulation"
             >
               {isPending
                 ? "Enviando..."
@@ -388,7 +396,7 @@ export function SellForm({
               <WhatsAppButton
                 size="lg"
                 variant="outline"
-                className="w-full"
+                className="w-full border-white/45"
                 trackingLabel="vender"
                 message={WHATSAPP_MESSAGES.sell}
               >
@@ -396,7 +404,7 @@ export function SellForm({
               </WhatsAppButton>
             </SiteLeadHit>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-cream/75">
+          <p className="mt-4 text-xs leading-relaxed text-cream/85">
             Seus dados são usados apenas para o contato da avaliação. Não enviamos
             spam nem compartilhamos com terceiros.
           </p>
@@ -423,34 +431,34 @@ function AfterSend({
     ? `Olá! Acabei de enviar os dados do meu ${vehicle.brand} ${vehicle.model} ${vehicle.year} pelo site para avaliação.`
     : WHATSAPP_MESSAGES.sell;
   return (
-    <div ref={containerRef} tabIndex={-1} aria-labelledby="sell-form-receipt-heading" className="scroll-mt-24 overflow-hidden border border-brand/40 bg-ink outline-none" aria-live="polite">
+    <div ref={containerRef} tabIndex={-1} aria-labelledby="sell-form-receipt-heading" className="scroll-mt-24 overflow-hidden bg-ink outline-none" aria-live="polite">
       <div className="h-1 bg-brand" aria-hidden="true" />
       <div className="p-4 sm:p-6">
-        <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand-light">
+        <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-brand-light">
           {mode === "queued" ? "Sem conexão" : "Pedido recebido"}
         </p>
         <h2 id="sell-form-receipt-heading" className="mt-2 font-display text-xl font-bold tracking-tight text-cream">
           {mode === "queued" ? "Avaliação guardada neste aparelho" : "Solicitação enviada"}
         </h2>
         {mode === "queued" ? (
-          <p className="mt-3 text-sm leading-relaxed text-cream/80">
+          <p className="mt-3 text-sm leading-relaxed text-cream/90">
             Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.
           </p>
         ) : (
           <ol className="mt-4 grid gap-1.5">
-            <li className="border border-white/15 bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/80">
+            <li className="bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/90">
               <span className="font-display font-semibold text-cream">
                 Recebemos os dados do veículo.
               </span>{" "}
               {sellReceivedLine(photoCount)}
             </li>
-            <li className="border border-white/15 bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/80">
+            <li className="bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/90">
               <span className="font-display font-semibold text-cream">
                 A loja avalia sem taxa e sem compromisso.
               </span>{" "}
               Tabela, histórico e estado de conservação.
             </li>
-            <li className="border border-white/15 bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/80">
+            <li className="bg-asphalt px-3.5 py-3 text-sm leading-snug text-cream/90">
               <span className="font-display font-semibold text-cream">
                 O retorno sai no telefone informado, das 8h às 23h.
               </span>{" "}
@@ -470,7 +478,7 @@ function AfterSend({
           <button
             type="button"
             onClick={onAnother}
-            className="min-h-[48px] w-full border border-white/25 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation"
+            className="min-h-[48px] w-full border border-white/45 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand-light hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light touch-manipulation"
           >
             Enviar outro veículo
           </button>
@@ -490,11 +498,11 @@ function FormBlock({
   children: ReactNode;
 }) {
   return (
-    <section className="border border-white/20 bg-ink p-4 sm:p-5">
-      <h3 className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand-light">
+    <section className="bg-ink p-4 sm:p-5">
+      <h3 className="font-display text-xs font-bold uppercase tracking-[0.14em] text-brand-light">
         {title}
       </h3>
-      {hint ? <p className="mt-1 text-sm leading-snug text-cream/75">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-sm leading-snug text-cream/90">{hint}</p> : null}
       <div className="mt-4 grid gap-4 lg:grid-cols-2 lg:gap-x-5">{children}</div>
     </section>
   );
@@ -533,20 +541,20 @@ function Field({
     <div>
       <label
         htmlFor={htmlFor}
-        className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.1em] text-cream/85"
+        className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-cream"
       >
         {label}
         {optional ? (
-          <span className="ml-1 normal-case font-normal text-cream/75">(opcional)</span>
+          <span className="ml-1 normal-case font-normal text-cream/80">(opcional)</span>
         ) : (
-          <span className="ml-1 text-brand-light" aria-hidden="true">
+          <span className="ml-1 font-bold text-brand-light" aria-hidden="true">
             *
           </span>
         )}
       </label>
       {decorated}
       {error ? (
-        <p id={errorId} className="mt-1.5 text-xs text-brand-light" role="alert">
+        <p id={errorId} className="mt-1.5 text-xs font-medium text-brand-light" role="alert">
           {error}
         </p>
       ) : null}
