@@ -6,6 +6,7 @@ import { randomUUID, randomInt } from "node:crypto";
 import { ORIGIN_LABELS } from "../src/lib/lead-origin";
 import { weeklyLeadSummary } from "../src/lib/lead-funnel";
 import { vehiclePath } from "../src/lib/vehicle-slug";
+import { wantedStockMatch } from "../src/lib/wanted-stock-match";
 import { readFileSync } from "node:fs";
 import { accessoryGroup, parseLegend } from "../src/lib/legend-parser";
 const fastbackLegend = readFileSync("src/lib/__fixtures__/legend-fastback.txt", "utf8");
@@ -406,7 +407,9 @@ test("funil: registrar origens, filtrar e persistir etapas e encerramento", asyn
 
 test("alerta desejado: consentimento, gravação, correspondência e encerramento", async ({ page, conta }) => {
   await login(page, conta.email);
-  expect((await page.request.get("/api/admin/avisos?tipo=pedidos")).status()).toBe(200);
+  const initialNotices = await page.request.get("/api/admin/avisos");
+  expect(initialNotices.status()).toBe(200);
+  expect((await initialNotices.json()).kind).toBe("carros");
   await page.request.post("/api/auth/logout");
   await page.goto("/pedido?q=Honda%20Civic");
   const form = page.locator("[data-missing-model-form] form");
@@ -419,20 +422,28 @@ test("alerta desejado: consentimento, gravação, correspondência e encerrament
   await expect(page.getByRole("heading", { name: "Pedido recebido" })).toBeVisible();
   const lead = await prisma.leadVenda.findFirstOrThrow({ where: { name: conta.prefixo } });
   expect(lead.source).toBe("nao-encontrou");
+  const vehicles = await prisma.vehicle.findMany({
+    where: { status: "disponivel", historical: false },
+    select: { id: true, brand: true, model: true, version: true, yearModel: true, price: true, km: true, transmission: true, status: true, historical: true },
+  });
+  expect(vehicles.some((vehicle) => Boolean(wantedStockMatch(lead, vehicle)))).toBe(true);
   await login(page, conta.email);
-  const matches = await page.request.get("/api/admin/avisos?tipo=pedidos");
-  expect(matches.status()).toBe(200);
-  expect((await matches.json()).items.some((item: { id: string }) => item.id.startsWith(`${lead.id}:`))).toBe(true);
+  const notices = await page.request.get("/api/admin/avisos");
+  expect(notices.status()).toBe(200);
+  expect((await notices.json()).items.some((item: { id: string }) => item.id.startsWith(`${lead.id}:`))).toBe(false);
   await page.goto(`/admin/leads?lead=${lead.id}`);
   await page.locator(`#status-${lead.id}`).selectOption("perdido");
   await expect.poll(async () => (await prisma.leadVenda.findUniqueOrThrow({ where: { id: lead.id } })).status).toBe("perdido");
-  const after = await (await page.request.get("/api/admin/avisos?tipo=pedidos")).json();
-  expect(after.items.some((item: { id: string }) => item.id.startsWith(`${lead.id}:`))).toBe(false);
+  const closedLead = await prisma.leadVenda.findUniqueOrThrow({ where: { id: lead.id } });
+  expect(vehicles.some((vehicle) => Boolean(wantedStockMatch(closedLead, vehicle)))).toBe(false);
 });
 
 test("avaliação: formulário salva lead com origem e mostra recibo", async ({ page, conta }) => {
   await login(page, conta.email);
-  expect((await page.request.get("/api/admin/badge")).status()).toBe(200);
+  const beforeResponse = await page.request.get("/api/admin/badge");
+  expect(beforeResponse.status()).toBe(200);
+  const badgeBefore = await beforeResponse.json();
+  expect(badgeBefore).not.toHaveProperty("count");
   await page.request.post("/api/auth/logout");
   await page.goto(`/vender?interesse=${samples[0].id}`);
   const form = page.locator("#conteudo form").filter({ has: page.locator('[name="plate"]') });
@@ -447,7 +458,12 @@ test("avaliação: formulário salva lead com origem e mostra recibo", async ({ 
   await expect(page.locator("#sell-form-receipt-heading")).toBeVisible();
   await login(page, conta.email);
   const badge = await (await page.request.get("/api/admin/badge")).json();
-  expect(badge.count).toBe(await prisma.leadVenda.count({ where: { status: "novo" } }));
+  expect(badge).toEqual({
+    carWarnings: expect.any(Number),
+    costWarnings: expect.any(Number),
+    notifications: badge.carWarnings + badge.costWarnings,
+  });
+  expect(badge.notifications).toBe(badgeBefore.notifications);
 });
 
 test("WhatsApp: clique interceptado conserva veículo, origem e eventos do catálogo", async ({ page, destinos }) => {
