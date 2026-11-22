@@ -409,7 +409,7 @@ test("alerta desejado: consentimento, gravação, correspondência e encerrament
   await login(page, conta.email);
   const initialNotices = await page.request.get("/api/admin/avisos");
   expect(initialNotices.status()).toBe(200);
-  expect((await initialNotices.json()).kind).toBe("carros");
+  expect((await initialNotices.json()).kind).toBe("vendas");
   await page.request.post("/api/auth/logout");
   await page.goto("/pedido?q=Honda%20Civic");
   const form = page.locator("[data-missing-model-form] form");
@@ -444,6 +444,7 @@ test("avaliação: formulário salva lead com origem e mostra recibo", async ({ 
   expect(beforeResponse.status()).toBe(200);
   const badgeBefore = await beforeResponse.json();
   expect(badgeBefore).not.toHaveProperty("count");
+  expect(badgeBefore).not.toHaveProperty("carWarnings");
   await page.request.post("/api/auth/logout");
   await page.goto(`/vender?interesse=${samples[0].id}`);
   const form = page.locator("#conteudo form").filter({ has: page.locator('[name="plate"]') });
@@ -459,9 +460,8 @@ test("avaliação: formulário salva lead com origem e mostra recibo", async ({ 
   await login(page, conta.email);
   const badge = await (await page.request.get("/api/admin/badge")).json();
   expect(badge).toEqual({
-    carWarnings: expect.any(Number),
     costWarnings: expect.any(Number),
-    notifications: badge.carWarnings + badge.costWarnings,
+    notifications: badge.costWarnings,
   });
   expect(badge.notifications).toBe(badgeBefore.notifications);
 });

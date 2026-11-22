@@ -5,10 +5,7 @@ import {
   ADMIN_DATA_TAG,
   ADMIN_SEED_PASSWORD_TAG,
 } from "@/lib/admin-cache";
-import {
-  buildVehiclePendingList,
-  summarizeStockCapital,
-} from "@/lib/admin-dashboard";
+import { summarizeStockCapital } from "@/lib/admin-dashboard";
 import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
 import { summarizeStockAge } from "@/lib/admin-stock-age";
 import { prisma } from "@/lib/prisma";
@@ -31,23 +28,6 @@ export const getAdminWeakPasswordAlert = unstable_cache(
   ["admin-password-alert-v1"],
   { revalidate: 60, tags: [ADMIN_SEED_PASSWORD_TAG] },
 );
-
-export async function getUsingSeedPassword() {
-  try {
-    const admins = await prisma.admin.findMany({
-      select: { id: true, passwordHash: true },
-    });
-    return (
-      await Promise.all(
-        admins.map((admin) =>
-          getAdminWeakPasswordAlert(admin.id, admin.passwordHash),
-        ),
-      )
-    ).some(Boolean);
-  } catch {
-    return null;
-  }
-}
 
 export type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
 
@@ -76,8 +56,6 @@ async function loadDashboardData() {
     featured,
     monthSales,
     monthlySales,
-    saleGaps,
-    usingSeedPassword,
   ] = await Promise.all([
     safe(
       "activeVehicles",
@@ -98,16 +76,8 @@ async function loadDashboardData() {
             purchasePrice: true,
             consigned: true,
             km: true,
-            description: true,
             createdAt: true,
-            _count: { select: { photos: true } },
             costs: { select: { amount: true } },
-            reservations: {
-              where: { status: "ativa" },
-              orderBy: { createdAt: "desc" },
-              take: 1,
-              select: { expiresAt: true },
-            },
           },
         }),
       [],
@@ -173,26 +143,6 @@ async function loadDashboardData() {
       },
       [] as Array<{ key: string; revenue: number; count: number }>,
     ),
-    safe(
-      "saleGaps",
-      () =>
-        prisma.vehicle.findMany({
-          where: { status: "vendido", historical: false, sale: null },
-          take: 5,
-          select: { id: true, brand: true, model: true },
-        }),
-      [],
-    ),
-    safe(
-      "usingSeedPassword",
-      async () => {
-        const value = await getUsingSeedPassword();
-        if (value === null)
-          throw new Error("Não foi possível conferir os acessos.");
-        return value;
-      },
-      false,
-    ),
   ]);
 
   const enteredAtMap = new Map<string, Date>();
@@ -225,33 +175,12 @@ async function loadDashboardData() {
     now,
   );
 
-  const pendencies = buildVehiclePendingList({
-    usingSeedPassword,
-    saleGaps,
-    vehicles: activeVehicles.map((vehicle) => ({
-      id: vehicle.id,
-      brand: vehicle.brand,
-      model: vehicle.model,
-      version: vehicle.version,
-      yearModel: vehicle.yearModel,
-      status: vehicle.status,
-      price: vehicle.price,
-      purchasePrice: vehicle.purchasePrice,
-      consigned: vehicle.consigned,
-      description: vehicle.description,
-      photoCount: vehicle._count.photos,
-      reservationExpiresAt:
-        vehicle.reservations[0]?.expiresAt?.toISOString() ?? null,
-    })),
-  });
-
   const monthCount = monthSales._count._all;
   const monthRevenue = monthSales._sum.salePrice ?? 0;
 
   return {
     failures,
     updatedAt: now.toISOString(),
-    pendencies,
     stockAge,
     stockCapital,
     featured,
@@ -266,11 +195,11 @@ async function loadDashboardData() {
 
 const getDashboardDataForDay = unstable_cache(
   async (_day: string) => loadDashboardData(),
-  ["admin-dashboard-v8"],
+  ["admin-dashboard-v9"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG] },
 );
 
-/** O dia na chave também renova alertas, idade e período do mês na virada local. */
+/** O dia na chave também renova idade e período do mês na virada local. */
 export function getDashboardData() {
   return getDashboardDataForDay(localDateInput());
 }

@@ -7,15 +7,12 @@ import {
   mapAdminVehicleStatsRow,
 } from "./admin-vehicles";
 
-test("contadores separam consignado e não trazem vídeo", () => {
+test("contadores separam consignado e não trazem contadores de pendência", () => {
   const stats = mapAdminVehicleStatsRow({
     available: 10,
     reserved: 2,
     sold: 4,
     featured: 3,
-    stale: 1,
-    withoutPhotos: 2,
-    withPending: 5,
     parked: 3,
     stockValue: 1000,
     purchaseSum: 400,
@@ -30,12 +27,11 @@ test("contadores separam consignado e não trazem vídeo", () => {
   assert.equal(stats.consignedAvailable, 2);
   assert.equal(stats.invested, 450);
   assert.equal(stats.stockValue, 1000);
-  assert.equal(stats.withoutPhotos, 2);
-  assert.equal(stats.withPending, 5);
   assert.equal(stats.parked, 3);
-  assert.equal(stats.stale, 1);
   assert.equal(stats.featured, 3);
   assert.equal("withoutVideo" in stats, false);
+  assert.equal("withPending" in stats, false);
+  assert.equal("withoutPhotos" in stats, false);
 });
 
 test("ADMIN_VEHICLE_LIST_SELECT traz só 1 foto de capa + _count e nunca seleciona placa, chassi ou RENAVAM", () => {

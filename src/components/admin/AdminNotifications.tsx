@@ -22,7 +22,7 @@ export function AdminNotifications({
 }) {
   const [open, setOpen] = useState(false);
   const [retry, setRetry] = useState(0);
-  const [kind, setKind] = useState<NoticeKind>("carros");
+  const [kind, setKind] = useState<NoticeKind>("vendas");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<NoticesResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -73,7 +73,7 @@ export function AdminNotifications({
         const result = (await response.json()) as NoticesResult;
         if (controller.signal.aborted) return;
         setData(result);
-        onCount(result.counts.carros + result.counts.vendas);
+        onCount(result.counts.vendas);
       })
       .catch(() => {
         if (!controller.signal.aborted) setError(true);
@@ -89,9 +89,7 @@ export function AdminNotifications({
       <button
         ref={buttonRef}
         type="button"
-        aria-label={
-          count && count > 0 ? `Avisos: ${count} pendências` : "Avisos"
-        }
+        aria-label={count && count > 0 ? `Avisos (${count})` : "Avisos"}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
@@ -152,36 +150,36 @@ export function AdminNotifications({
                   className="min-h-0 overflow-y-auto overscroll-contain p-4"
                   aria-busy={loading}
                 >
-                  <div
-                    className="mb-4 grid grid-cols-2 gap-2"
-                    role="group"
-                    aria-label="Tipo de aviso"
-                  >
-                    {NOTICE_KINDS.map(({ value, label }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        aria-pressed={kind === value}
-                        onClick={() => {
-                          setKind(value);
-                          setPage(1);
-                          setData(null);
-                        }}
-                        className={`min-h-11 rounded-lg px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                          kind === value
-                            ? "bg-brand text-white"
-                            : "border border-white/20 text-cream/80 hover:bg-white/5 hover:text-cream"
-                        }`}
-                      >
-                        {label}
-                        {data ? ` (${data.counts[value]})` : ""}
-                      </button>
-                    ))}
-                  </div>
+                  {NOTICE_KINDS.length > 1 ? (
+                    <div
+                      className="mb-4 grid grid-cols-2 gap-2"
+                      role="group"
+                      aria-label="Tipo de aviso"
+                    >
+                      {NOTICE_KINDS.map(({ value, label }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          aria-pressed={kind === value}
+                          onClick={() => {
+                            setKind(value);
+                            setPage(1);
+                            setData(null);
+                          }}
+                          className={`min-h-11 rounded-lg px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                            kind === value
+                              ? "bg-brand text-white"
+                              : "border border-white/20 text-cream/80 hover:bg-white/5 hover:text-cream"
+                          }`}
+                        >
+                          {label}
+                          {data ? ` (${data.counts[value]})` : ""}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                   <p className="mb-3 text-sm leading-relaxed text-cream/80">
-                    {kind === "carros"
-                      ? "Carros sem foto, sem preço ou com reserva vencendo."
-                      : "Vendas sem preço de compra informado para calcular o lucro."}
+                    Vendas sem preço de compra informado para calcular o lucro.
                   </p>
                   {loading ? (
                     <p role="status" className="py-6 text-sm text-cream/80">
@@ -200,9 +198,7 @@ export function AdminNotifications({
                     </div>
                   ) : data?.items.length === 0 ? (
                     <p role="status" className="py-6 text-sm text-cream/80">
-                      {kind === "carros"
-                        ? "Nenhum carro pendente no estoque."
-                        : "Nenhuma venda com essa pendência."}
+                      Nenhuma venda sem preço de compra.
                     </p>
                   ) : (
                     <ul className="space-y-2">
@@ -223,9 +219,7 @@ export function AdminNotifications({
                               {item.detail}
                             </p>
                             <span className="mt-2 block text-xs text-cream underline underline-offset-4">
-                              {kind === "carros"
-                                ? "Abrir veículo"
-                                : "Completar operação"}
+                              Completar operação
                             </span>
                           </Link>
                         </li>

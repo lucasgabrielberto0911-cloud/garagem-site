@@ -58,11 +58,6 @@ import {
   canEnableFeatured,
   featuredCapMessage,
 } from "@/lib/featured";
-import {
-  vehiclePendingBadges,
-  type StockPending,
-} from "@/lib/admin-stock-pending";
-import { stockListQuietNote } from "@/lib/stock-quality";
 import { rotateLocalDraftOnDuplicate } from "@/lib/admin-duplicate-vehicle";
 import {
   deleteVehicle,
@@ -93,14 +88,6 @@ const STATUS_LABEL: Record<string, string> = {
   disponivel: "Disponível",
   reservado: "Reservado",
   vendido: "Vendido",
-};
-
-const PENDING_FILTER_LABEL: Record<Exclude<StockPending, "">, string> = {
-  "com-pendencia": "Com pendência",
-  parados: "Parados (+30d)",
-  "sem-fotos": "Sem foto",
-  "sem-preco": "Sem preço",
-  antigos: "60+ dias",
 };
 
 const FILTER_PILL =
@@ -153,15 +140,13 @@ export function VehiclesTable({
   q,
   tab,
   status,
-  pending = "",
+  parked = false,
   estoqueCount: estoqueCountProp,
   vendidosCount: vendidosCountProp,
   featuredCount: featuredCountProp,
   availableCount: availableCountProp,
   reservedCount: reservedCountProp,
-  withPendingCount = 0,
   parkedCount = 0,
-  quality,
   adminId,
 }: {
   vehicles: VehicleRow[];
@@ -170,19 +155,13 @@ export function VehiclesTable({
   q: string;
   tab: VehiclesTab;
   status?: string;
-  pending?: StockPending;
+  parked?: boolean;
   estoqueCount: number;
   vendidosCount: number;
   featuredCount: number;
   availableCount: number;
   reservedCount: number;
-  withPendingCount?: number;
   parkedCount?: number;
-  quality?: {
-    withoutPhotos: number;
-    stale: number;
-    staleDays: number;
-  };
   adminId?: string;
 }) {
   const router = useRouter();
@@ -233,9 +212,9 @@ export function VehiclesTable({
   const someVisibleSelected = selected.length > 0 && !allVisibleSelected;
   const selectMode = selecting || selected.length > 0;
   const statusFilterActive = tab === "estoque" && Boolean(status);
-  const pendingFilterActive = tab === "estoque" && Boolean(pending);
+  const parkedFilterActive = tab === "estoque" && parked;
   const activeFilterCount =
-    (q ? 1 : 0) + (statusFilterActive ? 1 : 0) + (pendingFilterActive ? 1 : 0);
+    (q ? 1 : 0) + (statusFilterActive ? 1 : 0) + (parkedFilterActive ? 1 : 0);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -314,7 +293,7 @@ export function VehiclesTable({
         if (tab === "vendidos") search.set("tab", "vendidos");
         if (tab === "destaques") search.set("tab", "destaques");
         if (status && tab === "estoque") search.set("status", status);
-        if (pending && tab === "estoque") search.set("pendencia", pending);
+        if (parked && tab === "estoque") search.set("parados", "1");
         search.set("sort", nextSort.key);
         search.set("dir", nextSort.dir);
         search.set("page", String(nextPage));
@@ -356,11 +335,11 @@ export function VehiclesTable({
         }
       }
     },
-    [pageSize, q, tab, status, pending],
+    [pageSize, q, tab, status, parked],
   );
 
   const applyFilters = useCallback(
-    (params: { q?: string; tab?: VehiclesTab; status?: string | null; pending?: StockPending }) => {
+    (params: { q?: string; tab?: VehiclesTab; status?: string | null; parked?: boolean }) => {
       const search = new URLSearchParams();
       const nextQ = params.q ?? q;
       const nextTab = params.tab ?? tab;
@@ -371,13 +350,13 @@ export function VehiclesTable({
       if (nextStatus && nextTab === "estoque") {
         search.set("status", nextStatus);
       }
-      const nextPending = params.pending ?? pending;
-      if (nextPending && nextTab === "estoque") search.set("pendencia", nextPending);
+      const nextParked = params.parked ?? parked;
+      if (nextParked && nextTab === "estoque") search.set("parados", "1");
       startTransition(() => {
         router.push(search.toString() ? `${pathname}?${search}` : pathname);
       });
     },
-    [q, tab, status, pending, router, pathname],
+    [q, tab, status, parked, router, pathname],
   );
 
   function changeSort(next: { key: SortKey; dir: "asc" | "desc" }) {
@@ -815,15 +794,6 @@ export function VehiclesTable({
     </>
   );
 
-  const stockNote =
-    tab === "estoque" && quality
-      ? stockListQuietNote({
-          withoutPhotos: quality.withoutPhotos,
-          stale: quality.stale,
-          staleDays: quality.staleDays,
-        })
-      : null;
-
   const isLoadingList = isPending || loadingSort;
 
   const quickChips = [
@@ -831,54 +801,42 @@ export function VehiclesTable({
       key: "todos",
       label: "Todos",
       count: String(estoqueCount),
-      active: tab === "estoque" && !status && !pending,
-      onClick: () => applyFilters({ tab: "estoque", status: null, pending: "" }),
+      active: tab === "estoque" && !status && !parked,
+      onClick: () => applyFilters({ tab: "estoque", status: null, parked: false }),
     },
     {
       key: "disponiveis",
       label: "Disponíveis",
       count: String(availableCount),
-      active: tab === "estoque" && status === "disponivel" && !pending,
+      active: tab === "estoque" && status === "disponivel" && !parked,
       onClick: () =>
-        applyFilters({ tab: "estoque", status: "disponivel", pending: "" }),
+        applyFilters({ tab: "estoque", status: "disponivel", parked: false }),
     },
     {
       key: "reservados",
       label: "Reservados",
       count: String(reservedCount),
-      active: tab === "estoque" && status === "reservado" && !pending,
+      active: tab === "estoque" && status === "reservado" && !parked,
       onClick: () =>
-        applyFilters({ tab: "estoque", status: "reservado", pending: "" }),
+        applyFilters({ tab: "estoque", status: "reservado", parked: false }),
     },
     {
       key: "vendidos",
       label: "Vendidos",
       count: String(vendidosCount),
       active: tab === "vendidos",
-      onClick: () => applyFilters({ tab: "vendidos", status: null, pending: "" }),
-    },
-    {
-      key: "com-pendencia",
-      label: "Com pendência",
-      count: String(withPendingCount),
-      active: tab === "estoque" && pending === "com-pendencia",
-      onClick: () =>
-        applyFilters({
-          tab: "estoque",
-          status: null,
-          pending: pending === "com-pendencia" ? "" : "com-pendencia",
-        }),
+      onClick: () => applyFilters({ tab: "vendidos", status: null, parked: false }),
     },
     {
       key: "parados",
       label: "Parados (+30d)",
       count: String(parkedCount),
-      active: tab === "estoque" && pending === "parados",
+      active: tab === "estoque" && parked,
       onClick: () =>
         applyFilters({
           tab: "estoque",
           status: null,
-          pending: pending === "parados" ? "" : "parados",
+          parked: !parked,
         }),
     },
     {
@@ -886,7 +844,7 @@ export function VehiclesTable({
       label: "Destaques",
       count: `${featuredCount}/${MAX_FEATURED_PINS}`,
       active: tab === "destaques",
-      onClick: () => applyFilters({ tab: "destaques", status: null, pending: "" }),
+      onClick: () => applyFilters({ tab: "destaques", status: null, parked: false }),
     },
   ] as const;
 
@@ -1003,62 +961,11 @@ export function VehiclesTable({
           ))}
         </div>
 
-        {stockNote && !pending ? (
-          <p className="text-xs leading-relaxed text-cream/75">{stockNote}</p>
-        ) : null}
-
         {filtersOpen ? (
           <div
             id="vehicles-filters"
-            className="space-y-3 border border-white/20 bg-ink/50 p-3"
+            className="border border-white/20 bg-ink/50 p-3"
           >
-            {tab === "estoque" ? (
-              <div>
-                <p className="mb-1.5 text-xs text-cream/80">
-                  Pendências e atenção
-                </p>
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="group"
-                  aria-label="Pendências do estoque"
-                >
-                  {(
-                    [
-                      { value: "", label: "Nenhuma" },
-                      { value: "com-pendencia", label: "Com pendência" },
-                      { value: "sem-fotos", label: "Sem foto" },
-                      { value: "sem-preco", label: "Sem preço" },
-                      { value: "parados", label: "Parados (+30d)" },
-                      { value: "antigos", label: "60+ dias" },
-                    ] as const
-                  ).map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={pending === option.value}
-                      disabled={isPending}
-                      onClick={() =>
-                        applyFilters({
-                          pending: option.value,
-                          ...(option.value === "antigos" ||
-                          option.value === "parados" ||
-                          option.value === "com-pendencia"
-                            ? { status: null }
-                            : {}),
-                        })
-                      }
-                      className={`${FILTER_PILL} ${
-                        pending === option.value
-                          ? "bg-brand/25 text-cream"
-                          : "text-cream/80 hover:bg-white/5 hover:text-cream"
-                      } disabled:opacity-60`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
             <div className="flex items-center gap-2">
               <label className="text-xs text-cream/80" htmlFor="vehicles-sort">
                 Ordenar
@@ -1096,15 +1003,15 @@ export function VehiclesTable({
                 onClear={() => applyFilters({ status: null })}
               />
             ) : null}
-            {pendingFilterActive && pending ? (
+            {parkedFilterActive ? (
               <ActiveChip
-                label={PENDING_FILTER_LABEL[pending]}
-                onClear={() => applyFilters({ pending: "" })}
+                label="Parados (+30d)"
+                onClear={() => applyFilters({ parked: false })}
               />
             ) : null}
             <button
               type="button"
-              onClick={() => applyFilters({ q: "", status: null, pending: "" })}
+              onClick={() => applyFilters({ q: "", status: null, parked: false })}
               className="min-h-11 px-2 text-xs text-cream/80 underline-offset-4 outline-none hover:text-cream hover:underline focus-visible:ring-2 focus-visible:ring-brand"
             >
               Limpar
@@ -1130,19 +1037,9 @@ export function VehiclesTable({
             />
             Carregando veículos…
           </p>
-        ) : pending && tab === "estoque" ? (
+        ) : parked && tab === "estoque" ? (
           <p role="status" className="text-xs leading-relaxed text-cream/80">
-            {total} veículo(s){" "}
-            {pending === "com-pendencia"
-              ? "com pendência no cadastro"
-              : pending === "parados"
-                ? "parado(s) há mais de 30 dias"
-                : pending === "sem-fotos"
-                  ? "sem fotos"
-                  : pending === "sem-preco"
-                    ? "sem preço"
-                    : "disponível(is) há mais de 60 dias"}
-            . Abra Editar para revisar o anúncio.
+            {total} veículo(s) parado(s) há mais de 30 dias.
           </p>
         ) : null}
       </div>
@@ -1268,43 +1165,27 @@ export function VehiclesTable({
           title={
             q
               ? "Nenhum veículo encontrado"
-              : pending === "com-pendencia"
-                ? "Nenhuma pendência no estoque"
-                : pending === "parados"
-                  ? "Nenhum carro parado há mais de 30 dias"
-                  : pending === "sem-fotos"
-                    ? "Nenhum veículo sem foto"
-                    : pending === "sem-preco"
-                      ? "Nenhum veículo sem preço"
-                      : pending === "antigos"
-                        ? "Nenhum veículo há mais de 60 dias"
-                        : tab === "vendidos"
-                          ? "Nenhum veículo vendido ainda"
-                          : tab === "destaques"
-                            ? "Nenhum destaque na home"
-                            : "Nenhum veículo em estoque"
+              : parked
+                ? "Nenhum carro parado há mais de 30 dias"
+                : tab === "vendidos"
+                  ? "Nenhum veículo vendido ainda"
+                  : tab === "destaques"
+                    ? "Nenhum destaque na home"
+                    : "Nenhum veículo em estoque"
           }
           description={
             q
               ? "Tente ajustar a busca ou limpar os filtros."
-              : pending === "com-pendencia"
-                ? "Todos os veículos ativos estão com preço, fotos, legenda e compra preenchidos."
-                : pending === "parados"
-                  ? "O estoque está girando bem — nenhum veículo disponível passou de 30 dias."
-                  : pending === "sem-fotos"
-                    ? "Todos os veículos ativos já têm pelo menos uma foto cadastrada."
-                    : pending === "sem-preco"
-                      ? "Todos os veículos ativos já estão com preço à vista preenchido."
-                      : pending === "antigos"
-                        ? "Nenhum anúncio disponível passou de 60 dias no estoque."
-                        : tab === "vendidos"
-                          ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
-                          : tab === "destaques"
-                            ? `Marque até ${MAX_FEATURED_PINS} anúncios disponíveis com a estrela para fixar no topo. O restante da home gira sozinho a cada 2 dias.`
-                            : "Cadastre o primeiro veículo do estoque para começar."
+              : parked
+                ? "O estoque está girando bem — nenhum veículo disponível passou de 30 dias."
+                : tab === "vendidos"
+                  ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
+                  : tab === "destaques"
+                    ? `Marque até ${MAX_FEATURED_PINS} anúncios disponíveis com a estrela para fixar no topo. O restante da home gira sozinho a cada 2 dias.`
+                    : "Cadastre o primeiro veículo do estoque para começar."
           }
           action={
-            tab === "estoque" && !pending ? (
+            tab === "estoque" && !parked ? (
               <Link prefetch={false} href="/admin/veiculos/novo" className={btn.primary}>
                 <IconPlus className="h-4 w-4" />
                 {q ? "Cadastrar veículo" : "Cadastrar o primeiro"}
@@ -1400,7 +1281,7 @@ export function VehiclesTable({
         }
         subtitle={
           actionsTarget
-            ? `${STATUS_LABEL[actionsTarget.status] ?? actionsTarget.status} · ${formatCurrencyBRL(actionsTarget.price)}`
+            ? `${STATUS_LABEL[actionsTarget.status] ?? actionsTarget.status}${actionsTarget.price > 0 ? ` · ${formatCurrencyBRL(actionsTarget.price)}` : ""}`
             : undefined
         }
         media={
@@ -1632,15 +1513,6 @@ function VehicleAdminCard({
 
   const meta = adminCardMetaLine(vehicle);
   const coverUrl = coverSrc(vehicle.photos);
-  const pendingBadges = vehiclePendingBadges({
-    status: vehicle.status,
-    price: vehicle.price,
-    photoCount: vehicle.photoCount,
-    hasCover: Boolean(coverUrl),
-    hasDescription: vehicle.hasDescription ?? true,
-    purchasePrice: vehicle.purchasePrice,
-    consigned: vehicle.consigned,
-  });
 
   const isActive = vehicle.status !== "vendido";
   const stockDays = isActive
@@ -1686,11 +1558,11 @@ function VehicleAdminCard({
                 Destaque
               </span>
             ) : null}
-            <span className="absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 text-[11px] tabular-nums text-cream/90">
-              {vehicle.photoCount > 0
-                ? `${vehicle.photoCount} foto${vehicle.photoCount === 1 ? "" : "s"}`
-                : "Sem foto"}
-            </span>
+            {vehicle.photoCount > 0 ? (
+              <span className="absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 text-[11px] tabular-nums text-cream/90">
+                {vehicle.photoCount} foto{vehicle.photoCount === 1 ? "" : "s"}
+              </span>
+            ) : null}
           </span>
 
           <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
@@ -1718,27 +1590,11 @@ function VehicleAdminCard({
               <span className="mt-1 block text-xs leading-relaxed text-cream/75">
                 {meta}
               </span>
-              {pendingBadges.length > 0 ? (
-                <span className="mt-1.5 flex flex-wrap gap-1.5">
-                  {pendingBadges.map((badge) => (
-                    <span
-                      key={badge.id}
-                      className={`inline-flex items-center px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wide ${
-                        badge.tone === "brand"
-                          ? "bg-brand/20 text-red-200 ring-1 ring-inset ring-brand/45"
-                          : "bg-white/10 text-cream/85 ring-1 ring-inset ring-white/20"
-                      }`}
-                    >
-                      {badge.label}
-                    </span>
-                  ))}
-                </span>
-              ) : null}
             </span>
             <span className="shrink-0 sm:text-right">
               {missingPrice ? (
-                <span className="text-sm font-semibold text-red-300">
-                  Sem preço
+                <span className="block font-display text-lg font-bold leading-none tabular-nums text-cream/60 sm:text-xl">
+                  —
                 </span>
               ) : (
                 <span className="block font-display text-lg font-bold leading-none tabular-nums text-cream sm:text-xl">

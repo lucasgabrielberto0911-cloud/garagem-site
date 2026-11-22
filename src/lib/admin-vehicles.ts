@@ -1,10 +1,3 @@
-import { MIN_GOOD_PHOTOS } from "@/lib/admin-dashboard";
-import {
-  parseStockPending,
-  stockPendingWhere,
-  vehiclePendingBadges,
-  type StockPending,
-} from "@/lib/admin-stock-pending";
 import { PARKED_MIN_DAYS, parkedCutoffDate } from "@/lib/admin-parados";
 import { customerSearchWhere } from "@/lib/admin-customer-search";
 import { salesSearchWhere } from "@/lib/admin-sales-search";
@@ -14,7 +7,6 @@ import { unstable_cache } from "next/cache";
 import { ADMIN_DATA_TAG } from "@/lib/admin-cache";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
-import { staleCutoffDate } from "@/lib/stock-quality";
 import { investedTotal } from "@/lib/vehicle-ops";
 import { DEFAULT_VEHICLE_LOCATION_CITY } from "@/lib/vehicle-location";
 
@@ -82,7 +74,6 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   updatedAt: true,
   transmission: true,
   color: true,
-  description: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -116,7 +107,6 @@ export type AdminVehicleListItem = {
   updatedAt?: Date | string | null;
   transmission: string;
   color: string | null;
-  hasDescription?: boolean;
   photos: Array<{ url: string; thumbnailUrl?: string | null }>;
   photoCount: number;
   /** Soma dos custos extras (a lista não carrega as linhas de custo). */
@@ -127,19 +117,17 @@ export type AdminVehicleListItem = {
 function toAdminVehicleListItem(
   row: Omit<
     AdminVehicleListItem,
-    "photoCount" | "costsTotal" | "hasDescription" | "stockEnteredAt"
+    "photoCount" | "costsTotal" | "stockEnteredAt"
   > & {
-    description?: string | null;
     _count?: { photos: number };
     costs?: Array<{ amount: number }>;
   },
   stockEnteredAt: Date | null = null,
 ): AdminVehicleListItem {
-  const { _count, costs, description, ...rest } = row;
+  const { _count, costs, ...rest } = row;
   return {
     ...rest,
     locationCity: rest.locationCity || DEFAULT_VEHICLE_LOCATION_CITY,
-    hasDescription: Boolean(description?.trim()),
     stockEnteredAt,
     photoCount: _count?.photos ?? rest.photos.length,
     // Consignado não soma custo da loja — igual à consulta antiga, que pulava esses ids.
@@ -170,7 +158,6 @@ const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
   updatedAt: true,
   transmission: true,
   color: true,
-  description: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -293,49 +280,25 @@ function finiteInteger(value: number | undefined, fallback: number, max: number)
     ? Math.min(max, Math.max(1, Math.trunc(value))) : fallback;
 }
 
-async function resolvePendingWhere(
-  pending: StockPending,
+async function resolveParkedWhere(
+  onlyParked: boolean,
   now: Date = new Date(),
 ): Promise<Prisma.VehicleWhereInput> {
-  if (!pending) return {};
-  if (pending === "com-pendencia") {
+  if (!onlyParked) return {};
+  const cutoff = parkedCutoffDate(PARKED_MIN_DAYS, now);
+  try {
     const rows = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT v.id
       FROM "Vehicle" v
-      LEFT JOIN (
-        SELECT "vehicleId", count(*)::int AS cnt
-        FROM "Photo"
-        GROUP BY "vehicleId"
-      ) p ON p."vehicleId" = v.id
+      LEFT JOIN "VehicleAcquisitionMetadata" m ON m."vehicleId" = v.id
       WHERE v.historical = false
-        AND v.status IN ('disponivel', 'reservado')
-        AND (
-          v.price <= 0
-          OR v.description IS NULL
-          OR btrim(v.description) = ''
-          OR coalesce(p.cnt, 0) < ${MIN_GOOD_PHOTOS}
-          OR (v.consigned = false AND (v."purchasePrice" IS NULL OR v."purchasePrice" <= 0))
-        )
+        AND v.status = 'disponivel'
+        AND coalesce(m."stockEnteredAt", v."createdAt") <= ${cutoff}
     `;
     return { id: { in: rows.map((row) => row.id) } };
+  } catch {
+    return { status: "disponivel", createdAt: { lte: cutoff } };
   }
-  if (pending === "parados") {
-    const cutoff = parkedCutoffDate(PARKED_MIN_DAYS, now);
-    try {
-      const rows = await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT v.id
-        FROM "Vehicle" v
-        LEFT JOIN "VehicleAcquisitionMetadata" m ON m."vehicleId" = v.id
-        WHERE v.historical = false
-          AND v.status = 'disponivel'
-          AND coalesce(m."stockEnteredAt", v."createdAt") <= ${cutoff}
-      `;
-      return { id: { in: rows.map((row) => row.id) } };
-    } catch {
-      return stockPendingWhere("parados", now);
-    }
-  }
-  return stockPendingWhere(pending, now);
 }
 
 async function loadEnteredAtMap(vehicleIds: string[]) {
@@ -359,7 +322,7 @@ export async function getAdminVehiclesPage(options: {
   q?: string;
   tab: VehiclesTab;
   status?: string;
-  pending?: string;
+  parked?: boolean;
   page?: number;
   pageSize?: number;
   sort?: AdminVehiclesSort;
@@ -373,15 +336,15 @@ export async function getAdminVehiclesPage(options: {
     options.status === "disponivel" || options.status === "reservado"
       ? { status: options.status }
       : tabStatusFilter(options.tab);
-  const parsedPending =
-    options.tab === "estoque" ? parseStockPending(options.pending) : "";
-  const pendingFilter = await resolvePendingWhere(parsedPending);
+  const parkedFilter = await resolveParkedWhere(
+    options.tab === "estoque" && Boolean(options.parked),
+  );
   const where: Prisma.VehicleWhereInput = {
     AND: [
       { historical: false },
       statusFilter,
       adminVehiclesSearchWhere(options.q ?? ""),
-      pendingFilter,
+      parkedFilter,
     ],
   };
 
@@ -426,10 +389,7 @@ export type AdminVehicleStats = {
   consignedAvailable: number;
   invested: number;
   withCostBasis: number;
-  withoutPhotos: number;
-  stale: number;
   featured: number;
-  withPending: number;
   parked: number;
 };
 
@@ -438,9 +398,6 @@ export type AdminVehicleStatsRow = {
   reserved?: unknown;
   sold?: unknown;
   featured?: unknown;
-  stale?: unknown;
-  withoutPhotos?: unknown;
-  withPending?: unknown;
   parked?: unknown;
   stockValue?: unknown;
   purchaseSum?: unknown;
@@ -480,10 +437,7 @@ export function mapAdminVehicleStatsRow(
       statNum(row?.extraCosts),
     ),
     withCostBasis: statNum(row?.withCostBasis),
-    withoutPhotos: statNum(row?.withoutPhotos),
-    stale: statNum(row?.stale),
     featured: statNum(row?.featured),
-    withPending: statNum(row?.withPending),
     parked: statNum(row?.parked),
   };
 }
@@ -498,11 +452,9 @@ function isStatsSchemaDrift(error: unknown) {
 
 /**
  * Uma ida ao banco no lugar de várias contagens.
- * Vídeo não entra: a lista não mostra mais esse aviso.
  * Consignado continua fora do valor e do investido.
  */
 async function loadAdminVehicleStatsSql(): Promise<AdminVehicleStats> {
-  const staleBefore = staleCutoffDate();
   const parkedBefore = parkedCutoffDate(PARKED_MIN_DAYS);
   const rows = await prisma.$queryRaw<AdminVehicleStatsRow[]>`
     SELECT
@@ -510,23 +462,6 @@ async function loadAdminVehicleStatsSql(): Promise<AdminVehicleStats> {
       count(*) FILTER (WHERE v.status = 'reservado')::int AS "reserved",
       count(*) FILTER (WHERE v.status = 'vendido')::int AS "sold",
       count(*) FILTER (WHERE v.status = 'disponivel' AND v.featured)::int AS "featured",
-      count(*) FILTER (
-        WHERE v.status = 'disponivel' AND v."createdAt" < ${staleBefore}
-      )::int AS "stale",
-      count(*) FILTER (
-        WHERE v.status IN ('disponivel', 'reservado')
-          AND coalesce(p.cnt, 0) = 0
-      )::int AS "withoutPhotos",
-      count(*) FILTER (
-        WHERE v.status IN ('disponivel', 'reservado')
-          AND (
-            v.price <= 0
-            OR v.description IS NULL
-            OR btrim(v.description) = ''
-            OR coalesce(p.cnt, 0) < ${MIN_GOOD_PHOTOS}
-            OR (v.consigned = false AND (v."purchasePrice" IS NULL OR v."purchasePrice" <= 0))
-          )
-      )::int AS "withPending",
       count(*) FILTER (
         WHERE v.status = 'disponivel'
           AND coalesce(m."stockEnteredAt", v."createdAt") <= ${parkedBefore}
@@ -554,11 +489,6 @@ async function loadAdminVehicleStatsSql(): Promise<AdminVehicleStats> {
           AND owned.consigned = false
       ) AS "extraCosts"
     FROM "Vehicle" v
-    LEFT JOIN (
-      SELECT "vehicleId", count(*)::int AS cnt
-      FROM "Photo"
-      GROUP BY "vehicleId"
-    ) p ON p."vehicleId" = v.id
     LEFT JOIN "VehicleAcquisitionMetadata" m ON m."vehicleId" = v.id
     WHERE v.historical = false
   `;
@@ -567,10 +497,6 @@ async function loadAdminVehicleStatsSql(): Promise<AdminVehicleStats> {
 
 /** Plano B se uma coluna/tabela nova ainda não existir no banco. */
 async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
-  const stockWhere = {
-    historical: false,
-    status: { in: ["disponivel", "reservado"] },
-  };
   const parkedBefore = parkedCutoffDate(PARKED_MIN_DAYS);
 
   const [
@@ -578,9 +504,6 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
     stockValue,
     extraCosts,
     withCostBasis,
-    withoutPhotos,
-    activePendingCandidates,
-    stale,
     featured,
     parked,
   ] = await Promise.all([
@@ -605,27 +528,6 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
       },
     }),
     prisma.vehicle.count({
-      where: { ...stockWhere, photos: { none: {} } },
-    }),
-    prisma.vehicle.findMany({
-      where: stockWhere,
-      select: {
-        status: true,
-        price: true,
-        purchasePrice: true,
-        consigned: true,
-        description: true,
-        _count: { select: { photos: true } },
-      },
-    }),
-    prisma.vehicle.count({
-      where: {
-        historical: false,
-        status: "disponivel",
-        createdAt: { lt: staleCutoffDate() },
-      },
-    }),
-    prisma.vehicle.count({
       where: { historical: false, status: "disponivel", featured: true },
     }),
     prisma.vehicle.count({
@@ -636,20 +538,6 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
       },
     }),
   ]);
-
-  const withPending = activePendingCandidates.reduce((sum, vehicle) => {
-    const photoCount = vehicle._count.photos;
-    const badges = vehiclePendingBadges({
-      status: vehicle.status,
-      price: vehicle.price,
-      photoCount,
-      hasCover: photoCount > 0,
-      hasDescription: Boolean(vehicle.description?.trim()),
-      purchasePrice: vehicle.purchasePrice,
-      consigned: vehicle.consigned,
-    });
-    return sum + (badges.length > 0 ? 1 : 0);
-  }, 0);
 
   const count = (value: string) =>
     groups.find((group) => group.status === value)?._count._all ?? 0;
@@ -670,10 +558,7 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
       extraCosts._sum.amount ?? 0,
     ),
     withCostBasis,
-    withoutPhotos,
-    stale,
     featured,
-    withPending,
     parked,
   };
 }
@@ -694,7 +579,7 @@ async function loadAdminVehicleStats() {
 /** Contadores do topo da lista: só números, expiram com expireAdminData(). */
 export const getAdminVehicleStats = unstable_cache(
   loadAdminVehicleStats,
-  ["admin-vehicle-stats-v5"],
+  ["admin-vehicle-stats-v6"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG] },
 );
 

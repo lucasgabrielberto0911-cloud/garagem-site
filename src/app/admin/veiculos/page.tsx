@@ -1,4 +1,3 @@
-import { parseStockPending } from "@/lib/admin-stock-pending";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { VehiclesTable } from "@/components/admin/VehiclesTable";
@@ -10,7 +9,6 @@ import {
   type VehiclesTab,
 } from "@/lib/admin-vehicles";
 import { MAX_FEATURED_PINS } from "@/lib/featured";
-import { STALE_DAYS } from "@/lib/stock-quality";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 
@@ -25,7 +23,7 @@ function resolveTab(raw?: string): VehiclesTab {
 export default async function VehiclesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tab?: string; status?: string; pendencia?: string }>;
+  searchParams: Promise<{ q?: string; tab?: string; status?: string; parados?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
@@ -41,11 +39,11 @@ export default async function VehiclesPage({
       (query.status === "vendido" ? "vendidos" : undefined),
   );
 
-  const pending = tab === "estoque" ? parseStockPending(query.pendencia) : "";
+  const parked = tab === "estoque" && query.parados === "1";
 
   const [stats, list] = await Promise.all([
     getAdminVehicleStats(),
-    getAdminVehiclesPage({ q, tab, status, pending, page: 1 }),
+    getAdminVehiclesPage({ q, tab, status, parked, page: 1 }),
   ]);
 
   // As abas e os chips de status já mostram as contagens; aqui só o que
@@ -91,26 +89,20 @@ export default async function VehiclesPage({
       />
 
       <VehiclesTable
-        key={`${tab}:${q}:${status ?? ""}:${pending}`}
+        key={`${tab}:${q}:${status ?? ""}:${parked ? "parados" : ""}`}
         vehicles={list.vehicles}
         initialTotal={list.total}
         pageSize={list.pageSize}
         q={q}
         tab={tab}
         status={status}
-        pending={pending}
+        parked={parked}
         estoqueCount={stats.estoqueCount}
         vendidosCount={stats.vendidosCount}
         featuredCount={stats.featured}
         availableCount={stats.available}
         reservedCount={stats.reserved}
-        withPendingCount={stats.withPending}
         parkedCount={stats.parked}
-        quality={{
-          withoutPhotos: stats.withoutPhotos,
-          stale: stats.stale,
-          staleDays: STALE_DAYS,
-        }}
         adminId={session.adminId}
       />
     </div>

@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { DashboardRefresh } from "@/components/admin/DashboardRefresh";
 import { DashboardSalesGoal } from "@/components/admin/DashboardSalesGoal";
 import {
-  IconAlert,
   IconCash,
   IconClock,
   IconExternal,
@@ -12,7 +11,6 @@ import {
 } from "@/components/admin/icons";
 import {
   AdminPageHeader,
-  Badge,
   Card,
 } from "@/components/admin/ui";
 import { IconCar } from "@/components/site/icons";
@@ -40,7 +38,7 @@ export default async function AdminDashboardPage() {
             <div className="skeleton h-14" />
             <div className="skeleton h-14" />
           </div>
-          <div className="skeleton h-48" />
+          <div className="skeleton h-44" />
           <div className="skeleton h-40" />
         </div>
       }
@@ -63,7 +61,7 @@ async function CentralContent() {
     <div className="space-y-5 sm:space-y-6">
       <AdminPageHeader
         title="Central da loja"
-        subtitle="Pendências dos carros, tempo de estoque e resultado do mês."
+        subtitle="Tempo de estoque e resultado do mês."
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-cream/75">
@@ -128,57 +126,7 @@ async function CentralContent() {
         </p>
       ) : null}
 
-      {/* 2. Pendências dos carros */}
-      {!activeFailed ? (
-        <Card
-          title={`Pendências dos carros${data.pendencies.total > 0 ? ` (${data.pendencies.total})` : ""}`}
-          action={
-            <Link
-              href="/admin/veiculos"
-              className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              Ver todas
-            </Link>
-          }
-        >
-          {data.pendencies.items.length === 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-cream/85">
-              <p>Todos os carros ativos estão com fotos, preço, legenda e compra preenchidos.</p>
-              <Badge tone="success">Tudo em dia</Badge>
-            </div>
-          ) : (
-            <ul className="divide-y divide-white/10">
-              {data.pendencies.items.map((item) => (
-                <li key={item.key}>
-                  <Link
-                    href={item.href}
-                    className="flex min-h-[52px] flex-wrap items-center justify-between gap-2 py-2.5 transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  >
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <IconAlert className="h-4 w-4 shrink-0 text-red-400" />
-                      <span className="break-words text-sm font-semibold text-cream">
-                        {item.title}
-                      </span>
-                    </span>
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      {item.badges.map((badge) => (
-                        <Badge
-                          key={badge.label}
-                          tone={badge.tone === "brand" ? "brand" : "neutral"}
-                        >
-                          {badge.label}
-                        </Badge>
-                      ))}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      ) : null}
-
-      {/* 3. Parados por faixa */}
+      {/* 2. Parados por faixa */}
       {!activeFailed ? (
         <Card
           title="Parados por faixa"

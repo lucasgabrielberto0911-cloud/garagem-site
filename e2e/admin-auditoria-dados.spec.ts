@@ -147,7 +147,8 @@ test("badge e avisos refletem pendência de compra sem esperar o TTL", async ({ 
   const before = await (await page.request.get("/api/admin/badge")).json();
   const counts = await (await page.request.get("/api/admin/avisos")).json();
   expect(before).not.toHaveProperty("count");
-  expect(before.notifications).toBe(counts.counts.carros + counts.counts.vendas);
+  expect(before).not.toHaveProperty("carWarnings");
+  expect(before.notifications).toBe(counts.counts.vendas);
   try {
     await page.goto(`/admin/veiculos/${sale.vehicleId}?view=operacao`);
     const purchaseField = page.getByLabel("Preço de compra");
@@ -205,5 +206,5 @@ test("avisos de vendas mantêm os critérios e não expõem pedidos/leads", asyn
   }
   expect(ids).toEqual(expected);
   const fallback = await (await page.request.get("/api/admin/avisos?tipo=pedidos")).json();
-  expect(fallback.kind).toBe("carros");
+  expect(fallback.kind).toBe("vendas");
 });

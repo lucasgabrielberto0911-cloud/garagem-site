@@ -359,34 +359,6 @@ export function publishMissingLine(
 export const publishChecklistItems = publishMissingItems;
 export const publishChecklistLine = publishMissingLine;
 
-/**
- * Resumo da aba Em estoque. Não cita vídeo: isso não é aviso de lista.
- * Null quando não há foto faltando nem carro parado.
- */
-export function stockListQuietNote(input: {
-  withoutPhotos: number;
-  stale: number;
-  staleDays: number;
-}): string | null {
-  const parts: string[] = [];
-  if (input.withoutPhotos > 0) {
-    parts.push(
-      input.withoutPhotos === 1
-        ? "1 anúncio sem foto"
-        : `${input.withoutPhotos} anúncios sem foto`,
-    );
-  }
-  if (input.stale > 0) {
-    parts.push(
-      input.stale === 1
-        ? `1 parado há mais de ${input.staleDays} dias`
-        : `${input.stale} parados há mais de ${input.staleDays} dias`,
-    );
-  }
-  if (parts.length === 0) return null;
-  return parts.join(" · ");
-}
-
 export function formatRelativeUpdatedAt(
   value: Date | string,
   now = Date.now(),
