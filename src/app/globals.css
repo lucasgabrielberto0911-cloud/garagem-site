@@ -46,7 +46,7 @@
 
 @media (max-width: 1023px) {
   :root {
-    --admin-nav-h: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+    --admin-nav-h: calc(59px + env(safe-area-inset-bottom, 0px));
   }
 }
 

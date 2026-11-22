@@ -326,38 +326,39 @@ export function AdminShell({
         <Link
           prefetch={false}
           href="/admin"
-          className="flex min-h-[44px] items-center gap-2 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="flex min-h-[44px] items-center gap-2 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <Image
             src="/branding/logo-wordmark.webp"
             alt="Garagem"
-            width={160}
-            height={29}
+            width={140}
+            height={25}
             className="h-6 w-auto"
           />
-          <span className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-cream/75">
+          <span className="admin-mobile-label font-display text-xs font-semibold uppercase tracking-[0.2em] text-cream/75">
             Admin
           </span>
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center">
           <AdminSearch />
           <AdminNotifications count={costWarnings} onCount={setCostWarnings} />
           <Link
             prefetch={false}
             href="/"
             target="_blank"
-            className="admin-site-link inline-flex min-h-[44px] items-center gap-1.5 px-2.5 font-display text-xs font-semibold text-cream/80 transition touch-manipulation hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            aria-label="Ver o site"
+            className="admin-site-link hidden h-11 w-11 items-center justify-center text-cream/80 transition touch-manipulation hover:text-cream active:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand min-[380px]:flex"
           >
-            Site
-            <IconExternal className="h-3.5 w-3.5" />
+            <IconExternal className="h-[18px] w-[18px]" />
           </Link>
           <button
             type="button"
-            aria-label="Abrir menu"
+            aria-label="Menu do painel"
+            aria-haspopup="dialog"
             aria-expanded={menuOpen}
             aria-controls="admin-mobile-drawer"
-            onClick={() => setMenuOpen(true)}
-            className="admin-header-menu flex h-11 w-11 items-center justify-center text-cream/80 transition touch-manipulation hover:text-cream active:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            onClick={() => setMenuOpen((open) => !open)}
+            className="admin-form-menu hidden h-11 w-11 items-center justify-center text-cream/80 touch-manipulation hover:text-cream active:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             <IconMenu className="h-5 w-5" />
           </button>
