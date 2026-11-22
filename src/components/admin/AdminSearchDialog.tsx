@@ -105,7 +105,7 @@ export default function AdminSearchDialog({ onClose }: { onClose: () => void }) 
             const isSelected = idx === activeIndex;
             return <li key={item.id}><Link id={`admin-search-item-${item.id}`} ref={element => { itemRefs.current[idx] = element; }} prefetch={false} onClick={onClose} onMouseEnter={() => setActiveIndex(idx)} href={item.href} aria-selected={isSelected} className={`block rounded-lg border px-3 py-2.5 transition hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${isSelected ? "border-brand/60 bg-white/10" : "border-white/10"}`}><p className="break-words text-sm font-semibold">{item.title}</p><p className="mt-1 break-words text-xs leading-relaxed text-muted">{item.detail}</p></Link></li>;
           })}</ul>
-          {group.more ? <p className="mt-3 text-xs leading-relaxed text-muted">Há mais {group.label.toLowerCase()}. Refine a busca com o modelo, a placa ou o nome completo.</p> : null}
+          {group.more ? <p className="mt-3 text-xs leading-relaxed text-muted">Há mais {group.label.toLowerCase()}. Refine a busca com o modelo ou a placa.</p> : null}
         </section>)}
       </div>
     </div>

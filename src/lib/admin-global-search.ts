@@ -5,7 +5,10 @@ export function normalizeAdminSearch(value: string | null) {
   return (value ?? "").trim().replace(/\s+/g, " ").slice(0, 120);
 }
 function literal(value: string) {
-  return { contains: value.replace(/[\%_]/g, "\$&"), mode: "insensitive" as const };
+  return {
+    contains: value.replace(/[\\%_]/g, "\\$&"),
+    mode: "insensitive" as const,
+  };
 }
 export function vehicleGlobalWhere(query: string): Prisma.VehicleWhereInput {
   return {
