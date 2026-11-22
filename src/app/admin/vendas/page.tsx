@@ -87,7 +87,7 @@ export default async function VendasPage({
       {totals.reviewCount > 0 ? (
         <p
           role="status"
-          className="border border-brand-orange/30 bg-brand-orange/10 p-4 text-sm"
+          className="border border-brand/40 bg-brand/10 p-4 text-sm"
         >
           {totals.reviewCount} venda(s) abaixo de R$ 1.000 neste período.
           Confira os lançamentos; nenhum valor foi alterado automaticamente.

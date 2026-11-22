@@ -91,6 +91,7 @@ const NAV: NavItem[] = [
     Icon: IconMapPin,
     match: (pathname) => pathname.startsWith("/admin/site"),
   },
+  { href: "/admin/catalogo", label: "Catálogo Meta", group: "Site", Icon: IconExternal, match: (pathname) => pathname.startsWith("/admin/catalogo") },
   {
     href: "/admin/depoimentos",
     label: "Depoimentos",

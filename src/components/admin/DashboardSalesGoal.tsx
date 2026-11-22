@@ -38,7 +38,7 @@ export function DashboardSalesGoal({
           )}
           <Link
             href="/admin/vendas?period=month"
-            className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-red-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-red-400 touch-manipulation hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             Ver vendas
           </Link>
@@ -149,7 +149,7 @@ export function DashboardSalesGoal({
                           {formatCurrencyBRL(item.revenue)}
                         </span>
                         <span
-                          className="text-xs text-emerald-300"
+                          className="text-xs text-cream/80"
                           title="Comissão acumulada"
                         >
                           (+{formatCurrencyBRL(item.commission)})
