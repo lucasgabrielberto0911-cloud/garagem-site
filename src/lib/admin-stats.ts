@@ -3,122 +3,124 @@ import { unstable_cache } from "next/cache";
 import bcrypt from "bcryptjs";
 import {
   ADMIN_DATA_TAG,
-  ADMIN_NEW_LEADS_TAG,
   ADMIN_SEED_PASSWORD_TAG,
 } from "@/lib/admin-cache";
+import {
+  buildVehiclePendingList,
+  summarizeStockCapital,
+} from "@/lib/admin-dashboard";
 import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
+import { summarizeStockAge } from "@/lib/admin-stock-age";
 import { prisma } from "@/lib/prisma";
-import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads";
-import {
-  DEFAULT_ABOUT,
-  getPublicSite,
-  listPlaceholderLabels,
-} from "@/lib/site-settings";
-import { getGoogleReviews } from "@/lib/site-content";
-import {
-  DEFAULT_GOOGLE_REVIEWS,
-  googleReviewsReady,
-} from "@/lib/google-reviews";
-import { daysInStock, staleCutoffDate } from "@/lib/stock-quality";
-import { PARKED_MIN_DAYS, parkedCutoffDate } from "@/lib/admin-parados";
-import {
-  computeMonthlySalesGoal,
-  computeSalesLeaderboard,
-} from "@/lib/sales-goals";
-import { summarizeUnansweredLeads } from "@/lib/lead-response-alert";
+import { computeMonthlySalesGoal } from "@/lib/sales-goals";
+import { extrasTotal } from "@/lib/vehicle-ops";
 
 export { daysInStock, STALE_DAYS } from "@/lib/stock-quality";
 
-/** Badge do menu: 15s de cache para não consultar o banco em toda navegação. */
-export const getNewLeadsBadgeCount = unstable_cache(
-  async () => {
-    try {
-      return await prisma.leadVenda.count({ where: { status: "novo" } });
-    } catch {
-      return null;
-    }
-  },
-  ["admin-new-leads-badge"],
-  { revalidate: 15, tags: [ADMIN_NEW_LEADS_TAG] },
-);
-
-/** Apenas alerta informativo: nunca participa da autenticação. O hash novo muda a chave imediatamente. */
+/** Apenas alerta informativo: nunca participa da autenticação. */
 export const getAdminWeakPasswordAlert = unstable_cache(
   async (_adminId: string, passwordHash: string) => {
-    return (await Promise.all(WEAK_ADMIN_PASSWORDS.map(password => bcrypt.compare(password, passwordHash)))).some(Boolean);
+    return (
+      await Promise.all(
+        WEAK_ADMIN_PASSWORDS.map((password) =>
+          bcrypt.compare(password, passwordHash),
+        ),
+      )
+    ).some(Boolean);
   },
   ["admin-password-alert-v1"],
   { revalidate: 60, tags: [ADMIN_SEED_PASSWORD_TAG] },
 );
 
-/** O dashboard já tem cache; a lista de hashes atual evita alerta velho após troca. */
 export async function getUsingSeedPassword() {
   try {
-    const admins = await prisma.admin.findMany({ select: { id: true, passwordHash: true } });
-    return (await Promise.all(admins.map(admin => getAdminWeakPasswordAlert(admin.id, admin.passwordHash)))).some(Boolean);
+    const admins = await prisma.admin.findMany({
+      select: { id: true, passwordHash: true },
+    });
+    return (
+      await Promise.all(
+        admins.map((admin) =>
+          getAdminWeakPasswordAlert(admin.id, admin.passwordHash),
+        ),
+      )
+    ).some(Boolean);
   } catch {
     return null;
   }
 }
 
-function startOfMonth() {
-  return businessPeriodStart("month");
-}
-
 export type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
 
-/*
- * Tudo aqui precisa sobreviver ao JSON do cache (sem Date): por isso os
- * leads e os parados já saem com os campos que a tela usa.
+/**
+ * Dados da Central da loja: tudo em um Promise.all, sem N+1,
+ * sem placa/chassi/RENAVAM e sem consultas de leads, agenda ou placar.
  */
 async function loadDashboardData() {
   const failures: string[] = [];
-  const monthStart = startOfMonth();
-  const staleBefore = staleCutoffDate();
-  const parkedBefore = parkedCutoffDate(PARKED_MIN_DAYS);
+  const now = new Date();
+  const monthStart = businessPeriodStart("month", now);
 
-  // Consultas isoladas: se uma tabela ainda não existir, o dashboard não cai inteiro.
   const safe = async <T>(label: string, fn: () => Promise<T>, fallback: T) => {
     try {
       return await fn();
     } catch (error) {
       failures.push(label);
-      console.error(`[dashboard] ${label}:`, error);
+      console.error(`[central] ${label}:`, error);
       return fallback;
     }
   };
 
   const [
-    vehicleGroups,
+    activeVehicles,
+    acquisitionDates,
     featured,
-    availableByConsigned,
-    salesAggregate,
     monthSales,
-    leadGroups,
-    recentLeads,
-    recentVehicles,
-    pendingCounts,
     monthlySales,
     saleGaps,
-    dueLeads,
-    unansweredLeads,
-    reservedVehicles,
-    monthSaleRecords,
-    newLeadsForUrgency,
-    staleVehicles,
-    withoutPhotos,
-    publishedTestimonials,
     usingSeedPassword,
-    publicSite,
-    googleReviews,
   ] = await Promise.all([
     safe(
-      "vehicle.groupBy",
+      "activeVehicles",
       () =>
-        prisma.vehicle.groupBy({
-          where: { historical: false },
-          by: ["status"],
-          _count: { _all: true },
+        prisma.vehicle.findMany({
+          where: {
+            historical: false,
+            status: { in: ["disponivel", "reservado"] },
+          },
+          select: {
+            id: true,
+            brand: true,
+            model: true,
+            version: true,
+            yearModel: true,
+            status: true,
+            price: true,
+            purchasePrice: true,
+            consigned: true,
+            km: true,
+            description: true,
+            createdAt: true,
+            _count: { select: { photos: true } },
+            costs: { select: { amount: true } },
+            reservations: {
+              where: { status: "ativa" },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { expiresAt: true },
+            },
+          },
+        }),
+      [],
+    ),
+    safe(
+      "acquisitionDates",
+      () =>
+        prisma.vehicleAcquisitionMetadata.findMany({
+          where: {
+            stockEnteredAt: { not: null },
+            vehicle: { historical: false, status: "disponivel" },
+          },
+          select: { vehicleId: true, stockEnteredAt: true },
         }),
       [],
     ),
@@ -126,29 +128,9 @@ async function loadDashboardData() {
       "featured",
       () =>
         prisma.vehicle.count({
-          where: { status: "disponivel", featured: true },
+          where: { historical: false, status: "disponivel", featured: true },
         }),
       0,
-    ),
-    safe(
-      "availableByConsigned",
-      () =>
-        prisma.vehicle.groupBy({
-          by: ["consigned"],
-          where: { status: "disponivel" },
-          _sum: { price: true, km: true },
-          _count: { _all: true },
-        }),
-      [],
-    ),
-    safe(
-      "salesAggregate",
-      () =>
-        prisma.sale.aggregate({
-          _sum: { salePrice: true },
-          _count: { _all: true },
-        }),
-      { _sum: { salePrice: null }, _count: { _all: 0 } },
     ),
     safe(
       "monthSales",
@@ -161,77 +143,10 @@ async function loadDashboardData() {
       { _sum: { salePrice: null }, _count: { _all: 0 } },
     ),
     safe(
-      "lead.groupBy",
-      () =>
-        prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }),
-      [],
-    ),
-    safe(
-      "recentLeads",
-      () =>
-        prisma.leadVenda.findMany({
-          orderBy: { createdAt: "desc" },
-          take: 5,
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            vehicleInfo: true,
-            status: true,
-          },
-        }),
-      [],
-    ),
-    safe(
-      "recentVehicles",
-      () =>
-        prisma.vehicle.findMany({
-          where: { historical: false },
-          orderBy: { createdAt: "desc" },
-          take: 5,
-          select: {
-            id: true,
-            brand: true,
-            model: true,
-            version: true,
-            yearModel: true,
-            price: true,
-            photos: {
-              orderBy: { order: "asc" },
-              take: 1,
-              select: { url: true, thumbnailUrl: true },
-            },
-          },
-        }),
-      [],
-    ),
-    safe(
-      "pendingCounts",
-      async () => {
-        const [counts] = await prisma.$queryRaw<Array<{ withoutPhotos: number; stale: number; parkedOver30: number; missingSales: number }>>`
-          SELECT count(*) FILTER (WHERE status IN ('disponivel', 'reservado')
-            AND NOT EXISTS (SELECT 1 FROM "Photo" p WHERE p."vehicleId" = v.id))::int AS "withoutPhotos",
-            count(*) FILTER (WHERE status = 'disponivel' AND "createdAt" < ${staleBefore})::int AS stale,
-            count(*) FILTER (WHERE status = 'disponivel' AND "createdAt" <= ${parkedBefore})::int AS "parkedOver30",
-            count(*) FILTER (WHERE status = 'vendido'
-            AND NOT EXISTS (SELECT 1 FROM "Sale" s WHERE s."vehicleId" = v.id))::int AS "missingSales"
-          FROM "Vehicle" v WHERE historical = false
-        `;
-        return counts;
-      },
-      null as {
-        withoutPhotos: number;
-        stale: number;
-        parkedOver30: number;
-        missingSales: number;
-      } | null,
-    ),
-    safe(
       "monthlySales",
       async () => {
-        const start = businessPeriodStart("month");
+        const start = businessPeriodStart("month", now);
         start.setUTCMonth(start.getUTCMonth() - 5);
-        // Prisma DateTime é timestamp sem fuso; os valores gravados representam UTC.
         const rows = await prisma.$queryRaw<
           Array<{ key: string; revenue: number; count: number }>
         >`
@@ -269,131 +184,6 @@ async function loadDashboardData() {
       [],
     ),
     safe(
-      "dueLeads",
-      () =>
-        prisma.leadVenda.findMany({
-          where: {
-            nextActionAt: { lte: new Date() },
-            status: { notIn: ["fechado", "perdido"] },
-          },
-          orderBy: { nextActionAt: "asc" },
-          take: 6,
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            nextAction: true,
-            nextActionAt: true,
-            vehicleInfo: true,
-          },
-        }),
-      [],
-    ),
-    safe(
-      "unansweredLeads",
-      () => {
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        return prisma.leadVenda.findMany({
-          where: {
-            status: "novo",
-            createdAt: { lte: oneHourAgo },
-          },
-          orderBy: { createdAt: "asc" },
-          take: 6,
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            vehicleInfo: true,
-            createdAt: true,
-          },
-        });
-      },
-      [],
-    ),
-    safe(
-      "reservedVehicles",
-      () =>
-        prisma.vehicle.findMany({
-          where: { status: "reservado" },
-          orderBy: { updatedAt: "asc" },
-          take: 6,
-          select: {
-            id: true,
-            brand: true,
-            model: true,
-            price: true,
-            updatedAt: true,
-            reservations: {
-              where: { status: "ativa" },
-              orderBy: { createdAt: "desc" },
-              take: 1,
-              select: { expiresAt: true },
-            },
-          },
-        }),
-      [],
-    ),
-    safe(
-      "monthSaleRecords",
-      () =>
-        prisma.sale.findMany({
-          where: { saleDate: { gte: monthStart } },
-          orderBy: { saleDate: "desc" },
-          select: {
-            id: true,
-            salePrice: true,
-            notes: true,
-            saleDate: true,
-          },
-        }),
-      [],
-    ),
-    safe(
-      "newLeadsForUrgency",
-      () =>
-        prisma.leadVenda.findMany({
-          where: { status: "novo" },
-          orderBy: { createdAt: "asc" },
-          take: 30,
-          select: {
-            id: true,
-            name: true,
-            vehicleInfo: true,
-            status: true,
-            createdAt: true,
-          },
-        }),
-      [],
-    ),
-    safe(
-      "staleVehicles",
-      () =>
-        prisma.vehicle.findMany({
-          where: { status: "disponivel", createdAt: { lt: staleBefore } },
-          orderBy: { createdAt: "asc" },
-          take: 5,
-          select: { id: true, brand: true, model: true, createdAt: true },
-        }),
-      [],
-    ),
-    safe(
-      "withoutPhotos",
-      () =>
-        prisma.vehicle.findMany({
-          where: { status: { not: "vendido" }, photos: { none: {} } },
-          orderBy: { createdAt: "desc" },
-          take: 5,
-          select: { id: true, brand: true, model: true },
-        }),
-      [],
-    ),
-    safe(
-      "testimonials",
-      () => prisma.testimonial.count({ where: { published: true } }),
-      0,
-    ),
-    safe(
       "usingSeedPassword",
       async () => {
         const value = await getUsingSeedPassword();
@@ -403,131 +193,84 @@ async function loadDashboardData() {
       },
       false,
     ),
-    safe(
-      "publicSite",
-      () => getPublicSite(),
-      null as Awaited<ReturnType<typeof getPublicSite>> | null,
-    ),
-    safe("googleReviews", () => getGoogleReviews(), DEFAULT_GOOGLE_REVIEWS),
   ]);
 
-  const byStatus = (status: string) =>
-    vehicleGroups.find((group) => group.status === status)?._count._all ?? 0;
+  const enteredAtMap = new Map<string, Date>();
+  for (const row of acquisitionDates) {
+    if (row.stockEnteredAt) enteredAtMap.set(row.vehicleId, row.stockEnteredAt);
+  }
 
-  const leadsByStatus = Object.fromEntries(
-    LEAD_STATUSES.map((status) => [
-      status,
-      leadGroups.find((group) => group.status === status)?._count._all ?? 0,
-    ]),
-  ) as Record<LeadStatus, number>;
+  const stockCapital = summarizeStockCapital(
+    activeVehicles.map((vehicle) => ({
+      price: vehicle.price,
+      purchasePrice: vehicle.purchasePrice,
+      consigned: vehicle.consigned,
+      km: vehicle.km,
+      status: vehicle.status,
+      costsTotal: extrasTotal(vehicle.costs),
+    })),
+  );
 
-  const available = byStatus("disponivel");
-  // Consignado fica na vitrine (entra no KM médio), mas não no valor do estoque.
-  const owned = availableByConsigned.find((group) => !group.consigned);
-  const ownedAvailable = owned?._count._all ?? 0;
-  const stockValue = owned?._sum.price ?? 0;
-  const availableCount = availableByConsigned.reduce(
-    (sum, group) => sum + group._count._all,
-    0,
+  const stockAge = summarizeStockAge(
+    activeVehicles.map((vehicle) => ({
+      id: vehicle.id,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      version: vehicle.version,
+      yearModel: vehicle.yearModel,
+      status: vehicle.status,
+      createdAt: vehicle.createdAt,
+      stockEnteredAt: enteredAtMap.get(vehicle.id) ?? null,
+    })),
+    now,
   );
-  const availableKm = availableByConsigned.reduce(
-    (sum, group) => sum + (group._sum.km ?? 0),
-    0,
-  );
-  const siteDefaults = (await import("@/lib/site")).site;
-  const siteForPlaceholders = publicSite ?? {
-    ...siteDefaults,
-    ...DEFAULT_ABOUT,
-  };
-  const unansweredSummary = summarizeUnansweredLeads(newLeadsForUrgency);
+
+  const pendencies = buildVehiclePendingList({
+    usingSeedPassword,
+    saleGaps,
+    vehicles: activeVehicles.map((vehicle) => ({
+      id: vehicle.id,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      version: vehicle.version,
+      yearModel: vehicle.yearModel,
+      status: vehicle.status,
+      price: vehicle.price,
+      purchasePrice: vehicle.purchasePrice,
+      consigned: vehicle.consigned,
+      description: vehicle.description,
+      photoCount: vehicle._count.photos,
+      reservationExpiresAt:
+        vehicle.reservations[0]?.expiresAt?.toISOString() ?? null,
+    })),
+  });
+
+  const monthCount = monthSales._count._all;
+  const monthRevenue = monthSales._sum.salePrice ?? 0;
 
   return {
     failures,
-    updatedAt: new Date().toISOString(),
-    pendingCounts,
+    updatedAt: now.toISOString(),
+    pendencies,
+    stockAge,
+    stockCapital,
+    featured,
     monthlySales,
-    saleGaps,
-    dueLeads,
-    hoje: {
-      dueLeads,
-      unansweredLeads,
-      reservedVehicles: reservedVehicles.map(({ reservations, ...vehicle }) => ({
-        ...vehicle,
-        expiresAt: reservations[0]?.expiresAt ?? null,
-      })),
-    },
     salesGoal: computeMonthlySalesGoal({
-      salesCount: monthSales._count._all,
-      salesRevenue: monthSales._sum.salePrice ?? 0,
+      salesCount: monthCount,
+      salesRevenue: monthRevenue,
     }),
-    leaderboard: computeSalesLeaderboard(monthSaleRecords),
-    unansweredLeads: {
-      alertCount: unansweredSummary.alertCount,
-      overdueCount: unansweredSummary.overdueCount,
-      urgent: unansweredSummary.urgent.slice(0, 5).map((item) => ({
-        id: item.id,
-        name: item.name,
-        vehicleInfo: item.vehicleInfo,
-        urgency: item.urgency,
-        urgencyLabel: item.urgencyLabel,
-      })),
-    },
-    vehicles: {
-      total: vehicleGroups.reduce((sum, group) => sum + group._count._all, 0),
-      available,
-      reserved: byStatus("reservado"),
-      sold: byStatus("vendido"),
-      featured,
-      stockValue,
-      ownedAvailable,
-      consignedAvailable: availableCount - ownedAvailable,
-      averagePrice: ownedAvailable > 0 ? stockValue / ownedAvailable : 0,
-      averageKm: availableCount > 0 ? availableKm / availableCount : 0,
-    },
-    sales: {
-      count: salesAggregate._count._all,
-      revenue: salesAggregate._sum.salePrice ?? 0,
-      monthCount: monthSales._count._all,
-      monthRevenue: monthSales._sum.salePrice ?? 0,
-      ticket:
-        salesAggregate._count._all > 0
-          ? (salesAggregate._sum.salePrice ?? 0) / salesAggregate._count._all
-          : 0,
-    },
-    leads: {
-      byStatus: leadsByStatus,
-      total: leadGroups.reduce((sum, group) => sum + group._count._all, 0),
-      recent: recentLeads,
-    },
-    publishedTestimonials,
-    recentVehicles,
-    alerts: {
-      staleVehicles: staleVehicles.map(({ createdAt, ...vehicle }) => ({
-        ...vehicle,
-        days: daysInStock(createdAt),
-      })),
-      withoutPhotos,
-      noFeatured: available > 0 && featured === 0,
-      noTestimonials: publishedTestimonials === 0,
-      noGoogleReviews: !googleReviewsReady(googleReviews),
-      usingSeedPassword,
-      placeholders: listPlaceholderLabels(siteForPlaceholders),
-    },
+    monthTicket: monthCount > 0 ? monthRevenue / monthCount : 0,
   };
 }
 
-/**
- * Consultas em série no pooler (connection_limit=1). Cache curto com tag:
- * as actions do painel chamam expireAdminData() e lead novo do site expira
- * pela tag do badge. Vídeo não entra: não vale uma leitura só para avisar.
- */
 const getDashboardDataForDay = unstable_cache(
   async (_day: string) => loadDashboardData(),
-  ["admin-dashboard-v6"],
-  { revalidate: 60, tags: [ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG] },
+  ["admin-dashboard-v8"],
+  { revalidate: 60, tags: [ADMIN_DATA_TAG] },
 );
 
-/** O dia na chave também renova alertas e período do mês na virada local. */
+/** O dia na chave também renova alertas, idade e período do mês na virada local. */
 export function getDashboardData() {
   return getDashboardDataForDay(localDateInput());
 }

@@ -1,7 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import bcrypt from "bcryptjs";
-import { MATCH_DISMISSED_ACTION, wantedStockMatch } from "../src/lib/wanted-stock-match";
-import { WANTED_LEAD_SOURCE } from "../src/lib/leads";
+import { MISSING_SALE_COST_WHERE } from "../src/lib/admin-cost-warnings";
 import { PrismaClient } from "@prisma/client";
 
 const database = new URL(process.env.DATABASE_URL || "postgresql://invalid/");
@@ -136,19 +135,29 @@ test("as cinco abas carregam e preservam os controles de cada painel", async ({ 
 });
 
 
-test("badge e avisos refletem alteração do atendimento sem esperar o TTL", async ({ page }) => {
-  const lead = await prisma.leadVenda.findFirstOrThrow({ where: { status: "novo", source: "vender" } });
+test("badge e avisos refletem pendência de compra sem esperar o TTL", async ({ page }) => {
+  const sale = await prisma.sale.findFirstOrThrow({
+    where: { vehicle: { consigned: false } },
+    select: { vehicleId: true, vehicle: { select: { purchasePrice: true } } },
+  });
+  const hadPurchase = sale.vehicle.purchasePrice != null && sale.vehicle.purchasePrice > 0;
+  const originalInput = hadPurchase
+    ? sale.vehicle.purchasePrice!.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "";
   const before = await (await page.request.get("/api/admin/badge")).json();
   const counts = await (await page.request.get("/api/admin/avisos")).json();
-  expect(before.notifications).toBe(Object.values(counts.counts as Record<string, number>).reduce((sum, count) => sum + count, 0));
+  expect(before).not.toHaveProperty("count");
+  expect(before.notifications).toBe(counts.counts.carros + counts.counts.vendas);
   try {
-    await page.goto(`/admin/leads?lead=${lead.id}`);
-    await page.locator(`#status-${lead.id}`).selectOption("contatado");
-    await expect.poll(async () => (await prisma.leadVenda.findUniqueOrThrow({ where: { id: lead.id } })).status).toBe("contatado");
-    await expect.poll(async () => (await (await page.request.get("/api/admin/badge")).json()).count).toBe(before.count - 1);
+    await page.goto(`/admin/veiculos/${sale.vehicleId}?view=operacao`);
+    const purchaseField = page.getByLabel("Preço de compra");
+    await purchaseField.fill(hadPurchase ? "" : "50.000,00");
+    await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: sale.vehicleId }, select: { purchasePrice: true } })).purchasePrice).toBe(hadPurchase ? null : 50000);
+    await expect.poll(async () => (await (await page.request.get("/api/admin/badge")).json()).costWarnings).toBe(hadPurchase ? before.costWarnings + 1 : before.costWarnings - 1);
   } finally {
-    await page.locator(`#status-${lead.id}`).selectOption(lead.status);
-    await expect.poll(async () => (await prisma.leadVenda.findUniqueOrThrow({ where: { id: lead.id } })).status).toBe(lead.status);
+    await page.goto(`/admin/veiculos/${sale.vehicleId}?view=operacao`);
+    await page.getByLabel("Preço de compra").fill(originalInput);
+    await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: sale.vehicleId }, select: { purchasePrice: true } })).purchasePrice).toBe(sale.vehicle.purchasePrice);
   }
 });
 
@@ -179,26 +188,22 @@ test("alerta muda com o hash e a sessão antiga é rejeitada sem cache de autent
 });
 
 
-test("matches do aviso mantêm os critérios e a ordem do cálculo completo", async ({ page }) => {
-  const [leads, vehicles] = await Promise.all([
-    prisma.leadVenda.findMany({ where: { source: WANTED_LEAD_SOURCE, status: { notIn: ["fechado", "perdido"] } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }] }),
-    prisma.vehicle.findMany({ where: { status: "disponivel", historical: false }, orderBy: [{ createdAt: "desc" }, { id: "asc" }] }),
-  ]);
-  const ignored = await prisma.adminAudit.findMany({ where: { action: MATCH_DISMISSED_ACTION, entityId: { in: leads.map(lead => lead.id) } } });
-  const dismissed = new Set(ignored.flatMap(item => {
-    const vehicleId = (item.changes as { vehicleId?: string } | null)?.vehicleId;
-    return vehicleId ? [item.entityId + ":" + vehicleId] : [];
-  }));
-  const expected = leads.flatMap(lead => vehicles.flatMap(vehicle => {
-    const id = lead.id + ":" + vehicle.id;
-    return !dismissed.has(id) && wantedStockMatch(lead, vehicle) ? [id] : [];
-  }));
+test("avisos de vendas mantêm os critérios e não expõem pedidos/leads", async ({ page }) => {
+  const expected = (
+    await prisma.sale.findMany({
+      where: MISSING_SALE_COST_WHERE,
+      orderBy: [{ saleDate: "desc" }, { id: "asc" }],
+      select: { id: true },
+    })
+  ).map((sale) => sale.id);
   const ids: string[] = [];
   let pages = 1;
   for (let current = 1; current <= pages; current++) {
-    const body = await (await page.request.get(`/api/admin/avisos?tipo=pedidos&page=${current}`)).json();
+    const body = await (await page.request.get(`/api/admin/avisos?tipo=vendas&page=${current}`)).json();
     pages = body.pages;
     ids.push(...body.items.map((item: { id: string }) => item.id));
   }
   expect(ids).toEqual(expected);
+  const fallback = await (await page.request.get("/api/admin/avisos?tipo=pedidos")).json();
+  expect(fallback.kind).toBe("carros");
 });

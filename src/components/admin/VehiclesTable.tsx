@@ -84,9 +84,9 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const MARK_SOLD_BTN =
-  "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-brand-orange/60 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition touch-manipulation outline-none hover:border-brand-orange hover:bg-brand-orange/15 focus-visible:ring-2 focus-visible:ring-brand";
+  "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-white/25 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation outline-none hover:border-white/50 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand";
 const MARK_SOLD_SIMPLE_BTN =
-  "inline-flex h-11 shrink-0 items-center justify-center border border-white/20 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation outline-none hover:border-brand-orange hover:text-brand-orange focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50";
+  "inline-flex h-11 shrink-0 items-center justify-center border border-white/20 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation outline-none hover:border-brand hover:text-cream focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50";
 
 const FILTER_PILL =
   "inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand";

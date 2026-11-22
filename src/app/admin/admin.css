@@ -27,7 +27,7 @@
 
   /* Folga do conteúdo acima da bottom nav do admin. */
   .pb-admin-nav {
-    padding-bottom: calc(var(--admin-nav-h) + 1rem);
+    padding-bottom: calc(var(--admin-nav-h) + 2.5rem);
   }
 
   @media (min-width: 1024px) {

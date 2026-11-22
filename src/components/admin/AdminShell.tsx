@@ -1,5 +1,6 @@
 "use client";
 
+import { ActionSheet, ActionSheetLink } from "@/components/admin/ActionSheet";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { handleFocusTrap } from "@/lib/focus-trap";
@@ -7,17 +8,15 @@ import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  IconCalendar,
   IconCash,
   IconClock,
   IconDashboard,
   IconExternal,
-  IconInbox,
   IconLogout,
+  IconPlus,
   IconUserCircle,
-  IconUsers,
 } from "@/components/admin/icons";
 import {
   IconCar,
@@ -26,96 +25,64 @@ import {
   IconMenu,
   IconQuote,
 } from "@/components/site/icons";
-import type { ReactNode } from "react";
 
 type NavItem = {
   href: string;
   label: string;
-  group: "Hoje" | "Estoque" | "Relacionamento" | "Site";
+  group: "Carros" | "Vendas" | "Site";
   Icon: (props: { className?: string }) => ReactNode;
-  badgeKey?: "leads" | "agenda";
   match: (pathname: string) => boolean;
 };
 
 const NAV: NavItem[] = [
   {
     href: "/admin",
-    label: "Dashboard",
-    group: "Hoje",
+    label: "Central",
+    group: "Carros",
     Icon: IconDashboard,
     match: (pathname) => pathname === "/admin",
   },
   {
     href: "/admin/veiculos",
     label: "Veículos",
-    group: "Estoque",
+    group: "Carros",
     Icon: IconCar,
     match: (pathname) => pathname.startsWith("/admin/veiculos"),
   },
   {
-    href: "/admin/leads",
-    label: "Leads",
-    group: "Relacionamento",
-    Icon: IconInbox,
-    badgeKey: "leads",
-    match: (pathname) => pathname.startsWith("/admin/leads"),
-  },
-  {
     href: "/admin/compra",
     label: "Compra",
-    group: "Estoque",
+    group: "Carros",
     Icon: IconCash,
     match: (pathname) => pathname.startsWith("/admin/compra"),
   },
   {
     href: "/admin/em-preparacao",
     label: "Em preparação",
-    group: "Estoque",
+    group: "Carros",
     Icon: IconCar,
     match: (pathname) => pathname.startsWith("/admin/em-preparacao"),
   },
   {
     href: "/admin/parados",
     label: "Carros parados",
-    group: "Estoque",
+    group: "Carros",
     Icon: IconClock,
     match: (pathname) => pathname.startsWith("/admin/parados"),
   },
   {
-    href: "/admin/agenda",
-    label: "Agenda",
-    group: "Hoje",
-    Icon: IconCalendar,
-    badgeKey: "agenda",
-    match: (pathname) => pathname.startsWith("/admin/agenda"),
-  },
-  {
-    href: "/admin/clientes",
-    label: "Clientes",
-    group: "Relacionamento",
-    Icon: IconUsers,
-    match: (pathname) => pathname.startsWith("/admin/clientes"),
-  },
-  {
     href: "/admin/vendas",
     label: "Vendas",
-    group: "Relacionamento",
+    group: "Vendas",
     Icon: IconCash,
     match: (pathname) => pathname.startsWith("/admin/vendas"),
   },
   {
     href: "/admin/promissorias",
     label: "Promissórias",
-    group: "Relacionamento",
+    group: "Vendas",
     Icon: IconCash,
     match: (pathname) => pathname.startsWith("/admin/promissorias"),
-  },
-  {
-    href: "/admin/depoimentos",
-    label: "Depoimentos",
-    group: "Site",
-    Icon: IconQuote,
-    match: (pathname) => pathname.startsWith("/admin/depoimentos"),
   },
   {
     href: "/admin/site",
@@ -126,6 +93,13 @@ const NAV: NavItem[] = [
   },
   { href: "/admin/catalogo", label: "Catálogo Meta", group: "Site", Icon: IconExternal, match: (pathname) => pathname.startsWith("/admin/catalogo") },
   {
+    href: "/admin/depoimentos",
+    label: "Depoimentos",
+    group: "Site",
+    Icon: IconQuote,
+    match: (pathname) => pathname.startsWith("/admin/depoimentos"),
+  },
+  {
     href: "/admin/ajuda",
     label: "Ajuda",
     group: "Site",
@@ -134,28 +108,28 @@ const NAV: NavItem[] = [
   },
 ];
 
-const NAV_GROUPS: NavItem["group"][] = ["Hoje", "Estoque", "Relacionamento", "Site"];
-const BOTTOM_NAV = NAV.slice(0, 3);
-const DRAWER_ONLY = [...NAV.slice(3).map((item) => item.href), "/admin/conta"];
+const NAV_GROUPS: NavItem["group"][] = ["Carros", "Vendas", "Site"];
+const BOTTOM_HREFS = new Set(["/admin", "/admin/veiculos", "/admin/parados"]);
+const DRAWER_ONLY = [
+  ...NAV.filter((item) => !BOTTOM_HREFS.has(item.href)).map((item) => item.href),
+  "/admin/conta",
+];
+
+const NAV_BY_HREF = new Map(NAV.map((item) => [item.href, item]));
 
 export function AdminShell({
   children,
-  newLeads: initialLeads = 0,
 }: {
   children: React.ReactNode;
-  newLeads?: number;
 }) {
   const [costWarnings, setCostWarnings] = useState<number | null>(null);
-  const [newLeads, setNewLeads] = useState(initialLeads);
-  const [agendaDue, setAgendaDue] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  // Busca ao trocar de tela e a cada 60 s com a aba visível, para o lead novo
-  // aparecer sem recarregar. Ao voltar para a aba, atualiza na hora.
   useEffect(() => {
     if (pathname === "/admin/login") return;
     let controller = new AbortController();
@@ -166,9 +140,9 @@ export function AdminShell({
         .then(async (response) => {
           if (response.ok) {
             const data = await response.json();
-            if (typeof data.count === "number") setNewLeads(data.count);
-            if (typeof data.agenda === "number") setAgendaDue(data.agenda);
-            setCostWarnings(typeof data.notifications === "number" ? data.notifications : null);
+            setCostWarnings(
+              typeof data.notifications === "number" ? data.notifications : null,
+            );
           }
         })
         .catch(() => {});
@@ -185,8 +159,10 @@ export function AdminShell({
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [pathname]);
+
   useEffect(() => {
     setMenuOpen(false);
+    setQuickOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -228,7 +204,11 @@ export function AdminShell({
     }
   }
 
-  const moreActive = menuOpen || DRAWER_ONLY.some((href) => pathname.startsWith(href));
+  const moreActive =
+    menuOpen || DRAWER_ONLY.some((href) => pathname.startsWith(href));
+  const centralItem = NAV_BY_HREF.get("/admin")!;
+  const vehiclesItem = NAV_BY_HREF.get("/admin/veiculos")!;
+  const parkedItem = NAV_BY_HREF.get("/admin/parados")!;
 
   const sidebar = (
     <>
@@ -241,37 +221,28 @@ export function AdminShell({
             <h2 className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-cream/75">
               {group}
             </h2>
-            {NAV.filter((item) => item.group === group).map(({ href, label, Icon, badgeKey, match }) => {
-              const active = match(pathname);
-              const badge = (badgeKey === "leads" ? newLeads : badgeKey === "agenda" ? agendaDue : 0) || null;
-
-              return (
-                <Link
-                  prefetch={false}
-                  key={href}
-                  href={href}
-                  onClick={() => setMenuOpen(false)}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm font-medium transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                    active
-                      ? "bg-brand text-white"
-                      : "text-cream/80 hover:bg-white/5 hover:text-cream"
-                  }`}
-                >
-                  <Icon className="h-[18px] w-[18px] shrink-0" />
-                  <span className="flex-1">{label}</span>
-                  {badge ? (
-                    <span
-                      className={`min-w-[22px] px-1.5 py-0.5 text-center font-display text-xs font-bold ${
-                        active ? "bg-cream/20 text-cream" : "bg-brand text-white"
-                      }`}
-                    >
-                      {badge}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
+            {NAV.filter((item) => item.group === group).map(
+              ({ href, label, Icon, match }) => {
+                const active = match(pathname);
+                return (
+                  <Link
+                    prefetch={false}
+                    key={href}
+                    href={href}
+                    onClick={() => setMenuOpen(false)}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm font-medium transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                      active
+                        ? "bg-brand text-white"
+                        : "text-cream/80 hover:bg-white/5 hover:text-cream"
+                    }`}
+                  >
+                    <Icon className="h-[18px] w-[18px] shrink-0" />
+                    <span className="flex-1">{label}</span>
+                  </Link>
+                );
+              },
+            )}
           </div>
         ))}
       </nav>
@@ -291,25 +262,26 @@ export function AdminShell({
               : "text-cream/80 hover:bg-white/5 hover:text-cream"
           }`}
         >
-          <IconUserCircle className="h-[18px] w-[18px] shrink-0" />
+          <IconUserCircle className="h-[18px] w-[18px]" />
           Minha conta
         </Link>
         <Link
           prefetch={false}
           href="/"
           target="_blank"
+          onClick={() => setMenuOpen(false)}
           className="flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm text-cream/80 transition touch-manipulation hover:bg-white/5 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          <IconExternal className="h-[18px] w-[18px] shrink-0" />
+          <IconExternal className="h-[18px] w-[18px]" />
           Ver o site
         </Link>
         <button
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="flex min-h-[48px] w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-cream/80 transition touch-manipulation hover:bg-white/5 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+          className="flex min-h-[48px] w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-cream/80 transition touch-manipulation hover:bg-white/5 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
         >
-          <IconLogout className="h-[18px] w-[18px] shrink-0" />
+          <IconLogout className="h-[18px] w-[18px]" />
           {loggingOut ? "Saindo..." : "Sair"}
         </button>
       </div>
@@ -318,7 +290,11 @@ export function AdminShell({
 
   const brand = (
     <div className="flex items-center justify-between gap-3 border-b border-white/15 px-5 py-4">
-      <Link prefetch={false} href="/admin" className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+      <Link
+        prefetch={false}
+        href="/admin"
+        className="flex min-h-[44px] items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
         <Image
           src="/branding/logo-wordmark.webp"
           alt="Garagem"
@@ -337,26 +313,16 @@ export function AdminShell({
     <div className="admin-shell min-h-dvh bg-asphalt text-cream lg:flex">
       <a
         href="#painel"
-        className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-white outline-none transition focus:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
+        className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-white outline-none transition focus-visible:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
       >
         Pular para o conteúdo
       </a>
       <aside className="hidden w-64 flex-col border-r border-white/15 bg-ink lg:fixed lg:inset-y-0 lg:flex lg:overflow-y-auto">
         {brand}
-        <div className="h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
         {sidebar}
       </aside>
 
-      {/*
-        Celular: a barra do topo rola junto (a navegação fica na bottom nav,
-        com "Mais" abrindo o menu). A faixa fixa cobre o notch no PWA, que
-        usa status bar translúcida.
-      */}
-      <div
-        className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top,0px)] bg-ink lg:hidden"
-        aria-hidden="true"
-      />
-      <div className="flex items-center justify-between border-b border-white/15 bg-ink px-4 pb-1.5 pt-[max(0.375rem,env(safe-area-inset-top,0px))] lg:hidden">
+      <div className="admin-header-bar sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-white/15 bg-ink/95 px-3 py-2 pt-safe backdrop-blur lg:hidden">
         <Link
           prefetch={false}
           href="/admin"
@@ -375,27 +341,27 @@ export function AdminShell({
         </Link>
         <div className="flex shrink-0 items-center">
           <AdminSearch />
-        <Link
-          prefetch={false}
-          href="/"
-          target="_blank"
-          aria-label="Ver o site"
-          className="admin-site-link hidden h-11 w-11 items-center justify-center text-cream/80 transition touch-manipulation hover:text-cream active:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand min-[380px]:flex"
-        >
-          <IconExternal className="h-[18px] w-[18px]" />
-        </Link>
           <AdminNotifications count={costWarnings} onCount={setCostWarnings} />
-            <button
-              type="button"
-              aria-label="Menu do painel"
-              aria-haspopup="dialog"
-              aria-expanded={menuOpen}
-              aria-controls="admin-mobile-drawer"
-              onClick={() => setMenuOpen((open) => !open)}
-              className="admin-form-menu hidden h-11 w-11 items-center justify-center text-cream/80 touch-manipulation hover:text-cream active:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              <IconMenu className="h-5 w-5" />
-            </button>
+          <Link
+            prefetch={false}
+            href="/"
+            target="_blank"
+            aria-label="Ver o site"
+            className="admin-site-link hidden h-11 w-11 items-center justify-center text-cream/80 transition touch-manipulation hover:text-cream active:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand min-[380px]:flex"
+          >
+            <IconExternal className="h-[18px] w-[18px]" />
+          </Link>
+          <button
+            type="button"
+            aria-label="Menu do painel"
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            aria-controls="admin-mobile-drawer"
+            onClick={() => setMenuOpen((open) => !open)}
+            className="admin-form-menu hidden h-11 w-11 items-center justify-center text-cream/80 touch-manipulation hover:text-cream active:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <IconMenu className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
@@ -409,7 +375,7 @@ export function AdminShell({
           aria-label="Menu do painel"
         >
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-asphalt/75 backdrop-blur-sm"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
@@ -466,10 +432,8 @@ export function AdminShell({
         className="admin-bottom-nav fixed inset-x-0 bottom-0 z-30 border-t border-white/15 bg-ink/95 shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden"
       >
         <ul className="mx-auto flex max-w-lg items-stretch pb-safe font-display">
-          {BOTTOM_NAV.map(({ href, label, Icon, badgeKey, match }) => {
+          {[centralItem, vehiclesItem].map(({ href, label, Icon, match }) => {
             const active = match(pathname);
-            const badge =
-              (badgeKey === "leads" ? newLeads : badgeKey === "agenda" ? agendaDue : 0) || null;
             return (
               <li key={href} className="flex flex-1">
                 <Link
@@ -481,25 +445,65 @@ export function AdminShell({
                   }`}
                 >
                   {active ? (
-                    <span className="absolute inset-x-5 top-0 h-0.5 bg-brand" aria-hidden="true" />
+                    <span
+                      className="absolute inset-x-5 top-0 h-0.5 bg-brand"
+                      aria-hidden="true"
+                    />
                   ) : null}
                   <Icon className="h-5 w-5" />
                   <span
-                    className={`text-xs ${
-                      active ? "font-semibold" : "font-medium"
-                    }`}
+                    className={`text-xs ${active ? "font-semibold" : "font-medium"}`}
                   >
                     {label}
                   </span>
-                  {badge ? (
-                    <span className="absolute right-1/2 top-1 min-w-[16px] translate-x-[14px] bg-brand px-1 text-center font-display text-xs font-bold leading-4 text-white">
-                      {badge > 9 ? "9+" : badge}
-                    </span>
-                  ) : null}
                 </Link>
               </li>
             );
           })}
+
+          <li className="flex flex-1">
+            <button
+              type="button"
+              aria-label="Ações de carro"
+              aria-haspopup="dialog"
+              aria-expanded={quickOpen}
+              onClick={() => setQuickOpen(true)}
+              className="flex min-h-[56px] flex-1 items-center justify-center py-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand text-white shadow-lg">
+                <IconPlus className="h-6 w-6" />
+              </span>
+            </button>
+          </li>
+
+          <li className="flex flex-1">
+            <Link
+              prefetch={false}
+              href={parkedItem.href}
+              aria-current={parkedItem.match(pathname) ? "page" : undefined}
+              className={`relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${
+                parkedItem.match(pathname)
+                  ? "text-cream"
+                  : "text-cream/80 active:text-cream"
+              }`}
+            >
+              {parkedItem.match(pathname) ? (
+                <span
+                  className="absolute inset-x-5 top-0 h-0.5 bg-brand"
+                  aria-hidden="true"
+                />
+              ) : null}
+              <parkedItem.Icon className="h-5 w-5" />
+              <span
+                className={`text-xs ${
+                  parkedItem.match(pathname) ? "font-semibold" : "font-medium"
+                }`}
+              >
+                Parados
+              </span>
+            </Link>
+          </li>
+
           <li className="flex flex-1">
             <button
               type="button"
@@ -515,7 +519,10 @@ export function AdminShell({
               }`}
             >
               {moreActive ? (
-                <span className="absolute inset-x-5 top-0 h-0.5 bg-brand" aria-hidden="true" />
+                <span
+                  className="absolute inset-x-5 top-0 h-0.5 bg-brand"
+                  aria-hidden="true"
+                />
               ) : null}
               {menuOpen ? (
                 <IconClose className="h-5 w-5" />
@@ -523,15 +530,47 @@ export function AdminShell({
                 <IconMenu className="h-5 w-5" />
               )}
               <span className="text-xs font-medium">Mais</span>
-              {agendaDue > 0 ? (
-                <span className="absolute right-1/2 top-1 min-w-[16px] translate-x-[14px] bg-brand px-1 text-center font-display text-xs font-bold leading-4 text-white">
-                  {agendaDue > 9 ? "9+" : agendaDue}
-                </span>
-              ) : null}
             </button>
           </li>
         </ul>
       </nav>
+
+      <ActionSheet
+        open={quickOpen}
+        title="Ações de carro"
+        subtitle="Atalhos rápidos do estoque"
+        onClose={() => setQuickOpen(false)}
+      >
+        <ActionSheetLink
+          href="/admin/veiculos/novo"
+          icon={<IconPlus className="h-4 w-4 text-red-400" />}
+          label="Cadastrar carro"
+          hint="Novo anúncio no estoque"
+          onNavigate={() => setQuickOpen(false)}
+        />
+        <ActionSheetLink
+          href="/admin/compra"
+          icon={<IconCash className="h-4 w-4" />}
+          label="Avaliar compra"
+          hint="Simular margem e preço de compra"
+          onNavigate={() => setQuickOpen(false)}
+        />
+        <ActionSheetLink
+          href="/admin/em-preparacao"
+          icon={<IconCar className="h-4 w-4" />}
+          label="Em preparação"
+          hint="Carros comprados antes de anunciar"
+          onNavigate={() => setQuickOpen(false)}
+        />
+        <ActionSheetLink
+          href="/"
+          external
+          icon={<IconExternal className="h-4 w-4" />}
+          label="Ver site"
+          hint="Abrir catálogo público em nova aba"
+          onNavigate={() => setQuickOpen(false)}
+        />
+      </ActionSheet>
     </div>
   );
 }

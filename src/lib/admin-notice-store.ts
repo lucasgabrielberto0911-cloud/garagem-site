@@ -1,48 +1,48 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "./prisma";
-import { localDateInput } from "./admin-date";
-import { ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG } from "./admin-cache";
+import { ADMIN_DATA_TAG } from "./admin-cache";
 import { MISSING_SALE_COST_WHERE } from "./admin-cost-warnings";
-import { summarizeUnansweredLeads } from "./lead-response-alert";
-import { getWantedStockMatches } from "./wanted-stock-match-store";
+import { localDateInput } from "./admin-date";
+
+export function reservationDueCutoff(now = new Date()) {
+  return new Date(`${localDateInput(now)}T23:59:59.999-03:00`);
+}
+
+export function missingCarNoticeWhere(dueBefore: Date) {
+  return {
+    historical: false,
+    status: { in: ["disponivel", "reservado"] },
+    OR: [
+      { photos: { none: {} } },
+      { price: { lte: 0 } },
+      {
+        status: "reservado",
+        reservations: {
+          some: {
+            status: "ativa",
+            expiresAt: { lte: dueBefore },
+          },
+        },
+      },
+    ],
+  };
+}
 
 const loadNoticeSnapshot = unstable_cache(
   async (day: string) => {
-    const start = new Date(`${day}T00:00:00-03:00`);
-    const end = new Date(start.getTime() + 86400000);
-    const [rows, vendas, matches, newLeads] = await Promise.all([
-      prisma.$queryRaw<
-        Array<{ count: number; hoje: number; atrasados: number }>
-      >`
-      SELECT count(*) FILTER (WHERE status = 'novo')::int AS count,
-        count(*) FILTER (WHERE status NOT IN ('fechado', 'perdido') AND "nextActionAt" >= ${start} AND "nextActionAt" < ${end})::int AS hoje,
-        count(*) FILTER (WHERE status NOT IN ('fechado', 'perdido') AND "nextActionAt" < ${start})::int AS atrasados
-      FROM "LeadVenda" WHERE status = 'novo' OR (status NOT IN ('fechado', 'perdido') AND "nextActionAt" < ${end})
-    `,
+    const dueBefore = new Date(`${day}T23:59:59.999-03:00`);
+    const [carros, vendas] = await Promise.all([
+      prisma.vehicle.count({ where: missingCarNoticeWhere(dueBefore) }),
       prisma.sale.count({ where: MISSING_SALE_COST_WHERE }),
-      getWantedStockMatches(),
-      prisma.leadVenda.findMany({
-        where: { status: "novo" },
-        select: { id: true, status: true, createdAt: true },
-        orderBy: { createdAt: "asc" },
-        take: 100,
-      }),
     ]);
-    const { count, hoje, atrasados } = rows[0];
-    const unanswered = summarizeUnansweredLeads(newLeads);
     return {
-      count,
-      unanswered30m: unanswered.alertCount,
-      unanswered2h: unanswered.overdueCount,
-      counts: { hoje, atrasados, vendas, pedidos: matches.length },
-      matches,
+      counts: { carros, vendas },
     };
   },
-  ["admin-notice-snapshot-v1"],
-  { revalidate: 15, tags: [ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG] },
+  ["admin-notice-snapshot-v3"],
+  { revalidate: 15, tags: [ADMIN_DATA_TAG] },
 );
 
-/** A data local integra a chave: não serve o dia anterior depois da meia-noite. */
 export function getAdminNoticeSnapshot(now = new Date()) {
   return loadNoticeSnapshot(localDateInput(now));
 }
