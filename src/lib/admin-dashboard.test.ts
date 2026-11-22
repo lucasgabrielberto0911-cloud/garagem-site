@@ -1,60 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  DASHBOARD_ALERTS_VISIBLE,
-  buildDashboardAlerts,
   buildVehiclePendingList,
-  splitDashboardAlerts,
   summarizeStockCapital,
-  type DashboardAlertsInput,
 } from "./admin-dashboard";
-
-const empty: DashboardAlertsInput = {
-  usingSeedPassword: false,
-  withoutPhotos: [],
-  noFeatured: false,
-  staleVehicles: [],
-  staleDays: 45,
-  placeholders: [],
-  noTestimonials: false,
-  noGoogleReviews: false,
-};
-
-test("sem pendência, lista vazia", () => {
-  assert.deepEqual(buildDashboardAlerts(empty), []);
-});
-
-test("senha e anúncio sem foto vêm antes de ajuste de cadastro da loja", () => {
-  const alerts = buildDashboardAlerts({
-    ...empty,
-    noGoogleReviews: true,
-    placeholders: ["WhatsApp"],
-    staleVehicles: [{ id: "s1", brand: "Fiat", model: "Uno", days: 90 }],
-    noFeatured: true,
-    withoutPhotos: [{ id: "p1", brand: "VW", model: "Gol" }],
-    usingSeedPassword: true,
-  });
-  assert.deepEqual(
-    alerts.map((alert) => alert.key),
-    [
-      "seed-password",
-      "no-photo-p1",
-      "no-featured",
-      "stale-s1",
-      "placeholders",
-      "no-google-reviews",
-    ],
-  );
-  assert.equal(alerts[1].href, "/admin/veiculos/p1");
-});
-
-test("celular mostra as primeiras pendências e guarda o resto", () => {
-  const list = Array.from({ length: 7 }, (_, index) => index);
-  const { head, rest } = splitDashboardAlerts(list);
-  assert.equal(head.length, DASHBOARD_ALERTS_VISIBLE);
-  assert.deepEqual(rest, [4, 5, 6]);
-  assert.deepEqual(splitDashboardAlerts([1, 2], 4), { head: [1, 2], rest: [] });
-});
 
 test("summarizeStockCapital soma disponíveis e reservados com compra, soma custos e exclui consignado e sem compra", () => {
   const summary = summarizeStockCapital([
@@ -207,6 +156,9 @@ test("buildVehiclePendingList identifica pendências dos carros ativos, ignora v
   assert.equal(result.items.length, 5);
   assert.equal(result.items[0].key, "vehicle-v-poucas-fotos");
   assert.equal(result.items[0].href, "/admin/veiculos/v-poucas-fotos?view=fotos");
+  assert.ok(
+    result.items[0].badges.some((badge) => badge.label === "Poucas fotos"),
+  );
   assert.equal(result.items[1].key, "sale-gap-sold-gap");
   assert.equal(result.items[1].href, "/admin/vendas/nova?veiculo=sold-gap");
   assert.equal(result.items[2].key, "vehicle-v-sem-foto");

@@ -1,7 +1,6 @@
 /** Pendências e resumos da Central da loja — sem prisma, testável. */
 import { reservationDeadline } from "@/lib/admin-date";
 import { moneySum } from "@/lib/admin-money";
-import { MAX_FEATURED_PINS } from "@/lib/featured";
 import { publishMissingItems } from "@/lib/stock-quality";
 import { buildVehicleFullLabel } from "@/lib/vehicle-display";
 import {
@@ -10,136 +9,10 @@ import {
   investedTotal,
 } from "@/lib/vehicle-ops";
 
-export type DashboardAlertTone = "brand" | "warning" | "neutral";
-export type DashboardAlertIcon = "alert" | "image" | "star" | "quote";
-
-export type DashboardAlert = {
-  key: string;
-  tone: DashboardAlertTone;
-  icon: DashboardAlertIcon;
-  title: string;
-  description: string;
-  href: string;
-};
-
 type VehicleRef = { id: string; brand: string; model: string };
-
-export type DashboardAlertsInput = {
-  usingSeedPassword: boolean;
-  withoutPhotos: VehicleRef[];
-  noFeatured: boolean;
-  staleVehicles: Array<VehicleRef & { days: number }>;
-  staleDays: number;
-  placeholders: string[];
-  noTestimonials: boolean;
-  noGoogleReviews: boolean;
-};
-
-/** Quantas pendências aparecem antes do “Ver mais” no celular. */
-export const DASHBOARD_ALERTS_VISIBLE = 4;
 
 /** Mínimo recomendado de fotos para um anúncio de veículo. */
 export const MIN_GOOD_PHOTOS = 6;
-
-/**
- * Primeiro o que trava venda (senha, anúncio sem foto, vitrine vazia),
- * depois estoque parado, e por último ajustes de cadastro da loja.
- */
-export function buildDashboardAlerts(
-  input: DashboardAlertsInput,
-): DashboardAlert[] {
-  const list: DashboardAlert[] = [];
-
-  if (input.usingSeedPassword) {
-    list.push({
-      key: "seed-password",
-      tone: "brand",
-      icon: "alert",
-      title: "Senha padrão ainda em uso",
-      description:
-        "Um acesso do painel continua com a senha criada na instalação. Troque em Minha conta.",
-      href: "/admin/conta",
-    });
-  }
-
-  for (const vehicle of input.withoutPhotos) {
-    list.push({
-      key: `no-photo-${vehicle.id}`,
-      tone: "brand",
-      icon: "image",
-      title: `${vehicle.brand} ${vehicle.model} sem fotos`,
-      description: "Anúncios sem foto praticamente não recebem contato.",
-      href: `/admin/veiculos/${vehicle.id}`,
-    });
-  }
-
-  if (input.noFeatured) {
-    list.push({
-      key: "no-featured",
-      tone: "warning",
-      icon: "star",
-      title: "Nenhum veículo em destaque",
-      description: `Você pode fixar até ${MAX_FEATURED_PINS} anúncios disponíveis para aparecerem primeiro na home (o restante gira a cada 2 dias).`,
-      href: "/admin/veiculos?tab=destaques",
-    });
-  }
-
-  for (const vehicle of input.staleVehicles) {
-    list.push({
-      key: `stale-${vehicle.id}`,
-      tone: "neutral",
-      icon: "alert",
-      title: `${vehicle.brand} ${vehicle.model} há ${vehicle.days} dias no estoque`,
-      description: `Parado há mais de ${input.staleDays} dias. Vale revisar preço ou fotos.`,
-      href: `/admin/veiculos/${vehicle.id}`,
-    });
-  }
-
-  if (input.placeholders.length > 0) {
-    list.push({
-      key: "placeholders",
-      tone: "warning",
-      icon: "alert",
-      title: "Dados da loja incompletos",
-      description: `Ainda em placeholder: ${input.placeholders.join(", ")}.`,
-      href: "/admin/site",
-    });
-  }
-
-  if (input.noTestimonials) {
-    list.push({
-      key: "no-testimonials",
-      tone: "neutral",
-      icon: "quote",
-      title: "Nenhum depoimento publicado",
-      description:
-        "A home mostra “Depoimentos em atualização”. Publique somente relatos reais em Depoimentos.",
-      href: "/admin/depoimentos",
-    });
-  }
-
-  if (input.noGoogleReviews) {
-    list.push({
-      key: "no-google-reviews",
-      tone: "neutral",
-      icon: "star",
-      title: "Selo do Google ainda oculto",
-      description:
-        "Preencha nota, quantidade e o link do perfil em Site. Sem isso o selo não aparece.",
-      href: "/admin/site",
-    });
-  }
-
-  return list;
-}
-
-export function splitDashboardAlerts<T>(
-  list: T[],
-  visible = DASHBOARD_ALERTS_VISIBLE,
-) {
-  const limit = Math.max(0, visible);
-  return { head: list.slice(0, limit), rest: list.slice(limit) };
-}
 
 export type StockCapitalVehicleInput = {
   price: number;
@@ -332,7 +205,7 @@ export function buildVehiclePendingList(
     const missingDescription = !vehicle.description?.trim();
     const missingPurchase =
       !vehicle.consigned &&
-      !(vehicle.purchasePrice != null && vehicle.purchasePrice > 0);
+      !hasCostBasis(vehicle.purchasePrice, 0, { consigned: vehicle.consigned });
     const deadlineLabel =
       vehicle.status === "reservado"
         ? reservationDeadline(vehicle.reservationExpiresAt ?? null)
@@ -360,7 +233,7 @@ export function buildVehiclePendingList(
       priority += 70;
     }
     if (fewPhotos) {
-      badges.push({ label: `${vehicle.photoCount} foto(s) (<6)`, tone: "neutral" });
+      badges.push({ label: "Poucas fotos", tone: "neutral" });
       priority += 40;
     }
     if (missingDescription) {
