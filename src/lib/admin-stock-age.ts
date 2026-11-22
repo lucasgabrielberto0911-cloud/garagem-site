@@ -42,6 +42,63 @@ export function classifyStockAgeBand(days: number): StockAgeBandId {
   return "60+";
 }
 
+/** Faixas de atenção de Carros parados, da mais urgente para a menos urgente. */
+export const PARKED_ATTENTION_BAND_IDS: readonly StockAgeBandId[] = [
+  "60+",
+  "46-60",
+  "31-45",
+];
+
+export type StockAgeBandGroup<T extends { daysParked: number }> =
+  StockAgeBandSpec & {
+    items: T[];
+  };
+
+/**
+ * Agrupa carros parados nas faixas de atenção (60+, 46–60 e 31–45),
+ * preservando a ordem interna dos itens em cada faixa.
+ */
+export function groupParkedByAgeBand<T extends { daysParked: number }>(
+  items: readonly T[],
+): StockAgeBandGroup<T>[] {
+  const byBand: Record<StockAgeBandId, T[]> = {
+    "0-30": [],
+    "31-45": [],
+    "46-60": [],
+    "60+": [],
+  };
+
+  for (const item of items) {
+    const band = classifyStockAgeBand(item.daysParked);
+    byBand[band].push(item);
+  }
+
+  return PARKED_ATTENTION_BAND_IDS.map((bandId) => {
+    const spec = STOCK_AGE_BANDS.find((entry) => entry.id === bandId)!;
+    return {
+      ...spec,
+      items: byBand[bandId],
+    };
+  });
+}
+
+/**
+ * Classes visuais para o indicador de dias em estoque conforme a faixa.
+ * Mantém a paleta da marca (preto, vermelho, off-white — nunca dourado/amarelo).
+ */
+export function stockAgeBandBadgeClass(band: StockAgeBandId): string {
+  if (band === "60+") {
+    return "border border-brand/60 bg-brand/25 text-white";
+  }
+  if (band === "46-60") {
+    return "border border-brand/40 bg-brand/15 text-red-200";
+  }
+  if (band === "31-45") {
+    return "border border-white/30 bg-white/10 text-cream";
+  }
+  return "border border-white/15 bg-white/5 text-cream/80";
+}
+
 export type StockAgeVehicleInput = {
   id: string;
   brand: string;

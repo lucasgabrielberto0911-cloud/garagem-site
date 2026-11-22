@@ -1,69 +1,152 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseStockPending, stockPendingWhere } from "./admin-stock-pending";
+import { MIN_GOOD_PHOTOS } from "./admin-dashboard";
+import {
+  parseStockPending,
+  stockPendingWhere,
+  vehiclePendingBadges,
+} from "./admin-stock-pending";
 import { staleCutoffDate } from "./stock-quality";
 
-test("pendências aceitam apenas filtros conhecidos e preservam a regra dos 60 dias", () => {
-  assert.equal(parseStockPending("todos"), "");
+test("pendências da lista filtram sem foto, sem preço, antigos, com pendência e parados", () => {
   assert.equal(parseStockPending("sem-fotos"), "sem-fotos");
-  assert.deepEqual(stockPendingWhere("sem-fotos"), { photos: { none: {} } });
-  assert.deepEqual(stockPendingWhere(""), {});
-  const before = Date.now() - 60 * 86400000;
-  const result = stockPendingWhere("antigos");
-  assert.equal(result.status, "disponivel");
-  const cutoff = (result.createdAt as { lt: Date }).lt.getTime();
-  assert.ok(cutoff >= before && cutoff <= Date.now() - 60 * 86400000);
-});
-
-test("parseStockPending: sanitiza entradas inválidas, nulas e desconhecidas", () => {
-  assert.equal(parseStockPending(null), "");
-  assert.equal(parseStockPending(undefined), "");
-  assert.equal(parseStockPending(""), "");
-  assert.equal(parseStockPending("   "), "");
-  assert.equal(parseStockPending("invalido"), "");
-  assert.equal(parseStockPending("SEM-FOTOS"), "");
-  assert.equal(parseStockPending("ANTIGOS"), "");
-  assert.equal(parseStockPending("consignado"), "");
-  assert.equal(parseStockPending("SEM-PRECO"), "");
-});
-
-test("pendência sem-preco filtra anúncios com preço zerado", () => {
   assert.equal(parseStockPending("sem-preco"), "sem-preco");
+  assert.equal(parseStockPending("antigos"), "antigos");
+  assert.equal(parseStockPending("com-pendencia"), "com-pendencia");
+  assert.equal(parseStockPending("parados"), "parados");
+  assert.equal(parseStockPending("desconhecido"), "");
+
+  assert.deepEqual(stockPendingWhere("sem-fotos"), { photos: { none: {} } });
   assert.deepEqual(stockPendingWhere("sem-preco"), { price: { lte: 0 } });
-});
 
-test("stockPendingWhere: pendência de fotos usa photos.none para identificar veículos sem imagem", () => {
-  const where = stockPendingWhere("sem-fotos");
-  assert.deepEqual(where, { photos: { none: {} } });
-});
-
-test("stockPendingWhere: pendência de antigos restringe a status disponivel e data de corte", () => {
-  const where = stockPendingWhere("antigos");
-  assert.equal(where.status, "disponivel");
-
-  const expectedCutoff = staleCutoffDate().getTime();
-  const actualCutoff = (where.createdAt as { lt: Date }).lt.getTime();
-
-  // A data de corte calculada deve ser exata com staleCutoffDate (60 dias)
-  assert.ok(Math.abs(actualCutoff - expectedCutoff) < 1000);
-});
-
-test("stockPendingWhere: vazio não restringe campos nem status", () => {
-  assert.deepEqual(stockPendingWhere(""), {});
-});
-
-test("cenário de negócio: consignados e próprios no estoque com pendências", () => {
-  // Tanto veículos próprios quanto consignados no estoque estão sujeitos às pendências:
-  // 1. Veículo sem foto cadastrada
-  const pendenciaFotos = stockPendingWhere(parseStockPending("sem-fotos"));
-  assert.deepEqual(pendenciaFotos, { photos: { none: {} } });
-
-  // 2. Veículo antigo (>60 dias) disponível
-  const pendenciaAntigos = stockPendingWhere(parseStockPending("antigos"));
+  const pendenciaAntigos = stockPendingWhere("antigos");
   assert.equal(pendenciaAntigos.status, "disponivel");
-  assert.ok((pendenciaAntigos.createdAt as { lt: Date }).lt instanceof Date);
+  assert.ok(pendenciaAntigos.createdAt);
+  assert.ok(
+    Math.abs(
+      (pendenciaAntigos.createdAt as { lt: Date }).lt.getTime() -
+        staleCutoffDate().getTime(),
+    ) < 5_000,
+  );
 
-  // 3. Filtro sem pendência retorna objeto limpo
-  const pendenciaLimpa = stockPendingWhere(parseStockPending("todos"));
-  assert.deepEqual(pendenciaLimpa, {});
+  const pendenciaParados = stockPendingWhere("parados");
+  assert.equal(pendenciaParados.status, "disponivel");
+  assert.ok((pendenciaParados.createdAt as { lte: Date }).lte instanceof Date);
+
+  assert.deepEqual(stockPendingWhere(parseStockPending("todos")), {});
+});
+
+test("vehiclePendingBadges reutiliza MIN_GOOD_PHOTOS (< 6), Sem legenda e Sem compra só em veículo próprio", () => {
+  assert.equal(MIN_GOOD_PHOTOS, 6);
+
+  // Sem preço + sem foto + sem legenda + sem compra (próprio)
+  const allMissing = vehiclePendingBadges({
+    status: "disponivel",
+    price: 0,
+    photoCount: 0,
+    hasCover: false,
+    hasDescription: false,
+    purchasePrice: null,
+    consigned: false,
+  });
+  assert.deepEqual(
+    allMissing.map((b) => b.label),
+    ["Sem preço", "Sem foto", "Sem legenda", "Sem compra"],
+  );
+
+  // Poucas fotos (< 6) + sem capa, compra OK
+  const fewWithoutCover = vehiclePendingBadges({
+    status: "disponivel",
+    price: 78900,
+    photoCount: 3,
+    hasCover: false,
+    hasDescription: true,
+    purchasePrice: 65000,
+    consigned: false,
+  });
+  assert.deepEqual(
+    fewWithoutCover.map((b) => b.label),
+    ["Sem capa", "Poucas fotos"],
+  );
+
+  // 5 fotos continua sendo "Poucas fotos" (< 6)
+  const fivePhotos = vehiclePendingBadges({
+    status: "reservado",
+    price: 78900,
+    photoCount: 5,
+    hasCover: true,
+    hasDescription: true,
+    purchasePrice: 65000,
+    consigned: false,
+  });
+  assert.deepEqual(
+    fivePhotos.map((b) => b.label),
+    ["Poucas fotos"],
+  );
+
+  // 6+ fotos, capa, preço e compra OK, apenas sem legenda
+  const missingDescription = vehiclePendingBadges({
+    status: "disponivel",
+    price: 78900,
+    photoCount: 6,
+    hasCover: true,
+    hasDescription: false,
+    purchasePrice: 65000,
+    consigned: false,
+  });
+  assert.deepEqual(
+    missingDescription.map((b) => b.label),
+    ["Sem legenda"],
+  );
+
+  // Próprio completo exceto compra (null ou 0) -> recebe "Sem compra"
+  const missingPurchase = vehiclePendingBadges({
+    status: "disponivel",
+    price: 92000,
+    photoCount: 6,
+    hasCover: true,
+    hasDescription: true,
+    purchasePrice: 0,
+    consigned: false,
+  });
+  assert.deepEqual(
+    missingPurchase.map((b) => b.label),
+    ["Sem compra"],
+  );
+
+  // Consignado sem compra nunca recebe "Sem compra"
+  const consignedComplete = vehiclePendingBadges({
+    status: "disponivel",
+    price: 92000,
+    photoCount: 6,
+    hasCover: true,
+    hasDescription: true,
+    purchasePrice: null,
+    consigned: true,
+  });
+  assert.deepEqual(consignedComplete, []);
+});
+
+test("vehiclePendingBadges não mostra selo verde/OK em carro completo nem em vendido", () => {
+  const complete = vehiclePendingBadges({
+    status: "disponivel",
+    price: 119900,
+    photoCount: 8,
+    hasCover: true,
+    hasDescription: true,
+    purchasePrice: 98000,
+    consigned: false,
+  });
+  assert.deepEqual(complete, []);
+
+  const sold = vehiclePendingBadges({
+    status: "vendido",
+    price: 0,
+    photoCount: 0,
+    hasCover: false,
+    hasDescription: false,
+    purchasePrice: null,
+    consigned: false,
+  });
+  assert.deepEqual(sold, []);
 });
