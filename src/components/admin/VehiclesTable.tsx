@@ -11,10 +11,12 @@ import { ActionSheet } from "@/components/admin/ActionSheet";
 import { SheetActions } from "@/components/admin/vehicles-table/SheetActions";
 import { VehiclePromoKitModal } from "@/components/admin/VehiclePromoKitModal";
 import {
+  IconCash,
   IconImage,
   IconMore,
   IconPencil,
   IconPlus,
+  IconStar,
 } from "@/components/admin/icons";
 import { EmptyState, btn, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL } from "@/lib/format";
@@ -39,9 +41,16 @@ import {
 import {
   DELETE_CONFIRM_PHRASE,
   adminCardMetaLine,
-  adminCardShowsSoldAction,
   deleteRequiresTypedConfirm,
 } from "@/lib/admin-list";
+import {
+  calculateParkedDays,
+  resolveVehicleEnteredAt,
+} from "@/lib/admin-parados";
+import {
+  classifyStockAgeBand,
+  stockAgeBandBadgeClass,
+} from "@/lib/admin-stock-age";
 import { coverSrc } from "@/lib/stock-query";
 import {
   MAX_FEATURED_PINS,
@@ -49,8 +58,11 @@ import {
   canEnableFeatured,
   featuredCapMessage,
 } from "@/lib/featured";
-import type { StockPending } from "@/lib/admin-stock-pending";
-import { publishMissingLine, stockListQuietNote } from "@/lib/stock-quality";
+import {
+  vehiclePendingBadges,
+  type StockPending,
+} from "@/lib/admin-stock-pending";
+import { stockListQuietNote } from "@/lib/stock-quality";
 import { rotateLocalDraftOnDuplicate } from "@/lib/admin-duplicate-vehicle";
 import {
   deleteVehicle,
@@ -83,10 +95,13 @@ const STATUS_LABEL: Record<string, string> = {
   vendido: "Vendido",
 };
 
-const MARK_SOLD_BTN =
-  "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-white/25 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation outline-none hover:border-white/50 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand";
-const MARK_SOLD_SIMPLE_BTN =
-  "inline-flex h-11 shrink-0 items-center justify-center border border-white/20 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation outline-none hover:border-brand hover:text-cream focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50";
+const PENDING_FILTER_LABEL: Record<Exclude<StockPending, "">, string> = {
+  "com-pendencia": "Com pendência",
+  parados: "Parados (+30d)",
+  "sem-fotos": "Sem foto",
+  "sem-preco": "Sem preço",
+  antigos: "60+ dias",
+};
 
 const FILTER_PILL =
   "inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand";
@@ -144,6 +159,8 @@ export function VehiclesTable({
   featuredCount: featuredCountProp,
   availableCount: availableCountProp,
   reservedCount: reservedCountProp,
+  withPendingCount = 0,
+  parkedCount = 0,
   quality,
   adminId,
 }: {
@@ -159,6 +176,8 @@ export function VehiclesTable({
   featuredCount: number;
   availableCount: number;
   reservedCount: number;
+  withPendingCount?: number;
+  parkedCount?: number;
   quality?: {
     withoutPhotos: number;
     stale: number;
@@ -805,85 +824,74 @@ export function VehiclesTable({
         })
       : null;
 
+  const isLoadingList = isPending || loadingSort;
+
+  const quickChips = [
+    {
+      key: "todos",
+      label: "Todos",
+      count: String(estoqueCount),
+      active: tab === "estoque" && !status && !pending,
+      onClick: () => applyFilters({ tab: "estoque", status: null, pending: "" }),
+    },
+    {
+      key: "disponiveis",
+      label: "Disponíveis",
+      count: String(availableCount),
+      active: tab === "estoque" && status === "disponivel" && !pending,
+      onClick: () =>
+        applyFilters({ tab: "estoque", status: "disponivel", pending: "" }),
+    },
+    {
+      key: "reservados",
+      label: "Reservados",
+      count: String(reservedCount),
+      active: tab === "estoque" && status === "reservado" && !pending,
+      onClick: () =>
+        applyFilters({ tab: "estoque", status: "reservado", pending: "" }),
+    },
+    {
+      key: "vendidos",
+      label: "Vendidos",
+      count: String(vendidosCount),
+      active: tab === "vendidos",
+      onClick: () => applyFilters({ tab: "vendidos", status: null, pending: "" }),
+    },
+    {
+      key: "com-pendencia",
+      label: "Com pendência",
+      count: String(withPendingCount),
+      active: tab === "estoque" && pending === "com-pendencia",
+      onClick: () =>
+        applyFilters({
+          tab: "estoque",
+          status: null,
+          pending: pending === "com-pendencia" ? "" : "com-pendencia",
+        }),
+    },
+    {
+      key: "parados",
+      label: "Parados (+30d)",
+      count: String(parkedCount),
+      active: tab === "estoque" && pending === "parados",
+      onClick: () =>
+        applyFilters({
+          tab: "estoque",
+          status: null,
+          pending: pending === "parados" ? "" : "parados",
+        }),
+    },
+    {
+      key: "destaques",
+      label: "Destaques",
+      count: `${featuredCount}/${MAX_FEATURED_PINS}`,
+      active: tab === "destaques",
+      onClick: () => applyFilters({ tab: "destaques", status: null, pending: "" }),
+    },
+  ] as const;
+
   return (
     <div className="space-y-3">
-      <div
-        role="tablist"
-        aria-label="Separar estoque e vendidos"
-        className="grid grid-cols-3 border-b border-white/20 lg:flex lg:flex-wrap"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "estoque"}
-          onClick={() => applyFilters({ tab: "estoque", status: null, pending: "" })}
-          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand lg:justify-start lg:px-4 ${
-            tab === "estoque"
-              ? "border-b-2 border-brand text-cream"
-              : "border-b-2 border-transparent text-cream/80 hover:text-cream"
-          }`}
-        >
-          Em estoque
-          <span
-            className={`px-1.5 py-0.5 text-xs ${
-              tab === "estoque"
-                ? "bg-brand/25 text-cream"
-                : "bg-white/15 text-cream/85"
-            }`}
-          >
-            {estoqueCount}
-          </span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "destaques"}
-          onClick={() => applyFilters({ tab: "destaques", status: null })}
-          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand lg:justify-start lg:px-4 ${
-            tab === "destaques"
-              ? "border-b-2 border-brand text-cream"
-              : "border-b-2 border-transparent text-cream/80 hover:text-cream"
-          }`}
-        >
-          Destaques
-          <span
-            className={`px-1.5 py-0.5 text-xs ${
-              tab === "destaques"
-                ? "bg-brand/25 text-cream"
-                : "bg-white/15 text-cream/85"
-            }`}
-          >
-            {featuredCount}/{MAX_FEATURED_PINS}
-          </span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "vendidos"}
-          onClick={() => applyFilters({ tab: "vendidos", status: null })}
-          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-brand lg:justify-start lg:px-4 ${
-            tab === "vendidos"
-              ? "border-b-2 border-brand text-cream"
-              : "border-b-2 border-transparent text-cream/80 hover:text-cream"
-          }`}
-        >
-          Vendidos
-          <span
-            className={`px-1.5 py-0.5 text-xs ${
-              tab === "vendidos"
-                ? "bg-brand/25 text-cream"
-                : "bg-white/15 text-cream/85"
-            }`}
-          >
-            {vendidosCount}
-          </span>
-        </button>
-      </div>
-
-      {stockNote ? (
-        <p className="text-xs leading-relaxed text-cream/80">{stockNote}</p>
-      ) : null}
-
       <div className="space-y-2">
         <div className="flex flex-wrap items-stretch gap-2 sm:flex-nowrap">
           <form
@@ -907,8 +915,8 @@ export function VehiclesTable({
                 setSearchTerm(value);
                 if (!value && q) applyFilters({ q: "" });
               }}
-              placeholder="Marca, modelo ou placa"
-              aria-label="Buscar marca, modelo ou placa"
+              placeholder="Nome, modelo, ano ou placa"
+              aria-label="Buscar por nome, modelo, ano ou placa"
               className={`${inputClass} min-w-0 flex-1`}
             />
             <button
@@ -941,7 +949,7 @@ export function VehiclesTable({
           >
             Filtros
             {activeFilterCount > 0 ? (
-              <span className="ml-1.5 text-xs tabular-nums text-brand-orange">
+              <span className="ml-1.5 text-xs tabular-nums text-red-400">
                 {activeFilterCount}
               </span>
             ) : null}
@@ -963,87 +971,93 @@ export function VehiclesTable({
           </button>
         </div>
 
+        <div
+          role="group"
+          aria-label="Filtros rápidos"
+          className="flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0"
+        >
+          {quickChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              aria-pressed={chip.active}
+              disabled={isPending}
+              onClick={chip.onClick}
+              className={`${FILTER_PILL} border ${
+                chip.active
+                  ? "border-brand bg-brand/25 text-cream"
+                  : "border-white/15 bg-ink/50 text-cream/80 hover:border-white/30 hover:text-cream"
+              } disabled:opacity-60`}
+            >
+              <span>{chip.label}</span>
+              <span
+                className={`ml-1.5 px-1.5 py-0.5 text-[11px] tabular-nums ${
+                  chip.active
+                    ? "bg-brand/40 text-white"
+                    : "bg-white/10 text-cream/80"
+                }`}
+              >
+                {chip.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {stockNote && !pending ? (
+          <p className="text-xs leading-relaxed text-cream/75">{stockNote}</p>
+        ) : null}
+
         {filtersOpen ? (
           <div
             id="vehicles-filters"
             className="space-y-3 border border-white/20 bg-ink/50 p-3"
           >
             {tab === "estoque" ? (
-              <>
-                <div>
-                  <p className="mb-1.5 text-xs text-cream/80">Status</p>
-                  <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por status">
-                    {(
-                      [
-                        { value: null, label: "Todos", count: estoqueCount },
-                        { value: "disponivel", label: "Disponível", count: availableCount },
-                        { value: "reservado", label: "Reservado", count: reservedCount },
-                      ] as const
-                    ).map((option) => {
-                      const active =
-                        option.value === null ? !status : status === option.value;
-                      return (
-                        <button
-                          key={option.label}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() =>
-                            applyFilters({
-                              status: option.value,
-                              ...(option.value === "reservado" && pending === "antigos"
-                                ? { pending: "" as const }
-                                : {}),
-                            })
-                          }
-                          className={`${FILTER_PILL} ${
-                            active
-                              ? "bg-brand/25 text-cream"
-                              : "text-cream/80 hover:bg-white/5 hover:text-cream"
-                          }`}
-                        >
-                          {option.label}
-                          <span className="ml-1.5 text-xs tabular-nums opacity-80">
-                            {option.count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+              <div>
+                <p className="mb-1.5 text-xs text-cream/80">
+                  Pendências e atenção
+                </p>
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="group"
+                  aria-label="Pendências do estoque"
+                >
+                  {(
+                    [
+                      { value: "", label: "Nenhuma" },
+                      { value: "com-pendencia", label: "Com pendência" },
+                      { value: "sem-fotos", label: "Sem foto" },
+                      { value: "sem-preco", label: "Sem preço" },
+                      { value: "parados", label: "Parados (+30d)" },
+                      { value: "antigos", label: "60+ dias" },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={pending === option.value}
+                      disabled={isPending}
+                      onClick={() =>
+                        applyFilters({
+                          pending: option.value,
+                          ...(option.value === "antigos" ||
+                          option.value === "parados" ||
+                          option.value === "com-pendencia"
+                            ? { status: null }
+                            : {}),
+                        })
+                      }
+                      className={`${FILTER_PILL} ${
+                        pending === option.value
+                          ? "bg-brand/25 text-cream"
+                          : "text-cream/80 hover:bg-white/5 hover:text-cream"
+                      } disabled:opacity-60`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <p className="mb-1.5 text-xs text-cream/80">Precisa de atenção</p>
-                  <div className="flex flex-wrap gap-2" role="group" aria-label="Pendências do estoque">
-                    {(
-                      [
-                        { value: "", label: "Nenhuma" },
-                        { value: "sem-fotos", label: "Sem foto" },
-                        { value: "sem-preco", label: "Sem preço" },
-                        { value: "antigos", label: "60+ dias" },
-                      ] as const
-                    ).map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        aria-pressed={pending === option.value}
-                        disabled={isPending}
-                        onClick={() =>
-                          applyFilters({
-                            pending: option.value,
-                            ...(option.value === "antigos" ? { status: null } : {}),
-                          })
-                        }
-                        className={`${FILTER_PILL} ${
-                          pending === option.value
-                            ? "bg-brand/25 text-cream"
-                            : "text-cream/80 hover:bg-white/5 hover:text-cream"
-                        } disabled:opacity-60`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
+              </div>
             ) : null}
             <div className="flex items-center gap-2">
               <label className="text-xs text-cream/80" htmlFor="vehicles-sort">
@@ -1082,15 +1096,9 @@ export function VehiclesTable({
                 onClear={() => applyFilters({ status: null })}
               />
             ) : null}
-            {pendingFilterActive ? (
+            {pendingFilterActive && pending ? (
               <ActiveChip
-                label={
-                  pending === "sem-fotos"
-                    ? "Sem foto"
-                    : pending === "sem-preco"
-                      ? "Sem preço"
-                      : "60+ dias"
-                }
+                label={PENDING_FILTER_LABEL[pending]}
                 onClear={() => applyFilters({ pending: "" })}
               />
             ) : null}
@@ -1109,14 +1117,31 @@ export function VehiclesTable({
             {selectAll}
           </div>
         ) : null}
-        {pending && tab === "estoque" ? (
+
+        {isLoadingList ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2 text-xs font-medium text-cream/80"
+          >
+            <span
+              className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand border-r-transparent"
+              aria-hidden="true"
+            />
+            Carregando veículos…
+          </p>
+        ) : pending && tab === "estoque" ? (
           <p role="status" className="text-xs leading-relaxed text-cream/80">
             {total} veículo(s){" "}
-            {pending === "sem-fotos"
-              ? "sem fotos"
-              : pending === "sem-preco"
-                ? "sem preço"
-                : "disponível(is) há mais de 60 dias"}
+            {pending === "com-pendencia"
+              ? "com pendência no cadastro"
+              : pending === "parados"
+                ? "parado(s) há mais de 30 dias"
+                : pending === "sem-fotos"
+                  ? "sem fotos"
+                  : pending === "sem-preco"
+                    ? "sem preço"
+                    : "disponível(is) há mais de 60 dias"}
             . Abra Editar para revisar o anúncio.
           </p>
         ) : null}
@@ -1135,7 +1160,7 @@ export function VehiclesTable({
               prefetch={false}
               href="/"
               target="_blank"
-              className="font-medium text-red-400 underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand"
+              className="inline-flex min-h-[44px] items-center font-medium text-red-400 underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand"
             >
               Ver a home
             </Link>
@@ -1144,7 +1169,7 @@ export function VehiclesTable({
       ) : null}
 
       {loadError ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-brand-orange/40 bg-brand-orange/10 px-4 py-3 text-sm text-cream">
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-brand/50 bg-brand/10 px-4 py-3 text-sm text-cream">
           <p>Não deu para carregar o restante da lista.</p>
           <button
             type="button"
@@ -1159,7 +1184,7 @@ export function VehiclesTable({
       {undoBanner ? (
         <div
           role="status"
-          className="sticky top-[env(safe-area-inset-top,0px)] z-20 flex flex-col gap-3 border border-brand-orange/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0"
+          className="sticky top-[env(safe-area-inset-top,0px)] z-20 flex flex-col gap-3 border border-brand/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0"
         >
           <p className="text-sm text-cream">
             {undoBanner.ids.length === 1
@@ -1237,29 +1262,37 @@ export function VehiclesTable({
         </div>
       ) : null}
 
-      {items.length === 0 && !loadingSort ? (
+      {items.length === 0 && !isLoadingList ? (
         <EmptyState
           icon={<IconImage className="h-12 w-12" />}
           title={
             q
               ? "Nenhum veículo encontrado"
-              : tab === "vendidos"
-                ? "Nenhum veículo vendido ainda"
-                : tab === "destaques"
-                  ? "Nenhum destaque na home"
-                  : "Nenhum veículo em estoque"
+              : pending === "com-pendencia"
+                ? "Nenhuma pendência no estoque"
+                : pending === "parados"
+                  ? "Nenhum carro parado há mais de 30 dias"
+                  : tab === "vendidos"
+                    ? "Nenhum veículo vendido ainda"
+                    : tab === "destaques"
+                      ? "Nenhum destaque na home"
+                      : "Nenhum veículo em estoque"
           }
           description={
             q
-              ? "Tente ajustar a busca nesta aba."
-              : tab === "vendidos"
-                ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
-                : tab === "destaques"
-                  ? `Marque até ${MAX_FEATURED_PINS} anúncios disponíveis com a estrela para fixar no topo. O restante da home gira sozinho a cada 2 dias.`
-                  : "Cadastre o primeiro veículo do estoque para começar."
+              ? "Tente ajustar a busca ou limpar os filtros."
+              : pending === "com-pendencia"
+                ? "Todos os veículos ativos estão com preço, capa, fotos e descrição preenchidos."
+                : pending === "parados"
+                  ? "O estoque está girando bem — nenhum veículo disponível passou de 30 dias."
+                  : tab === "vendidos"
+                    ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
+                    : tab === "destaques"
+                      ? `Marque até ${MAX_FEATURED_PINS} anúncios disponíveis com a estrela para fixar no topo. O restante da home gira sozinho a cada 2 dias.`
+                      : "Cadastre o primeiro veículo do estoque para começar."
           }
           action={
-            tab === "estoque" ? (
+            tab === "estoque" && !pending ? (
               <Link prefetch={false} href="/admin/veiculos/novo" className={btn.primary}>
                 <IconPlus className="h-4 w-4" />
                 {q ? "Cadastrar veículo" : "Cadastrar o primeiro"}
@@ -1270,13 +1303,14 @@ export function VehiclesTable({
       ) : (
         <>
           <div
+            aria-busy={isLoadingList}
             className={
-              loadingSort
-                ? "pointer-events-none opacity-50 transition-opacity"
+              isLoadingList
+                ? "pointer-events-none opacity-60 transition-opacity"
                 : "transition-opacity"
             }
           >
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {items.map((vehicle) => (
                 <VehicleAdminCard
                   key={vehicle.id}
@@ -1285,8 +1319,7 @@ export function VehiclesTable({
                   selectable={selectMode}
                   selected={selected.includes(vehicle.id)}
                   onToggleSelect={() => toggleSelected(vehicle.id)}
-                  onMarkSold={() => setSoldTarget(vehicle)}
-                  onMarkSoldSimple={() => setSimpleSoldTarget(vehicle)}
+                  onToggleFeatured={() => toggleFeatured(vehicle)}
                   onSavePrice={(raw) => saveQuickPrice(vehicle, raw)}
                   onMore={() => setActionsTarget(vehicle)}
                 />
@@ -1514,13 +1547,13 @@ export function VehiclesTable({
 
 function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/15 py-0.5 pl-2.5 pr-1 text-xs text-cream">
-      <span className="truncate">{label}</span>
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/15 pl-3 pr-0.5 text-xs text-cream">
+      <span className="truncate py-1">{label}</span>
       <button
         type="button"
         onClick={onClear}
         aria-label={`Remover filtro ${label}`}
-        className="-my-1 -mr-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-cream/80 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-brand"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full text-cream/80 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-brand"
       >
         ×
       </button>
@@ -1534,8 +1567,7 @@ function VehicleAdminCard({
   selectable,
   selected,
   onToggleSelect,
-  onMarkSold,
-  onMarkSoldSimple,
+  onToggleFeatured,
   onSavePrice,
   onMore,
 }: {
@@ -1544,8 +1576,7 @@ function VehicleAdminCard({
   selectable: boolean;
   selected: boolean;
   onToggleSelect: () => void;
-  onMarkSold: () => void;
-  onMarkSoldSimple: () => void;
+  onToggleFeatured: () => void;
   onSavePrice: (raw: string) => Promise<boolean>;
   onMore: () => void;
 }) {
@@ -1553,12 +1584,18 @@ function VehicleAdminCard({
   const title = `${vehicle.brand} ${vehicle.model}`;
   const missingPrice = !(vehicle.price > 0);
   const canEditPrice = vehicle.status !== "vendido";
+  const canToggleFeatured = vehicle.status === "disponivel" || vehicle.featured;
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceDraft, setPriceDraft] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
   const [savingPrice, setSavingPrice] = useState(false);
 
   function openPriceEditor() {
+    if (editingPrice) {
+      setEditingPrice(false);
+      setPriceError(null);
+      return;
+    }
     setPriceDraft(moneyInput(vehicle.price > 0 ? vehicle.price : null));
     setPriceError(null);
     setEditingPrice(true);
@@ -1580,22 +1617,43 @@ function VehicleAdminCard({
       setSavingPrice(false);
     }
   }
+
   const meta = adminCardMetaLine(vehicle);
-  const missing = publishMissingLine(vehicle);
-  const showSold = adminCardShowsSoldAction(vehicle.status);
+  const coverUrl = coverSrc(vehicle.photos);
+  const pendingBadges = vehiclePendingBadges({
+    status: vehicle.status,
+    price: vehicle.price,
+    photoCount: vehicle.photoCount,
+    hasCover: Boolean(coverUrl),
+    hasDescription: vehicle.hasDescription ?? true,
+  });
+
+  const isActive = vehicle.status !== "vendido";
+  const stockDays = isActive
+    ? calculateParkedDays(
+        resolveVehicleEnteredAt({
+          createdAt: vehicle.createdAt,
+          stockEnteredAt: vehicle.stockEnteredAt,
+        }),
+      )
+    : null;
+  const stockBand =
+    stockDays !== null ? classifyStockAgeBand(stockDays) : null;
 
   return (
     <li className="overflow-hidden border border-white/20 bg-ink/50">
       <div className="flex gap-3 p-3 lg:gap-4">
-        {selectable ? <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
-          <span className="sr-only">Selecionar {title}</span>
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onToggleSelect}
-            className="h-5 w-5 accent-brand"
-          />
-        </label> : null}
+        {selectable ? (
+          <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
+            <span className="sr-only">Selecionar {title}</span>
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={onToggleSelect}
+              className="h-5 w-5 accent-brand"
+            />
+          </label>
+        ) : null}
         <Link
           prefetch={false}
           href={`/admin/veiculos/${vehicle.id}`}
@@ -1603,18 +1661,18 @@ function VehicleAdminCard({
         >
           <span className="relative h-[72px] w-[96px] shrink-0 overflow-hidden bg-asphalt lg:h-[96px] lg:w-[136px]">
             <VehicleImage
-              src={coverSrc(vehicle.photos)}
+              src={coverUrl}
               alt=""
               fill
               sizes="(min-width: 1024px) 136px, 96px"
               className="object-cover"
             />
             {vehicle.featured ? (
-              <span className="absolute left-1 top-1 bg-brand px-1.5 py-0.5 font-display text-xs font-bold uppercase text-white">
+              <span className="absolute left-1 top-1 bg-brand px-1.5 py-0.5 font-display text-[11px] font-bold uppercase text-white">
                 Destaque
               </span>
             ) : null}
-            <span className="absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 text-xs tabular-nums text-cream/90">
+            <span className="absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 text-[11px] tabular-nums text-cream/90">
               {vehicle.photoCount > 0
                 ? `${vehicle.photoCount} foto${vehicle.photoCount === 1 ? "" : "s"}`
                 : "Sem foto"}
@@ -1623,37 +1681,59 @@ function VehicleAdminCard({
 
           <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <span className="min-w-0">
-              <span className="block font-display text-base font-semibold leading-tight text-cream">
+              <span className="block font-display text-base font-semibold leading-tight text-cream break-words">
                 {title}
               </span>
               <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="inline-flex items-center gap-1.5 text-xs text-cream/80">
+                <span className="inline-flex items-center gap-1.5 text-xs text-cream/85">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[vehicle.status] ?? "bg-white/35"}`}
                     aria-hidden="true"
                   />
                   {STATUS_LABEL[vehicle.status] ?? vehicle.status}
                 </span>
+                {stockDays !== null && stockBand ? (
+                  <span
+                    className={`inline-flex items-center px-1.5 py-0.5 font-display text-[11px] font-semibold tabular-nums ${stockAgeBandBadgeClass(stockBand)}`}
+                  >
+                    {stockDays} {stockDays === 1 ? "dia" : "dias"}
+                  </span>
+                ) : null}
                 {vehicle.consigned ? <ConsignedChip /> : null}
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-cream/80">
+              <span className="mt-1 block text-xs leading-relaxed text-cream/75">
                 {meta}
               </span>
-              {missing ? <span className="mt-1 block text-xs text-brand-orange">{missing}</span> : null}
+              {pendingBadges.length > 0 ? (
+                <span className="mt-1.5 flex flex-wrap gap-1.5">
+                  {pendingBadges.map((badge) => (
+                    <span
+                      key={badge.id}
+                      className={`inline-flex items-center px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wide ${
+                        badge.tone === "brand"
+                          ? "bg-brand/20 text-red-200 ring-1 ring-inset ring-brand/45"
+                          : "bg-white/10 text-cream/85 ring-1 ring-inset ring-white/20"
+                      }`}
+                    >
+                      {badge.label}
+                    </span>
+                  ))}
+                </span>
+              ) : null}
             </span>
             <span className="shrink-0 sm:text-right">
               {missingPrice ? (
-                <span className="text-sm font-medium text-cream/80">
+                <span className="text-sm font-semibold text-red-300">
                   Sem preço
                 </span>
               ) : (
-                <span className="block font-display text-lg font-bold leading-none text-cream sm:text-xl">
+                <span className="block font-display text-lg font-bold leading-none tabular-nums text-cream sm:text-xl">
                   {formatCurrencyBRL(vehicle.price)}
                 </span>
               )}
               {finance ? (
                 <span
-                  className={`mt-1 block text-xs ${
+                  className={`mt-1 block text-xs tabular-nums ${
                     finance.value >= 0 ? "text-emerald-300" : "text-red-400"
                   }`}
                 >
@@ -1664,18 +1744,6 @@ function VehicleAdminCard({
           </span>
         </Link>
       </div>
-      {canEditPrice && !editingPrice ? (
-        <div className="px-3 pb-3">
-          <button
-            type="button"
-            onClick={openPriceEditor}
-            disabled={busy}
-            className="inline-flex min-h-[44px] items-center px-2 text-base font-medium text-cream underline underline-offset-4 outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-          >
-            Alterar preço
-          </button>
-        </div>
-      ) : null}
 
       <div className="flex flex-wrap items-center gap-1 border-t border-white/15 px-1.5 py-1">
         <Link
@@ -1686,27 +1754,36 @@ function VehicleAdminCard({
           <IconPencil className="h-4 w-4" />
           Editar
         </Link>
-        {showSold ? (
-          <>
-            <button
-              type="button"
-              onClick={onMarkSoldSimple}
-              disabled={busy}
-              className={MARK_SOLD_SIMPLE_BTN}
-              aria-label={SIMPLE_SOLD_LABEL}
-            >
-              {SIMPLE_SOLD_LABEL}
-            </button>
-            <button
-              type="button"
-              onClick={onMarkSold}
-              disabled={busy}
-              className={MARK_SOLD_BTN}
-              aria-label="Registrar venda completa"
-            >
-              Registrar venda completa
-            </button>
-          </>
+        {canEditPrice ? (
+          <button
+            type="button"
+            onClick={openPriceEditor}
+            disabled={busy}
+            aria-expanded={editingPrice}
+            className="inline-flex h-11 items-center gap-1.5 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+          >
+            <IconCash className="h-4 w-4" />
+            Alterar preço
+          </button>
+        ) : null}
+        {canToggleFeatured ? (
+          <button
+            type="button"
+            onClick={onToggleFeatured}
+            disabled={busy || savingPrice}
+            aria-pressed={vehicle.featured}
+            aria-label={
+              vehicle.featured
+                ? `Tirar destaque: ${title}`
+                : `Destacar: ${title}`
+            }
+            className={`inline-flex h-11 items-center gap-1.5 px-3 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 ${
+              vehicle.featured ? "text-red-400" : "text-cream/85 hover:text-cream"
+            }`}
+          >
+            <IconStar className="h-4 w-4" filled={vehicle.featured} />
+            {vehicle.featured ? "Destacado" : "Destacar"}
+          </button>
         ) : null}
         <button
           type="button"

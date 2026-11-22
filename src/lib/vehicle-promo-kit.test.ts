@@ -89,7 +89,6 @@ function makeMockVehicleRow(overrides: Partial<VehicleRow> = {}): VehicleRow {
     updatedAt: new Date("2026-10-02T12:00:00Z"),
     transmission: mockVehicle.transmission ?? "Automático",
     color: mockVehicle.color ?? null,
-    plate: "RBA1E23",
     photos: [
       {
         url: "https://pub-revisao123.r2.dev/corolla-capa.webp",

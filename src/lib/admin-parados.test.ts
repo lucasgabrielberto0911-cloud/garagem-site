@@ -8,13 +8,16 @@ import {
   PARKED_MIN_DAYS,
   PARKED_VEHICLE_SELECT,
   SITE_VISIT_ACTION,
+  SITE_WHATSAPP_ACTION,
   calculateParkedDays,
   filterParkedVehicles,
+  formatFipeComparison,
   parkedCutoffDate,
   resolveVehicleEnteredAt,
   type ParkedVehicleCandidate,
 } from "./admin-parados";
 import { loadParkedVehicles } from "./admin-parados-store";
+import { groupParkedByAgeBand } from "./admin-stock-age";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = new Date("2026-11-17T15:00:00.000Z");
@@ -61,6 +64,29 @@ test("parkedCutoffDate casa exatamente com o filtro estrito de mais de 30 dias",
   assert.equal(calculateParkedDays(exact31Days, NOW), 31);
 });
 
+test("formatFipeComparison só compara quando há FIPE salva e preço válido", () => {
+  assert.equal(formatFipeComparison(100000, null), null);
+  assert.equal(formatFipeComparison(100000, 0), null);
+  assert.equal(formatFipeComparison(0, 100000), null);
+
+  const above = formatFipeComparison(110000, 100000);
+  assert.ok(above);
+  assert.equal(above.diffPercent, 10);
+  assert.equal(above.deltaLabel, "+10% da FIPE");
+  assert.equal(above.tone, "brand");
+
+  const below = formatFipeComparison(95000, 100000);
+  assert.ok(below);
+  assert.equal(below.diffPercent, -5);
+  assert.equal(below.deltaLabel, "-5% da FIPE");
+  assert.equal(below.tone, "success");
+
+  const equal = formatFipeComparison(100000, 100000);
+  assert.ok(equal);
+  assert.equal(equal.diffPercent, 0);
+  assert.equal(equal.deltaLabel, "na FIPE");
+});
+
 test("filterParkedVehicles mantém apenas disponíveis (> 30 dias, não vendidos/reservados/históricos) e ordena desc", () => {
   const candidates: ParkedVehicleCandidate[] = [
     {
@@ -70,6 +96,7 @@ test("filterParkedVehicles mantém apenas disponíveis (> 30 dias, não vendidos
       version: "XEi 2.0",
       yearModel: 2021,
       price: 119900,
+      fipePrice: 115000,
       status: "disponivel",
       historical: false,
       createdAt: daysAgo(42),
@@ -81,6 +108,7 @@ test("filterParkedVehicles mantém apenas disponíveis (> 30 dias, não vendidos
       version: "EXL 2.0",
       yearModel: 2020,
       price: 114900,
+      fipePrice: null,
       status: "disponivel",
       historical: false,
       createdAt: daysAgo(68),
@@ -94,7 +122,7 @@ test("filterParkedVehicles mantém apenas disponíveis (> 30 dias, não vendidos
       price: 69900,
       status: "disponivel",
       historical: false,
-      createdAt: daysAgo(30, 23 * 3600_000), // 30 dias e 23h -> ainda 30 dias completos, não entra
+      createdAt: daysAgo(30, 23 * 3600_000),
     },
     {
       id: "cm0000000000000000000004",
@@ -105,7 +133,7 @@ test("filterParkedVehicles mantém apenas disponíveis (> 30 dias, não vendidos
       price: 98900,
       status: "disponivel",
       historical: false,
-      createdAt: daysAgo(31), // 31 dias -> entra
+      createdAt: daysAgo(31),
     },
     {
       id: "cm0000000000000000000005",
@@ -149,7 +177,7 @@ test("filterParkedVehicles mantém apenas disponíveis (> 30 dias, não vendidos
       price: 108900,
       status: "disponivel",
       historical: false,
-      createdAt: daysAgo(42, 6 * 3600_000), // Mesmo dia inteiro (42), mas 6h mais antigo que o Corolla
+      createdAt: daysAgo(42, 6 * 3600_000),
     },
   ];
 
@@ -157,36 +185,108 @@ test("filterParkedVehicles mantém apenas disponíveis (> 30 dias, não vendidos
     ["cm0000000000000000000002", 37],
     ["cm0000000000000000000008", 12],
   ]);
+  const whatsapp = new Map<string, number>([
+    ["cm0000000000000000000002", 4],
+  ]);
 
   const result = filterParkedVehicles(candidates, {
     now: NOW,
     viewsByVehicleId: views,
+    whatsappByVehicleId: whatsapp,
   });
 
   assert.deepEqual(
-    result.map((item) => [item.id, item.daysParked, item.views]),
+    result.map((item) => [
+      item.id,
+      item.daysParked,
+      item.views,
+      item.whatsappClicks,
+      item.fipePrice,
+    ]),
     [
-      ["cm0000000000000000000002", 68, 37],
-      ["cm0000000000000000000008", 42, 12],
-      ["cm0000000000000000000001", 42, 0],
-      ["cm0000000000000000000004", 31, 0],
+      ["cm0000000000000000000002", 68, 37, 4, null],
+      ["cm0000000000000000000008", 42, 12, 0, null],
+      ["cm0000000000000000000001", 42, 0, 0, 115000],
+      ["cm0000000000000000000004", 31, 0, 0, null],
     ],
   );
 });
 
-test("segurança e privacidade: select, itens e HTML nunca expõem placa, chassi ou RENAVAM, e a página exige sessão", () => {
+test("groupParkedByAgeBand agrupa em 60+, 46-60 e 31-45 com sugestões corretas", () => {
+  const items = filterParkedVehicles(
+    [
+      {
+        id: "v31",
+        brand: "VW",
+        model: "Polo",
+        yearModel: 2023,
+        price: 90000,
+        status: "disponivel",
+        createdAt: daysAgo(35),
+      },
+      {
+        id: "v50",
+        brand: "Honda",
+        model: "HR-V",
+        yearModel: 2021,
+        price: 120000,
+        status: "disponivel",
+        createdAt: daysAgo(50),
+      },
+      {
+        id: "v70",
+        brand: "Toyota",
+        model: "Corolla",
+        yearModel: 2020,
+        price: 115000,
+        status: "disponivel",
+        createdAt: daysAgo(70),
+      },
+    ],
+    { now: NOW },
+  );
+
+  const groups = groupParkedByAgeBand(items);
+  assert.deepEqual(
+    groups.map((g) => ({
+      id: g.id,
+      suggestion: g.suggestion,
+      ids: g.items.map((item) => item.id),
+    })),
+    [
+      {
+        id: "60+",
+        suggestion: "Decidir: vender no preço ou repassar",
+        ids: ["v70"],
+      },
+      {
+        id: "46-60",
+        suggestion: "Baixar preço e divulgar",
+        ids: ["v50"],
+      },
+      {
+        id: "31-45",
+        suggestion: "Rever preço e trocar capa",
+        ids: ["v31"],
+      },
+    ],
+  );
+});
+
+test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/RENAVAM, mostram faixas, FIPE só quando existe e métricas reais", () => {
   const selectKeys = Object.keys(PARKED_VEHICLE_SELECT);
   for (const forbidden of ["plate", "plateEnd", "chassis", "renavam"]) {
     assert.equal(selectKeys.includes(forbidden), false);
   }
 
-  const candidateWithSecrets = {
+  const candidateWithFipe = {
     id: "cm0000000000000000000099",
     brand: "Ford",
     model: "Ka",
     version: "SE 1.0",
     yearModel: 2020,
-    price: 49900,
+    price: 55000,
+    fipePrice: 50000,
     status: "disponivel",
     historical: false,
     createdAt: daysAgo(50),
@@ -195,12 +295,26 @@ test("segurança e privacidade: select, itens e HTML nunca expõem placa, chassi
     renavam: "00123456789",
   } as ParkedVehicleCandidate;
 
-  const items = filterParkedVehicles([candidateWithSecrets], {
+  const candidateWithoutFipe = {
+    id: "cm0000000000000000000100",
+    brand: "Toyota",
+    model: "Corolla",
+    version: "XEi",
+    yearModel: 2022,
+    price: 125000,
+    fipePrice: null,
+    status: "disponivel",
+    historical: false,
+    createdAt: daysAgo(72),
+  } as ParkedVehicleCandidate;
+
+  const items = filterParkedVehicles([candidateWithFipe, candidateWithoutFipe], {
     now: NOW,
     viewsByVehicleId: { cm0000000000000000000099: 19 },
+    whatsappByVehicleId: { cm0000000000000000000099: 3 },
   });
 
-  assert.equal(items.length, 1);
+  assert.equal(items.length, 2);
   const serialized = JSON.stringify(items);
   assert.equal(serialized.includes("ABC1D23"), false);
   assert.equal(serialized.includes("9BFZH55L0L8000000"), false);
@@ -209,28 +323,44 @@ test("segurança e privacidade: select, itens e HTML nunca expõem placa, chassi
   const html = renderToStaticMarkup(
     createElement(ParkedVehiclesList, { items }),
   );
+  // Faixas e sugestões na ordem mais urgente -> menos urgente
+  assert.ok(html.indexOf("60+ dias") < html.indexOf("46–60 dias"));
+  assert.match(html, /Decidir: vender no preço ou repassar/);
+  assert.match(html, /Baixar preço e divulgar/);
   assert.match(html, /Ford Ka SE 1\.0 2020/);
   assert.match(html, /50 dias/);
-  assert.match(html, /49\.900/);
+  assert.match(html, /55\.000/);
+  assert.match(html, /\+10% da FIPE/);
   assert.match(html, /19/);
+  assert.match(html, /Cliques WhatsApp/);
+  assert.match(html, /Editar preço/);
+  assert.match(html, /Abrir ficha do carro/);
+  assert.match(html, /Ver no site/);
   assert.equal(html.includes("ABC1D23"), false);
   assert.equal(html.includes("9BFZH55L0L8000000"), false);
   assert.equal(html.includes("00123456789"), false);
-  assert.equal(/yellow|dourad/i.test(html), false);
+  assert.equal(/yellow|dourad|parcela/i.test(html), false);
+
+  // Sem FIPE não inventa FIPE
+  const noFipeHtml = renderToStaticMarkup(
+    createElement(ParkedVehiclesList, { items: [items[0]] }),
+  );
+  assert.equal(/FIPE/.test(noFipeHtml), false);
 
   const emptyHtml = renderToStaticMarkup(
     createElement(ParkedVehiclesList, { items: [] }),
   );
   assert.match(emptyHtml, /Nenhum carro parado há mais de 30 dias/);
+  assert.match(emptyHtml, /estoque está girando bem/);
 
   const pageSource = readFileSync("src/app/admin/parados/page.tsx", "utf8");
   assert.match(pageSource, /getSession\(\)/);
   assert.match(pageSource, /redirect\("\/admin\/login"\)/);
 });
 
-test("loadParkedVehicles agrega site:visita de AdminAudit apenas para carros parados e tolera tabela opcional ausente", async () => {
+test("loadParkedVehicles agrega site:visita e site:whatsapp de AdminAudit, calcula faixas e tolera tabela opcional ausente", async () => {
   let queriedAuditIds: string[] = [];
-  let queriedAction = "";
+  let queriedActions: string[] = [];
 
   const report = await loadParkedVehicles(
     {
@@ -243,6 +373,7 @@ test("loadParkedVehicles agrega site:visita de AdminAudit apenas para carros par
             version: "EXL",
             yearModel: 2021,
             price: 124900,
+            fipePrice: 120000,
             status: "disponivel",
             historical: false,
             createdAt: daysAgo(48),
@@ -254,6 +385,7 @@ test("loadParkedVehicles agrega site:visita de AdminAudit apenas para carros par
             version: "Audace",
             yearModel: 2023,
             price: 99900,
+            fipePrice: null,
             status: "disponivel",
             historical: false,
             createdAt: daysAgo(12),
@@ -268,11 +400,17 @@ test("loadParkedVehicles agrega site:visita de AdminAudit apenas para carros par
       adminAudit: {
         groupBy: async (args) => {
           queriedAuditIds = args.where.entityId.in;
-          queriedAction = args.where.action;
+          queriedActions = args.where.action.in;
           return [
             {
               entityId: "cm0000000000000000000010",
+              action: SITE_VISIT_ACTION,
               _count: { _all: 24 },
+            },
+            {
+              entityId: "cm0000000000000000000010",
+              action: SITE_WHATSAPP_ACTION,
+              _count: { _all: 5 },
             },
           ];
         },
@@ -281,11 +419,19 @@ test("loadParkedVehicles agrega site:visita de AdminAudit apenas para carros par
     NOW,
   );
 
-  assert.equal(queriedAction, SITE_VISIT_ACTION);
+  assert.deepEqual(queriedActions, [SITE_VISIT_ACTION, SITE_WHATSAPP_ACTION]);
   assert.deepEqual(queriedAuditIds, ["cm0000000000000000000010"]);
   assert.equal(report.viewsAvailable, true);
   assert.equal(report.totalValue, 124900);
+  assert.deepEqual(report.bandCounts, {
+    "0-30": 1,
+    "31-45": 0,
+    "46-60": 1,
+    "60+": 0,
+  });
   assert.equal(report.items.length, 1);
   assert.equal(report.items[0].daysParked, 48);
   assert.equal(report.items[0].views, 24);
+  assert.equal(report.items[0].whatsappClicks, 5);
+  assert.equal(report.items[0].fipePrice, 120000);
 });

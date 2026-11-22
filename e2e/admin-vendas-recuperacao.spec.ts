@@ -50,9 +50,14 @@ test.beforeEach(async ({ context }) => {
 test.skip(!localDatabase, "Requer banco local dedicado e E2E_TEST=1.");
 test.afterAll(async () => { await db.$disconnect(); });
 
+async function openVehicleMenu(page: Page, vehicle: { model: string }) {
+  await page.getByRole("button", { name: new RegExp(`^Mais ações:.*${vehicle.model}`) }).click();
+}
+
 async function openSimpleSale(page: Page, vehicle: { model: string }) {
   await page.goto(`/admin/veiculos?q=${encodeURIComponent(vehicle.model)}`);
-  await page.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
+  await openVehicleMenu(page, vehicle);
+  await page.getByRole("button", { name: /^Marcar como vendido/ }).click();
   return page.getByRole("dialog", { name: "Marcar como vendido" });
 }
 
@@ -116,7 +121,8 @@ test("falha simples fecha confirmação, mantém veículo e permite tentar novam
   expect(attempts).toBe(1);
   expect((await db.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("disponivel");
   expect(await db.sale.count({ where: { vehicleId: vehicle.id } })).toBe(0);
-  await page.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
+  await openVehicleMenu(page, vehicle);
+  await page.getByRole("button", { name: /^Marcar como vendido/ }).click();
   await dialog.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
   await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("vendido");
   await expect(dialog).toBeHidden();
@@ -177,7 +183,8 @@ test("reserva com sinal na venda rápida manda para o assistente", async ({ page
 test("fluxo completo valida cada etapa, preserva campos ao voltar, sem abrir venda simples, e grava contrato", async ({ page, vehicle }) => {
   test.setTimeout(90_000);
   await page.goto(`/admin/veiculos?q=${encodeURIComponent(vehicle.model)}`);
-  await page.getByRole("button", { name: "Registrar venda completa", exact: true }).click();
+  await openVehicleMenu(page, vehicle);
+  await page.getByRole("button", { name: /^Registrar venda completa/ }).click();
   await page.getByRole("dialog", { name: "Registrar venda completa" }).getByRole("button", { name: "Registrar venda completa", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicle.id}`));
   await expect(page.getByRole("dialog", { name: "Marcar como vendido" })).toBeHidden();

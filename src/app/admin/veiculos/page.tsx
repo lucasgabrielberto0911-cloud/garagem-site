@@ -9,6 +9,7 @@ import {
   getAdminVehiclesPage,
   type VehiclesTab,
 } from "@/lib/admin-vehicles";
+import { MAX_FEATURED_PINS } from "@/lib/featured";
 import { STALE_DAYS } from "@/lib/stock-quality";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
@@ -77,7 +78,7 @@ export default async function VehiclesPage({
           tab === "vendidos"
             ? `${list.total} vendido(s) na visualização atual`
             : tab === "destaques"
-              ? `${list.total} destaque(s) na home (máx. 8)`
+              ? `${list.total} destaque(s) na home (máx. ${MAX_FEATURED_PINS})`
               : stockSummary
         }
         actions={
@@ -103,6 +104,8 @@ export default async function VehiclesPage({
         featuredCount={stats.featured}
         availableCount={stats.available}
         reservedCount={stats.reserved}
+        withPendingCount={stats.withPending}
+        parkedCount={stats.parked}
         quality={{
           withoutPhotos: stats.withoutPhotos,
           stale: stats.stale,

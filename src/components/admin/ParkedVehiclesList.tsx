@@ -1,195 +1,327 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
+import { setVehiclePrice } from "@/app/admin/veiculos/actions";
+import {
+  IconCash,
+  IconClock,
+  IconExternal,
+  IconPencil,
+} from "@/components/admin/icons";
+import { Badge, EmptyState, btn, inputClass } from "@/components/admin/ui";
 import { adminDate } from "@/lib/admin-date";
-import { PARKED_MIN_DAYS, type ParkedVehicleItem } from "@/lib/admin-parados";
+import { moneyInput } from "@/lib/admin-money";
+import {
+  PARKED_MIN_DAYS,
+  formatFipeComparison,
+  type ParkedVehicleItem,
+} from "@/lib/admin-parados";
+import { quickPriceError } from "@/lib/admin-quick-price";
+import {
+  groupParkedByAgeBand,
+  stockAgeBandBadgeClass,
+} from "@/lib/admin-stock-age";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
-import { IconClock, IconExternal, IconPencil } from "@/components/admin/icons";
-import { Badge, EmptyState, btn, iconTap } from "@/components/admin/ui";
 
 export function ParkedVehiclesList({
   items,
   viewsAvailable = true,
 }: {
-  items: readonly ParkedVehicleItem[];
+  items: ParkedVehicleItem[];
   viewsAvailable?: boolean;
 }) {
+  const [priceById, setPriceById] = useState<Record<string, number>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [priceDraft, setPriceDraft] = useState("");
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
   if (items.length === 0) {
     return (
       <EmptyState
-        icon={<IconClock className="h-8 w-8" />}
+        icon={<IconClock className="h-9 w-9" />}
         title={`Nenhum carro parado há mais de ${PARKED_MIN_DAYS} dias`}
-        description={`Todos os veículos disponíveis entraram no estoque nos últimos ${PARKED_MIN_DAYS} dias.`}
+        description="O estoque está girando bem — todos os veículos disponíveis entraram nos últimos 30 dias."
         action={
           <Link href="/admin/veiculos?status=disponivel" className={btn.outline}>
-            Ver veículos disponíveis
+            Ver estoque disponível
           </Link>
         }
       />
     );
   }
 
+  const groups = groupParkedByAgeBand(items).filter(
+    (group) => group.items.length > 0,
+  );
+
+  function openPriceEditor(item: ParkedVehicleItem) {
+    const currentPrice = priceById[item.id] ?? item.price;
+    if (editingId === item.id) {
+      setEditingId(null);
+      setPriceError(null);
+      return;
+    }
+    setEditingId(item.id);
+    setPriceDraft(currentPrice > 0 ? moneyInput(currentPrice) : "");
+    setPriceError(null);
+  }
+
+  async function savePrice(item: ParkedVehicleItem) {
+    const validation = quickPriceError({
+      raw: priceDraft,
+      status: "disponivel",
+    });
+    if (validation) {
+      setPriceError(validation);
+      return;
+    }
+    setSavingId(item.id);
+    setPriceError(null);
+    try {
+      const result = await setVehiclePrice(item.id, priceDraft);
+      if (result.ok) {
+        setPriceById((current) => ({ ...current, [item.id]: result.price }));
+        setEditingId(null);
+        toast.success(result.message);
+      } else {
+        setPriceError(result.message);
+      }
+    } catch {
+      setPriceError("Não foi possível salvar o preço agora. Tente novamente.");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
-    <div className="space-y-3">
-      <ul
-        className="divide-y divide-white/15 border border-white/15 bg-ink/50 lg:hidden"
-        aria-label="Carros parados"
-      >
-        {items.map((item) => {
-          const enteredLabel = adminDate(new Date(item.enteredAt), {
-            dateStyle: "short",
-          });
-          const priceLabel =
-            item.price > 0 ? formatCurrencyBRL(item.price) : "Sem preço";
-          const viewsLabel = viewsAvailable ? formatNumberBR(item.views) : "—";
-
-          return (
-            <li key={item.id} className="p-4">
-              <div className="flex items-start justify-between gap-2">
-                <Link
-                  href={`/admin/veiculos/${item.id}`}
-                  className="inline-flex min-h-[44px] min-w-0 flex-1 items-center font-display text-base font-semibold text-cream transition touch-manipulation hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+    <div className="space-y-6">
+      {groups.map((group) => {
+        const isUrgent = group.id === "60+";
+        return (
+          <section
+            key={group.id}
+            id={`faixa-${group.id}`}
+            aria-labelledby={`faixa-titulo-${group.id}`}
+            className="space-y-3 scroll-mt-4"
+          >
+            <div
+              className={`flex flex-col gap-1.5 border-l-4 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
+                isUrgent
+                  ? "border-brand bg-brand/10"
+                  : group.id === "46-60"
+                    ? "border-brand/60 bg-ink/70"
+                    : "border-white/30 bg-ink/50"
+              }`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <h2
+                  id={`faixa-titulo-${group.id}`}
+                  className="font-display text-base font-bold uppercase tracking-wide text-cream"
                 >
-                  <span className="break-words">{item.name}</span>
-                </Link>
-                <Link
-                  href={item.publicPath}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Ver ${item.name} no site`}
-                  className={iconTap}
-                >
-                  <IconExternal className="h-4 w-4" />
-                </Link>
+                  {group.label}
+                </h2>
+                <Badge tone={isUrgent ? "brand" : "neutral"}>
+                  {group.items.length}{" "}
+                  {group.items.length === 1 ? "carro" : "carros"}
+                </Badge>
               </div>
+              <p className="text-sm font-medium text-cream/90">
+                Ação sugerida: {group.suggestion}
+              </p>
+            </div>
 
-              <dl className="mt-2 grid grid-cols-3 gap-2 border-t border-white/10 pt-3">
-                <div className="min-w-0">
-                  <dt className="text-xs text-cream/75">Dias parado</dt>
-                  <dd className="mt-1">
-                    <Badge
-                      tone={item.daysParked >= 60 ? "brand" : "neutral"}
-                      className="tabular-nums"
-                    >
-                      {item.daysParked} dias
-                    </Badge>
-                    <span className="mt-1 block text-[11px] tabular-nums text-cream/70">
-                      Desde {enteredLabel}
-                    </span>
-                  </dd>
-                </div>
+            <ul className="space-y-2.5">
+              {group.items.map((item) => {
+                const currentPrice = priceById[item.id] ?? item.price;
+                const fipe = formatFipeComparison(currentPrice, item.fipePrice);
+                const enteredDate = new Date(item.enteredAt);
+                const enteredLabel = Number.isNaN(enteredDate.getTime())
+                  ? "—"
+                  : adminDate(enteredDate);
+                const visitsLabel = viewsAvailable
+                  ? formatNumberBR(item.views)
+                  : "—";
+                const whatsappLabel = viewsAvailable
+                  ? formatNumberBR(item.whatsappClicks)
+                  : "—";
+                const editHref = `/admin/veiculos/${encodeURIComponent(item.id)}`;
+                const isEditing = editingId === item.id;
+                const isSaving = savingId === item.id;
 
-                <div className="min-w-0">
-                  <dt className="text-xs text-cream/75">Preço</dt>
-                  <dd className="mt-1 break-words font-display text-sm font-semibold tabular-nums text-cream">
-                    {priceLabel}
-                  </dd>
-                </div>
+                return (
+                  <li
+                    key={item.id}
+                    className={`border bg-ink/50 transition ${
+                      isUrgent ? "border-brand/35" : "border-white/15"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-3 p-3.5 sm:p-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 font-display text-xs font-semibold tabular-nums ${stockAgeBandBadgeClass(group.id)}`}
+                          >
+                            {item.daysParked} dias
+                          </span>
+                          <span className="text-xs text-cream/75">
+                            Desde {enteredLabel}
+                          </span>
+                        </div>
 
-                <div className="min-w-0">
-                  <dt className="text-xs text-cream/75">Visualizações</dt>
-                  <dd className="mt-1 font-display text-sm font-semibold tabular-nums text-cream">
-                    {viewsLabel}
-                  </dd>
-                </div>
-              </dl>
-            </li>
-          );
-        })}
-      </ul>
+                        <p className="font-display text-base font-semibold leading-snug text-cream break-words">
+                          {item.name}
+                        </p>
 
-      <div className="hidden overflow-x-auto border border-white/15 bg-ink/50 lg:block">
-        <table className="w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-white/15 font-display text-xs font-semibold uppercase tracking-wider text-cream/80">
-              <th scope="col" className="px-5 py-3.5">
-                Veículo
-              </th>
-              <th scope="col" className="px-5 py-3.5">
-                Dias parado
-              </th>
-              <th scope="col" className="px-5 py-3.5 text-right">
-                Preço
-              </th>
-              <th scope="col" className="px-5 py-3.5 text-right">
-                Visualizações
-              </th>
-              <th scope="col" className="px-5 py-3.5 text-right">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/15">
-            {items.map((item) => {
-              const enteredLabel = adminDate(new Date(item.enteredAt), {
-                dateStyle: "short",
-              });
-              const priceLabel =
-                item.price > 0 ? formatCurrencyBRL(item.price) : "Sem preço";
-              const viewsLabel = viewsAvailable
-                ? formatNumberBR(item.views)
-                : "—";
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                          <span className="font-display text-lg font-bold tabular-nums text-cream">
+                            {currentPrice > 0
+                              ? formatCurrencyBRL(currentPrice)
+                              : "Sem preço"}
+                          </span>
+                          {fipe ? (
+                            <span
+                              className={`text-xs font-medium tabular-nums ${
+                                fipe.tone === "brand"
+                                  ? "text-red-300"
+                                  : fipe.tone === "success"
+                                    ? "text-emerald-300"
+                                    : "text-cream/80"
+                              }`}
+                            >
+                              FIPE {fipe.fipeFormatted} ({fipe.deltaLabel})
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
 
-              return (
-                <tr
-                  key={item.id}
-                  className="transition hover:bg-white/[0.03]"
-                >
-                  <td className="px-5 py-3.5 font-display font-semibold text-cream">
-                    <Link
-                      href={`/admin/veiculos/${item.id}`}
-                      className="inline-flex min-h-[44px] items-center hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                    >
-                      {item.name}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        tone={item.daysParked >= 60 ? "brand" : "neutral"}
-                        className="tabular-nums"
-                      >
-                        {item.daysParked} dias
-                      </Badge>
-                      <span className="text-xs tabular-nums text-cream/75">
-                        Desde {enteredLabel}
-                      </span>
+                      <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-3 sm:flex sm:items-center sm:gap-4 lg:border-t-0 lg:pt-0">
+                        <div className="border border-white/10 bg-asphalt/50 px-3 py-2 sm:min-w-[104px]">
+                          <p className="text-[11px] uppercase tracking-wider text-cream/70">
+                            Visitas no site
+                          </p>
+                          <p className="mt-0.5 font-display text-base font-bold tabular-nums text-cream">
+                            {visitsLabel}
+                          </p>
+                        </div>
+                        <div className="border border-white/10 bg-asphalt/50 px-3 py-2 sm:min-w-[116px]">
+                          <p className="text-[11px] uppercase tracking-wider text-cream/70">
+                            Cliques WhatsApp
+                          </p>
+                          <p className="mt-0.5 font-display text-base font-bold tabular-nums text-cream">
+                            {whatsappLabel}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </td>
-                  <td className="px-5 py-3.5 text-right font-display font-semibold tabular-nums text-cream">
-                    {priceLabel}
-                  </td>
-                  <td className="px-5 py-3.5 text-right font-display font-semibold tabular-nums text-cream">
-                    {viewsLabel}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center justify-end gap-1">
+
+                    <div className="flex flex-wrap items-center gap-2 border-t border-white/10 bg-asphalt/30 px-3.5 py-2.5 sm:px-4">
+                      <button
+                        type="button"
+                        onClick={() => openPriceEditor(item)}
+                        aria-expanded={isEditing}
+                        disabled={isSaving}
+                        className="inline-flex min-h-[44px] items-center justify-center gap-1.5 border border-white/20 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+                      >
+                        <IconCash className="h-4 w-4" />
+                        Editar preço
+                      </button>
+
                       <Link
-                        href={`/admin/veiculos/${item.id}`}
-                        aria-label={`Editar ${item.name}`}
-                        className={iconTap}
+                        href={editHref}
+                        className="inline-flex min-h-[44px] items-center justify-center gap-1.5 border border-white/20 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                       >
                         <IconPencil className="h-4 w-4" />
+                        Abrir ficha do carro
                       </Link>
+
                       <Link
                         href={item.publicPath}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label={`Ver ${item.name} no site`}
-                        className={iconTap}
+                        className="inline-flex min-h-[44px] items-center justify-center gap-1.5 border border-white/15 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream/85 transition touch-manipulation hover:border-white/35 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                       >
                         <IconExternal className="h-4 w-4" />
+                        Ver no site
                       </Link>
                     </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+
+                    {isEditing ? (
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void savePrice(item);
+                        }}
+                        className="border-t border-white/15 bg-asphalt/60 p-3.5 sm:px-4"
+                      >
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                          <div className="min-w-0 flex-1">
+                            <label
+                              htmlFor={`parado-preco-${item.id}`}
+                              className="block text-xs font-semibold text-cream/85"
+                            >
+                              Preço à vista (R$)
+                            </label>
+                            <input
+                              id={`parado-preco-${item.id}`}
+                              type="text"
+                              inputMode="decimal"
+                              autoFocus
+                              value={priceDraft}
+                              onChange={(event) => {
+                                setPriceDraft(event.target.value);
+                                if (priceError) setPriceError(null);
+                              }}
+                              placeholder="Ex.: 45.900,00"
+                              aria-invalid={Boolean(priceError)}
+                              className={`mt-1 ${inputClass}`}
+                            />
+                            {priceError ? (
+                              <p
+                                role="alert"
+                                className="mt-1.5 text-xs text-red-300"
+                              >
+                                {priceError}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="submit"
+                              disabled={isSaving}
+                              className={btn.primary}
+                            >
+                              {isSaving ? "Salvando…" : "Salvar preço"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isSaving}
+                              onClick={() => {
+                                setEditingId(null);
+                                setPriceError(null);
+                              }}
+                              className={btn.outline}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
 
       <p className="text-xs leading-relaxed text-cream/75">
-        Ordenado por dias em estoque (maior para menor). Visualizações somam os
-        acessos à ficha no site registrados com consentimento de medição.
+        Agrupado por faixa de dias em estoque (do mais urgente ao menos urgente).
+        Visitas e cliques no WhatsApp consideram acessos registrados no site com
+        consentimento de medição.
       </p>
     </div>
   );

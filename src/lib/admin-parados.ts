@@ -1,3 +1,4 @@
+import { formatCurrencyBRL } from "@/lib/format";
 import { buildVehicleFullLabel } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -6,8 +7,9 @@ const DAY_MS = 1000 * 60 * 60 * 24;
 /** Limiar exclusivo: entram veículos disponíveis há mais de 30 dias (> 30). */
 export const PARKED_MIN_DAYS = 30;
 
-/** Ação já gravada por /api/funil em AdminAudit nas visitas às fichas do site. */
+/** Ações já gravadas por /api/funil em AdminAudit nas fichas do site. */
 export const SITE_VISIT_ACTION = "site:visita" as const;
+export const SITE_WHATSAPP_ACTION = "site:whatsapp" as const;
 
 /**
  * Campos lidos do veículo para a lista de carros parados.
@@ -20,6 +22,7 @@ export const PARKED_VEHICLE_SELECT = {
   version: true,
   yearModel: true,
   price: true,
+  fipePrice: true,
   status: true,
   historical: true,
   createdAt: true,
@@ -32,6 +35,7 @@ export type ParkedVehicleCandidate = {
   version?: string | null;
   yearModel: number;
   price: number;
+  fipePrice?: number | null;
   status: string;
   historical?: boolean | null;
   createdAt: Date | string;
@@ -46,11 +50,65 @@ export type ParkedVehicleItem = {
   version: string | null;
   yearModel: number;
   price: number;
+  fipePrice: number | null;
   enteredAt: string;
   daysParked: number;
   views: number;
+  whatsappClicks: number;
   publicPath: string;
 };
+
+export type FipeComparison = {
+  fipeFormatted: string;
+  diffPercent: number;
+  deltaLabel: string;
+  tone: "brand" | "neutral" | "success";
+};
+
+/**
+ * Compara o preço anunciado com a FIPE salva no carro.
+ * Retorna null quando não há FIPE salva (ou preço <= 0) — nunca inventa valor.
+ */
+export function formatFipeComparison(
+  price: number,
+  fipePrice: number | null | undefined,
+): FipeComparison | null {
+  if (
+    !Number.isFinite(price) ||
+    price <= 0 ||
+    fipePrice == null ||
+    !Number.isFinite(fipePrice) ||
+    fipePrice <= 0
+  ) {
+    return null;
+  }
+
+  const diffPercent = Math.round(((price - fipePrice) / fipePrice) * 100);
+  const fipeFormatted = formatCurrencyBRL(fipePrice);
+
+  if (diffPercent === 0) {
+    return {
+      fipeFormatted,
+      diffPercent: 0,
+      deltaLabel: "na FIPE",
+      tone: "neutral",
+    };
+  }
+  if (diffPercent > 0) {
+    return {
+      fipeFormatted,
+      diffPercent,
+      deltaLabel: `+${diffPercent}% da FIPE`,
+      tone: diffPercent >= 8 ? "brand" : "neutral",
+    };
+  }
+  return {
+    fipeFormatted,
+    diffPercent,
+    deltaLabel: `${diffPercent}% da FIPE`,
+    tone: "success",
+  };
+}
 
 export function resolveVehicleEnteredAt(input: {
   createdAt: Date | string;
@@ -84,23 +142,23 @@ export function parkedCutoffDate(
   return new Date(now.getTime() - (minDays + 1) * DAY_MS);
 }
 
-function isViewCountMap(
+function isCountMap(
   value: ReadonlyMap<string, number> | Record<string, number>,
 ): value is ReadonlyMap<string, number> {
   return typeof (value as ReadonlyMap<string, number>).get === "function";
 }
 
-function readViewCount(
-  viewsByVehicleId:
+function readCount(
+  countsByVehicleId:
     | ReadonlyMap<string, number>
     | Record<string, number>
     | undefined,
   vehicleId: string,
 ): number {
-  if (!viewsByVehicleId) return 0;
-  const raw = isViewCountMap(viewsByVehicleId)
-    ? viewsByVehicleId.get(vehicleId)
-    : viewsByVehicleId[vehicleId];
+  if (!countsByVehicleId) return 0;
+  const raw = isCountMap(countsByVehicleId)
+    ? countsByVehicleId.get(vehicleId)
+    : countsByVehicleId[vehicleId];
   if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) return 0;
   return Math.floor(raw);
 }
@@ -115,6 +173,7 @@ export function filterParkedVehicles(
     now?: Date;
     minDays?: number;
     viewsByVehicleId?: ReadonlyMap<string, number> | Record<string, number>;
+    whatsappByVehicleId?: ReadonlyMap<string, number> | Record<string, number>;
   } = {},
 ): ParkedVehicleItem[] {
   const now = options.now ?? new Date();
@@ -132,6 +191,13 @@ export function filterParkedVehicles(
     const daysParked = calculateParkedDays(enteredDate, now);
     if (daysParked <= minDays) continue;
 
+    const fipePrice =
+      typeof vehicle.fipePrice === "number" &&
+      Number.isFinite(vehicle.fipePrice) &&
+      vehicle.fipePrice > 0
+        ? vehicle.fipePrice
+        : null;
+
     ranked.push({
       enteredMs,
       item: {
@@ -142,9 +208,11 @@ export function filterParkedVehicles(
         version: vehicle.version ?? null,
         yearModel: vehicle.yearModel,
         price: vehicle.price,
+        fipePrice,
         enteredAt: enteredDate.toISOString(),
         daysParked,
-        views: readViewCount(options.viewsByVehicleId, vehicle.id),
+        views: readCount(options.viewsByVehicleId, vehicle.id),
+        whatsappClicks: readCount(options.whatsappByVehicleId, vehicle.id),
         publicPath: vehiclePath(vehicle),
       },
     });

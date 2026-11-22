@@ -806,6 +806,7 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
 
   await prisma.vehicle.update({ where: { id }, data: { featured } });
   revalidatePath("/admin/veiculos");
+  revalidatePath("/admin/parados");
   revalidatePath(`/admin/veiculos/${id}`);
   await revalidatePublicStock(id);
   return {
@@ -880,6 +881,7 @@ export async function setVehiclePrice(id: string, priceRaw: string) {
   await recordVehiclePriceChange(id, beforePrice, price);
 
   revalidatePath("/admin/veiculos");
+  revalidatePath("/admin/parados");
   revalidatePath(`/admin/veiculos/${id}`);
   await revalidatePublicStock(id);
   return { ok: true as const, message: "Preço atualizado.", price };

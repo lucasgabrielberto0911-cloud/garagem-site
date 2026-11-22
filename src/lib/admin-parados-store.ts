@@ -6,16 +6,27 @@ import {
   PARKED_MIN_DAYS,
   PARKED_VEHICLE_SELECT,
   SITE_VISIT_ACTION,
+  SITE_WHATSAPP_ACTION,
   type ParkedVehicleItem,
 } from "@/lib/admin-parados";
+import {
+  summarizeStockAge,
+  type StockAgeBandId,
+} from "@/lib/admin-stock-age";
 import { prisma } from "@/lib/prisma";
 
 export type ParkedVehiclesReport = {
   items: ParkedVehicleItem[];
+  bandCounts: Record<StockAgeBandId, number>;
+  totalActive: number;
   totalValue: number;
   viewsAvailable: boolean;
   updatedAt: string;
 };
+
+type ParkedFunnelAction =
+  | typeof SITE_VISIT_ACTION
+  | typeof SITE_WHATSAPP_ACTION;
 
 type ParkedStoreDb = {
   vehicle: {
@@ -30,6 +41,7 @@ type ParkedStoreDb = {
         version: string | null;
         yearModel: number;
         price: number;
+        fipePrice?: number | null;
         status: string;
         historical: boolean;
         createdAt: Date;
@@ -44,10 +56,15 @@ type ParkedStoreDb = {
   };
   adminAudit: {
     groupBy: (args: {
-      by: ["entityId"];
-      where: { entityId: { in: string[] }; action: typeof SITE_VISIT_ACTION };
+      by: ["entityId", "action"];
+      where: {
+        entityId: { in: string[] };
+        action: { in: ParkedFunnelAction[] };
+      };
       _count: { _all: true };
-    }) => Promise<Array<{ entityId: string; _count: { _all: number } }>>;
+    }) => Promise<
+      Array<{ entityId: string; action: string; _count: { _all: number } }>
+    >;
   };
 };
 
@@ -82,6 +99,17 @@ export async function loadParkedVehicles(
     stockEnteredAt: enteredMap.get(vehicle.id) ?? null,
   }));
 
+  const ageSummary = summarizeStockAge(candidates, now, 0);
+  const bandCounts: Record<StockAgeBandId, number> = {
+    "0-30": 0,
+    "31-45": 0,
+    "46-60": 0,
+    "60+": 0,
+  };
+  for (const band of ageSummary.bands) {
+    bandCounts[band.id] = band.count;
+  }
+
   const preliminary = filterParkedVehicles(candidates, {
     now,
     minDays: PARKED_MIN_DAYS,
@@ -90,23 +118,28 @@ export async function loadParkedVehicles(
 
   let viewsAvailable = true;
   const viewsByVehicleId = new Map<string, number>();
+  const whatsappByVehicleId = new Map<string, number>();
 
   if (parkedIds.length > 0) {
     try {
       const auditGroups = await db.adminAudit.groupBy({
-        by: ["entityId"],
+        by: ["entityId", "action"],
         where: {
           entityId: { in: parkedIds },
-          action: SITE_VISIT_ACTION,
+          action: { in: [SITE_VISIT_ACTION, SITE_WHATSAPP_ACTION] },
         },
         _count: { _all: true },
       });
       for (const group of auditGroups) {
-        viewsByVehicleId.set(group.entityId, group._count._all);
+        if (group.action === SITE_VISIT_ACTION) {
+          viewsByVehicleId.set(group.entityId, group._count._all);
+        } else if (group.action === SITE_WHATSAPP_ACTION) {
+          whatsappByVehicleId.set(group.entityId, group._count._all);
+        }
       }
     } catch (error) {
       viewsAvailable = false;
-      console.error("[admin-parados] Falha ao consultar visualizações:", error);
+      console.error("[admin-parados] Falha ao consultar métricas do site:", error);
     }
   }
 
@@ -114,6 +147,7 @@ export async function loadParkedVehicles(
     now,
     minDays: PARKED_MIN_DAYS,
     viewsByVehicleId,
+    whatsappByVehicleId,
   });
 
   const totalValue = items.reduce(
@@ -123,6 +157,8 @@ export async function loadParkedVehicles(
 
   return {
     items,
+    bandCounts,
+    totalActive: ageSummary.totalActive,
     totalValue,
     viewsAvailable,
     updatedAt: now.toISOString(),
@@ -131,7 +167,7 @@ export async function loadParkedVehicles(
 
 const getCachedParkedVehicles = unstable_cache(
   async (_day: string) => loadParkedVehicles(),
-  ["admin-parked-vehicles-v1"],
+  ["admin-parked-vehicles-v2"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG] },
 );
 
