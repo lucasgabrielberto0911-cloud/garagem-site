@@ -30,6 +30,7 @@ import {
   EmptyState,
   Field,
   btn,
+  iconTap,
   inputClass,
   mobileActionCell,
 } from "@/components/admin/ui";
@@ -1054,7 +1055,7 @@ export function SalesManager({
                       </p>
                     ) : null}
                     {hasSaleCommission(sale) ? (
-                      <p className="text-xs text-brand-orange">
+                      <p className="text-xs text-cream/80">
                         Comissão: {formatCurrencyBRL(extractSaleCommission(sale))}
                       </p>
                     ) : null}
@@ -1064,7 +1065,7 @@ export function SalesManager({
                         <Badge tone="neutral">Histórica</Badge>
                       ) : null}
                       {missingContract(sale) ? (
-                        <Badge tone="warning">Sem contrato</Badge>
+                        <Badge tone="brand">Sem contrato</Badge>
                       ) : null}
                       {sale.vehicle.consigned ? (
                         <Badge tone="info">{CONSIGNED_LABEL}</Badge>
@@ -1147,7 +1148,7 @@ export function SalesManager({
                       <td className="px-4 py-3 text-muted">
                         {formatDate(sale.saleDate)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2">
                         {sale.vehicle.historical ? (
                           <p className="font-medium text-cream">
                             {sale.vehicle.brand} {sale.vehicle.model}
@@ -1155,7 +1156,7 @@ export function SalesManager({
                         ) : (
                           <Link
                             href={`/admin/veiculos/${sale.vehicle.id}?view=operacao`}
-                            className="font-medium text-cream transition hover:text-brand"
+                            className="-my-1.5 inline-flex min-h-[44px] items-center py-1 font-medium text-cream transition hover:text-brand"
                           >
                             {sale.vehicle.brand} {sale.vehicle.model}
                           </Link>
@@ -1173,12 +1174,12 @@ export function SalesManager({
                             : ""}
                         </p>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2">
                         {sale.customer ? (
                           <>
                             <Link
                               href="/admin/clientes"
-                              className="font-medium text-cream transition hover:text-brand"
+                              className="-my-1.5 inline-flex min-h-[44px] items-center py-1 font-medium text-cream transition hover:text-brand"
                             >
                               {sale.customer.name}
                             </Link>
@@ -1196,7 +1197,7 @@ export function SalesManager({
                         <div className="flex flex-col gap-1">
                           <Badge tone="success">{sale.paymentMethod}</Badge>
                           {missingContract(sale) ? (
-                            <Badge tone="warning">Sem contrato</Badge>
+                            <Badge tone="brand">Sem contrato</Badge>
                           ) : null}
                           {extractSaleSeller(sale) !== "Geral" ? (
                             <span className="text-xs text-cream">
@@ -1204,7 +1205,7 @@ export function SalesManager({
                             </span>
                           ) : null}
                           {hasSaleCommission(sale) ? (
-                            <span className="text-xs text-brand-orange">
+                            <span className="text-xs text-cream/80">
                               {formatCurrencyBRL(extractSaleCommission(sale))}
                             </span>
                           ) : null}
@@ -1224,14 +1225,14 @@ export function SalesManager({
                           </p>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2">
                         <div className="flex items-center justify-end gap-1">
                           {wa ? (
                             <a
                               href={`https://wa.me/55${wa}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2 text-muted transition hover:text-cream"
+                              className={iconTap}
                               aria-label="WhatsApp do cliente"
                               title="WhatsApp do cliente"
                             >
@@ -1241,7 +1242,7 @@ export function SalesManager({
                           <button
                             type="button"
                             onClick={() => startEdit(sale)}
-                            className="p-2 text-muted transition hover:text-cream"
+                            className={iconTap}
                             aria-label="Editar venda"
                             title="Editar venda"
                           >
@@ -1251,7 +1252,7 @@ export function SalesManager({
                             <button
                               type="button"
                               onClick={() => openSaleContract(sale)}
-                              className="p-2 text-xs text-cream transition hover:text-brand-light"
+                              className="inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap px-3 py-2 text-xs font-medium text-cream transition touch-manipulation hover:text-brand-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                               title={missingContract(sale) ? "Esta venda não tem contrato: abra a operação do veículo para gerar" : "Documentos desta venda"}
                             >
                               {missingContract(sale) ? "Gerar contrato" : "Ver venda/documentos"}
@@ -1260,7 +1261,7 @@ export function SalesManager({
                           <button
                             type="button"
                             onClick={() => setCancelTarget(sale)}
-                            className="p-2 text-red-400 transition hover:text-cream"
+                            className={`${iconTap} text-red-400 hover:text-cream`}
                             aria-label="Desfazer venda"
                             title="Desfazer venda"
                           >

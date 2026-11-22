@@ -18,6 +18,7 @@ const grupos = {
   ],
   Site: [
     ["Dados do site", "/admin/site"],
+    ["Catálogo Meta", "/admin/catalogo"],
     ["Depoimentos", "/admin/depoimentos"],
     ["Ajuda", "/admin/ajuda"],
   ],
@@ -125,6 +126,7 @@ test("menu agrupado mantém todas as rotas e indica a página atual", async ({ p
     "/admin/promissorias",
     "/admin/depoimentos",
     "/admin/site",
+    "/admin/catalogo",
     "/admin/ajuda",
     "/admin/conta",
     "/admin/veiculos",

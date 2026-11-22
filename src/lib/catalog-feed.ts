@@ -14,6 +14,7 @@ import { catalogPhotoJpgPath, extensionFromPhotoUrl } from "@/lib/photo-archive"
 import { site } from "@/lib/site";
 import {
   buildVehicleFullLabel,
+  CATALOG_BODY_RULES as BODY_RULES,
   formatColorLabel,
   inferGearFromText,
   resolveTransmission,
@@ -266,33 +267,6 @@ export function stripCatalogConfirmationNotes(value: string) {
     .replace(/\s+([,.;:])/g, "$1")
     .trim();
 }
-
-const BODY_RULES: Array<{ style: string; pattern: RegExp }> = [
-  {
-    style: "WAGON",
-    pattern: /weekend|spacefox|\bsw\b|perua|parati|variant/,
-  },
-  {
-    style: "PICKUP",
-    pattern:
-      /saveiro|strada|montana|oroch|hilux|ranger|\bs[- ]?10\b|amarok|toro|frontier|\bl200\b|pickup|caminhon/,
-  },
-  {
-    style: "SUV",
-    pattern:
-      /hr-?v|pulse|kicks|nivus|creta|compass|tracker|t-?cross|renegade|duster|ecosport|captur|tucson|sportage|\bsw4\b|pajero|outlander|rav4|cr-?v|\bsuv\b|crossover/,
-  },
-  {
-    style: "SEDAN",
-    pattern:
-      /hb20s|prisma|siena|civic|corolla|lancer|voyage|logan|onix plus|cronos|city\b|virtus|jetta|sentra|cruze|cobalt|versa|sedan/,
-  },
-  {
-    style: "HATCHBACK",
-    pattern:
-      /\bmobi\b|palio|\bhb20\b|argo|\bonix\b|\bgol\b|\bfox\b|\bup\b|\bka\b|\buno\b|celta|corsa|sandero|\bfit\b|march|\bpolo\b|etios|hatch/,
-  },
-];
 
 /**
  * Carroceria a partir do modelo/versão. Motos ficam OTHER (o enum de

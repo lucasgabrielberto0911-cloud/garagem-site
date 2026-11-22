@@ -11,35 +11,60 @@ export type CatalogWhere = {
   consigned?: false;
 };
 
+export const CATALOG_FEED_WHERE = {
+  status: "disponivel",
+  historical: false,
+  consigned: false,
+} as const;
+
+export type CatalogColumnFlags = {
+  locationCity: boolean;
+  historical: boolean;
+  consigned: boolean;
+};
+
 /**
- * Roda a consulta do feed. Se o banco ainda não tem `locationCity`,
+ * Executa consulta tolerando bancos sem as colunas mais recentes (`locationCity`,
+ * `historical` ou `consigned` — erro P2022), removendo apenas a coluna ausente.
+ */
+export async function withCatalogColumnFallback<T>(
+  run: (columns: CatalogColumnFlags) => Promise<T>,
+): Promise<T> {
+  const columns: CatalogColumnFlags = {
+    locationCity: true,
+    historical: true,
+    consigned: true,
+  };
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await run({ ...columns });
+    } catch (error) {
+      if (attempt >= 3) throw error;
+      if (columns.locationCity && isMissingColumnError(error, "locationCity")) {
+        columns.locationCity = false;
+      } else if (columns.historical && isMissingColumnError(error, "historical")) {
+        columns.historical = false;
+      } else if (columns.consigned && isMissingColumnError(error, "consigned")) {
+        columns.consigned = false;
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
+/**
+ * Consulta o estoque elegível para o feed tolerando bancos ainda sem `locationCity`,
  * `historical` ou `consigned` (P2022), tira só aquela coluna e tenta de novo.
  * Sem a coluna `consigned` não existe consignado no banco, então nada vaza.
  */
 export async function queryCatalogVehicles<T>(
   find: (where: CatalogWhere, legacy: boolean) => Promise<T[]>,
 ): Promise<T[]> {
-  const where: CatalogWhere = {
-    status: "disponivel",
-    historical: false,
-    consigned: false,
-  };
-  let legacy = false;
-
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      return await find({ ...where }, legacy);
-    } catch (error) {
-      if (attempt >= 3) throw error;
-      if (!legacy && isMissingColumnError(error, "locationCity")) {
-        legacy = true;
-      } else if (where.historical === false && isMissingColumnError(error, "historical")) {
-        delete where.historical;
-      } else if (where.consigned === false && isMissingColumnError(error, "consigned")) {
-        delete where.consigned;
-      } else {
-        throw error;
-      }
-    }
-  }
+  return withCatalogColumnFallback((columns) => {
+    const where: CatalogWhere = { status: CATALOG_FEED_WHERE.status };
+    if (columns.historical) where.historical = CATALOG_FEED_WHERE.historical;
+    if (columns.consigned) where.consigned = CATALOG_FEED_WHERE.consigned;
+    return find(where, !columns.locationCity);
+  });
 }

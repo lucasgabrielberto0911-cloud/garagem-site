@@ -11,12 +11,12 @@ import { site } from "@/lib/site";
 export const CATALOG_CACHE_CONTROL =
   "public, s-maxage=900, stale-while-revalidate=86400";
 
-const PHOTO_SELECT = {
+export const CATALOG_PHOTO_SELECT = {
   orderBy: { order: "asc" as const },
   select: { id: true, url: true },
 };
 
-const CATALOG_SELECT = {
+export const CATALOG_SELECT = {
   id: true,
   category: true,
   brand: true,
@@ -31,10 +31,10 @@ const CATALOG_SELECT = {
   description: true,
   engine: true,
   locationCity: true,
-  photos: PHOTO_SELECT,
+  photos: CATALOG_PHOTO_SELECT,
 } as const;
 
-const CATALOG_SELECT_LEGACY = {
+export const CATALOG_SELECT_LEGACY = {
   id: true,
   category: true,
   brand: true,
@@ -48,7 +48,7 @@ const CATALOG_SELECT_LEGACY = {
   color: true,
   description: true,
   engine: true,
-  photos: PHOTO_SELECT,
+  photos: CATALOG_PHOTO_SELECT,
 } as const;
 
 async function findCatalog(where: CatalogWhere, legacy: boolean) {
