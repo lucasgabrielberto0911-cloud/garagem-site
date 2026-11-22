@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { setVehiclePrice } from "@/app/admin/veiculos/actions";
+import {
+  setVehicleFeatured,
+  setVehiclePrice,
+} from "@/app/admin/veiculos/actions";
 import {
   IconCash,
   IconClock,
   IconExternal,
+  IconImage,
   IconPencil,
+  IconStar,
 } from "@/components/admin/icons";
 import { Badge, EmptyState, btn, inputClass } from "@/components/admin/ui";
 import { adminDate } from "@/lib/admin-date";
@@ -16,6 +21,7 @@ import { moneyInput } from "@/lib/admin-money";
 import {
   PARKED_MIN_DAYS,
   formatFipeComparison,
+  parkedFunnelReading,
   type ParkedVehicleItem,
 } from "@/lib/admin-parados";
 import { quickPriceError } from "@/lib/admin-quick-price";
@@ -23,20 +29,32 @@ import {
   groupParkedByAgeBand,
   stockAgeBandBadgeClass,
 } from "@/lib/admin-stock-age";
+import { canEnableFeatured, featuredCapMessage } from "@/lib/featured";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 
 export function ParkedVehiclesList({
   items,
   viewsAvailable = true,
+  featuredCount: featuredCountProp,
 }: {
   items: ParkedVehicleItem[];
   viewsAvailable?: boolean;
+  featuredCount?: number;
 }) {
   const [priceById, setPriceById] = useState<Record<string, number>>({});
+  const [featuredById, setFeaturedById] = useState<Record<string, boolean>>({});
+  const [currentFeaturedCount, setCurrentFeaturedCount] = useState(
+    () =>
+      featuredCountProp ??
+      items.filter((item) => item.featured).length,
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
   const [priceDraft, setPriceDraft] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [togglingFeaturedId, setTogglingFeaturedId] = useState<string | null>(
+    null,
+  );
 
   if (items.length === 0) {
     return (
@@ -96,6 +114,36 @@ export function ParkedVehiclesList({
     }
   }
 
+  async function toggleFeatured(item: ParkedVehicleItem) {
+    const currentlyFeatured = featuredById[item.id] ?? item.featured;
+    const nextFeatured = !currentlyFeatured;
+    if (
+      nextFeatured &&
+      !canEnableFeatured(currentFeaturedCount, currentlyFeatured)
+    ) {
+      toast.error(featuredCapMessage());
+      return;
+    }
+
+    setTogglingFeaturedId(item.id);
+    try {
+      const result = await setVehicleFeatured(item.id, nextFeatured);
+      if (result.ok) {
+        setFeaturedById((current) => ({ ...current, [item.id]: nextFeatured }));
+        setCurrentFeaturedCount((count) =>
+          Math.max(0, count + (nextFeatured ? 1 : -1)),
+        );
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch {
+      toast.error("Não foi possível atualizar o destaque agora. Tente novamente.");
+    } finally {
+      setTogglingFeaturedId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {groups.map((group) => {
@@ -136,20 +184,32 @@ export function ParkedVehiclesList({
             <ul className="space-y-2.5">
               {group.items.map((item) => {
                 const currentPrice = priceById[item.id] ?? item.price;
+                const isFeatured = featuredById[item.id] ?? item.featured;
                 const fipe = formatFipeComparison(currentPrice, item.fipePrice);
                 const enteredDate = new Date(item.enteredAt);
                 const enteredLabel = Number.isNaN(enteredDate.getTime())
                   ? "—"
                   : adminDate(enteredDate);
-                const visitsLabel = viewsAvailable
+                const visits30dLabel = viewsAvailable
                   ? formatNumberBR(item.views)
+                  : "—";
+                const visits7dLabel = viewsAvailable
+                  ? formatNumberBR(item.views7d)
                   : "—";
                 const whatsappLabel = viewsAvailable
                   ? formatNumberBR(item.whatsappClicks)
                   : "—";
-                const editHref = `/admin/veiculos/${encodeURIComponent(item.id)}`;
+                const reading = parkedFunnelReading({
+                  views30d: item.views,
+                  whatsappClicks: item.whatsappClicks,
+                  viewsAvailable,
+                });
+                const encodedId = encodeURIComponent(item.id);
+                const editHref = `/admin/veiculos/${encodedId}`;
+                const photosHref = `/admin/veiculos/${encodedId}?view=fotos`;
                 const isEditing = editingId === item.id;
                 const isSaving = savingId === item.id;
+                const isTogglingFeatured = togglingFeaturedId === item.id;
 
                 return (
                   <li
@@ -169,6 +229,11 @@ export function ParkedVehiclesList({
                           <span className="text-xs text-cream/75">
                             Desde {enteredLabel}
                           </span>
+                          {isFeatured ? (
+                            <span className="inline-flex items-center bg-brand/20 px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wide text-red-200 ring-1 ring-inset ring-brand/45">
+                              Na home
+                            </span>
+                          ) : null}
                         </div>
 
                         <p className="font-display text-base font-semibold leading-snug text-cream break-words">
@@ -195,20 +260,35 @@ export function ParkedVehiclesList({
                             </span>
                           ) : null}
                         </div>
+
+                        {reading ? (
+                          <p
+                            className={`inline-block border px-2.5 py-1 text-xs font-medium leading-snug ${
+                              reading.tone === "brand"
+                                ? "border-brand/45 bg-brand/15 text-red-200"
+                                : "border-white/15 bg-white/5 text-cream/85"
+                            }`}
+                          >
+                            {reading.label}
+                          </p>
+                        ) : null}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-3 sm:flex sm:items-center sm:gap-4 lg:border-t-0 lg:pt-0">
-                        <div className="border border-white/10 bg-asphalt/50 px-3 py-2 sm:min-w-[104px]">
+                      <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-3 sm:flex sm:items-stretch sm:gap-3 lg:border-t-0 lg:pt-0">
+                        <div className="border border-white/10 bg-asphalt/50 px-3 py-2 sm:min-w-[126px]">
                           <p className="text-[11px] uppercase tracking-wider text-cream/70">
-                            Visitas no site
+                            Visitas (30d)
                           </p>
                           <p className="mt-0.5 font-display text-base font-bold tabular-nums text-cream">
-                            {visitsLabel}
+                            {visits30dLabel}
+                          </p>
+                          <p className="text-[11px] tabular-nums text-cream/70">
+                            {visits7dLabel} nos últimos 7d
                           </p>
                         </div>
-                        <div className="border border-white/10 bg-asphalt/50 px-3 py-2 sm:min-w-[116px]">
+                        <div className="border border-white/10 bg-asphalt/50 px-3 py-2 sm:min-w-[136px]">
                           <p className="text-[11px] uppercase tracking-wider text-cream/70">
-                            Cliques WhatsApp
+                            Cliques WhatsApp (30d)
                           </p>
                           <p className="mt-0.5 font-display text-base font-bold tabular-nums text-cream">
                             {whatsappLabel}
@@ -226,12 +306,35 @@ export function ParkedVehiclesList({
                         className="inline-flex min-h-[44px] items-center justify-center gap-1.5 border border-white/20 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
                       >
                         <IconCash className="h-4 w-4" />
-                        Editar preço
+                        Alterar preço
+                      </button>
+
+                      <Link
+                        href={photosHref}
+                        className="inline-flex min-h-[44px] items-center justify-center gap-1.5 border border-white/20 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      >
+                        <IconImage className="h-4 w-4" />
+                        Trocar capa
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => void toggleFeatured(item)}
+                        aria-pressed={isFeatured}
+                        disabled={isTogglingFeatured}
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 border px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60 ${
+                          isFeatured
+                            ? "border-brand/60 bg-brand/15 text-red-200 hover:border-brand"
+                            : "border-white/20 text-cream hover:border-brand"
+                        }`}
+                      >
+                        <IconStar className="h-4 w-4" filled={isFeatured} />
+                        {isFeatured ? "Fixado na home" : "Fixar na home"}
                       </button>
 
                       <Link
                         href={editHref}
-                        className="inline-flex min-h-[44px] items-center justify-center gap-1.5 border border-white/20 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        className="inline-flex min-h-[44px] items-center justify-center gap-1.5 border border-white/15 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream/90 transition touch-manipulation hover:border-white/35 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                       >
                         <IconPencil className="h-4 w-4" />
                         Abrir ficha do carro
@@ -320,8 +423,8 @@ export function ParkedVehiclesList({
 
       <p className="text-xs leading-relaxed text-cream/75">
         Agrupado por faixa de dias em estoque (do mais urgente ao menos urgente).
-        Visitas e cliques no WhatsApp consideram acessos registrados no site com
-        consentimento de medição.
+        Visitas (7 e 30 dias) e cliques no WhatsApp (30 dias) consideram acessos
+        registrados no site com consentimento de medição.
       </p>
     </div>
   );

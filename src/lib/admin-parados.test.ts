@@ -5,7 +5,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ParkedVehiclesList } from "@/components/admin/ParkedVehiclesList";
 import {
+  PARKED_METRICS_WINDOW_DAYS,
   PARKED_MIN_DAYS,
+  PARKED_RECENT_VISITS_DAYS,
   PARKED_VEHICLE_SELECT,
   SITE_VISIT_ACTION,
   SITE_WHATSAPP_ACTION,
@@ -13,6 +15,7 @@ import {
   filterParkedVehicles,
   formatFipeComparison,
   parkedCutoffDate,
+  parkedFunnelReading,
   resolveVehicleEnteredAt,
   type ParkedVehicleCandidate,
 } from "./admin-parados";
@@ -273,11 +276,52 @@ test("groupParkedByAgeBand agrupa em 60+, 46-60 e 31-45 com sugestões corretas"
   );
 });
 
-test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/RENAVAM, mostram faixas, FIPE só quando existe e métricas reais", () => {
+test("parkedFunnelReading gera leitura simples sem IA conforme visitas e cliques", () => {
+  assert.equal(
+    parkedFunnelReading({
+      views30d: 25,
+      whatsappClicks: 0,
+      viewsAvailable: false,
+    }),
+    null,
+  );
+
+  const highViewsLowClicks = parkedFunnelReading({
+    views30d: 25,
+    whatsappClicks: 1,
+  });
+  assert.deepEqual(highViewsLowClicks, {
+    kind: "high-views-low-clicks",
+    label: "Muita visita e pouco clique → rever preço ou fotos",
+    tone: "brand",
+  });
+
+  const lowViews = parkedFunnelReading({
+    views30d: 4,
+    whatsappClicks: 0,
+  });
+  assert.deepEqual(lowViews, {
+    kind: "low-views",
+    label: "Pouca visita → divulgar mais",
+    tone: "neutral",
+  });
+
+  // Bom volume e boa taxa de cliques -> sem alerta
+  assert.equal(
+    parkedFunnelReading({
+      views30d: 20,
+      whatsappClicks: 3,
+    }),
+    null,
+  );
+});
+
+test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/RENAVAM, mostram faixas, FIPE só quando existe, leitura simples e ações rápidas", () => {
   const selectKeys = Object.keys(PARKED_VEHICLE_SELECT);
   for (const forbidden of ["plate", "plateEnd", "chassis", "renavam"]) {
     assert.equal(selectKeys.includes(forbidden), false);
   }
+  assert.equal(PARKED_VEHICLE_SELECT.featured, true);
 
   const candidateWithFipe = {
     id: "cm0000000000000000000099",
@@ -287,6 +331,7 @@ test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/REN
     yearModel: 2020,
     price: 55000,
     fipePrice: 50000,
+    featured: false,
     status: "disponivel",
     historical: false,
     createdAt: daysAgo(50),
@@ -303,6 +348,7 @@ test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/REN
     yearModel: 2022,
     price: 125000,
     fipePrice: null,
+    featured: true,
     status: "disponivel",
     historical: false,
     createdAt: daysAgo(72),
@@ -310,8 +356,18 @@ test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/REN
 
   const items = filterParkedVehicles([candidateWithFipe, candidateWithoutFipe], {
     now: NOW,
-    viewsByVehicleId: { cm0000000000000000000099: 19 },
-    whatsappByVehicleId: { cm0000000000000000000099: 3 },
+    viewsByVehicleId: {
+      cm0000000000000000000099: 19,
+      cm0000000000000000000100: 3,
+    },
+    views7dByVehicleId: {
+      cm0000000000000000000099: 7,
+      cm0000000000000000000100: 1,
+    },
+    whatsappByVehicleId: {
+      cm0000000000000000000099: 0,
+      cm0000000000000000000100: 0,
+    },
   });
 
   assert.equal(items.length, 2);
@@ -321,7 +377,7 @@ test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/REN
   assert.equal(serialized.includes("00123456789"), false);
 
   const html = renderToStaticMarkup(
-    createElement(ParkedVehiclesList, { items }),
+    createElement(ParkedVehiclesList, { items, featuredCount: 1 }),
   );
   // Faixas e sugestões na ordem mais urgente -> menos urgente
   assert.ok(html.indexOf("60+ dias") < html.indexOf("46–60 dias"));
@@ -332,8 +388,15 @@ test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/REN
   assert.match(html, /55\.000/);
   assert.match(html, /\+10% da FIPE/);
   assert.match(html, /19/);
-  assert.match(html, /Cliques WhatsApp/);
-  assert.match(html, /Editar preço/);
+  assert.match(html, /7 nos últimos 7d/);
+  assert.match(html, /Cliques WhatsApp \(30d\)/);
+  assert.match(html, /Muita visita e pouco clique → rever preço ou fotos/);
+  assert.match(html, /Pouca visita → divulgar mais/);
+  assert.match(html, /Alterar preço/);
+  assert.match(html, /Trocar capa/);
+  assert.match(html, /\?view=fotos/);
+  assert.match(html, /Fixar na home/);
+  assert.match(html, /Fixado na home/);
   assert.match(html, /Abrir ficha do carro/);
   assert.match(html, /Ver no site/);
   assert.equal(html.includes("ABC1D23"), false);
@@ -343,7 +406,7 @@ test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/REN
 
   // Sem FIPE não inventa FIPE
   const noFipeHtml = renderToStaticMarkup(
-    createElement(ParkedVehiclesList, { items: [items[0]] }),
+    createElement(ParkedVehiclesList, { items: [items[0]], featuredCount: 1 }),
   );
   assert.equal(/FIPE/.test(noFipeHtml), false);
 
@@ -358,9 +421,12 @@ test("segurança, privacidade e UI: select e HTML nunca expõem placa/chassi/REN
   assert.match(pageSource, /redirect\("\/admin\/login"\)/);
 });
 
-test("loadParkedVehicles agrega site:visita e site:whatsapp de AdminAudit, calcula faixas e tolera tabela opcional ausente", async () => {
-  let queriedAuditIds: string[] = [];
-  let queriedActions: string[] = [];
+test("loadParkedVehicles agrega site:visita e site:whatsapp com janela de 30d e visitas 7d, calcula faixas e featuredCount", async () => {
+  const auditCalls: Array<{
+    ids: string[];
+    actions: string[];
+    since: Date;
+  }> = [];
 
   const report = await loadParkedVehicles(
     {
@@ -374,6 +440,7 @@ test("loadParkedVehicles agrega site:visita e site:whatsapp de AdminAudit, calcu
             yearModel: 2021,
             price: 124900,
             fipePrice: 120000,
+            featured: true,
             status: "disponivel",
             historical: false,
             createdAt: daysAgo(48),
@@ -386,6 +453,7 @@ test("loadParkedVehicles agrega site:visita e site:whatsapp de AdminAudit, calcu
             yearModel: 2023,
             price: 99900,
             fipePrice: null,
+            featured: true,
             status: "disponivel",
             historical: false,
             createdAt: daysAgo(12),
@@ -399,18 +467,30 @@ test("loadParkedVehicles agrega site:visita e site:whatsapp de AdminAudit, calcu
       },
       adminAudit: {
         groupBy: async (args) => {
-          queriedAuditIds = args.where.entityId.in;
-          queriedActions = args.where.action.in;
+          auditCalls.push({
+            ids: args.where.entityId.in,
+            actions: args.where.action.in,
+            since: args.where.createdAt.gte,
+          });
+          if (args.where.action.in.includes(SITE_WHATSAPP_ACTION)) {
+            return [
+              {
+                entityId: "cm0000000000000000000010",
+                action: SITE_VISIT_ACTION,
+                _count: { _all: 24 },
+              },
+              {
+                entityId: "cm0000000000000000000010",
+                action: SITE_WHATSAPP_ACTION,
+                _count: { _all: 5 },
+              },
+            ];
+          }
           return [
             {
               entityId: "cm0000000000000000000010",
               action: SITE_VISIT_ACTION,
-              _count: { _all: 24 },
-            },
-            {
-              entityId: "cm0000000000000000000010",
-              action: SITE_WHATSAPP_ACTION,
-              _count: { _all: 5 },
+              _count: { _all: 6 },
             },
           ];
         },
@@ -419,9 +499,28 @@ test("loadParkedVehicles agrega site:visita e site:whatsapp de AdminAudit, calcu
     NOW,
   );
 
-  assert.deepEqual(queriedActions, [SITE_VISIT_ACTION, SITE_WHATSAPP_ACTION]);
-  assert.deepEqual(queriedAuditIds, ["cm0000000000000000000010"]);
+  assert.equal(auditCalls.length, 2);
+  const call30d = auditCalls.find((c) =>
+    c.actions.includes(SITE_WHATSAPP_ACTION),
+  );
+  const call7d = auditCalls.find(
+    (c) => !c.actions.includes(SITE_WHATSAPP_ACTION),
+  );
+  assert.ok(call30d);
+  assert.ok(call7d);
+  assert.deepEqual(call30d.ids, ["cm0000000000000000000010"]);
+  assert.deepEqual(call7d.ids, ["cm0000000000000000000010"]);
+  assert.equal(
+    call30d.since.getTime(),
+    NOW.getTime() - PARKED_METRICS_WINDOW_DAYS * DAY_MS,
+  );
+  assert.equal(
+    call7d.since.getTime(),
+    NOW.getTime() - PARKED_RECENT_VISITS_DAYS * DAY_MS,
+  );
+
   assert.equal(report.viewsAvailable, true);
+  assert.equal(report.featuredCount, 2);
   assert.equal(report.totalValue, 124900);
   assert.deepEqual(report.bandCounts, {
     "0-30": 1,
@@ -432,6 +531,8 @@ test("loadParkedVehicles agrega site:visita e site:whatsapp de AdminAudit, calcu
   assert.equal(report.items.length, 1);
   assert.equal(report.items[0].daysParked, 48);
   assert.equal(report.items[0].views, 24);
+  assert.equal(report.items[0].views7d, 6);
   assert.equal(report.items[0].whatsappClicks, 5);
   assert.equal(report.items[0].fipePrice, 120000);
+  assert.equal(report.items[0].featured, true);
 });

@@ -118,7 +118,7 @@ const SORT_SELECT_OPTIONS = [
 
 const STATUS_DOT: Record<string, string> = {
   disponivel: "bg-emerald-400",
-  reservado: "bg-brand-orange",
+  reservado: "bg-brand",
   vendido: "bg-white/35",
 };
 
@@ -1272,24 +1272,36 @@ export function VehiclesTable({
                 ? "Nenhuma pendência no estoque"
                 : pending === "parados"
                   ? "Nenhum carro parado há mais de 30 dias"
-                  : tab === "vendidos"
-                    ? "Nenhum veículo vendido ainda"
-                    : tab === "destaques"
-                      ? "Nenhum destaque na home"
-                      : "Nenhum veículo em estoque"
+                  : pending === "sem-fotos"
+                    ? "Nenhum veículo sem foto"
+                    : pending === "sem-preco"
+                      ? "Nenhum veículo sem preço"
+                      : pending === "antigos"
+                        ? "Nenhum veículo há mais de 60 dias"
+                        : tab === "vendidos"
+                          ? "Nenhum veículo vendido ainda"
+                          : tab === "destaques"
+                            ? "Nenhum destaque na home"
+                            : "Nenhum veículo em estoque"
           }
           description={
             q
               ? "Tente ajustar a busca ou limpar os filtros."
               : pending === "com-pendencia"
-                ? "Todos os veículos ativos estão com preço, capa, fotos e descrição preenchidos."
+                ? "Todos os veículos ativos estão com preço, fotos, legenda e compra preenchidos."
                 : pending === "parados"
                   ? "O estoque está girando bem — nenhum veículo disponível passou de 30 dias."
-                  : tab === "vendidos"
-                    ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
-                    : tab === "destaques"
-                      ? `Marque até ${MAX_FEATURED_PINS} anúncios disponíveis com a estrela para fixar no topo. O restante da home gira sozinho a cada 2 dias.`
-                      : "Cadastre o primeiro veículo do estoque para começar."
+                  : pending === "sem-fotos"
+                    ? "Todos os veículos ativos já têm pelo menos uma foto cadastrada."
+                    : pending === "sem-preco"
+                      ? "Todos os veículos ativos já estão com preço à vista preenchido."
+                      : pending === "antigos"
+                        ? "Nenhum anúncio disponível passou de 60 dias no estoque."
+                        : tab === "vendidos"
+                          ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
+                          : tab === "destaques"
+                            ? `Marque até ${MAX_FEATURED_PINS} anúncios disponíveis com a estrela para fixar no topo. O restante da home gira sozinho a cada 2 dias.`
+                            : "Cadastre o primeiro veículo do estoque para começar."
           }
           action={
             tab === "estoque" && !pending ? (
@@ -1626,6 +1638,8 @@ function VehicleAdminCard({
     photoCount: vehicle.photoCount,
     hasCover: Boolean(coverUrl),
     hasDescription: vehicle.hasDescription ?? true,
+    purchasePrice: vehicle.purchasePrice,
+    consigned: vehicle.consigned,
   });
 
   const isActive = vehicle.status !== "vendido";
@@ -1777,7 +1791,7 @@ function VehicleAdminCard({
                 ? `Tirar destaque: ${title}`
                 : `Destacar: ${title}`
             }
-            className={`inline-flex h-11 items-center gap-1.5 px-3 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 ${
+            className={`hidden h-11 items-center gap-1.5 px-3 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 sm:inline-flex ${
               vehicle.featured ? "text-red-400" : "text-cream/85 hover:text-cream"
             }`}
           >

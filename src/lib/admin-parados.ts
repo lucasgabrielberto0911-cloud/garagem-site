@@ -7,6 +7,10 @@ const DAY_MS = 1000 * 60 * 60 * 24;
 /** Limiar exclusivo: entram veículos disponíveis há mais de 30 dias (> 30). */
 export const PARKED_MIN_DAYS = 30;
 
+/** Janelas de leitura de visitas e cliques no WhatsApp em AdminAudit. */
+export const PARKED_METRICS_WINDOW_DAYS = 30;
+export const PARKED_RECENT_VISITS_DAYS = 7;
+
 /** Ações já gravadas por /api/funil em AdminAudit nas fichas do site. */
 export const SITE_VISIT_ACTION = "site:visita" as const;
 export const SITE_WHATSAPP_ACTION = "site:whatsapp" as const;
@@ -23,6 +27,7 @@ export const PARKED_VEHICLE_SELECT = {
   yearModel: true,
   price: true,
   fipePrice: true,
+  featured: true,
   status: true,
   historical: true,
   createdAt: true,
@@ -36,6 +41,7 @@ export type ParkedVehicleCandidate = {
   yearModel: number;
   price: number;
   fipePrice?: number | null;
+  featured?: boolean;
   status: string;
   historical?: boolean | null;
   createdAt: Date | string;
@@ -51,12 +57,54 @@ export type ParkedVehicleItem = {
   yearModel: number;
   price: number;
   fipePrice: number | null;
+  featured: boolean;
   enteredAt: string;
   daysParked: number;
   views: number;
+  views7d: number;
   whatsappClicks: number;
   publicPath: string;
 };
+
+export type ParkedFunnelReading = {
+  kind: "high-views-low-clicks" | "low-views";
+  label: string;
+  tone: "brand" | "neutral";
+};
+
+/**
+ * Leitura simples de visitas (30d) e cliques no WhatsApp (30d), sem IA.
+ * Retorna null quando a medição não está disponível ou quando o carro
+ * tem bom volume de visitas e cliques.
+ */
+export function parkedFunnelReading(input: {
+  views30d: number;
+  whatsappClicks: number;
+  viewsAvailable?: boolean;
+}): ParkedFunnelReading | null {
+  if (input.viewsAvailable === false) return null;
+
+  const views = Math.max(0, Math.floor(input.views30d || 0));
+  const clicks = Math.max(0, Math.floor(input.whatsappClicks || 0));
+
+  if (views >= 10 && (clicks === 0 || clicks / views < 0.05)) {
+    return {
+      kind: "high-views-low-clicks",
+      label: "Muita visita e pouco clique → rever preço ou fotos",
+      tone: "brand",
+    };
+  }
+
+  if (views < 10) {
+    return {
+      kind: "low-views",
+      label: "Pouca visita → divulgar mais",
+      tone: "neutral",
+    };
+  }
+
+  return null;
+}
 
 export type FipeComparison = {
   fipeFormatted: string;
@@ -173,6 +221,7 @@ export function filterParkedVehicles(
     now?: Date;
     minDays?: number;
     viewsByVehicleId?: ReadonlyMap<string, number> | Record<string, number>;
+    views7dByVehicleId?: ReadonlyMap<string, number> | Record<string, number>;
     whatsappByVehicleId?: ReadonlyMap<string, number> | Record<string, number>;
   } = {},
 ): ParkedVehicleItem[] {
@@ -209,9 +258,11 @@ export function filterParkedVehicles(
         yearModel: vehicle.yearModel,
         price: vehicle.price,
         fipePrice,
+        featured: Boolean(vehicle.featured),
         enteredAt: enteredDate.toISOString(),
         daysParked,
         views: readCount(options.viewsByVehicleId, vehicle.id),
+        views7d: readCount(options.views7dByVehicleId, vehicle.id),
         whatsappClicks: readCount(options.whatsappByVehicleId, vehicle.id),
         publicPath: vehiclePath(vehicle),
       },

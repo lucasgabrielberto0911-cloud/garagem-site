@@ -1,9 +1,10 @@
 import type { Prisma } from "@prisma/client";
+import { MIN_GOOD_PHOTOS } from "@/lib/admin-dashboard";
 import { PARKED_MIN_DAYS, parkedCutoffDate } from "@/lib/admin-parados";
-import { staleCutoffDate } from "@/lib/stock-quality";
+import { publishMissingItems, staleCutoffDate } from "@/lib/stock-quality";
+import { hasCostBasis } from "@/lib/vehicle-ops";
 
-/** Mínimo de fotos esperado na lista de veículos antes de sinalizar pendência. */
-export const MIN_LIST_PHOTOS = 5;
+export { MIN_GOOD_PHOTOS };
 
 export type StockPending =
   | "sem-fotos"
@@ -48,8 +49,9 @@ export type VehiclePendingBadgeId =
   | "sem-preco"
   | "sem-foto"
   | "poucas-fotos"
-  | "sem-descricao"
-  | "sem-capa";
+  | "sem-legenda"
+  | "sem-capa"
+  | "sem-compra";
 
 export type VehiclePendingBadge = {
   id: VehiclePendingBadgeId;
@@ -63,31 +65,47 @@ export type VehiclePendingBadgeInput = {
   photoCount: number;
   hasCover: boolean;
   hasDescription: boolean;
+  purchasePrice?: number | null;
+  consigned?: boolean;
 };
 
 /**
  * Selos de pendência da lista de Veículos.
+ * Reutiliza a mesma regra da Central (`MIN_GOOD_PHOTOS`, `publishMissingItems` e `hasCostBasis`).
  * Só devolve selo quando falta algo; carro completo ou vendido devolve [].
  */
 export function vehiclePendingBadges(
   input: VehiclePendingBadgeInput,
 ): VehiclePendingBadge[] {
-  if (input.status === "vendido") return [];
-
-  const badges: VehiclePendingBadge[] = [];
-
-  if (!Number.isFinite(input.price) || input.price <= 0) {
-    badges.push({ id: "sem-preco", label: "Sem preço", tone: "brand" });
+  if (input.status !== "disponivel" && input.status !== "reservado") {
+    return [];
   }
 
   const photoCount = Math.max(0, Math.trunc(input.photoCount || 0));
-  if (photoCount === 0) {
+  const baseMissing = publishMissingItems({
+    status: input.status,
+    photoCount,
+    price: input.price,
+  });
+  const missingPrice = baseMissing.some((item) => item.id === "preco");
+  const missingPhoto = baseMissing.some((item) => item.id === "fotos");
+  const missingPurchase =
+    !input.consigned &&
+    !hasCostBasis(input.purchasePrice, 0, { consigned: input.consigned });
+
+  const badges: VehiclePendingBadge[] = [];
+
+  if (missingPrice) {
+    badges.push({ id: "sem-preco", label: "Sem preço", tone: "brand" });
+  }
+
+  if (missingPhoto) {
     badges.push({ id: "sem-foto", label: "Sem foto", tone: "brand" });
   } else {
     if (!input.hasCover) {
       badges.push({ id: "sem-capa", label: "Sem capa", tone: "brand" });
     }
-    if (photoCount < MIN_LIST_PHOTOS) {
+    if (photoCount < MIN_GOOD_PHOTOS) {
       badges.push({
         id: "poucas-fotos",
         label: "Poucas fotos",
@@ -98,8 +116,16 @@ export function vehiclePendingBadges(
 
   if (!input.hasDescription) {
     badges.push({
-      id: "sem-descricao",
-      label: "Sem descrição",
+      id: "sem-legenda",
+      label: "Sem legenda",
+      tone: "neutral",
+    });
+  }
+
+  if (missingPurchase) {
+    badges.push({
+      id: "sem-compra",
+      label: "Sem compra",
       tone: "neutral",
     });
   }

@@ -48,6 +48,7 @@ export default async function AdminParadosPage() {
         <ParkedVehiclesList
           items={report.items}
           viewsAvailable={report.viewsAvailable}
+          featuredCount={report.featuredCount}
         />
       ) : (
         <>
@@ -86,6 +87,7 @@ export default async function AdminParadosPage() {
           <ParkedVehiclesList
             items={report.items}
             viewsAvailable={report.viewsAvailable}
+            featuredCount={report.featuredCount}
           />
         </>
       )}

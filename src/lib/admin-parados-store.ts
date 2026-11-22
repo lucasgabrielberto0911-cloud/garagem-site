@@ -3,7 +3,9 @@ import { ADMIN_DATA_TAG } from "@/lib/admin-cache";
 import { localDateInput } from "@/lib/admin-date";
 import {
   filterParkedVehicles,
+  PARKED_METRICS_WINDOW_DAYS,
   PARKED_MIN_DAYS,
+  PARKED_RECENT_VISITS_DAYS,
   PARKED_VEHICLE_SELECT,
   SITE_VISIT_ACTION,
   SITE_WHATSAPP_ACTION,
@@ -15,9 +17,12 @@ import {
 } from "@/lib/admin-stock-age";
 import { prisma } from "@/lib/prisma";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export type ParkedVehiclesReport = {
   items: ParkedVehicleItem[];
   bandCounts: Record<StockAgeBandId, number>;
+  featuredCount: number;
   totalActive: number;
   totalValue: number;
   viewsAvailable: boolean;
@@ -42,6 +47,7 @@ type ParkedStoreDb = {
         yearModel: number;
         price: number;
         fipePrice?: number | null;
+        featured?: boolean;
         status: string;
         historical: boolean;
         createdAt: Date;
@@ -60,6 +66,7 @@ type ParkedStoreDb = {
       where: {
         entityId: { in: string[] };
         action: { in: ParkedFunnelAction[] };
+        createdAt: { gte: Date };
       };
       _count: { _all: true };
     }) => Promise<
@@ -77,6 +84,7 @@ export async function loadParkedVehicles(
     select: PARKED_VEHICLE_SELECT,
   });
 
+  const featuredCount = vehicles.filter((vehicle) => vehicle.featured).length;
   const vehicleIds = vehicles.map((vehicle) => vehicle.id);
   const enteredMap = new Map<string, Date>();
 
@@ -118,23 +126,49 @@ export async function loadParkedVehicles(
 
   let viewsAvailable = true;
   const viewsByVehicleId = new Map<string, number>();
+  const views7dByVehicleId = new Map<string, number>();
   const whatsappByVehicleId = new Map<string, number>();
 
   if (parkedIds.length > 0) {
+    const since30d = new Date(
+      now.getTime() - PARKED_METRICS_WINDOW_DAYS * DAY_MS,
+    );
+    const since7d = new Date(
+      now.getTime() - PARKED_RECENT_VISITS_DAYS * DAY_MS,
+    );
+
     try {
-      const auditGroups = await db.adminAudit.groupBy({
-        by: ["entityId", "action"],
-        where: {
-          entityId: { in: parkedIds },
-          action: { in: [SITE_VISIT_ACTION, SITE_WHATSAPP_ACTION] },
-        },
-        _count: { _all: true },
-      });
-      for (const group of auditGroups) {
+      const [audit30d, audit7d] = await Promise.all([
+        db.adminAudit.groupBy({
+          by: ["entityId", "action"],
+          where: {
+            entityId: { in: parkedIds },
+            action: { in: [SITE_VISIT_ACTION, SITE_WHATSAPP_ACTION] },
+            createdAt: { gte: since30d },
+          },
+          _count: { _all: true },
+        }),
+        db.adminAudit.groupBy({
+          by: ["entityId", "action"],
+          where: {
+            entityId: { in: parkedIds },
+            action: { in: [SITE_VISIT_ACTION] },
+            createdAt: { gte: since7d },
+          },
+          _count: { _all: true },
+        }),
+      ]);
+
+      for (const group of audit30d) {
         if (group.action === SITE_VISIT_ACTION) {
           viewsByVehicleId.set(group.entityId, group._count._all);
         } else if (group.action === SITE_WHATSAPP_ACTION) {
           whatsappByVehicleId.set(group.entityId, group._count._all);
+        }
+      }
+      for (const group of audit7d) {
+        if (group.action === SITE_VISIT_ACTION) {
+          views7dByVehicleId.set(group.entityId, group._count._all);
         }
       }
     } catch (error) {
@@ -147,6 +181,7 @@ export async function loadParkedVehicles(
     now,
     minDays: PARKED_MIN_DAYS,
     viewsByVehicleId,
+    views7dByVehicleId,
     whatsappByVehicleId,
   });
 
@@ -158,6 +193,7 @@ export async function loadParkedVehicles(
   return {
     items,
     bandCounts,
+    featuredCount,
     totalActive: ageSummary.totalActive,
     totalValue,
     viewsAvailable,
@@ -167,7 +203,7 @@ export async function loadParkedVehicles(
 
 const getCachedParkedVehicles = unstable_cache(
   async (_day: string) => loadParkedVehicles(),
-  ["admin-parked-vehicles-v2"],
+  ["admin-parked-vehicles-v3"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG] },
 );
 

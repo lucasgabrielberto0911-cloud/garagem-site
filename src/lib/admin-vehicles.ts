@@ -1,7 +1,8 @@
+import { MIN_GOOD_PHOTOS } from "@/lib/admin-dashboard";
 import {
-  MIN_LIST_PHOTOS,
   parseStockPending,
   stockPendingWhere,
+  vehiclePendingBadges,
   type StockPending,
 } from "@/lib/admin-stock-pending";
 import { PARKED_MIN_DAYS, parkedCutoffDate } from "@/lib/admin-parados";
@@ -312,7 +313,8 @@ async function resolvePendingWhere(
           v.price <= 0
           OR v.description IS NULL
           OR btrim(v.description) = ''
-          OR coalesce(p.cnt, 0) < ${MIN_LIST_PHOTOS}
+          OR coalesce(p.cnt, 0) < ${MIN_GOOD_PHOTOS}
+          OR (v.consigned = false AND (v."purchasePrice" IS NULL OR v."purchasePrice" <= 0))
         )
     `;
     return { id: { in: rows.map((row) => row.id) } };
@@ -521,7 +523,8 @@ async function loadAdminVehicleStatsSql(): Promise<AdminVehicleStats> {
             v.price <= 0
             OR v.description IS NULL
             OR btrim(v.description) = ''
-            OR coalesce(p.cnt, 0) < ${MIN_LIST_PHOTOS}
+            OR coalesce(p.cnt, 0) < ${MIN_GOOD_PHOTOS}
+            OR (v.consigned = false AND (v."purchasePrice" IS NULL OR v."purchasePrice" <= 0))
           )
       )::int AS "withPending",
       count(*) FILTER (
@@ -576,6 +579,7 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
     extraCosts,
     withCostBasis,
     withoutPhotos,
+    activePendingCandidates,
     stale,
     featured,
     parked,
@@ -603,6 +607,17 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
     prisma.vehicle.count({
       where: { ...stockWhere, photos: { none: {} } },
     }),
+    prisma.vehicle.findMany({
+      where: stockWhere,
+      select: {
+        status: true,
+        price: true,
+        purchasePrice: true,
+        consigned: true,
+        description: true,
+        _count: { select: { photos: true } },
+      },
+    }),
     prisma.vehicle.count({
       where: {
         historical: false,
@@ -621,6 +636,20 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
       },
     }),
   ]);
+
+  const withPending = activePendingCandidates.reduce((sum, vehicle) => {
+    const photoCount = vehicle._count.photos;
+    const badges = vehiclePendingBadges({
+      status: vehicle.status,
+      price: vehicle.price,
+      photoCount,
+      hasCover: photoCount > 0,
+      hasDescription: Boolean(vehicle.description?.trim()),
+      purchasePrice: vehicle.purchasePrice,
+      consigned: vehicle.consigned,
+    });
+    return sum + (badges.length > 0 ? 1 : 0);
+  }, 0);
 
   const count = (value: string) =>
     groups.find((group) => group.status === value)?._count._all ?? 0;
@@ -644,7 +673,7 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
     withoutPhotos,
     stale,
     featured,
-    withPending: withoutPhotos,
+    withPending,
     parked,
   };
 }
@@ -665,7 +694,7 @@ async function loadAdminVehicleStats() {
 /** Contadores do topo da lista: só números, expiram com expireAdminData(). */
 export const getAdminVehicleStats = unstable_cache(
   loadAdminVehicleStats,
-  ["admin-vehicle-stats-v4"],
+  ["admin-vehicle-stats-v5"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG] },
 );
 
