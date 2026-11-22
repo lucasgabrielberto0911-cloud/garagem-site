@@ -148,7 +148,7 @@ export default async function HomePage() {
             featured.error ? (
               <div
                 role="status"
-                className="max-w-2xl border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-left"
+                className="max-w-2xl bg-ink px-5 py-8 text-left"
               >
                 <p className="font-display text-lg font-semibold text-cream">
                   Não foi possível carregar os veículos em destaque agora
@@ -171,7 +171,7 @@ export default async function HomePage() {
                 </div>
               </div>
             ) : (
-              <div className="max-w-2xl border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-left">
+              <div className="max-w-2xl bg-ink px-5 py-8 text-left">
                 <p className="font-display text-lg font-semibold text-cream">
                   Estoque sendo montado
                 </p>
@@ -238,7 +238,7 @@ export default async function HomePage() {
           {REASONS.map(({ Icon, title, text }) => (
             <li
               key={title}
-              className="flex h-full gap-3 border border-white/10 bg-asphalt p-4 text-left"
+              className="flex h-full gap-3 bg-white/[0.04] p-4 text-left"
             >
               <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center bg-brand/10">
                 <Icon className="h-5 w-5 text-brand-light" />
@@ -265,7 +265,7 @@ export default async function HomePage() {
           <div aria-hidden="true" className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {/* Aproxima seis cards; quantidade e textos publicados podem variar. */}
             {Array.from({ length: 6 }, (_, index) => (
-              <div key={index} className="h-64 border border-white/10 bg-ink max-[360px]:h-72" />
+              <div key={index} className="h-64 bg-ink max-[360px]:h-72" />
             ))}
           </div>
         }>
@@ -288,12 +288,12 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Atendimento"
           title="Atendemos Linhares, Aracruz e Grande Vitória"
-          description={`Atendemos ${publicSite.region}. Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada.`}
+          description="Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada."
         />
 
-        <div className="mt-5 overflow-hidden border border-white/10 bg-white/10">
-          <dl className="grid gap-px sm:grid-cols-3">
-            <div className="bg-asphalt px-4 py-3.5">
+        <div className="mt-5 overflow-hidden bg-white/[0.04]">
+          <dl className="grid divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="px-4 py-3.5">
               <dt className="font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
                 WhatsApp
               </dt>
@@ -301,14 +301,14 @@ export default async function HomePage() {
                 {site.whatsappLabel}
               </dd>
             </div>
-            <div className="bg-asphalt px-4 py-3.5">
+            <div className="px-4 py-3.5">
               <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
                 <IconClock className="h-3.5 w-3.5 text-brand-light" />
                 Horário
               </dt>
               <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.hours}</dd>
             </div>
-            <div className="bg-asphalt px-4 py-3.5">
+            <div className="px-4 py-3.5">
               <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
                 <IconMapPin className="h-3.5 w-3.5 text-brand-light" />
                 Modalidade
@@ -321,7 +321,7 @@ export default async function HomePage() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`${site.instagram} no Instagram, abre em nova aba`}
-            className="group mt-px flex min-h-14 items-center gap-3.5 bg-asphalt px-4 text-cream transition hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand touch-manipulation"
+            className="group flex min-h-14 items-center gap-3.5 border-t border-white/10 px-4 text-cream transition hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand touch-manipulation"
           >
             <span
               aria-hidden="true"
@@ -339,7 +339,7 @@ export default async function HomePage() {
 
       {/* 7. VENDER OU TROCAR */}
       <Section spacing="snug" className="border-t border-white/5">
-        <div className="relative overflow-hidden border border-white/10 bg-ink">
+        <div className="relative overflow-hidden bg-ink">
           <div
             className="absolute inset-x-0 top-0 h-0.5 bg-brand"
             aria-hidden="true"
@@ -382,7 +382,7 @@ export default async function HomePage() {
         />
         <div className="mt-4">
           <Suspense fallback={
-            <div aria-hidden="true" className="mx-auto max-w-3xl divide-y divide-white/10 border border-white/10 bg-ink">
+            <div aria-hidden="true" className="mx-auto max-w-3xl divide-y divide-white/10 bg-white/[0.04]">
               {Array.from({ length: 5 }, (_, index) => (
                 <div key={index} className="h-[84px] max-[360px]:h-24 sm:h-20" />
               ))}

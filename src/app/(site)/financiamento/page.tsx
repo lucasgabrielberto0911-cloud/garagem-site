@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
-import { RealStockPreview } from "@/components/site/RealStockPreview";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
 import {
   IconArrowRight,
   IconClipboardCheck,
@@ -21,7 +21,9 @@ import {
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { SiteLeadHit } from "@/lib/funnel-events";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
 import { getFeaturedVehicles } from "@/lib/vehicles";
+import { evenVehicleGridItems } from "@/lib/vehicle-grid-pairs";
 
 export const revalidate = 3600;
 
@@ -135,7 +137,8 @@ const FINANCIAMENTO_FAQ = [
 ] as const;
 
 export default async function FinanciamentoPage() {
-  const featured = await getFeaturedVehicles(3);
+  const featured = await getFeaturedVehicles(8);
+  const featuredWithLqip = evenVehicleGridItems(await enrichVehiclesWithLqip(featured));
 
   return (
     <div>
@@ -166,7 +169,7 @@ export default async function FinanciamentoPage() {
             {HERO_BADGES.map(({ value, label }) => (
               <li
                 key={value}
-                className="flex flex-col items-center rounded-2xl border border-white/15 bg-ink/85 px-4 py-4 text-center shadow-[0_14px_32px_-14px_rgba(0,0,0,0.85)] backdrop-blur-sm"
+                className="flex flex-col items-center rounded-2xl bg-ink/85 px-4 py-4 text-center shadow-[0_14px_32px_-14px_rgba(0,0,0,0.85)] backdrop-blur-sm"
               >
                 <span className="font-display text-2xl font-bold tracking-tight text-brand-light sm:text-[26px]">
                   {value}
@@ -226,7 +229,7 @@ export default async function FinanciamentoPage() {
             {OPTIONS.map(({ Icon, eyebrow, title, text }) => (
               <li
                 key={title}
-                className="relative flex flex-col overflow-hidden rounded-2xl border border-white/15 bg-asphalt p-6 text-left shadow-[0_18px_40px_-16px_rgba(0,0,0,0.88)] transition hover:border-brand/50"
+                className="relative flex flex-col overflow-hidden rounded-2xl bg-white/[0.04] p-6 text-left"
               >
                 <div
                   aria-hidden="true"
@@ -272,8 +275,14 @@ export default async function FinanciamentoPage() {
               </Link>
             </div>
 
-            <div className="mt-6 lg:mt-8">
-              <RealStockPreview vehicles={featured} variant="cards" />
+            <div
+              className={
+                featuredWithLqip.length === 1
+                  ? "mt-6 lg:mt-8 [&_.listing-card-item]:!col-span-1"
+                  : "mt-6 lg:mt-8"
+              }
+            >
+              <VehicleGrid vehicles={featuredWithLqip} desktopCols={4} destaqueLimit={0} />
             </div>
           </Container>
         </section>
@@ -304,7 +313,7 @@ export default async function FinanciamentoPage() {
                 {HOW_IT_WORKS.map(({ title, text }, index) => (
                   <li
                     key={title}
-                    className="flex flex-col rounded-2xl border border-white/15 bg-asphalt p-5 shadow-[0_14px_34px_-14px_rgba(0,0,0,0.85)]"
+                    className="flex flex-col rounded-2xl bg-asphalt p-5 shadow-[0_14px_34px_-14px_rgba(0,0,0,0.85)]"
                   >
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand font-display text-sm font-bold text-white shadow-[0_6px_14px_rgba(217,21,25,0.35)]">
@@ -327,7 +336,7 @@ export default async function FinanciamentoPage() {
 
             <aside
               aria-labelledby="documentos-financiamento"
-              className="relative overflow-hidden rounded-2xl border border-brand/35 bg-asphalt p-6 shadow-[0_20px_46px_-16px_rgba(0,0,0,0.9)] sm:p-7 lg:col-span-5"
+              className="relative overflow-hidden rounded-2xl bg-asphalt p-6 shadow-[0_20px_46px_-16px_rgba(0,0,0,0.9)] sm:p-7 lg:col-span-5"
             >
               <div
                 aria-hidden="true"
@@ -354,7 +363,7 @@ export default async function FinanciamentoPage() {
                 {DOCUMENTS.map(({ label, detail }) => (
                   <li
                     key={label}
-                    className="flex items-start gap-3 rounded-xl border border-white/10 bg-ink/80 p-3.5"
+                    className="flex items-start gap-3 rounded-xl bg-white/[0.04] p-3.5"
                   >
                     <IconShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
                     <div className="min-w-0">
@@ -395,7 +404,7 @@ export default async function FinanciamentoPage() {
                 {FINANCIAMENTO_FAQ.map((item) => (
                   <details
                     key={item.question}
-                    className="group overflow-hidden rounded-2xl border border-white/15 bg-ink shadow-[0_12px_28px_-12px_rgba(0,0,0,0.8)] transition open:border-brand/55 open:shadow-[0_16px_36px_-12px_rgba(217,21,25,0.22)]"
+                    className="group overflow-hidden rounded-2xl bg-white/[0.04] shadow-[0_12px_28px_-12px_rgba(0,0,0,0.8)] transition open:bg-white/[0.07] open:shadow-[0_16px_36px_-12px_rgba(217,21,25,0.22)]"
                   >
                     <summary className="flex min-h-[58px] cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-display text-sm font-semibold text-cream sm:text-base [&::-webkit-details-marker]:hidden">
                       <span>{item.question}</span>
@@ -414,7 +423,7 @@ export default async function FinanciamentoPage() {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-brand/40 bg-ink p-6 shadow-[0_22px_50px_-16px_rgba(0,0,0,0.9)] sm:p-7 lg:sticky lg:top-24 lg:col-span-4">
+            <div className="relative overflow-hidden rounded-2xl bg-ink p-6 shadow-[0_22px_50px_-16px_rgba(0,0,0,0.9)] sm:p-7 lg:sticky lg:top-24 lg:col-span-4">
               <div
                 aria-hidden="true"
                 className="absolute inset-x-0 top-0 h-0.5 bg-brand-gradient"
