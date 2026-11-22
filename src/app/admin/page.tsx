@@ -7,6 +7,7 @@ import {
   IconAlert,
   IconCash,
   IconClock,
+  IconExternal,
   IconPlus,
 } from "@/components/admin/icons";
 import {
@@ -32,7 +33,8 @@ export default async function AdminDashboardPage() {
       fallback={
         <div className="space-y-4" role="status">
           <p className="text-sm text-cream/80">Carregando central da loja…</p>
-          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+            <div className="skeleton col-span-2 h-14 lg:col-span-1" />
             <div className="skeleton h-14" />
             <div className="skeleton h-14" />
             <div className="skeleton h-14" />
@@ -77,10 +79,10 @@ async function CentralContent() {
 
       {/* 1. Botões grandes de ação */}
       <section aria-label="Ações rápidas">
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
           <Link
             href="/admin/veiculos/novo"
-            className="inline-flex min-h-[56px] items-center justify-center gap-2.5 bg-brand px-4 py-3 font-display text-sm font-semibold text-white transition touch-manipulation hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+            className="col-span-2 inline-flex min-h-[56px] items-center justify-center gap-2.5 bg-brand px-4 py-3 font-display text-sm font-semibold text-white transition touch-manipulation hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream lg:col-span-1"
           >
             <IconPlus className="h-5 w-5 shrink-0" />
             <span>Cadastrar carro</span>
@@ -105,6 +107,13 @@ async function CentralContent() {
           >
             <IconClock className="h-5 w-5 shrink-0 text-cream/85" />
             <span>Carros parados</span>
+          </Link>
+          <Link
+            href="/admin/catalogo"
+            className="inline-flex min-h-[56px] items-center justify-center gap-2.5 border border-white/20 bg-ink px-4 py-3 font-display text-sm font-semibold text-cream transition touch-manipulation hover:border-white/40 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <IconExternal className="h-5 w-5 shrink-0 text-cream/85" />
+            <span>Catálogo Meta</span>
           </Link>
         </div>
       </section>
@@ -279,14 +288,8 @@ async function CentralContent() {
       ) : null}
 
       {/* 6. Mais números (recolhido) */}
-      <details className="border border-white/15 bg-ink">
-        <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-sm font-semibold text-cream transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-          <span>Mais números</span>
-          <span className="text-xs font-normal text-cream/75">
-            Valor do estoque, ticket médio, km médio e últimos 6 meses
-          </span>
-        </summary>
-        <div className="space-y-5 border-t border-white/10 p-4">
+      <Card collapsed title="Mais números">
+        <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="border border-white/10 bg-asphalt/50 p-3">
               <p className="text-xs text-cream/75">Valor do estoque</p>
@@ -318,7 +321,9 @@ async function CentralContent() {
                 href="/admin/veiculos?tab=destaques"
                 className="mt-1 inline-flex min-h-[44px] items-center font-display text-lg font-semibold tabular-nums text-cream hover:text-red-400"
               >
-                {data.featured}/{MAX_FEATURED_PINS}
+                {data.failures.includes("featured")
+                  ? "—"
+                  : `${data.featured}/${MAX_FEATURED_PINS}`}
               </Link>
             </div>
           </div>
@@ -358,7 +363,7 @@ async function CentralContent() {
             )}
           </div>
         </div>
-      </details>
+      </Card>
     </div>
   );
 }
