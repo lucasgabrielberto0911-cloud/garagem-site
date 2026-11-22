@@ -134,3 +134,58 @@ test("catálogo JPG usa fixture E2E antes de recusar URL legada do Storage", asy
     if (previous.database === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = previous.database;
   }
 });
+
+test("catálogo JPG converte foto R2 sem habilitar a fixture e mantém a recusa de formas inválidas", async () => {
+  const originalFind = prisma.vehicle.findFirst;
+  const originalFetch = globalThis.fetch;
+  const previous = process.env.E2E_TEST;
+  delete process.env.E2E_TEST;
+  const r2 = "https://pub-revisao.r2.dev/estoque/foto.webp";
+  try {
+    const bytes = await sharp({ create: { width: 1600, height: 1000, channels: 3, background: "blue" } }).webp().toBuffer();
+    const fetched: string[] = [];
+    globalThis.fetch = async (url, options) => {
+      fetched.push(String(url));
+      assert.equal(options?.redirect, "error");
+      return new Response(new Uint8Array(bytes), { headers: { "Content-Type": "image/webp" } });
+    };
+    prisma.vehicle.findFirst = (async () => ({ photos: [{ url: r2 }] })) as unknown as typeof originalFind;
+    const response = await GET(request, context);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "image/jpeg");
+    assert.match(response.headers.get("cache-control")!, /s-maxage=86400/);
+    assert.equal((await sharp(Buffer.from(await response.arrayBuffer())).metadata()).format, "jpeg");
+    assert.deepEqual(fetched, [r2]);
+
+    globalThis.fetch = async () => assert.fail("Fonte recusada não pode gerar download");
+    for (const url of [r2 + "?token=x", "https://pub-revisao.r2.dev.attacker.com/foto.webp", "http://pub-revisao.r2.dev/foto.webp", "https://user:pw@pub-revisao.r2.dev/foto.webp"]) {
+      prisma.vehicle.findFirst = (async () => ({ photos: [{ url }] })) as unknown as typeof originalFind;
+      assert.equal((await GET(request, context)).status, 404, url);
+    }
+  } finally {
+    prisma.vehicle.findFirst = originalFind;
+    globalThis.fetch = originalFetch;
+    if (previous === undefined) delete process.env.E2E_TEST; else process.env.E2E_TEST = previous;
+  }
+});
+
+test("catálogo JPG com falha no R2 responde 502 sem segunda busca", async () => {
+  const originalFind = prisma.vehicle.findFirst;
+  const originalFetch = globalThis.fetch;
+  const previous = { flag: process.env.E2E_TEST, r2: process.env.R2_ACCOUNT_ID };
+  delete process.env.E2E_TEST;
+  delete process.env.R2_ACCOUNT_ID;
+  try {
+    let calls = 0;
+    globalThis.fetch = async () => { calls++; return new Response(null, { status: 503 }); };
+    prisma.vehicle.findFirst = (async () => ({ photos: [{ url: "https://pub-revisao.r2.dev/foto.webp" }] })) as unknown as typeof originalFind;
+    const response = await GET(request, context);
+    assert.equal(response.status, 502);
+    assert.equal(calls, 1);
+  } finally {
+    prisma.vehicle.findFirst = originalFind;
+    globalThis.fetch = originalFetch;
+    if (previous.flag === undefined) delete process.env.E2E_TEST; else process.env.E2E_TEST = previous.flag;
+    if (previous.r2 === undefined) delete process.env.R2_ACCOUNT_ID; else process.env.R2_ACCOUNT_ID = previous.r2;
+  }
+});
