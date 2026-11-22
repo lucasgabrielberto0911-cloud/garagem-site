@@ -34,7 +34,7 @@ test("galeria /vendidos exibe título, subtítulo, fotos 4:5 com srcset/LQIP só
     page.getByRole("heading", { level: 1, name: "Vendidos" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Clientes que já saíram da Garagem de carro ou moto novos"),
+    page.getByText("Clientes que já fecharam negócio com a Garagem."),
   ).toBeVisible();
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",

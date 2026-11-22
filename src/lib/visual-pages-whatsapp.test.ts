@@ -129,7 +129,7 @@ test("p√°ginas /links, /como-funciona e /financiamento seguem cache, estoque pr√
   ] as const) {
     assert.match(src, /export const revalidate = 3600;/, name);
     assert.match(src, /getFeaturedVehicles\(/, name);
-    assert.match(src, /RealStockPreview/, name);
+    assert.match(src, name === "financiamento" ? /VehicleGrid/ : /RealStockPreview/, name);
     assert.match(src, /shadow-/, name);
     assert.doesNotMatch(
       src,

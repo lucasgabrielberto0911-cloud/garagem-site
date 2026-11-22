@@ -2,7 +2,7 @@ import { faqItemId, type FaqItem } from "@/lib/faq";
 
 export function FaqAccordion({ items }: { items: FaqItem[] }) {
   return (
-    <div className="mx-auto max-w-3xl divide-y divide-white/15 border border-white/20 bg-ink">
+    <div className="mx-auto max-w-3xl divide-y divide-white/10 bg-white/[0.04]">
       {items.map((item, index) => {
         const id = faqItemId(item.question, index);
         return (

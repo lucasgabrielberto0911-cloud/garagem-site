@@ -46,7 +46,7 @@ function StarRow({ rating }: { rating: number }) {
 export function Testimonials({ items }: { items: TestimonialItem[] }) {
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex max-w-2xl flex-col items-center border border-dashed border-white/20 bg-ink/40 px-6 py-14 text-center">
+      <div className="mx-auto flex max-w-2xl flex-col items-center bg-ink px-6 py-14 text-center">
         <IconQuote className="h-9 w-9 text-white/15" />
         <p className="mt-5 font-display text-lg font-semibold text-cream">
           Depoimentos em atualização
@@ -84,14 +84,14 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
         return (
           <li
             key={item.id}
-            className="flex min-w-0 flex-col border border-white/20 bg-ink p-4 text-left sm:p-5"
+            className="flex min-w-0 flex-col bg-ink p-4 text-left sm:p-5"
           >
             <IconQuote className="h-6 w-6 text-brand-light/60" />
             <StarRow rating={item.rating} />
             <blockquote className="mt-3 flex-1 text-sm leading-snug text-cream/90">
               {cleanMessage}
             </blockquote>
-            <div className="mt-4 flex w-full items-center gap-3 border-t border-white/20 pt-3">
+            <div className="mt-4 flex w-full items-center gap-3 border-t border-white/10 pt-3">
               <Avatar name={cleanName} photoUrl={item.photoUrl} />
               <div className="min-w-0">
                 <p className="truncate font-display text-sm font-semibold text-cream">

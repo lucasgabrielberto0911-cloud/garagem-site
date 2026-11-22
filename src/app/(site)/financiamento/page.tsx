@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
-import { RealStockPreview } from "@/components/site/RealStockPreview";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
 import {
   IconArrowRight,
   IconClipboardCheck,
@@ -21,6 +21,7 @@ import {
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { SiteLeadHit } from "@/lib/funnel-events";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { enrichVehiclesWithLqip } from "@/lib/photo-lqip";
 import { getFeaturedVehicles } from "@/lib/vehicles";
 
 export const revalidate = 3600;
@@ -135,7 +136,8 @@ const FINANCIAMENTO_FAQ = [
 ] as const;
 
 export default async function FinanciamentoPage() {
-  const featured = await getFeaturedVehicles(3);
+  const featured = await getFeaturedVehicles(8);
+  const featuredWithLqip = await enrichVehiclesWithLqip(featured);
 
   return (
     <div>
@@ -166,7 +168,7 @@ export default async function FinanciamentoPage() {
             {HERO_BADGES.map(({ value, label }) => (
               <li
                 key={value}
-                className="flex flex-col items-center rounded-2xl border border-white/15 bg-ink/85 px-4 py-4 text-center shadow-[0_14px_32px_-14px_rgba(0,0,0,0.85)] backdrop-blur-sm"
+                className="flex flex-col items-center rounded-2xl bg-ink/85 px-4 py-4 text-center shadow-[0_14px_32px_-14px_rgba(0,0,0,0.85)] backdrop-blur-sm"
               >
                 <span className="font-display text-2xl font-bold tracking-tight text-brand-light sm:text-[26px]">
                   {value}
@@ -226,7 +228,7 @@ export default async function FinanciamentoPage() {
             {OPTIONS.map(({ Icon, eyebrow, title, text }) => (
               <li
                 key={title}
-                className="relative flex flex-col overflow-hidden rounded-2xl border border-white/15 bg-asphalt p-6 text-left shadow-[0_18px_40px_-16px_rgba(0,0,0,0.88)] transition hover:border-brand/50"
+                className="relative flex flex-col overflow-hidden rounded-2xl bg-white/[0.04] p-6 text-left"
               >
                 <div
                   aria-hidden="true"
@@ -273,7 +275,7 @@ export default async function FinanciamentoPage() {
             </div>
 
             <div className="mt-6 lg:mt-8">
-              <RealStockPreview vehicles={featured} variant="cards" />
+              <VehicleGrid vehicles={featuredWithLqip} desktopCols={4} destaqueLimit={0} />
             </div>
           </Container>
         </section>
