@@ -117,6 +117,15 @@ test("RealStockPreview renderiza fotos 4:3 com fundo desfocado, sem <ul>/<nav> e
   assert.doesNotMatch(cardsHtml, /Linhares|Aracruz|Vitória/);
 });
 
+test("/financiamento não estica card ímpar no celular e não tem containers com borda", () => {
+  const src = readSrc("app/(site)/financiamento/page.tsx");
+  assert.match(src, /evenVehicleGridItems\(/);
+  assert.match(src, /featuredWithLqip\.length === 1/);
+  assert.match(src, /\[&_\.listing-card-item\]:!col-span-1/);
+  assert.doesNotMatch(src, /rounded-(2xl|xl) border border-[^"]*\bp-(3\.5|5|6)\b/);
+  assert.doesNotMatch(src, /group overflow-hidden rounded-2xl border/);
+});
+
 test("páginas /links, /como-funciona e /financiamento seguem cache, estoque próprio e regras de marca", () => {
   const linksPage = readSrc("app/links/page.tsx");
   const comoFunciona = readSrc("app/(site)/como-funciona/page.tsx");
@@ -129,7 +138,7 @@ test("páginas /links, /como-funciona e /financiamento seguem cache, estoque pr�
   ] as const) {
     assert.match(src, /export const revalidate = 3600;/, name);
     assert.match(src, /getFeaturedVehicles\(/, name);
-    assert.match(src, /RealStockPreview/, name);
+    assert.match(src, name === "financiamento" ? /VehicleGrid/ : /RealStockPreview/, name);
     assert.match(src, /shadow-/, name);
     assert.doesNotMatch(
       src,

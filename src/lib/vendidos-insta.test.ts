@@ -309,7 +309,7 @@ test("página /vendidos segue visual limpo sem bordas nos cards, payload enxuto 
   assert.ok(pageSrc.includes("InstaDeliveriesGrid"));
   assert.ok(pageSrc.includes("WhatsAppButton"));
   assert.ok(
-    pageSrc.includes("Clientes que já saíram da Garagem de carro ou moto novos"),
+    pageSrc.includes("Clientes que já fecharam negócio com a Garagem."),
   );
   assert.ok(
     pageSrc.includes("Fotos de clientes com os veículos vendidos pela Garagem."),

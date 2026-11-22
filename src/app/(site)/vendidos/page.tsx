@@ -59,7 +59,7 @@ export default function VendidosPage() {
             aria-hidden="true"
           />
           <p className="mx-auto mt-3.5 max-w-xl text-balance text-base leading-relaxed text-muted sm:text-lg">
-            Clientes que já saíram da Garagem de carro ou moto novos
+            Clientes que já fecharam negócio com a Garagem.
           </p>
         </header>
 
