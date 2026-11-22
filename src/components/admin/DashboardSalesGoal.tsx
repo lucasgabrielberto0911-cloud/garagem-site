@@ -127,11 +127,11 @@ export function DashboardSalesGoal({
                   {leaderboard.leaderboard.map((item, index) => (
                     <li
                       key={item.seller}
-                      className="flex items-center justify-between gap-2 border-b border-white/5 pb-1.5 text-xs last:border-0 last:pb-0"
+                      className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-white/5 pb-1.5 text-xs last:border-0 last:pb-0"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
                         <span
-                          className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                             index === 0
                               ? "bg-brand text-cream"
                               : "bg-white/10 text-muted"
@@ -139,11 +139,11 @@ export function DashboardSalesGoal({
                         >
                           {index + 1}
                         </span>
-                        <span className="font-medium text-cream">
+                        <span className="truncate font-medium text-cream">
                           {item.seller}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-right">
+                      <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-0.5 text-right">
                         <span className="text-muted">{item.count} venda(s)</span>
                         <span className="font-semibold text-cream">
                           {formatCurrencyBRL(item.revenue)}
