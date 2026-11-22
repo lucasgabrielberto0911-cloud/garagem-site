@@ -43,7 +43,7 @@ const test = base.extend<{ sessao: void }>({
         localStorage.setItem("garagem_consent", "essential"),
       );
       await page.route("**/api/admin/badge", (route) =>
-        route.fulfill({ json: { carWarnings: 1, costWarnings: 2, notifications: 3 } }),
+        route.fulfill({ json: { costWarnings: 2, notifications: 2 } }),
       );
       expect(
         (await page.request.post("/api/auth/login", { data: { email, password } })).status(),

@@ -14,7 +14,6 @@ import {
   publishChecklistLine,
   publishMissingItems,
   publishMissingLine,
-  stockListQuietNote,
 } from "./stock-quality";
 
 test("badges de lote apontam cor, fotos e preço sem inventar FIPE", () => {
@@ -91,20 +90,6 @@ test("edição lista lacunas sem badge; vendido não lista", () => {
     }),
     null,
   );
-});
-
-test("resumo da lista não cita vídeo", () => {
-  assert.equal(
-    stockListQuietNote({ withoutPhotos: 0, stale: 0, staleDays: 60 }),
-    null,
-  );
-  assert.equal(
-    stockListQuietNote({ withoutPhotos: 1, stale: 0, staleDays: 60 }),
-    "1 anúncio sem foto",
-  );
-  const note = stockListQuietNote({ withoutPhotos: 3, stale: 2, staleDays: 60 });
-  assert.equal(note, "3 anúncios sem foto · 2 parados há mais de 60 dias");
-  assert.equal(note?.includes("vídeo"), false);
 });
 
 test("tempo relativo do lote fala em minutos, horas e dias", () => {

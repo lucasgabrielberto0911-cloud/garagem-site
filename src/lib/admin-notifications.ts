@@ -1,12 +1,11 @@
 export const NOTICE_KINDS = [
-  { value: "carros", label: "Carros" },
   { value: "vendas", label: "Vendas" },
 ] as const;
 
 export type NoticeKind = (typeof NOTICE_KINDS)[number]["value"];
 
-export function parseNoticeKind(value: string | null): NoticeKind {
-  return value === "vendas" ? "vendas" : "carros";
+export function parseNoticeKind(_value: string | null): NoticeKind {
+  return "vendas";
 }
 
 export type NoticesResult = {

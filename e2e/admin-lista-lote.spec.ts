@@ -35,7 +35,7 @@ const test = base.extend<{ tag: string }>({
     await prisma.vehicle.createMany({
       data: [
         { ...base, model: "Alfa", price: 50000, status: "disponivel" },
-        { ...base, model: "Beta", price: 0, status: "disponivel" },
+        { ...base, model: "Beta", price: 0, status: "reservado" },
         { ...base, model: "Gama", price: 60000, status: "disponivel" },
       ],
     });
@@ -74,19 +74,20 @@ test("lista limpa: sem checkbox, sem filtros abertos e sem barra de lote", async
   await expect(page.getByText(`${tag} Alfa`)).toBeVisible();
   await expect(page.locator('input[type="checkbox"]')).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Filtros" })).toHaveAttribute("aria-expanded", "false");
-  await expect(page.getByRole("group", { name: "Pendências do estoque" })).toHaveCount(0);
   await expect(page.getByText("selecionado(s)")).toHaveCount(0);
 });
 
-test("filtro sem preço fica na URL e vira chip removível", async ({ page, tag }) => {
+test("filtro de status fica na URL e vira chip removível", async ({ page, tag }) => {
   await page.goto(`/admin/veiculos?q=${tag}`);
-  await page.getByRole("button", { name: "Filtros" }).click();
-  await page.getByRole("group", { name: "Pendências do estoque" }).getByRole("button", { name: "Sem preço" }).click();
-  await expect(page).toHaveURL(/pendencia=sem-preco/);
+  await page
+    .getByRole("group", { name: "Filtros rápidos" })
+    .getByRole("button", { name: /^Reservados/ })
+    .click();
+  await expect(page).toHaveURL(/status=reservado/);
   await expect(page.getByText(`${tag} Beta`)).toBeVisible();
   await expect(page.getByText(`${tag} Alfa`)).toHaveCount(0);
-  await page.getByRole("button", { name: "Remover filtro Sem preço" }).click();
-  await expect(page).not.toHaveURL(/pendencia/);
+  await page.getByRole("button", { name: "Remover filtro Reservado" }).click();
+  await expect(page).not.toHaveURL(/status=/);
   await expect(page.getByText(`${tag} Alfa`)).toBeVisible();
 });
 

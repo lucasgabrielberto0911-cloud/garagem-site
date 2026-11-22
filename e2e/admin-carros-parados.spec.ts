@@ -335,7 +335,43 @@ for (const vp of [
     });
     page.on("pageerror", (err) => pageErrors.push(err.message));
 
-    // 1. /admin/veiculos: cards limpos, selos só quando faltar algo, consignado sem "Sem compra"
+    // 0. /admin (Central): sem bloco de pendências dos carros, mantendo Parados por faixa e Lucro previsto
+    await page.goto("/admin");
+    await expect(
+      page.getByRole("heading", { name: "Central da loja", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Parados por faixa", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Lucro previsto do estoque", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator("main")).toContainText(
+      "Tempo de estoque e resultado do mês.",
+    );
+    await expect(page.getByRole("link", { name: "Ver todas" })).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      ),
+      "Sem overflow horizontal na Central",
+    ).toBe(0);
+
+    const badgeRes = await page.request.get("/api/admin/badge");
+    expect(badgeRes.status()).toBe(200);
+    const badgeJson = await badgeRes.json();
+    expect(badgeJson).not.toHaveProperty("carWarnings");
+    expect(badgeJson.notifications).toBe(badgeJson.costWarnings);
+
+    const avisosRes = await page.request.get("/api/admin/avisos");
+    expect(avisosRes.status()).toBe(200);
+    const avisosJson = await avisosRes.json();
+    expect(avisosJson.kind).toBe("vendas");
+    expect(avisosJson.counts).not.toHaveProperty("carros");
+
+    // 1. /admin/veiculos: cards limpos sem selos ou filtros de pendência
     await page.goto(`/admin/veiculos?q=${seed.tag}`);
     await expect(
       page.getByRole("heading", { name: "Veículos", exact: true }),
@@ -344,9 +380,6 @@ for (const vp of [
 
     const completeCard = page.locator("li", { hasText: `${seed.tag} Completo` });
     await expect(completeCard).toBeVisible();
-    await expect(completeCard).not.toContainText(
-      /Sem preço|Sem foto|Poucas fotos|Sem legenda|Sem capa|Sem compra/i,
-    );
 
     // Barra de ações no celular: só Editar, Alterar preço e ⋯ (Destacar fica oculto no celular)
     const featureBtn = completeCard.getByRole("button", {
@@ -362,58 +395,27 @@ for (const vp of [
       hasText: `${seed.tag} ConsignadoOk`,
     });
     await expect(consignedCard).toBeVisible();
-    await expect(consignedCard).not.toContainText(
-      /Sem preço|Sem foto|Poucas fotos|Sem legenda|Sem capa|Sem compra/i,
-    );
 
     const missingPurchaseCard = page.locator("li", {
       hasText: `${seed.tag} SemCompra`,
     });
     await expect(missingPurchaseCard).toBeVisible();
-    await expect(missingPurchaseCard).toContainText("Sem compra");
     await expect(missingPurchaseCard).not.toContainText(
-      /Sem preço|Sem foto|Poucas fotos|Sem legenda|Sem capa/i,
+      /Sem preço|Sem foto|Sem legenda|Sem capa/i,
     );
 
     const pendingCard = page.locator("li", { hasText: `${seed.tag} Pendente` });
-    await expect(pendingCard).toContainText("Sem preço");
-    await expect(pendingCard).toContainText("Sem foto");
-    await expect(pendingCard).toContainText("Sem legenda");
-    await expect(pendingCard).toContainText("Sem compra");
-
-    // Filtro Com pendência no servidor (inclui Pendente e SemCompra, exclui Completo e ConsignadoOk)
-    await page
-      .getByRole("group", { name: "Filtros rápidos" })
-      .getByRole("button", { name: /Com pendência/ })
-      .click();
-    await expect(page).toHaveURL(/pendencia=com-pendencia/);
     await expect(pendingCard).toBeVisible();
-    await expect(missingPurchaseCard).toBeVisible();
-    await expect(completeCard).toHaveCount(0);
-    await expect(consignedCard).toHaveCount(0);
-    await assertCleanLayout(page);
-
-    // API paginada com pendencia=com-pendencia respeita o mesmo filtro no servidor
-    const apiPage1 = await page.request.get(
-      `/api/admin/veiculos?q=${encodeURIComponent(seed.tag)}&tab=estoque&pendencia=com-pendencia&page=1&pageSize=2`,
+    await expect(pendingCard).not.toContainText(
+      /Sem preço|Sem foto|Sem legenda|Sem capa/i,
     );
-    expect(apiPage1.status()).toBe(200);
-    const body1 = (await apiPage1.json()) as {
-      total: number;
-      hasMore: boolean;
-      vehicles: Array<{ id: string }>;
-    };
-    // Pendente + SemCompra + Parado68 + Parado48 + Parado35 (1 foto cada < 6) = 5 com pendência
-    expect(body1.total).toBe(5);
-    expect(body1.vehicles.length).toBe(2);
-    expect(body1.hasMore).toBe(true);
 
     // Filtro Parados (+30d)
     await page
       .getByRole("group", { name: "Filtros rápidos" })
       .getByRole("button", { name: /Parados \(\+30d\)/ })
       .click();
-    await expect(page).toHaveURL(/pendencia=parados/);
+    await expect(page).toHaveURL(/parados=1/);
     await expect(
       page.locator("li", { hasText: `${seed.tag} Parado68` }),
     ).toBeVisible();

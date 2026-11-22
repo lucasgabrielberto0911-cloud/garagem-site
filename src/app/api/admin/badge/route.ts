@@ -8,9 +8,8 @@ export async function GET() {
     const { counts } = await getAdminNoticeSnapshot();
     return NextResponse.json(
       {
-        carWarnings: counts.carros,
         costWarnings: counts.vendas,
-        notifications: counts.carros + counts.vendas,
+        notifications: counts.vendas,
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );
@@ -18,7 +17,6 @@ export async function GET() {
     console.error("[admin/badge] falha ao consultar:", error);
     return NextResponse.json(
       {
-        carWarnings: null,
         costWarnings: null,
         notifications: null,
       },

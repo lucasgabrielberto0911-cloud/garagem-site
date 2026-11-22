@@ -12,7 +12,6 @@ export default function Loading() {
         <div className="skeleton h-14" />
         <div className="skeleton h-14" />
       </div>
-      <div className="skeleton h-48 w-full" />
       <div className="skeleton h-44 w-full" />
       <div className="skeleton h-40 w-full" />
     </div>
