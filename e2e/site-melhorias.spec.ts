@@ -37,7 +37,8 @@ test("botões do topo mantêm alvo de toque grande sem transbordar", async ({ pa
   for (const button of buttons) {
     await expect(button).toBeVisible();
     const box = (await button.boundingBox())!;
-    expect(box.height).toBeGreaterThanOrEqual(56);
+    // Subpixel de layout no CI pode devolver 55.999... para um alvo de 56px.
+    expect(box.height).toBeGreaterThanOrEqual(55.5);
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(viewportWidth + 1);
   }
