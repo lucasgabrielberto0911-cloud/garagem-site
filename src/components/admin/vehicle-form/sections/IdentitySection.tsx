@@ -87,7 +87,7 @@ export function IdentitySection({
       <Field
         label="Placa (interna)"
         error={errors.plate}
-        hint="Só no admin. O site mostra no máximo o final da placa."
+        hint="Só no admin. O site não mostra a placa."
       >
         <input
           name="plate"
