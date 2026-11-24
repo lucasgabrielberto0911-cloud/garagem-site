@@ -55,20 +55,25 @@ test("agendamento de visita na ficha e em 1 toque no painel do chat", async ({
   await page.goto(vehiclePath(civic));
 
   if (page.viewportSize()!.width >= 1024) {
-    // No card do desktop, visita/financiamento/troca/vídeo ficam à vista sob o WhatsApp.
-    const desktopVisit = page
-      .locator("[data-ficha-page] aside")
-      .getByRole("link", {
-        name: "Agendar visita: combinar dia e hora pelo WhatsApp",
-        exact: true,
-      });
+    // No card do desktop, o botão secundário único "Agendar visita" fica logo abaixo do WhatsApp principal.
+    const aside = page.locator("[data-ficha-page] aside");
+    await expect(aside.getByRole("link", { name: /Agendar visita/ })).toHaveCount(1);
+    const desktopVisit = aside.getByRole("link", {
+      name: "Agendar visita",
+      exact: true,
+    });
     await expect(desktopVisit).toBeVisible();
     const href = (await desktopVisit.getAttribute("href"))!;
     expect(href).toMatch(/^https:\/\/wa\.me\/5527996330706\?/);
     expect(new URL(href).searchParams.get("text")).toMatch(
-      /Quero agendar uma visita para ver o .*Civic.*Qual o melhor dia e horário\?/,
+      /Quero agendar uma visita para ver o .*Civic.*2015.*\(R\$\s*74\.900\)\. Qual o melhor dia e horário\?/,
     );
   } else {
+    await expect(
+      page
+        .locator("[data-ficha-page] aside")
+        .getByRole("link", { name: "Agendar visita", exact: true }),
+    ).toBeHidden();
     // "Próximos passos" fica sempre aberto, sem clique.
     const dossierVisit = page
       .locator("#proximos-passos")

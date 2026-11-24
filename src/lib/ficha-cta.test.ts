@@ -685,10 +685,14 @@ test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna prin
   assert.ok(aside.indexOf("<VehicleKeyFacts") < aside.indexOf("Falar no WhatsApp"));
   assert.ok(aside.indexOf("Falar no WhatsApp") < aside.indexOf("Agendar visita"));
 
-  // WhatsApp principal, botão secundário Agendar visita e segundo botão no fim da coluna; financiamento/troca/vídeo/visita à vista.
+  // WhatsApp principal, botão secundário Agendar visita (só desktop) e segundo botão no fim da coluna; financiamento/troca/vídeo à vista.
   assert.equal((aside.match(/<WhatsAppButton/g) ?? []).length, 4); // vendido + à venda + agendar visita + fim da coluna
+  const agendarBlock = aside.slice(aside.indexOf("Falar no WhatsApp"), aside.indexOf("data-ficha-more-actions"));
+  assert.match(agendarBlock, /className="hidden lg:block"/);
   assert.match(aside, /trackingLabel="ficha-agendar"/);
   assert.match(aside, /<div data-ficha-more-actions/);
+  const moreActions = aside.slice(aside.indexOf("data-ficha-more-actions"), aside.indexOf("<VehicleTrustNotes"));
+  assert.doesNotMatch(moreActions, /visit=\{whatsapp\.visit\}/);
   assert.doesNotMatch(aside, /<details/);
   const secondCta = aside.slice(aside.indexOf("data-ficha-second-cta"));
   assert.match(secondCta, /<VehicleLeadHit/);
@@ -704,11 +708,12 @@ test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna prin
   assert.doesNotMatch(aside, /R\$\s*\d/);
 });
 
-test("faixa de confiança do desktop: garantia, vistoria da loja e Linhares/ES", () => {
+test("faixa de confiança do desktop: garantia, vistoria oculta no lg e Linhares/ES", () => {
   const html = renderToStaticMarkup(
     createElement(VehicleTrustNotes, { warranty: null }),
   );
   assert.match(html, /Garantia de 3 meses/);
+  assert.match(html, /data-vistoriado-seal=""[^>]*lg:hidden/);
   assert.match(html, /Vistoriado pela Garagem/);
   assert.doesNotMatch(html, /laudo cautelar/i);
   assert.match(html, /Linhares\/ES/);

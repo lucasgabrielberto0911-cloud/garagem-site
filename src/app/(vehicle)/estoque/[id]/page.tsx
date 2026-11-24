@@ -632,35 +632,37 @@ export default async function VehicleDetailPage({
                     </p>
                   </div>
 
-                  <VehicleLeadHit
-                    contentId={vehicle.id}
-                    contentName={fullLabel}
-                    value={sold ? undefined : vehicle.price}
-                    make={formatBrandName(vehicle.brand)}
-                    model={formatModelName(vehicle.model)}
-                    year={vehicle.yearModel}
-                    {...autoHit}
-                    catalog={inCatalog}
-                    status={vehicle.status}
-                    sold={sold}
-                  >
-                    <WhatsAppButton
-                      size="md"
-                      variant="outline"
-                      className="w-full"
-                      trackingLabel="ficha-agendar"
-                      campaign="ficha"
-                      content={fichaTrack.content}
-                      vehicleId={vehicle.id}
-                      slug={canonicalSlug}
-                      pageOrigin="ficha"
-                      message={whatsapp.visit}
+                  <div className="hidden lg:block">
+                    <VehicleLeadHit
+                      contentId={vehicle.id}
+                      contentName={fullLabel}
+                      value={sold ? undefined : vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
+                      {...autoHit}
+                      catalog={inCatalog}
+                      status={vehicle.status}
+                      sold={sold}
                     >
-                      Agendar visita
-                    </WhatsAppButton>
-                  </VehicleLeadHit>
+                      <WhatsAppButton
+                        size="md"
+                        variant="outline"
+                        className="w-full"
+                        trackingLabel="ficha-agendar"
+                        campaign="ficha"
+                        content={fichaTrack.content}
+                        vehicleId={vehicle.id}
+                        slug={canonicalSlug}
+                        pageOrigin="ficha"
+                        message={whatsapp.visit}
+                      >
+                        Agendar visita
+                      </WhatsAppButton>
+                    </VehicleLeadHit>
+                  </div>
 
-                  {/* Financiamento, troca, vídeo e visita: à vista, em estilo discreto para não competir com o botão principal. */}
+                  {/* Financiamento, troca e vídeo: à vista, em estilo discreto para não competir com o botão principal. */}
                   <div data-ficha-more-actions="" className="hidden border-t border-white/[0.12] pt-3 lg:block">
                     <VehicleQuickActions
                       contentId={vehicle.id}
@@ -678,7 +680,6 @@ export default async function VehicleDetailPage({
                       video={whatsapp.video}
                       finance={whatsapp.finance}
                       trade={whatsapp.trade}
-                      visit={whatsapp.visit}
                       hasVideo={!!vehicle.hasVideo}
                       variant="secondary"
                       className=""

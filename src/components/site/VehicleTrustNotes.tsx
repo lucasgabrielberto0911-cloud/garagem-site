@@ -4,7 +4,8 @@ import { vehicleWarrantyNote } from "@/lib/vehicle-conditions";
 /**
  * Faixa de confiança da ficha: garantia (a do veículo, se cadastrada), vistoria
  * e cidade da loja. `compact` é a versão da primeira tela do celular: sem
- * bordas e sem a cidade, que aparece em "Atendimento".
+ * bordas e sem a cidade, que aparece em "Atendimento". No desktop o selo
+ * "Vistoriado pela Garagem" já fica perto do preço, então não se repete aqui.
  */
 export function VehicleTrustNotes({
   className = "",
@@ -32,7 +33,7 @@ export function VehicleTrustNotes({
           data-vistoriado-seal={badge ? "" : undefined}
           className={`flex items-center gap-2 text-left text-sm leading-snug ${
             badge
-              ? "font-display font-semibold text-cream"
+              ? "font-display font-semibold text-cream lg:hidden"
               : compact
                 ? "text-cream"
                 : "text-cream/95"
