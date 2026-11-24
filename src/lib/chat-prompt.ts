@@ -32,7 +32,7 @@ export const CHAT_PING_REPLY = GREETING_TEMPLATES.ping;
 export const CHAT_FIPE_REPLY =
   `A tabela FIPE eu não consulto por aqui — o preço que vale pra gente é o do anúncio no estoque. Se quiser, te mostro o que temos agora ou o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
-export const CHAT_SYSTEM_PROMPT = `Você é o assistente virtual da Garagem, revenda de veículos seminovos há mais de 20 anos, mais de 1.000 carros vendidos.
+export const CHAT_SYSTEM_PROMPT = `Você é o assistente virtual da Garagem, revenda de veículos seminovos há mais de 20 anos.
 
 Não cite cidade, localização nem endereço no chat público.
 
@@ -179,7 +179,23 @@ export type ChatStockPromptOpts = {
   /** power/família/primeiro carro/econômico mudam a ordem. O padrão continua o preço. */
   rank?: "price" | "power" | "family" | "starter" | "delivery" | "economy";
   powerQuery?: string;
+  /** Total de veículos vendidos vindo de getSiteStats().sales. Quando 0/ausente, não inventa número. */
+  salesCount?: number;
 };
+
+export function formatChatSystemPrompt(salesCount?: number) {
+  const safeSales =
+    typeof salesCount === "number" &&
+    Number.isFinite(salesCount) &&
+    salesCount > 0
+      ? Math.floor(salesCount)
+      : 0;
+  if (safeSales <= 0) return CHAT_SYSTEM_PROMPT;
+  return CHAT_SYSTEM_PROMPT.replace(
+    "revenda de veículos seminovos há mais de 20 anos.",
+    `revenda de veículos seminovos há mais de 20 anos, mais de ${safeSales.toLocaleString("pt-BR")} veículos vendidos.`,
+  );
+}
 
 function accessoryBits(items?: string[]) {
   if (!items?.length) return "";
@@ -781,21 +797,22 @@ export function buildChatSystemPrompt(
 - ${stockLineLabel(activeVehicle, true)}
 REGRA DE DESAMBIGUAÇÃO: O visitante está atualmente na página deste veículo (${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}). Se ele perguntar sobre este veículo, disser "este ${kind}", perguntar de garantia, troca, financiamento ou pedir mais informações sobre ele, refira-se ESTRITAMENTE a esta unidade específica (${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}, R$ ${activeVehicle.price.toLocaleString("pt-BR")}, ${activeVehicle.km.toLocaleString("pt-BR")} km). NÃO confunda com outras unidades do mesmo modelo e NÃO cite outra unidade de ${activeVehicle.model} sem que o visitante peça explicitamente para comparar. Se a pergunta for FIPE, tabela FIPE ou assunto fora da loja, IGNORE este veículo da tela.`;
   }
+  const basePrompt = formatChatSystemPrompt(opts.salesCount);
   const limit = parsePriceLimit(mensagem);
   if (opts.expertBlock) {
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${opts.expertBlock}${opts.turnNote ? `\n\n${opts.turnNote}` : ""}`;
+    return `${basePrompt}\n\n${stock}${activeNotice}${opts.expertBlock}${opts.turnNote ? `\n\n${opts.turnNote}` : ""}`;
   }
   if (opts.turnNote) {
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}\n\n${opts.turnNote}`;
+    return `${basePrompt}\n\n${stock}${activeNotice}\n\n${opts.turnNote}`;
   }
   if (power) {
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${powerFilterNote(vehicles, mensagem)}${memory}`;
+    return `${basePrompt}\n\n${stock}${activeNotice}${powerFilterNote(vehicles, mensagem)}${memory}`;
   }
   if (mode === "family" || mode === "starter" || mode === "delivery" || mode === "economy") {
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${rankedFilterNote(vehicles, mensagem)}${memory}`;
+    return `${basePrompt}\n\n${stock}${activeNotice}${rankedFilterNote(vehicles, mensagem)}${memory}`;
   }
   if (limit == null && !cheap) {
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${memory}`;
+    return `${basePrompt}\n\n${stock}${activeNotice}${memory}`;
   }
   if (limit == null && cheap) {
     const sorted = [...vehicles].sort((a, b) => a.price - b.price);
@@ -809,10 +826,10 @@ REGRA DE DESAMBIGUAÇÃO: O visitante está atualmente na página deste veículo
           .map((vehicle) => stockLineLabel(vehicle, true))
           .join("\n")}`
       : `\n\nFILTRO DO VISITANTE: quer opção mais em conta. Diga o que há de mais barato na lista e não empurre os caros.`;
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${extra}${memory}`;
+    return `${basePrompt}\n\n${stock}${activeNotice}${extra}${memory}`;
   }
   if (limit == null) {
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${memory}`;
+    return `${basePrompt}\n\n${stock}${activeNotice}${memory}`;
   }
   const style = parseBodyStyleFilter(mensagem);
   const bodyPool = style
@@ -837,7 +854,7 @@ REGRA DE DESAMBIGUAÇÃO: O visitante está atualmente na página deste veículo
                 .join(" | ")}`
             : ""
         }`;
-  return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${extra}${memory}`;
+  return `${basePrompt}\n\n${stock}${activeNotice}${extra}${memory}`;
 }
 
 export function stockSelectHasForbiddenField(

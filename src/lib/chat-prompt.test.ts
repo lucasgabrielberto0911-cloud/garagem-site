@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   CHAT_FIPE_REPLY,
@@ -6,6 +7,7 @@ import {
   CHAT_SYSTEM_PROMPT,
   CHAT_WHATSAPP_URL,
   buildChatSystemPrompt,
+  formatChatSystemPrompt,
   formatStockForPrompt,
   isPowerQuery,
   parseCheapIntent,
@@ -22,6 +24,11 @@ import {
   stockSelectHasForbiddenField,
 } from "./chat-prompt";
 import {
+  formatSobreHeaderDescription,
+  formatSobreHistoryParagraph,
+  formatSoldStatLabel,
+} from "./site-settings";
+import {
   CHAT_VEHICLE_SELECT,
   formatChatKeysReply,
   toChatStockLine,
@@ -36,10 +43,24 @@ test("saudação de ping ajuda a escolher sem jargão de 60x", () => {
   assert.doesNotMatch(CHAT_PING_REPLY, /60x/);
 });
 
-test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
+test("system prompt traz as regras fixas e o WhatsApp oficial sem inventar número fixo de vendidos", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /assistente virtual da Garagem/);
-  assert.match(CHAT_SYSTEM_PROMPT, /há mais de 20 anos/);
-  assert.match(CHAT_SYSTEM_PROMPT, /mais de 1\.000 carros vendidos/);
+  assert.match(CHAT_SYSTEM_PROMPT, /há mais de 20 anos\./);
+  assert.doesNotMatch(CHAT_SYSTEM_PROMPT, /1\.000|1\.156|carros vendidos|veículos vendidos/);
+  assert.equal(formatChatSystemPrompt(0), CHAT_SYSTEM_PROMPT);
+  assert.equal(formatChatSystemPrompt(-5), CHAT_SYSTEM_PROMPT);
+  assert.match(
+    formatChatSystemPrompt(1234),
+    /há mais de 20 anos, mais de 1\.234 veículos vendidos\./,
+  );
+  assert.match(
+    buildChatSystemPrompt([], "oi", undefined, { salesCount: 1234 }),
+    /mais de 1\.234 veículos vendidos/,
+  );
+  assert.doesNotMatch(
+    buildChatSystemPrompt([], "oi", undefined, { salesCount: 0 }),
+    /vendidos\./,
+  );
   assert.match(
     CHAT_SYSTEM_PROMPT,
     /Não cite cidade, localização nem endereço/,
@@ -663,4 +684,49 @@ test("assistente confirma na hora chave reserva, manual do proprietário e víde
   });
   assert.doesNotMatch(turnVideoPlain.reply, /vídeo disponível deste anúncio/);
   assert.match(turnVideoPlain.reply, /O consultor manda um vídeo do Polo 2019 pelo WhatsApp/);
+
+  let seenPromptWithSales = "";
+  await runChatTurn({
+    mensagem: "a loja está no mercado há quanto tempo?",
+    historico: [],
+    stock: [],
+    salesCount: 1342,
+    readIntent: async () => null,
+    generate: async ({ systemPrompt }) => {
+      seenPromptWithSales = systemPrompt;
+      return { text: "Há mais de 20 anos.", functionCall: null, finishReason: "STOP" };
+    },
+  });
+  assert.match(seenPromptWithSales, /mais de 1\.342 veículos vendidos\./);
+  assert.doesNotMatch(seenPromptWithSales, /1\.000|1\.156/);
+
+  let seenPromptZeroSales = "";
+  await runChatTurn({
+    mensagem: "a loja está no mercado há quanto tempo?",
+    historico: [],
+    stock: [],
+    salesCount: 0,
+    readIntent: async () => null,
+    generate: async ({ systemPrompt }) => {
+      seenPromptZeroSales = systemPrompt;
+      return { text: "Há mais de 20 anos.", functionCall: null, finishReason: "STOP" };
+    },
+  });
+  assert.doesNotMatch(seenPromptZeroSales, /1\.000|1\.156|veículos vendidos\./);
+
+  const sobreSource = readFileSync("src/app/(site)/sobre/page.tsx", "utf8");
+  assert.doesNotMatch(sobreSource, /1\.000|1\.156/);
+  assert.match(sobreSource, /formatSoldStatLabel\(stats\.sales\)/);
+  assert.match(sobreSource, /formatSobreHeaderDescription\(stats\.sales\)/);
+  assert.match(sobreSource, /formatSobreHistoryParagraph\(stats\.sales\)/);
+
+  const fakeSales = 1342;
+  assert.equal(formatSoldStatLabel(fakeSales), "+1.342");
+  assert.match(formatSobreHeaderDescription(fakeSales), /Mais de 1\.342 veículos negociados\./);
+  assert.match(formatSobreHistoryParagraph(fakeSales), /Foram mais de 1\.342 veículos entregues/);
+
+  assert.equal(formatSoldStatLabel(0), "0");
+  assert.doesNotMatch(formatSobreHeaderDescription(0), /\d[\d.]*\s+veículos/);
+  assert.doesNotMatch(formatSobreHistoryParagraph(0), /\d|1\.000|1\.156/);
+  assert.match(formatSobreHistoryParagraph(0), /^Cada veículo é entregue com atenção à procedência/);
 });

@@ -17,6 +17,7 @@ import type { ChatSoldVehicle } from "@/lib/chat-sold";
 import { runChatTurn, type ChatTurnResult } from "@/lib/chat-turn";
 import { readChatResearch } from "@/lib/chat-research-data";
 import type { RateLimitResult } from "@/lib/rate-limit";
+import { getSiteStats } from "@/lib/vehicles";
 
 export const CHAT_MAX_MESSAGE = 800;
 export const CHAT_MAX_HISTORY = 12;
@@ -32,6 +33,7 @@ export type ChatPostDeps = {
   checkIpLimit?: (ip: string) => Promise<RateLimitResult>;
   loadStock: () => Promise<ChatVehicleRecord[]>;
   loadSoldStock?: () => Promise<ChatSoldVehicle[]>;
+  loadSalesCount?: () => Promise<number>;
   runTurn: (
     input: Parameters<typeof runChatTurn>[0],
   ) => Promise<ChatTurnResult>;
@@ -43,6 +45,7 @@ export const defaultChatPostDeps: ChatPostDeps = {
   checkIpLimit: checkChatIpRateLimit,
   loadStock: loadCachedChatStock,
   loadSoldStock: loadCachedChatSoldStock,
+  loadSalesCount: async () => (await getSiteStats()).sales,
   runTurn: runChatTurn,
 };
 
@@ -180,13 +183,20 @@ export async function handleChatPost(
       : [];
     let stock: ChatVehicleRecord[] = [];
     let soldStock: ChatSoldVehicle[] = [];
+    let salesCount: number | undefined;
     try {
-      [stock, soldStock] = await Promise.all([
+      [stock, soldStock, salesCount] = await Promise.all([
         deps.loadStock(),
         deps.loadSoldStock?.().catch(() => {
           console.error("[chat] histórico de vendidos indisponível");
           return [];
         }) ?? Promise.resolve([]),
+        deps.loadSalesCount
+          ? deps.loadSalesCount().catch(() => {
+              console.error("[chat] total de vendidos indisponível");
+              return 0;
+            })
+          : Promise.resolve(undefined),
       ]);
     } catch (error) {
       console.error("[chat] estoque:", error);
@@ -219,6 +229,7 @@ export async function handleChatPost(
         historico,
         stock,
         soldStock,
+        ...(salesCount !== undefined ? { salesCount } : {}),
         previousVehicleIds,
         shownVehicleIds,
         searchHistory,
@@ -263,6 +274,7 @@ export async function handleChatPost(
               historico,
               stock,
               soldStock,
+              ...(salesCount !== undefined ? { salesCount } : {}),
               previousVehicleIds,
               shownVehicleIds,
               searchHistory,

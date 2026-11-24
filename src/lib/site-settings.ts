@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { formatNumberBR } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { site, type SiteConfig } from "@/lib/site";
 
@@ -46,6 +47,41 @@ export function parseLegacySoldBase(raw: string | null | undefined): number {
   if (!digits) return 0;
   const value = Number(digits);
   return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function normalizePositiveSales(sales: number | null | undefined): number {
+  if (typeof sales !== "number" || !Number.isFinite(sales) || sales <= 0) {
+    return 0;
+  }
+  return Math.floor(sales);
+}
+
+/** Valor exibido no bloco de estatísticas em /sobre (ex.: "+1.156" ou "0"). */
+export function formatSoldStatLabel(sales: number | null | undefined): string {
+  const count = normalizePositiveSales(sales);
+  return count > 0 ? `+${formatNumberBR(count)}` : "0";
+}
+
+/** Subtítulo do cabeçalho de /sobre alinhado à mesma fonte de vendas. */
+export function formatSobreHeaderDescription(
+  sales: number | null | undefined,
+): string {
+  const count = normalizePositiveSales(sales);
+  const soldSentence =
+    count > 0 ? ` Mais de ${formatNumberBR(count)} veículos negociados.` : "";
+  return `Mais de 20 anos de mercado.${soldSentence} Seminovos com procedência e negociação clara. Atendemos Linhares, Aracruz e Grande Vitória.`;
+}
+
+/** Parágrafo de entregas da seção Nossa história em /sobre alinhado à mesma fonte de vendas. */
+export function formatSobreHistoryParagraph(
+  sales: number | null | undefined,
+): string {
+  const count = normalizePositiveSales(sales);
+  const lead =
+    count > 0
+      ? `Foram mais de ${formatNumberBR(count)} veículos entregues — cada um com atenção à procedência, à documentação e ao que o cliente realmente precisava.`
+      : "Cada veículo é entregue com atenção à procedência, à documentação e ao que o cliente realmente precisava.";
+  return `${lead} Crescemos ouvindo quem compra, quem vende e quem volta para indicar um amigo.`;
 }
 
 function pickEditable(
