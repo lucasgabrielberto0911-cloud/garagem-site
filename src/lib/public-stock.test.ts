@@ -31,6 +31,7 @@ test("nenhum select público carrega campo interno (consignado, compra, placa, F
   assert.equal(PUBLIC_VEHICLE_OMIT.consigned, true);
   assert.equal(PUBLIC_VEHICLE_OMIT.fipePrice, true);
   assert.equal(PUBLIC_VEHICLE_OMIT.plate, true);
+  assert.equal(PUBLIC_VEHICLE_OMIT.plateEnd, true);
   assert.equal(PUBLIC_VEHICLE_OMIT.purchasePrice, true);
   assert.equal(PUBLIC_VEHICLE_OMIT.inStoreName, true);
 });
@@ -48,6 +49,7 @@ test("ficha pública e assistente incluem chave, manual e vídeo e escondem docu
     "sale",
     "fipePrice",
     "plate",
+    "plateEnd",
     "purchasePrice",
     "inStoreName",
     "consigned",
