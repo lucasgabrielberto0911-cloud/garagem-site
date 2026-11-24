@@ -365,10 +365,11 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.match(accessories, /Direção hidráulica/);
 });
 
-test("dobra do celular mostra ano, KM, câmbio, combustível e cor; final da placa vai para a ficha técnica", () => {
+test("dobra do celular mostra ano, KM, câmbio, combustível e cor; final da placa nunca entra na ficha pública", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   assert.match(page, /facts=\{keyFacts\}/);
   assert.match(page, /vehicleKeyFacts\(specs\)/);
+  assert.doesNotMatch(page, /plateEnd/);
 
   const specsFor = (plateEnd: string | null, color: string | null) =>
     buildVehiclePublicSpecs({
@@ -397,7 +398,7 @@ test("dobra do celular mostra ano, KM, câmbio, combustível e cor; final da pla
   assert.match(summary, />Branco</);
   assert.match(summary, />2012\/<wbr\/>2013</);
   assert.match(summary, />98\.000</);
-  assert.doesNotMatch(summary, /Final da placa|Serra|Cidade/);
+  assert.doesNotMatch(summary, /Final da placa|Final placa|Placa|Serra|Cidade/i);
 
   // Sem cor cadastrada, nada de "Não informada" no topo.
   assert.equal(vehicleColorFact(specsFor(null, null)), null);
@@ -424,9 +425,8 @@ test("dobra do celular mostra ano, KM, câmbio, combustível e cor; final da pla
       ),
     );
   const plated = blocks(withPlate);
-  assert.match(plated, /Final placa/);
-  assert.match(plated, />7</);
-  assert.doesNotMatch(blocks(specsFor("   ", "Branco")), /Final placa/);
+  assert.doesNotMatch(plated, /Final placa|Final da placa|Placa/i);
+  assert.doesNotMatch(blocks(specsFor("   ", "Branco")), /Final placa|Final da placa|Placa/i);
 });
 
 test("selo da vistoria aparece perto do preço e some sem texto", () => {

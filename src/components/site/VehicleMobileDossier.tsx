@@ -39,7 +39,7 @@ const TRUST_LABELS = new Set(["Garantia", STORE_INSPECTION_LABEL]);
 const TOP_LABELS = new Set(["Tipo", "Ano", "km", "Câmbio", "Combustível", "Cor"]);
 
 /**
- * Ficha técnica do celular: só o que ainda não apareceu acima (motor, portas, final de placa...).
+ * Ficha técnica do celular: só o que ainda não apareceu acima (motor, portas...).
  * Sem repetir o topo e sem linha "Não informada".
  */
 export function sheetSpecs(specs: VehicleSpecRow[]) {

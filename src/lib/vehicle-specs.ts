@@ -107,9 +107,6 @@ export function buildVehiclePublicSpecs(
   if (vehicle.category !== "moto" && vehicle.doors != null && vehicle.doors > 0) {
     rows.push({ label: "Portas", value: String(vehicle.doors) });
   }
-  if (filled(vehicle.plateEnd)) {
-    rows.push({ label: "Final placa", value: vehicle.plateEnd!.trim() });
-  }
   if (filled(vehicle.warranty)) {
     rows.push({ label: "Garantia", value: vehicle.warranty!.trim() });
   }

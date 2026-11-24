@@ -567,3 +567,14 @@ test("R2 só entra no feed com a forma de URL pública esperada", () => {
     assert.equal(catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, { id: "photoaaaaaaaaaaaaaaaaaa", url }), "", url);
   }
 });
+
+test("descrição do catálogo Meta omite final da placa e linhas de placa", () => {
+  const row = catalogVehicleRow({
+    ...sample,
+    description: "HB20 Platinum com procedência.\nFinal placa: 7\nPlaca ABC-1234",
+  }, "https://www.suagaragem.net");
+  assert.ok(row);
+  assert.match(row.description, /HB20 Platinum com procedência/);
+  assert.doesNotMatch(row.description, /Final placa|ABC-1234|Placa/i);
+});
+

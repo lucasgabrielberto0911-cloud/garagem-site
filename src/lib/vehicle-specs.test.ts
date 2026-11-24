@@ -191,11 +191,13 @@ test("selo da ficha mostra o texto salvo e some quando a vistoria está vazia", 
   );
 });
 
-test("topo da ficha: ano, KM, câmbio e combustível, sem quadradinho vazio", () => {
+test("topo da ficha: ano, KM, câmbio e combustível, sem quadradinho vazio e sem final da placa", () => {
   const rows = buildVehiclePublicSpecs({
     category: "carro", year: 2020, yearModel: 2021, km: 50000, fuel: "Flex", transmission: "Automático",
     color: "Prata", engine: "1.5 16V", doors: 4, plateEnd: "7",
   });
+  assert.equal(rows.some((row) => /placa/i.test(row.label)), false);
+  assert.equal(rows.some((row) => row.value === "7"), false);
   assert.deepEqual(vehicleKeyFacts(rows), [
     { label: "Ano", value: "2020/2021" },
     { label: "KM", value: "50.000" },

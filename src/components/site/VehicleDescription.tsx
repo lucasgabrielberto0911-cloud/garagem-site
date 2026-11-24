@@ -90,11 +90,11 @@ function FactGroup({ lines, hideEmoji }: { lines: DescriptionFact[]; hideEmoji: 
 const LABEL_ALIASES: Record<string, string> = {
   quilometragem: "km",
   transmissao: "cambio",
-  "final da placa": "final placa",
-  "final de placa": "final placa",
-  placa: "final placa",
   "ano/modelo": "ano",
 };
+
+const FORBIDDEN_PLATE_FACT =
+  /\b(?:final\s+(?:d[aeo]\s+)?placa|placa\s+final|placa)\b|\b[a-z]{3}[-\s]?(?:\d{4}|\d[a-z]\d{2})\b/i;
 
 /** "Quilometragem: 106.000 km" e a linha "km: 106.000" da ficha são o mesmo dado. */
 function specKey(label: string) {
@@ -158,8 +158,12 @@ function isRepeatedLabeled(text: string, ctx: SpecContext) {
   return values.some((known) => sameSpecValue(known, value));
 }
 
+function isPlateFact(text: string) {
+  return FORBIDDEN_PLATE_FACT.test(normalizeSpec(splitFactLine(text)?.text ?? text));
+}
+
 function repeatsSpec(text: string, ctx: SpecContext) {
-  return isRepeatedLabeled(text, ctx) || isBareTopFact(text, ctx);
+  return isPlateFact(text) || isRepeatedLabeled(text, ctx) || isBareTopFact(text, ctx);
 }
 
 /**
@@ -174,9 +178,8 @@ export function visibleDescriptionSegments(
   specRows?: { label: string; value: string; empty?: boolean }[],
 ): DescriptionSegment[] {
   const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
-  if (!specRows?.length) return segments;
   const known = new Map<string, string[]>();
-  for (const row of specRows) {
+  for (const row of specRows ?? []) {
     if (row.empty) continue;
     const key = specKey(row.label);
     known.set(key, [...(known.get(key) ?? []), specValue(key, row.value)]);

@@ -82,7 +82,6 @@ export const PUBLIC_VEHICLE_DETAIL_SELECT = {
   engine: true,
   doors: true,
   warranty: true,
-  plateEnd: true,
   inspection: true,
   accessories: true,
   hasSpareKey: true,
@@ -115,7 +114,6 @@ const PUBLIC_VEHICLE_DETAIL_SELECT_LEGACY = {
   engine: true,
   doors: true,
   warranty: true,
-  plateEnd: true,
   inspection: true,
   accessories: true,
   hasSpareKey: true,
@@ -141,10 +139,11 @@ export const PUBLIC_VEHICLE_INCLUDE = {
   photos: { orderBy: { order: "asc" as const } },
 } as const;
 
-/** Nunca enviar preço FIPE, placa completa nem dados de operação ao site. */
+/** Nunca enviar preço FIPE, placa (inteira ou final) nem dados de operação ao site. */
 export const PUBLIC_VEHICLE_OMIT = {
   fipePrice: true,
   plate: true,
+  plateEnd: true,
   inStoreName: true,
   purchasePrice: true,
   consigned: true,
@@ -167,7 +166,7 @@ export type PublicVehicleDetail = {
   engine: string | null;
   doors: number | null;
   warranty: string | null;
-  plateEnd: string | null;
+  plateEnd?: string | null;
   inspection: string | null;
   accessories: string[];
   hasSpareKey: boolean;

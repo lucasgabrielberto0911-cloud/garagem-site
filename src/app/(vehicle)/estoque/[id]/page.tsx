@@ -224,7 +224,6 @@ export default async function VehicleDetailPage({
     color: display.color,
     engine: vehicle.engine,
     doors: vehicle.doors,
-    plateEnd: vehicle.plateEnd,
     warranty: vehicle.warranty,
     inspection: vehicle.inspection,
   });
