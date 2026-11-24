@@ -3,6 +3,7 @@ import { formatCurrencyBRL, formatVehicleLabel, vehicleSeoDescription } from "@/
 import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { absoluteHttpsUrl, absoluteUrl, pageCanonicalPath } from "@/lib/seo";
 import { SEO_LOCAL_LOCATION } from "@/lib/seo-local";
+import { isSoldOrAwaitingDelivery } from "@/lib/public-stock";
 import { formatVehicleDisplay, shortVersion } from "@/lib/vehicle-display";
 import { site } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -115,7 +116,7 @@ export function buildVehicleFichaMetadata(vehicle: {
   status: string;
   photos: Array<{ url: string }>;
 }): Metadata {
-  const sold = vehicle.status === "vendido";
+  const sold = isSoldOrAwaitingDelivery(vehicle.status);
   const display = formatVehicleDisplay(vehicle);
   const label = display.fullLabel;
   const title = vehicleSeoTitle({

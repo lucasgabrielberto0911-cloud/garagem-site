@@ -27,6 +27,7 @@ import {
   formatVehicleDisplay,
 } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
+import { isSoldOrAwaitingDelivery } from "@/lib/public-stock";
 
 export {
   CITIES_DIRECTORY_PATH,
@@ -489,7 +490,7 @@ export function vehicleJsonLd(vehicle: {
       .replace(RENAVAM_DIGITS_TOKEN, ""),
   );
   const path = display.path;
-  const sold = vehicle.status === "vendido";
+  const sold = isSoldOrAwaitingDelivery(vehicle.status);
   const priceOk = !sold && hasPublishablePrice(vehicle.price);
   const availability = vehicleAvailabilityUrl(vehicle.status);
   const sanitizedDescription = sanitizeVehicleJsonLdDescription(

@@ -97,6 +97,16 @@ function parseVehicleFields(formData: FormData) {
   const plateEnd = String(formData.get("plateEnd") || "").trim() || null;
   const inspection = String(formData.get("inspection") || "").trim() || null;
   const status = String(formData.get("status") || "disponivel").trim();
+  if (
+    status !== "disponivel" &&
+    status !== "aguardando_entrega" &&
+    status !== "reservado" &&
+    status !== "vendido"
+  ) {
+    throw Object.assign(new Error("Status inválido."), {
+      fieldErrors: { status: "Selecione um status válido." },
+    });
+  }
   const featuredRequested =
     formData.get("featured") === "on" || formData.get("featured") === "true";
   if (featuredRequested && status === "reservado") {
@@ -598,7 +608,12 @@ export async function markVehicleAsSold(id: string) {
   await revalidatePublicStock(id);
 }
 
-const VEHICLE_STATUSES = ["disponivel", "reservado", "vendido"] as const;
+const VEHICLE_STATUSES = [
+  "disponivel",
+  "aguardando_entrega",
+  "reservado",
+  "vendido",
+] as const;
 
 export async function setVehicleStatus(id: string, status: string) {
   const session = await requireAdmin();
@@ -626,16 +641,33 @@ export async function setVehicleStatus(id: string, status: string) {
     await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
     if (status === "disponivel") await assertNoVehicleSales(tx, [id]);
     if (status === "vendido" && !(await tx.sale.findUnique({ where: { vehicleId: id }, select: { id: true } }))) throw new VehicleSaleConflictError("Conclua o fluxo de venda para marcar o veículo como vendido.");
-    await tx.vehicleReservation.updateMany({ where: { vehicleId: id, status: { in: status === "vendido" ? ["ativa"] : ["ativa", "convertida"] } }, data: { status: status === "vendido" ? "convertida" : "cancelada" } });
+    await tx.vehicleReservation.updateMany({
+      where: {
+        vehicleId: id,
+        status: {
+          in:
+            status === "vendido" || status === "aguardando_entrega"
+              ? ["ativa"]
+              : ["ativa", "convertida"],
+        },
+      },
+      data: {
+        status:
+          status === "vendido" || status === "aguardando_entrega"
+            ? "convertida"
+            : "cancelada",
+      },
+    });
     const previous = await tx.vehicle.findUniqueOrThrow({
       where: { id },
       select: { status: true },
     });
     await tx.vehicle.update({
       where: { id },
-      data: status === "vendido"
-        ? { status, featured: false }
-        : { status },
+      data:
+        status === "vendido" || status === "aguardando_entrega"
+          ? { status, featured: false }
+          : { status },
     });
     await recordAdminAudit(tx, session.adminId, id, "vehicle.status", {
       status: { before: previous.status, after: status },

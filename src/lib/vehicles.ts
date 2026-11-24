@@ -34,7 +34,10 @@ import {
 } from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
 import { mapCatalogBodyStyle } from "@/lib/catalog-feed";
-import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
+import {
+  PUBLIC_LISTING_VEHICLE_WHERE,
+  PUBLIC_SITEMAP_VEHICLE_WHERE,
+} from "@/lib/public-stock";
 import { pickRelatedVehicles, priceBandRange } from "@/lib/related-vehicles";
 
 export {
@@ -653,7 +656,7 @@ export function buildStockWhere(filters: StockFilters, catalog: { brand: string;
   if (bodyWhere) and.push(bodyWhere);
 
   return {
-    ...PUBLIC_SITEMAP_VEHICLE_WHERE,
+    ...PUBLIC_LISTING_VEHICLE_WHERE,
     ...(filters.category ? { category: filters.category } : filters.body ? { category: "carro" } : {}),
     ...(filters.brand
       ? { brand: { equals: filters.brand, mode: "insensitive" as const } }
@@ -701,10 +704,10 @@ function stockQueryKey(filters: StockFilters) {
 
 const loadStockSearchCatalog = unstable_cache(
   () => prisma.vehicle.findMany({
-    where: PUBLIC_SITEMAP_VEHICLE_WHERE, distinct: ["brand", "model", "version"],
+    where: PUBLIC_LISTING_VEHICLE_WHERE, distinct: ["brand", "model", "version"],
     select: { brand: true, model: true, version: true },
   }),
-  ["stock-search-catalog-v2"], PUBLIC_CACHE,
+  ["stock-search-catalog-v3"], PUBLIC_CACHE,
 );
 
 /** O mesmo conjunto ordenado atende todas as páginas sem repetir fotos/histórico. */
@@ -931,7 +934,7 @@ const loadStockFacetsCached = unstable_cache(
   async (): Promise<StockFacets> => {
     // Uma projeção enxuta substitui oito consultas e exclui veículos históricos.
     const rows = await prisma.vehicle.findMany({
-      where: PUBLIC_SITEMAP_VEHICLE_WHERE,
+      where: PUBLIC_LISTING_VEHICLE_WHERE,
       select: {
         category: true, brand: true, model: true, transmission: true,
         fuel: true, color: true, yearModel: true, accessories: true,
@@ -940,7 +943,7 @@ const loadStockFacetsCached = unstable_cache(
     });
     return buildStockFacets(rows);
   },
-  ["stock-facets-v8"],
+  ["stock-facets-v9"],
   PUBLIC_CACHE,
 );
 

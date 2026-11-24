@@ -72,7 +72,7 @@ export type EditListingGapInput = {
  * Vendido não lista lacuna: o anúncio já saiu do estoque ativo.
  */
 export function editListingGaps(input: EditListingGapInput): string[] {
-  if (input.status === "vendido") return [];
+  if (input.status === "vendido" || input.status === "aguardando_entrega") return [];
   const gaps: string[] = [];
   const badges = listingGapBadges({
     color: input.color,
@@ -189,7 +189,7 @@ function hasValidKm(value: number | string | null | undefined): boolean {
  * Veículo vendido nunca lista pendência nem preço.
  */
 export function publishMissingItems(input: PublishGapInput): PublishGapItem[] {
-  if (input.status === "vendido") return [];
+  if (input.status === "vendido" || input.status === "aguardando_entrega") return [];
 
   const items: PublishGapItem[] = [];
   const hasPhotoField =

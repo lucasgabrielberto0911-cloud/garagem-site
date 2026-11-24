@@ -1,8 +1,15 @@
+import Link from "next/link";
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { isValidLqipDataUri } from "@/lib/photo-lqip-cache";
+import {
+  AWAITING_DELIVERY_LABEL,
+  isAwaitingDeliveryStatus,
+  isSoldOrAwaitingDelivery,
+} from "@/lib/public-stock";
+import { vehicleModelLandingPath } from "@/lib/stock-landings";
 import { isNewListing } from "@/lib/vehicle-badges";
 import { formatBrandName, formatCurrencyBRL, formatModelName } from "@/lib/format";
 import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
@@ -24,6 +31,10 @@ export type VehicleCardData = VehicleCardRecord;
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   reservado: { label: "Reservado", className: "listing-card-badge--muted" },
+  aguardando_entrega: {
+    label: AWAITING_DELIVERY_LABEL,
+    className: "listing-card-badge--awaiting",
+  },
   vendido: { label: "Vendido", className: "listing-card-badge--muted" },
 };
 
@@ -72,6 +83,9 @@ export function VehicleCard({
   const rawLqip = vehicle.photos?.[0]?.lqip;
   const lqip = isValidLqipDataUri(rawLqip) ? rawLqip : null;
   const badge = STATUS_BADGE[vehicle.status];
+  const awaitingDelivery = isAwaitingDeliveryStatus(vehicle.status);
+  const soldOrAwaiting = isSoldOrAwaitingDelivery(vehicle.status);
+  const modelPath = vehicleModelLandingPath(vehicle) ?? "/estoque";
   const facts = new Map(card.facts.map((fact) => [fact.label, fact]));
   const version = card.version;
   const favoriteSnapshot = {
@@ -149,7 +163,9 @@ export function VehicleCard({
                 </span>
               ) : null}
               {!cover ? <span className="listing-card-badge--muted">Sem foto</span> : null}
-              {showDestaque ? <span className="listing-card-badge--new">Destaque</span> : null}
+              {showDestaque && !badge ? (
+                <span className="listing-card-badge--new">Destaque</span>
+              ) : null}
             </div>
           </div>
           <h2 className="listing-card-title font-display">{formatModelName(vehicle.model)}</h2>
@@ -172,7 +188,7 @@ export function VehicleCard({
         <FavoriteButton
           vehicleId={vehicle.id}
           label={display.titleWithYear}
-          value={vehicle.price}
+          value={soldOrAwaiting ? undefined : vehicle.price}
           make={formatBrandName(vehicle.brand)}
           model={formatModelName(vehicle.model)}
           year={vehicle.yearModel}
@@ -185,7 +201,15 @@ export function VehicleCard({
       </div>
       {hideInterest ? null : (
       <div className="listing-card-interest">
-        {vehicle.status !== "vendido" ? (
+        {awaitingDelivery ? (
+          <Link
+            href={modelPath}
+            prefetch={false}
+            className="listing-card-similar-link inline-flex min-h-[44px] w-full items-center justify-center border-t border-white/10 px-2 font-display text-[13px] font-medium text-cream/85 transition touch-manipulation hover:bg-white/[0.04] hover:text-cream"
+          >
+            Quero um parecido
+          </Link>
+        ) : vehicle.status !== "vendido" ? (
           <VehicleCardWhatsApp
             showOnStockList
             vehicleId={vehicle.id}

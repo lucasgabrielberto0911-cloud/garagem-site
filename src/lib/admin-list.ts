@@ -30,7 +30,11 @@ export function adminCardMetaLine(vehicle: {
 
 /** O card mostra um caminho de venda. Reservar e desfazer ficam no menu. */
 export function adminCardShowsSoldAction(status: string) {
-  return status === "disponivel" || status === "reservado";
+  return (
+    status === "disponivel" ||
+    status === "reservado" ||
+    status === "aguardando_entrega"
+  );
 }
 
 export function adminCardOverflowStatuses(status: string) {
@@ -41,7 +45,7 @@ export function adminCardOverflowStatuses(status: string) {
       label: "Voltar para disponível",
     });
   }
-  if (status !== "reservado") {
+  if (status !== "reservado" && status !== "aguardando_entrega") {
     options.push({ value: "reservado", label: "Marcar reservado" });
   }
   return options;

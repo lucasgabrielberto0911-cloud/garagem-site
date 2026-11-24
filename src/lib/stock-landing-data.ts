@@ -6,7 +6,10 @@ import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 const loadCachedStockLandingHistory = unstable_cache(
   async () => {
     return prisma.vehicle.findMany({
-      where: { historical: false, status: { in: ["disponivel", "vendido"] } },
+      where: {
+        historical: false,
+        status: { in: ["disponivel", "aguardando_entrega", "vendido"] },
+      },
       select: {
         id: true,
         brand: true,
@@ -19,7 +22,7 @@ const loadCachedStockLandingHistory = unstable_cache(
       orderBy: { updatedAt: "desc" },
     });
   },
-  ["stock-landing-history-v1"],
+  ["stock-landing-history-v2"],
   { revalidate: 3600, tags: [VEHICLES_PUBLIC_CACHE_TAG] },
 );
 

@@ -32,7 +32,11 @@ import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { SeoInternalLinks } from "@/components/site/SeoInternalLinks";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { MissingModelDisclosure } from "@/components/site/MissingModelDisclosure";
-import { stockLandingLinks } from "@/lib/stock-landings";
+import { stockLandingLinks, vehicleModelLandingPath } from "@/lib/stock-landings";
+import {
+  AWAITING_DELIVERY_LABEL,
+  isAwaitingDeliveryStatus,
+} from "@/lib/public-stock";
 import { JsonLd } from "@/components/JsonLd";
 import { buildVehicleFichaMetadata } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName } from "@/lib/format";
@@ -123,7 +127,10 @@ export default async function VehicleDetailPage({
   const path = vehiclePath(vehicle);
   const fichaTrack = fichaWhatsAppTracking({ id: vehicle.id, path });
   const sold = vehicle.status === "vendido";
-  const description = publicVehicleDescription(vehicle.description, sold);
+  const awaitingDelivery = isAwaitingDeliveryStatus(vehicle.status);
+  const soldOrAwaiting = sold || awaitingDelivery;
+  const modelLandingPath = vehicleModelLandingPath(vehicle) ?? "/estoque";
+  const description = publicVehicleDescription(vehicle.description, soldOrAwaiting);
   const isMoto = vehicle.category === "moto";
   const display = formatVehicleDisplay(vehicle);
   const title = display.title;
@@ -189,19 +196,23 @@ export default async function VehicleDetailPage({
     }),
   };
   const soldNavLinks = soldFichaNavLinks(vehicle);
-  const sameBandHref = sold ? "/estoque" : priceBandHref(vehicle.price);
+  const sameBandHref = soldOrAwaiting
+    ? awaitingDelivery
+      ? modelLandingPath
+      : "/estoque"
+    : priceBandHref(vehicle.price);
   const sameBandTitle = isMoto
     ? "Motos na mesma faixa"
     : "Carros na mesma faixa";
   const [conditions, verifiedItems, publicSite] = await Promise.all([
     getVehicleConditions(),
     // Falha ou tabela ausente = sem seção; carro vendido não mostra.
-    sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
+    awaitingDelivery ? Promise.resolve([]) : sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
     getPublicSite(),
   ]);
-  const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
-  const seals = sold ? [] : publicVehicleSeals({ verified, accessories });
-  const dossierChips = sold ? [] : publicDossierChips(vehicle);
+  const verified = soldOrAwaiting ? [] : publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
+  const seals = soldOrAwaiting ? [] : publicVehicleSeals({ verified, accessories });
+  const dossierChips = soldOrAwaiting ? [] : publicDossierChips(vehicle);
 
   const specs = buildVehiclePublicSpecs({
     category: vehicle.category,
@@ -232,7 +243,7 @@ export default async function VehicleDetailPage({
     ? formatUpdatedAt(vehicle.updatedAt)
     : "";
   // Catálogo Meta: só disponível do estoque próprio (nem vendido, reservado ou consignado).
-  const inCatalog = !sold && vehicle.status === "disponivel" && vehicle.catalog === true;
+  const inCatalog = !soldOrAwaiting && vehicle.status === "disponivel" && vehicle.catalog === true;
   const auto = catalogPixelAutoFields(vehicle);
   const autoHit = {
     stateOfVehicle: auto.state_of_vehicle,
@@ -248,19 +259,19 @@ export default async function VehicleDetailPage({
       data-ficha-page=""
       className="pb-sticky-bar-safe lg:pb-10"
     >
-      {!sold ? <RememberRecentVehicle id={vehicle.id} /> : null}
+      {!soldOrAwaiting ? <RememberRecentVehicle id={vehicle.id} /> : null}
       <RememberHotLeadVehicle
         slug={canonicalSlug}
         name={buildVehicleShortName(vehicle)}
         year={vehicle.yearModel}
         link={absoluteUrl(path)}
-        sold={sold}
+        sold={soldOrAwaiting}
       />
       <VehicleViewContent
         contentId={vehicle.id}
         contentName={fullLabel}
         slug={canonicalSlug}
-        value={sold ? undefined : vehicle.price}
+        value={soldOrAwaiting ? undefined : vehicle.price}
         make={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
@@ -275,11 +286,11 @@ export default async function VehicleDetailPage({
           model: formatModelName(vehicle.model),
           version: vehicle.version,
           year: vehicle.yearModel,
-          price: sold ? undefined : vehicle.price,
+          price: soldOrAwaiting ? undefined : vehicle.price,
           path,
           category: vehicle.category,
           status: vehicle.status,
-          sold: sold,
+          sold: soldOrAwaiting,
           catalog: inCatalog,
         }}
       />
@@ -456,7 +467,7 @@ export default async function VehicleDetailPage({
                 items={verified}
                 alt={galleryAlt}
                 heading={verifiedHeading(isMoto)}
-                sold={sold}
+                sold={soldOrAwaiting}
               />
             ) : null}
           </div>
@@ -474,12 +485,16 @@ export default async function VehicleDetailPage({
                   <span className="bg-white/15 px-2 py-0.5 font-display text-sm font-semibold uppercase tracking-wider text-cream">
                     Vendido
                   </span>
+                ) : awaitingDelivery ? (
+                  <span className="rounded-full bg-brand/15 px-2.5 py-0.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-light">
+                    {AWAITING_DELIVERY_LABEL}
+                  </span>
                 ) : vehicle.status === "reservado" ? (
                   <span className="bg-brand-orange px-2 py-0.5 font-display text-sm font-semibold uppercase tracking-wider text-asphalt">
                     Reservado
                   </span>
                 ) : null}
-                {!sold ? (
+                {!soldOrAwaiting ? (
                   <FavoriteButton
                     vehicleId={vehicle.id}
                     label={fullLabel}
@@ -508,25 +523,35 @@ export default async function VehicleDetailPage({
                 ) : null}
               </div>
 
-              <p
-                data-ficha-price=""
-                className="-mt-1 font-display text-[1.75rem] font-bold leading-none tracking-tight tabular-nums text-brand-light lg:mt-0 lg:text-[2.25rem]"
-              >
-                {sold ? (
-                  <span className="text-base text-cream/80">Já vendido</span>
-                ) : (
-                  <span className="ficha-price">{formatCurrencyBRL(vehicle.price)}</span>
-                )}
-              </p>
+              {awaitingDelivery ? (
+                <div data-ficha-price="" className="-mt-0.5 lg:hidden">
+                  <span className="inline-flex rounded-full bg-brand/15 px-2.5 py-0.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-light">
+                    {AWAITING_DELIVERY_LABEL}
+                  </span>
+                </div>
+              ) : (
+                <p
+                  data-ficha-price=""
+                  className="-mt-1 font-display text-[1.75rem] font-bold leading-none tracking-tight tabular-nums text-brand-light lg:mt-0 lg:text-[2.25rem]"
+                >
+                  {sold ? (
+                    <span className="text-base text-cream/80">Já vendido</span>
+                  ) : (
+                    <span className="ficha-price">{formatCurrencyBRL(vehicle.price)}</span>
+                  )}
+                </p>
+              )}
 
               <VehicleKeyFacts facts={keyFacts} color={keyColor} onInk="lg" hideYearBelowLg={yearBadge !== SPEC_EMPTY} specAnchor={!hasMobileFichaSpecs(specs)} />
 
-              <VehicleInspectionBadge inspection={sold ? null : vehicle.inspection} />
-              {!sold ? (
-                <VehicleSeals
-                  seals={seals.filter((seal) => seal.id !== "opcionais")}
-                  chips={dossierChips}
-                />
+              {!soldOrAwaiting ? (
+                <>
+                  <VehicleInspectionBadge inspection={sold ? null : vehicle.inspection} />
+                  <VehicleSeals
+                    seals={seals.filter((seal) => seal.id !== "opcionais")}
+                    chips={dossierChips}
+                  />
+                </>
               ) : null}
 
               {sold ? (
@@ -552,6 +577,17 @@ export default async function VehicleDetailPage({
                   >
                     Pedir parecido no WhatsApp
                   </WhatsAppButton>
+                </div>
+              ) : awaitingDelivery ? (
+                <div className="pt-1">
+                  <Link
+                    href={modelLandingPath}
+                    prefetch={false}
+                    className="inline-flex min-h-[44px] items-center gap-1.5 font-display text-sm font-semibold text-cream/90 underline decoration-white/30 underline-offset-4 transition hover:text-cream hover:decoration-brand-light"
+                  >
+                    Quero um parecido
+                    <span aria-hidden="true">→</span>
+                  </Link>
                 </div>
               ) : (
                 <>
@@ -628,7 +664,7 @@ export default async function VehicleDetailPage({
 
               <div className="hidden flex-wrap items-center gap-x-5 gap-y-1 text-sm lg:flex">
                 {/* No computador o botão flutuante do chat some na ficha: este é o acesso. O link de avaliar o usado saiu: "Tenho um usado para trocar" já cobre. */}
-                {!sold ? (
+                {!soldOrAwaiting ? (
                   <ChatOpenButton
                     source="ficha"
                     prompt={`Tenho dúvida sobre o ${title}`}
@@ -648,12 +684,14 @@ export default async function VehicleDetailPage({
               <p className="hidden text-sm leading-relaxed text-muted lg:block">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
-                  : `Valores sujeitos a alteração. Financiamento e cartão com análise de crédito; condições pelo WhatsApp ${site.whatsappLabel}.`}
+                  : awaitingDelivery
+                    ? "Este veículo já foi vendido e aguarda a entrega."
+                    : `Valores sujeitos a alteração. Financiamento e cartão com análise de crédito; condições pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
               </div>
             </div>
 
-            {!sold ? (
+            {!soldOrAwaiting ? (
               <div className="hidden lg:block">
                 <VehicleConditions
                   vehicleWarranty={vehicle.warranty}
@@ -703,10 +741,10 @@ export default async function VehicleDetailPage({
           hours={publicSite.hours}
           fullLabel={fullLabel}
           path={path}
-          sold={sold}
+          sold={soldOrAwaiting}
           catalog={inCatalog}
           status={vehicle.status}
-          price={sold ? 0 : vehicle.price}
+          price={soldOrAwaiting ? 0 : vehicle.price}
           yearModel={vehicle.yearModel}
           make={formatBrandName(vehicle.brand)}
           model={formatModelName(vehicle.model)}
@@ -731,7 +769,7 @@ export default async function VehicleDetailPage({
           warranty={vehicle.warranty}
           verifiedHeading={verifiedHeading(isMoto)}
           quickActions={
-            sold
+            soldOrAwaiting
               ? undefined
               : {
                   contentPath: path,
@@ -756,39 +794,45 @@ export default async function VehicleDetailPage({
             query={[vehicle.id, vehicle.brand, 3, vehicle.category, vehicle.price, display.transmission]}
             title={sameBandTitle}
             description={
-              sold
+              soldOrAwaiting
                 ? "Este já foi. Estas opções estão no estoque agora — abra a ficha."
                 : "Se este não fechar, estes estão na mesma faixa. Abra a ficha."
             }
             stockHref={sameBandHref}
-            whatsapp={{
-              message: whatsapp.sameBand,
-              trackingLabel: "ficha-mesma-faixa",
-              content: fichaTrack.content,
-              vehicleId: vehicle.id,
-              slug: canonicalSlug,
-            }}
+            whatsapp={
+              awaitingDelivery
+                ? undefined
+                : {
+                    message: whatsapp.sameBand,
+                    trackingLabel: "ficha-mesma-faixa",
+                    content: fichaTrack.content,
+                    vehicleId: vehicle.id,
+                    slug: canonicalSlug,
+                  }
+            }
           />
         </Suspense>
 
         {/* O formulário também serve a /pedido: o mínimo de 14px vale só na ficha. */}
-        <div className="[&_.text-xs]:text-sm">
-          <MissingModelDisclosure>
-            <MissingModelForm
-              idPrefix="ficha"
-              sourcePage="ficha"
-              contextLabel={fullLabel}
-              pagePath={path}
-              interestVehicleId={vehicle.id}
-              initialModel={sold ? title : ""}
-              description={
-                sold
-                  ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`
-                  : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
-              }
-            />
-          </MissingModelDisclosure>
-        </div>
+        {!awaitingDelivery ? (
+          <div className="[&_.text-xs]:text-sm">
+            <MissingModelDisclosure>
+              <MissingModelForm
+                idPrefix="ficha"
+                sourcePage="ficha"
+                contextLabel={fullLabel}
+                pagePath={path}
+                interestVehicleId={vehicle.id}
+                initialModel={sold ? title : ""}
+                description={
+                  sold
+                    ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`
+                    : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
+                }
+              />
+            </MissingModelDisclosure>
+          </div>
+        ) : null}
         <SeoInternalLinks />
       </Container>
 
@@ -803,7 +847,7 @@ export default async function VehicleDetailPage({
         version={vehicle.version}
         status={vehicle.status}
         year={vehicle.yearModel}
-        price={sold ? 0 : vehicle.price}
+        price={soldOrAwaiting ? 0 : vehicle.price}
         stateOfVehicle={autoHit.stateOfVehicle}
         exteriorColor={autoHit.exteriorColor}
         catalogTransmission={autoHit.transmission}
@@ -811,10 +855,11 @@ export default async function VehicleDetailPage({
         fuelType={autoHit.fuelType}
         postalCode={autoHit.postalCode}
         catalog={inCatalog}
-        sold={sold}
+        sold={soldOrAwaiting}
         category={vehicle.category}
-        soldHref="#mesma-faixa"
-        soldLabel="Ver opções"
+        soldHref={awaitingDelivery ? modelLandingPath : "#mesma-faixa"}
+        soldLabel={awaitingDelivery ? "Quero um parecido" : "Ver opções"}
+        soldVariant={awaitingDelivery ? "subtle" : "cta"}
       />
     </div>
   );

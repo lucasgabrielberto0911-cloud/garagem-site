@@ -4,6 +4,17 @@ export function stockLandingSlug(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+export function vehicleModelLandingPath(vehicle: {
+  brand?: string | null;
+  model?: string | null;
+}): string | null {
+  const brand = formatBrandName((vehicle.brand ?? "").trim());
+  const model = formatModelName((vehicle.model ?? "").trim());
+  if (!brand || !model) return null;
+  const slug = stockLandingSlug(`${brand} ${model}`);
+  return slug ? `/modelo/${slug}` : null;
+}
+
 /** Redireciona slugs com letras maiúsculas para o caminho canônico em minúsculas (ex: /marca/Honda -> /marca/honda). */
 export function canonicalSlugRedirect(prefix: string, slug: string): string | null {
   if (!slug || slug === slug.toLowerCase()) return null;

@@ -4,6 +4,15 @@
  */
 export const PUBLIC_STOCK_STATUS = "disponivel" as const;
 
+export const AWAITING_DELIVERY_STATUS = "aguardando_entrega" as const;
+export const AWAITING_DELIVERY_LABEL = "Vendido, aguardando entrega" as const;
+export const PUBLIC_LISTING_STATUSES = [
+  PUBLIC_STOCK_STATUS,
+  AWAITING_DELIVERY_STATUS,
+] as const;
+
+export type PublicStockStatus = typeof PUBLIC_STOCK_STATUS;
+
 export type PublicStockVehicle = {
   status?: string | null;
   historical?: boolean | null;
@@ -15,10 +24,26 @@ export function isPublicStockVehicle(vehicle: PublicStockVehicle) {
   );
 }
 
+export function isAwaitingDeliveryStatus(status?: string | null) {
+  return status === AWAITING_DELIVERY_STATUS;
+}
+
+export function isSoldOrAwaitingDelivery(status?: string | null) {
+  return status === "vendido" || status === AWAITING_DELIVERY_STATUS;
+}
+
 export const PUBLIC_SITEMAP_VEHICLE_WHERE = {
   status: PUBLIC_STOCK_STATUS,
   historical: false,
 } as const;
+
+export const PUBLIC_LISTING_VEHICLE_WHERE: {
+  status: { in: string[] };
+  historical: false;
+} = {
+  status: { in: [...PUBLIC_LISTING_STATUSES] },
+  historical: false,
+};
 
 /**
  * Campos mínimos do card de listagem. Isolado para rotas públicas

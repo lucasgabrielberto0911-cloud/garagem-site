@@ -86,6 +86,7 @@ function hydrateVehicle(row: VehicleRow): VehicleRow {
 
 const STATUS_LABEL: Record<string, string> = {
   disponivel: "Disponível",
+  aguardando_entrega: "Aguardando entrega",
   reservado: "Reservado",
   vendido: "Vendido",
 };
@@ -105,6 +106,7 @@ const SORT_SELECT_OPTIONS = [
 
 const STATUS_DOT: Record<string, string> = {
   disponivel: "bg-emerald-400",
+  aguardando_entrega: "bg-brand",
   reservado: "bg-brand",
   vendido: "bg-white/35",
 };
@@ -402,14 +404,31 @@ export function VehiclesTable({
       }
       return;
     }
+    if (tab === "destaques" && nextStatus === "aguardando_entrega") {
+      if (featured) {
+        setFeaturedCount((count) => Math.max(0, count - 1));
+      }
+      removeFromList(id, "destaques");
+      return;
+    }
     if (tab === "vendidos" && nextStatus !== "vendido") {
       removeFromList(id, "vendidos");
       setEstoqueCount((count) => count + 1);
       return;
     }
+    if (nextStatus === "aguardando_entrega" && featured) {
+      setFeaturedCount((count) => Math.max(0, count - 1));
+    }
     setItems((rows) =>
       rows.map((item) =>
-        item.id === id ? { ...item, status: nextStatus } : item,
+        item.id === id
+          ? {
+              ...item,
+              status: nextStatus,
+              featured:
+                nextStatus === "aguardando_entrega" ? false : item.featured,
+            }
+          : item,
       ),
     );
   }
@@ -1476,7 +1495,8 @@ function VehicleAdminCard({
   const finance = vehicleFinance(vehicle);
   const title = `${vehicle.brand} ${vehicle.model}`;
   const missingPrice = !(vehicle.price > 0);
-  const canEditPrice = vehicle.status !== "vendido";
+  const canEditPrice =
+    vehicle.status !== "vendido" && vehicle.status !== "aguardando_entrega";
   const canToggleFeatured = vehicle.status === "disponivel" || vehicle.featured;
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceDraft, setPriceDraft] = useState("");
