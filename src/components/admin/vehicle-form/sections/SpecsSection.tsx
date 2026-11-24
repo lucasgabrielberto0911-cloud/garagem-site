@@ -101,7 +101,7 @@ export function SpecsSection({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Field
           label="Final da placa"
-          hint="Calculado a partir da placa interna — visível no site"
+          hint="Calculado a partir da placa interna — não aparece no site"
         >
           <input
             name="plateEnd"

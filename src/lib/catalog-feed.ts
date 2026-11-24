@@ -19,6 +19,7 @@ import {
   inferGearFromText,
   resolveTransmission,
 } from "@/lib/vehicle-display";
+import { publicVehicleDescription } from "@/lib/public-vehicle-description";
 import { catalogPlace } from "@/lib/vehicle-location";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -317,7 +318,9 @@ function catalogTitle(vehicle: CatalogFeedVehicle) {
 }
 
 function catalogDescription(vehicle: CatalogFeedVehicle) {
-  const custom = stripCatalogConfirmationNotes(vehicle.description ?? "");
+  const custom = stripCatalogConfirmationNotes(
+    publicVehicleDescription(vehicle.description ?? "", false) ?? "",
+  );
   if (custom.length >= 20) return custom.slice(0, 5000);
   return vehicleSeoDescription({
     brand: vehicle.brand,
