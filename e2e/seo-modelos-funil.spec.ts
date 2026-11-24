@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { SignJWT } from "jose";
 import { sessionFingerprint } from "../src/lib/admin-session-fingerprint";
 import { BUYING_GUIDES } from "../src/lib/buying-guides";
+import { SEO_GUIDES } from "../src/lib/seo-guides";
 import samples from "./public-samples.json";
 import { vehiclePath } from "../src/lib/vehicle-slug";
 const prisma = new PrismaClient();
@@ -47,10 +48,12 @@ test("cidades ligam estoque real, modelos e cidades, com FAQ e breadcrumb", asyn
   await noOverflow(page);
   await page.screenshot({ path: info.outputPath("cidade.png"), fullPage: true });
 });
-test("cinco guias têm fontes oficiais, estoque real e WhatsApp", async ({ page, request }) => {
+test("guias de compra e guias SEO estão listados em /guias e no sitemap", async ({ page, request }) => {
   const xml = await (await request.get("/sitemap.xml")).text();
   await page.goto("/guias");
-  await expect(page.locator('main a[href^="/guias/"]')).toHaveCount(5);
+  await expect(page.locator('main a[href^="/guias/"]')).toHaveCount(BUYING_GUIDES.length);
+  await expect(page.locator('main a[href^="/guia/"]')).toHaveCount(SEO_GUIDES.length);
+  await noOverflow(page);
   for (const guide of BUYING_GUIDES) {
     await page.goto(`/guias/${guide.slug}`);
     await expect(page.getByRole("heading", { name: guide.title, exact: true })).toBeVisible();
@@ -58,6 +61,17 @@ test("cinco guias têm fontes oficiais, estoque real e WhatsApp", async ({ page,
     await expect(page.locator("main").getByRole("link", { name: "Falar no WhatsApp", exact: true })).toHaveAttribute("href", /wa.me/);
     await expect(page.locator("article.listing-card")).toHaveCount(3);
     expect(xml).toContain(`/guias/${guide.slug}`);
+    await noOverflow(page);
+  }
+  for (const guide of SEO_GUIDES) {
+    await page.goto("/guias");
+    const link = page.locator(`main a[href="/guia/${guide.slug}"]`);
+    await expect(link).toHaveText(guide.h1);
+    await expect(link.locator("..")).toContainText(guide.description);
+    await page.goto(`/guia/${guide.slug}`);
+    await expect(page.getByRole("heading", { name: guide.h1, exact: true })).toBeVisible();
+    await expect(page.locator("main").getByRole("link", { name: "Falar no WhatsApp", exact: true })).toHaveAttribute("href", /wa.me/);
+    expect(xml).toContain(`/guia/${guide.slug}`);
     await noOverflow(page);
   }
 });
