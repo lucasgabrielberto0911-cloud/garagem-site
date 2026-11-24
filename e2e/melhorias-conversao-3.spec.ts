@@ -66,7 +66,7 @@ test("agendamento de visita na ficha e em 1 toque no painel do chat", async ({
     const href = (await desktopVisit.getAttribute("href"))!;
     expect(href).toMatch(/^https:\/\/wa\.me\/5527996330706\?/);
     expect(new URL(href).searchParams.get("text")).toMatch(
-      /Civic.*quero ver ele de perto/,
+      /Quero agendar uma visita para ver o .*Civic.*Qual o melhor dia e horário\?/,
     );
   } else {
     // "Próximos passos" fica sempre aberto, sem clique.

@@ -674,15 +674,20 @@ test("desktop: card da direita enxuto, ficha técnica e opcionais na coluna prin
   assert.doesNotMatch(aside, /Ver os \$\{accessories\.length\} opcionais/);
   assert.doesNotMatch(page.slice(page.indexOf("<VehicleMobileBlocks")), /opcionais-desktop/);
 
-  // Topo do card: nome, preço com destaque e os quadradinhos de cor/ano/KM.
+  // Topo do card: nome, preço com destaque, selo Vistoriado pela Garagem e os quadradinhos de cor/ano/KM.
   assert.match(aside, /text-brand-light/);
   assert.match(aside, /className="ficha-price"/);
+  assert.match(aside, /data-ficha-vistoriado/);
+  assert.match(aside, /Vistoriado pela Garagem/);
   assert.match(aside, /<VehicleKeyFacts facts=\{keyFacts\}/);
-  assert.ok(aside.indexOf("ficha-price") < aside.indexOf("<VehicleKeyFacts"));
+  assert.ok(aside.indexOf("ficha-price") < aside.indexOf("data-ficha-vistoriado"));
+  assert.ok(aside.indexOf("data-ficha-vistoriado") < aside.indexOf("<VehicleKeyFacts"));
   assert.ok(aside.indexOf("<VehicleKeyFacts") < aside.indexOf("Falar no WhatsApp"));
+  assert.ok(aside.indexOf("Falar no WhatsApp") < aside.indexOf("Agendar visita"));
 
-  // WhatsApp principal, segundo botão no fim da coluna; financiamento/troca/vídeo/visita à vista.
-  assert.equal((aside.match(/<WhatsAppButton/g) ?? []).length, 3); // vendido + à venda + fim da coluna
+  // WhatsApp principal, botão secundário Agendar visita e segundo botão no fim da coluna; financiamento/troca/vídeo/visita à vista.
+  assert.equal((aside.match(/<WhatsAppButton/g) ?? []).length, 4); // vendido + à venda + agendar visita + fim da coluna
+  assert.match(aside, /trackingLabel="ficha-agendar"/);
   assert.match(aside, /<div data-ficha-more-actions/);
   assert.doesNotMatch(aside, /<details/);
   const secondCta = aside.slice(aside.indexOf("data-ficha-second-cta"));
@@ -704,7 +709,8 @@ test("faixa de confiança do desktop: garantia, vistoria da loja e Linhares/ES",
     createElement(VehicleTrustNotes, { warranty: null }),
   );
   assert.match(html, /Garantia de 3 meses/);
-  assert.match(html, /Vistoria da loja/);
+  assert.match(html, /Vistoriado pela Garagem/);
+  assert.doesNotMatch(html, /laudo cautelar/i);
   assert.match(html, /Linhares\/ES/);
   assert.doesNotMatch(html, /parcela/i);
 });
@@ -730,10 +736,10 @@ test("garantia usa o dado do veículo nas duas telas e fala veículo, não carro
   const own = render("6 meses de motor");
   assert.match(own, /Garantia deste veículo: 6 meses de motor/);
   assert.doesNotMatch(own, /Garantia de 3 meses|deste carro/);
-  assert.match(own, /Vistoria da loja/);
+  assert.match(own, /Vistoriado pela Garagem/);
   assert.match(render(null), /Garantia de 3 meses/);
   assert.match(render("   "), /Garantia de 3 meses/);
-  assert.doesNotMatch(render("6 meses de motor", true), /Garantia|Vistoria da loja/);
+  assert.doesNotMatch(render("6 meses de motor", true), /Garantia|Vistoriado pela Garagem/);
 
   const desktop = renderToStaticMarkup(
     createElement(VehicleTrustNotes, { warranty: "6 meses de motor" }),
