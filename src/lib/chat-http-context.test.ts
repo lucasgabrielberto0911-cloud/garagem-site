@@ -13,6 +13,7 @@ test("API encaminha vendidos e até três IDs anteriores validados, em JSON e SS
       getSession: async () => ({ id: "sess-contexto", fresh: false }),
       checkLimit: async () => ({ ok: true }),
       loadStock: async () => [], loadSoldStock: async () => sold,
+      loadSalesCount: async () => 1234,
       runTurn: async input => {
         received = input;
         return { reply: "De qual deles?", vehicles: [], stockHref: null, leadCreated: false };
@@ -25,6 +26,7 @@ test("API encaminha vendidos e até três IDs anteriores validados, em JSON e SS
     assert.deepEqual(received?.shownVehicleIds, ["a", "b", "c", "d"]);
     assert.deepEqual(received?.searchHistory, [{ role: "user", content: "automático até 70 mil" }]);
     assert.deepEqual(received?.soldStock, sold);
+    assert.equal(received?.salesCount, 1234);
     assert.deepEqual(received?.historico, [{ role: "user", content: "automático" }]);
   }
 });

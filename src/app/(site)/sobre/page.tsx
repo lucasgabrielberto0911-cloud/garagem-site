@@ -17,11 +17,15 @@ import {
 } from "@/components/site/icons";
 import { JsonLd } from "@/components/JsonLd";
 import { SiteLeadHit } from "@/lib/funnel-events";
-import { formatNumberBR } from "@/lib/format";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { getSiteContent } from "@/lib/site-content";
-import { getPublicSite } from "@/lib/site-settings";
+import {
+  formatSobreHeaderDescription,
+  formatSobreHistoryParagraph,
+  formatSoldStatLabel,
+  getPublicSite,
+} from "@/lib/site-settings";
 import { getSiteStats } from "@/lib/vehicles";
 
 export const revalidate = 3600;
@@ -69,8 +73,7 @@ export default async function SobrePage() {
     getSiteStats(),
     getSiteContent(),
   ]);
-  const soldLabel =
-    stats.sales > 0 ? `+${formatNumberBR(stats.sales)}` : "0";
+  const soldLabel = formatSoldStatLabel(stats.sales);
   const highlightStats = [
     { value: publicSite.aboutYears, label: "anos de história", href: undefined },
     { value: soldLabel, label: "veículos vendidos", href: "/vendidos" },
@@ -90,7 +93,7 @@ export default async function SobrePage() {
         <PageHeader
           eyebrow="Sobre nós"
           title={publicSite.name}
-          description="Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência e negociação clara. Atendemos Linhares, Aracruz e Grande Vitória."
+          description={formatSobreHeaderDescription(stats.sales)}
         />
 
         <div className="mt-6 flex justify-center">
@@ -184,12 +187,7 @@ export default async function SobrePage() {
                     construímos uma trajetória marcada pela confiança de famílias em
                     Linhares, Aracruz, Grande Vitória e em todo o {publicSite.state}.
                   </p>
-                  <p>
-                    Foram mais de 1.000 veículos entregues — cada um com atenção à
-                    procedência, à documentação e ao que o cliente realmente
-                    precisava. Crescemos ouvindo quem compra, quem vende e quem
-                    volta para indicar um amigo.
-                  </p>
+                  <p>{formatSobreHistoryParagraph(stats.sales)}</p>
                   <p>
                     Hoje{" "}
                     <strong className="text-cream">
