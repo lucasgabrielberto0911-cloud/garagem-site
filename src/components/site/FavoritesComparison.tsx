@@ -10,7 +10,7 @@ import { coverSrc } from "@/lib/stock-query";
 import { formatVehicleLabel } from "@/lib/format";
 import { publicCardFacts } from "@/lib/public-card-facts";
 import { buildWhatsAppCarMessage } from "@/lib/whatsapp-car-message";
-import { vehiclePath } from "@/lib/vehicle-slug";
+import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { comparisonSelection, toggleComparison, readComparisonSession, writeComparisonSession } from "@/lib/favorites-comparison";
 import { VehicleLeadHit, isCatalogVehicle } from "@/lib/funnel-events";
 
@@ -137,7 +137,7 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
                     path: vehiclePath(vehicle),
                     isMoto: vehicle.category === "moto",
                     pageOrigin: "favoritos",
-                  })} trackingLabel="comparacao-favoritos" vehicleId={vehicle.id} variant="outline" className="!h-14 !min-h-14 w-full !gap-1 !py-2 !whitespace-normal !border-emerald-500/30 bg-[#11231a] !px-1 !text-xs !tracking-normal hover:!bg-[#183225] [&_svg]:shrink-0 [&_svg]:!h-3.5 [&_svg]:!w-3.5 [&_svg]:text-[#25d366] sm:!text-xs"><span className="min-w-0 text-center">Tenho interesse</span></WhatsAppButton>
+                  })} trackingLabel="comparacao-favoritos" vehicleId={vehicle.id} slug={vehicleSlug(vehicle)} variant="outline" className="!h-14 !min-h-14 w-full !gap-1 !py-2 !whitespace-normal !border-emerald-500/30 bg-[#11231a] !px-1 !text-xs !tracking-normal hover:!bg-[#183225] [&_svg]:shrink-0 [&_svg]:!h-3.5 [&_svg]:!w-3.5 [&_svg]:text-[#25d366] sm:!text-xs"><span className="min-w-0 text-center">Tenho interesse</span></WhatsAppButton>
                   </VehicleLeadHit>
                   <Link href={vehiclePath(vehicle)} className="mt-1 flex min-h-11 items-center justify-center text-xs text-cream underline underline-offset-4">Abrir anúncio</Link>
                 </td>)}

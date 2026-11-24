@@ -18,6 +18,8 @@ import {
   telUrl,
   whatsappCampaignFromLabel,
   whatsappCampaignFromPath,
+  whatsappCampaignValue,
+  whatsappCarSlug,
   whatsappContentFromVehicle,
   pwaShortcutWhatsAppUrl,
   whatsappUrl,
@@ -98,16 +100,34 @@ test("wa.me dos CTAs leva UTM de origem sem alterar o pré-preenchido", () => {
   });
   assert.match(href, /utm_source=site/);
   assert.match(href, /utm_medium=whatsapp/);
-  assert.match(href, /utm_campaign=ficha/);
+  assert.match(href, /utm_campaign=ficha-pulse\b/);
   assert.match(href, /utm_content=fiat-pulse-2022-abc/);
   assert.match(
     decodeURIComponent(href),
     /Oi! Vi o site da Garagem e quero ajuda pra escolher um seminovo\./,
   );
+  const versaFicha = whatsappUrl(WHATSAPP_MESSAGES.vehicle("Nissan Versa 2021"), {
+    campaign: "ficha",
+    content: "nissan-versa-sense-1-6-2021-cmshv22g9000fl204fk6qz9l2",
+  });
+  assert.match(versaFicha, /utm_campaign=ficha-versa\b/);
   const generic = whatsappUrl();
-  assert.match(generic, /utm_campaign=home/);
+  assert.match(generic, /utm_campaign=home\b/);
+  const vendidosHref = whatsappUrl(undefined, {
+    campaign: whatsappCampaignFromPath("/vendidos"),
+  });
+  assert.match(vendidosHref, /utm_campaign=vendidos\b/);
+  const estoqueHref = whatsappUrl(undefined, {
+    campaign: whatsappCampaignFromPath("/estoque"),
+  });
+  assert.match(estoqueHref, /utm_campaign=estoque\b/);
   assert.equal(whatsappCampaignFromPath("/estoque/fiat-pulse-2022-x"), "ficha");
   assert.equal(whatsappCampaignFromPath("/estoque"), "estoque");
+  assert.equal(whatsappCampaignFromPath("/vendidos"), "vendidos");
+  assert.equal(whatsappCampaignFromPath("/vender"), "vender");
+  assert.equal(whatsappCampaignFromPath("/financiamento"), "financiamento");
+  assert.equal(whatsappCampaignFromPath("/sobre"), "sobre");
+  assert.equal(whatsappCampaignFromPath("/contato"), "contato");
   assert.equal(whatsappCampaignFromPath("/"), "home");
   assert.equal(whatsappCampaignFromLabel("ficha-mobile"), "ficha");
   assert.equal(whatsappCampaignFromLabel("chat-card"), "chat");
@@ -117,9 +137,21 @@ test("wa.me dos CTAs leva UTM de origem sem alterar o pré-preenchido", () => {
   assert.equal(whatsappCampaignFromLabel("atalho-pwa"), "pwa");
   assert.equal(whatsappCampaignFromLabel("favoritos-lista"), "favoritos");
   assert.equal(whatsappCampaignFromLabel("favoritos-vazio"), "favoritos");
+  assert.equal(whatsappCampaignFromLabel("vendidos"), "vendidos");
+  assert.equal(whatsappCampaignFromLabel("vender"), "vender");
+  assert.equal(whatsappCampaignFromLabel("financiamento"), "financiamento");
   assert.equal(whatsappCampaignFromPath("/favoritos"), "favoritos");
   assert.equal(whatsappCampaignFromPath("/seminovos/linhares"), "cidade");
   assert.equal(whatsappCampaignFromLabel("cidade-hero"), "cidade");
+  assert.equal(whatsappCarSlug("nissan-versa-1-6-2021-cmshv22g9000fl204fk6qz9l2"), "versa");
+  assert.equal(whatsappCarSlug({ brand: "Honda", model: "HR-V EXL" }), "hr-v");
+  assert.equal(whatsappCarSlug({ brand: "Toyota", model: "Corolla Cross XRE" }), "corolla-cross");
+  assert.equal(whatsappCarSlug("ABC1D23"), "");
+  assert.equal(whatsappCarSlug("ABC1234"), "");
+  assert.equal(whatsappCarSlug("12345678901"), "");
+  assert.equal(whatsappCarSlug("27996330706"), "");
+  assert.equal(whatsappCarSlug("9BWZZZ377VT004251"), "");
+  assert.equal(whatsappCampaignValue({ campaign: "ficha", car: "ABC1D23" }), "ficha");
   const shortcut = pwaShortcutWhatsAppUrl();
   assert.match(shortcut, /^https:\/\/wa\.me\/5527996330706\?/);
   assert.match(shortcut, /utm_source=site/);

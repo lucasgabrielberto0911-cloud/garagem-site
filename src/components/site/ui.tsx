@@ -183,7 +183,8 @@ export function WhatsAppButton({
     <TrackedWhatsAppLink
       href={whatsappUrl(message, {
         campaign: campaign ?? whatsappCampaignFromLabel(trackingLabel),
-        content,
+        content: content ?? slug,
+        car: slug ?? content,
       })}
       trackingLabel={trackingLabel}
       vehicleId={vehicleId}

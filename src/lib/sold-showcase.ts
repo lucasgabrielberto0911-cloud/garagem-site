@@ -210,7 +210,11 @@ export function toSoldVehicleShowcaseItem(
         isMoto,
         pageOrigin: "vendidos",
       }),
-      { campaign: "estoque", content: slug },
+      {
+        campaign: "vendidos",
+        content: slug,
+        car: { id: row.id, brand: row.brand, model: row.model, slug },
+      },
     ),
   };
 }

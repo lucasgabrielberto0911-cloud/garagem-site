@@ -194,7 +194,7 @@ test("cards no estoque e na home têm botão Tenho interesse fora da foto e fora
   const stockWaHref = stockHtml.match(/href="(https:\/\/wa\.me\/5527996330706\?[^"]+)"/)?.[1]?.replaceAll("&amp;", "&");
   assert.ok(stockWaHref);
   assert.match(stockHtml, /aria-label="Tenho interesse em Honda Civic EXL 2\.0 FlexOne 2020 pelo WhatsApp"/);
-  assert.match(stockWaHref, /utm_campaign=estoque/);
+  assert.match(stockWaHref, /utm_campaign=estoque-civic\b/);
   const stockText = new URL(stockWaHref).searchParams.get("text") ?? "";
   assert.match(stockText, /Honda Civic EXL 2\.0 FlexOne 2020/);
   assert.match(stockText, /R\$\s*109\.900/);
@@ -204,7 +204,7 @@ test("cards no estoque e na home têm botão Tenho interesse fora da foto e fora
   // Mensagem e campanha na home
   const homeWaHref = homeHtml.match(/href="(https:\/\/wa\.me\/5527996330706\?[^"]+)"/)?.[1]?.replaceAll("&amp;", "&");
   assert.ok(homeWaHref);
-  assert.match(homeWaHref, /utm_campaign=home/);
+  assert.match(homeWaHref, /utm_campaign=home-civic\b/);
   const homeText = new URL(homeWaHref).searchParams.get("text") ?? "";
   assert.match(homeText, /Honda Civic EXL 2\.0 FlexOne 2020/);
   assert.match(homeText, /R\$\s*109\.900/);
@@ -236,6 +236,7 @@ test("barra fixa no celular na ficha e header/float levam dados completos, link 
   );
   const barHref = barHtml.match(/href="(https:\/\/wa\.me\/5527996330706\?[^"]+)"/)?.[1]?.replaceAll("&amp;", "&");
   assert.ok(barHref);
+  assert.match(barHref, /utm_campaign=ficha-civic\b/);
   const barText = new URL(barHref).searchParams.get("text") ?? "";
   assert.match(barText, /Honda Civic EXL 2\.0 FlexOne 2020/);
   assert.match(barText, /R\$\s*109\.900/);
@@ -260,7 +261,7 @@ test("barra fixa no celular na ficha e header/float levam dados completos, link 
   assert.ok(headerMsg.endsWith("[origem: ficha]"));
 
   const headerHref = pageWhatsAppHref({ pathname: fichaCtx.path, vehicle: fichaCtx });
-  assert.match(headerHref, /utm_campaign=ficha/);
+  assert.match(headerHref, /utm_campaign=ficha-civic\b/);
 });
 
 test("tracking de clique envia apenas IDs do carro e origem curta — nunca texto livre", () => {

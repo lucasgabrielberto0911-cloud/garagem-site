@@ -82,6 +82,7 @@ export function VehicleCardWhatsApp({
   const href = whatsappUrl(text, {
     campaign: campaign ?? whatsappCampaignFromLabel(trackingLabel),
     content,
+    car: { id: vehicleId, path, brand: make, model },
   });
   return (
     <VehicleLeadHit

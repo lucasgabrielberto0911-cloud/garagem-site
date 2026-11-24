@@ -115,23 +115,53 @@ export type CustomerWhatsAppVehicleIntent =
   | "photos";
 
 /** Campanhas internas dos CTAs públicos; não representam a origem do visitante. */
-export type WhatsAppCampaign =
+export type WhatsAppCampaignBase =
   | "ficha"
   | "estoque"
   | "filtro"
   | "home"
   | "favoritos"
+  | "vendidos"
+  | "vender"
+  | "troca"
+  | "financiamento"
+  | "como-funciona"
+  | "sobre"
+  | "contato"
+  | "faq"
+  | "privacidade"
+  | "pedido"
+  | "guia"
+  | "modelos"
+  | "marca"
+  | "modelo"
   | "cidade"
   | "chat"
   | "pwa"
-  | "links";
+  | "links"
+  | "404"
+  | "erro";
+
+export type WhatsAppCampaign =
+  | WhatsAppCampaignBase
+  | `${WhatsAppCampaignBase}-${string}`;
 
 /** Atalho do app instalado. Tem que ser same-origin (o manifesto não aceita wa.me). */
 export const PWA_WHATSAPP_SHORTCUT_PATH = "/atalho/whatsapp";
 
+export type WhatsAppVehicleRef = {
+  id?: string | null;
+  path?: string | null;
+  slug?: string | null;
+  brand?: string | null;
+  model?: string | null;
+};
+
 export type WhatsAppTracking = {
   campaign?: WhatsAppCampaign;
   content?: string;
+  /** Veículo ou slug para compor `utm_campaign=[pagina]-[carro]`. */
+  car?: string | WhatsAppVehicleRef | null;
   phoneIndex?: number;
   /** Sem UTM — compartilhar o anúncio com um amigo, não CTA da loja. */
   bare?: boolean;
@@ -252,23 +282,387 @@ export function headerWordmarkPriority(pathname: string): boolean {
   return path !== "/";
 }
 
-export function whatsappCampaignFromPath(pathname: string): WhatsAppCampaign {
+const TWO_WORD_BRANDS = new Set([
+  "caoa chery",
+  "land rover",
+  "mercedes benz",
+  "royal enfield",
+  "harley davidson",
+  "alfa romeo",
+  "aston martin",
+  "rolls royce",
+]);
+
+const ONE_WORD_BRANDS = new Set([
+  "chevrolet",
+  "ford",
+  "fiat",
+  "volkswagen",
+  "vw",
+  "hyundai",
+  "toyota",
+  "honda",
+  "jeep",
+  "mitsubishi",
+  "renault",
+  "nissan",
+  "peugeot",
+  "citroen",
+  "kia",
+  "bmw",
+  "mercedes",
+  "audi",
+  "volvo",
+  "chery",
+  "caoa",
+  "byd",
+  "gwm",
+  "suzuki",
+  "subaru",
+  "landrover",
+  "ram",
+  "dodge",
+  "chrysler",
+  "mini",
+  "porsche",
+  "jaguar",
+  "lexus",
+  "iveco",
+  "jac",
+  "troller",
+  "ssangyong",
+  "smart",
+  "yamaha",
+  "kawasaki",
+  "harley",
+  "triumph",
+  "ducati",
+  "dafra",
+  "shineray",
+  "haojue",
+  "bajaj",
+]);
+
+const COMPOUND_CAR_MODELS = new Set([
+  "hr-v",
+  "cr-v",
+  "wr-v",
+  "zr-v",
+  "t-cross",
+  "x-trail",
+  "s-cross",
+  "c-hr",
+  "e-js1",
+  "gt-r",
+  "v-strom",
+  "s-10",
+  "corolla-cross",
+  "onix-plus",
+  "grand-siena",
+  "grand-vitara",
+  "grand-livina",
+  "grand-cherokee",
+  "santa-fe",
+  "range-rover",
+  "discovery-sport",
+  "new-fiesta",
+  "new-civic",
+  "hilux-sw4",
+  "pajero-sport",
+  "pajero-tr4",
+  "pajero-full",
+  "pajero-dakar",
+  "l200-triton",
+  "eclipse-cross",
+  "sandero-stepway",
+  "polo-sedan",
+  "palio-weekend",
+  "ka-sedan",
+  "c4-cactus",
+  "c4-lounge",
+  "c4-picasso",
+  "c3-aircross",
+  "tiggo-2",
+  "tiggo-3x",
+  "tiggo-5x",
+  "tiggo-7",
+  "tiggo-8",
+  "arrizo-6",
+  "dolphin-mini",
+  "song-plus",
+  "song-pro",
+  "yuan-plus",
+  "yuan-pro",
+  "haval-h6",
+  "ora-03",
+  "africa-twin",
+  "cb-twister",
+  "yaris-sedan",
+  "yaris-hatch",
+  "city-hatch",
+  "city-sedan",
+  "civic-si",
+  "golf-gti",
+  "polo-gts",
+  "up-tsi",
+  "c-180",
+  "c-200",
+  "c-250",
+  "c-300",
+  "a-200",
+  "a-250",
+  "b-200",
+  "cla-200",
+  "gla-200",
+  "glb-200",
+  "glc-250",
+  "glc-300",
+  "xc-40",
+  "xc-60",
+  "xc-90",
+]);
+
+const MOTO_PREFIX_TOKENS = new Set([
+  "cg",
+  "biz",
+  "cb",
+  "cbr",
+  "cbx",
+  "crf",
+  "xre",
+  "nxr",
+  "pcx",
+  "adv",
+  "nc",
+  "mt",
+  "gsx",
+  "xtz",
+  "sh",
+  "pop",
+  "bros",
+  "titan",
+  "fan",
+  "start",
+  "fazer",
+  "factor",
+  "lander",
+  "crosser",
+  "twister",
+  "tenere",
+  "nmax",
+  "xmax",
+]);
+
+const NUMERIC_CAR_MODELS = new Set([
+  "206",
+  "207",
+  "208",
+  "307",
+  "308",
+  "408",
+  "500",
+  "911",
+  "1500",
+  "2008",
+  "2500",
+  "3008",
+  "3500",
+  "5008",
+]);
+
+const NON_VEHICLE_CONTENT = new Set([
+  "atalho",
+  "chat-visita",
+  "vendido-link-antigo",
+  "estoque-vazio",
+  "filtro-vazio",
+]);
+
+const NON_CAR_TOKENS = new Set([
+  "veiculo",
+  "carro",
+  "carros",
+  "moto",
+  "motos",
+  "seminovo",
+  "seminovos",
+  "estoque",
+  "ficha",
+  "home",
+  "site",
+  "whatsapp",
+  "atalho",
+  "visita",
+  "vazio",
+  "vendido",
+  "vendidos",
+  "entrega",
+  "cuid",
+  "id",
+  "abc",
+  "xyz",
+  "garagem",
+  "placa",
+  "cpf",
+  "chassi",
+  "renavam",
+]);
+
+function isSafeCarModelToken(token: string): boolean {
+  if (!token || token.length < 2 || token.length > 20) return false;
+  if (NON_CAR_TOKENS.has(token)) return false;
+  if (/^\d+$/.test(token)) return NUMERIC_CAR_MODELS.has(token);
+  // Nunca refletir placa (ABC1234 / ABC1D23), CUID, chassi (17 chars) ou sequências longas.
+  if (/^[a-z]{3}\d[a-z0-9]\d{2}$/i.test(token)) return false;
+  if (/^c[a-z0-9]{15,}$/i.test(token) || /^[a-z0-9]{15,}$/i.test(token)) return false;
+  if (/^(?:cuid|id)\d*$/i.test(token)) return false;
+  if (/\d{5,}/.test(token)) return false;
+  return /^[a-z0-9]+$/.test(token);
+}
+
+function extractCarSlugFromRaw(raw: string): string {
+  const first = (raw || "").split(",")[0]?.trim() ?? "";
+  if (!first) return "";
+  const cleanPath =
+    first
+      .split(/[?#]/)[0]
+      ?.replace(/^https?:\/\/[^/]+/i, "")
+      .replace(/^\/+|\/+$/g, "") ?? "";
+  const withoutPrefix = cleanPath.toLowerCase().startsWith("estoque/")
+    ? cleanPath.slice("estoque/".length).replace(/^\/+|\/+$/g, "")
+    : cleanPath;
+  if (!withoutPrefix) return "";
+  const lower = withoutPrefix.toLowerCase();
+  if (NON_VEHICLE_CONTENT.has(lower) || lower.startsWith("entrega-")) return "";
+  if (/^c[a-z0-9]{15,}$/i.test(withoutPrefix)) return "";
+  if (/^(?:cuid|id)[a-z0-9_-]*$/i.test(withoutPrefix)) return "";
+
+  const base = withoutPrefix.replace(/-c[a-z0-9]{20,32}$/i, "");
+  const tokens = base
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  if (tokens.length === 0) return "";
+
+  let rest = tokens;
+  if (
+    tokens.length > 2 &&
+    TWO_WORD_BRANDS.has(`${tokens[0]} ${tokens[1]}`)
+  ) {
+    rest = tokens.slice(2);
+  } else if (tokens.length > 1 && ONE_WORD_BRANDS.has(tokens[0])) {
+    rest = tokens.slice(1);
+  }
+  if (rest.length === 0) return "";
+
+  const [t0, t1] = rest;
+  if (!t0 || !isSafeCarModelToken(t0)) return "";
+
+  if (t1) {
+    const pair = `${t0}-${t1}`;
+    if (COMPOUND_CAR_MODELS.has(pair)) return pair;
+    const isYear = /^\d{4}$/.test(t1) && Number(t1) >= 1980 && Number(t1) <= 2035;
+    if (
+      MOTO_PREFIX_TOKENS.has(t0) &&
+      /^\d{2,4}[a-z]?$/.test(t1) &&
+      !isYear
+    ) {
+      return pair;
+    }
+  }
+
+  return t0.slice(0, 24);
+}
+
+/**
+ * Slug curto e estável do veículo para `utm_campaign=[pagina]-[carro]` (ex.: `versa`, `hr-v`).
+ * Nunca inclui placa, CPF, telefone, chassi, RENAVAM, CUID ou dados de cliente.
+ */
+export function whatsappCarSlug(
+  input?: string | WhatsAppVehicleRef | null,
+): string {
+  if (!input) return "";
+  if (typeof input === "string") return extractCarSlugFromRaw(input);
+  if (input.model) {
+    const fromModel = extractCarSlugFromRaw(
+      [input.brand, input.model].filter(Boolean).join(" "),
+    );
+    if (fromModel) return fromModel;
+  }
+  if (input.slug) {
+    const fromSlug = extractCarSlugFromRaw(input.slug);
+    if (fromSlug) return fromSlug;
+  }
+  if (input.path) {
+    const fromPath = extractCarSlugFromRaw(input.path);
+    if (fromPath) return fromPath;
+  }
+  return "";
+}
+
+export function whatsappCampaignFromPath(pathname: string): WhatsAppCampaignBase {
   if (isVehicleFichaPath(pathname)) return "ficha";
   const path = (pathname || "/").split("?")[0]?.replace(/\/+$/, "") || "/";
   if (path === "/estoque" || path.startsWith("/estoque")) return "estoque";
   if (path === "/favoritos") return "favoritos";
-  if (path.startsWith("/seminovos/")) return "cidade";
+  if (path === "/vendidos") return "vendidos";
+  if (path === "/vender") return "vender";
+  if (path === "/troca") return "troca";
+  if (path === "/financiamento") return "financiamento";
+  if (path === "/como-funciona") return "como-funciona";
+  if (path === "/sobre") return "sobre";
+  if (path === "/contato") return "contato";
+  if (path === "/faq") return "faq";
+  if (path === "/privacidade") return "privacidade";
+  if (path === "/pedido") return "pedido";
+  if (
+    path === "/guias" ||
+    path.startsWith("/guias/") ||
+    path.startsWith("/guia/")
+  ) {
+    return "guia";
+  }
+  if (path === "/modelos") return "modelos";
+  if (path.startsWith("/marca/")) return "marca";
+  if (path.startsWith("/modelo/")) return "modelo";
+  if (path === "/links") return "links";
+  if (
+    path === "/cidades" ||
+    path === "/seminovos" ||
+    path.startsWith("/seminovos/")
+  ) {
+    return "cidade";
+  }
   return "home";
 }
 
-export function whatsappCampaignFromLabel(label: string): WhatsAppCampaign {
+export function whatsappCampaignFromLabel(label: string): WhatsAppCampaignBase {
   const key = (label || "").toLowerCase();
   if (key.includes("pwa") || key.includes("atalho")) return "pwa";
   if (key.includes("chat")) return "chat";
-  if (key.includes("ficha")) return "ficha";
+  if (key.includes("ficha") || key.includes("vendido-link")) return "ficha";
   if (key.includes("home")) return "home";
   if (key.includes("favorit")) return "favoritos";
-  if (key.includes("cidade")) return "cidade";
+  if (key.includes("vendidos")) return "vendidos";
+  if (key.includes("vender")) return "vender";
+  if (key.includes("troca") && !key.includes("financiamento")) return "troca";
+  if (key.includes("financiamento")) return "financiamento";
+  if (key.includes("como-funciona")) return "como-funciona";
+  if (key.includes("sobre")) return "sobre";
+  if (key.includes("contato")) return "contato";
+  if (key.includes("faq")) return "faq";
+  if (key.includes("privacidade")) return "privacidade";
+  if (key.includes("pedido")) return "pedido";
+  if (key.includes("guia")) return "guia";
+  if (key.includes("modelos")) return "modelos";
+  if (key.includes("marca")) return "marca";
+  if (key.includes("modelo")) return "modelo";
+  if (key.includes("links")) return "links";
+  if (key.includes("404")) return "404";
+  if (key.includes("erro")) return "erro";
+  if (key.includes("cidade") || key.includes("seminovos")) return "cidade";
   if (key.includes("filtro")) return "filtro";
   if (
     key.includes("estoque") ||
@@ -341,11 +735,6 @@ export function whatsappContentFromVehicle(input: {
   return (slug || input.id || "").slice(0, 80);
 }
 
-export type WhatsAppVehicleRef = {
-  id?: string | null;
-  path?: string | null;
-};
-
 /** UTM dos CTAs da ficha: campanha `ficha` + id/slug em `utm_content`. */
 export function fichaWhatsAppTracking(
   vehicle: WhatsAppVehicleRef,
@@ -353,6 +742,9 @@ export function fichaWhatsAppTracking(
   return {
     campaign: "ficha",
     content: whatsappContentFromVehicle(vehicle),
+    ...(vehicle.brand || vehicle.model || vehicle.slug
+      ? { car: vehicle }
+      : {}),
   };
 }
 
@@ -373,6 +765,9 @@ export function pageWhatsAppTracking(input: {
     return fichaWhatsAppTracking({
       id: vehicle.id,
       path: vehicle.path || pathname,
+      slug: vehicle.slug,
+      brand: vehicle.brand,
+      model: vehicle.model,
     });
   }
   return fichaWhatsAppTracking({ path: pathname });
@@ -394,13 +789,21 @@ function resolveWhatsAppTracking(
   return { phoneIndex: 0, ...tracking };
 }
 
+/** Resolve `utm_campaign`: `[pagina]-[carro]` quando houver carro, ou só `[pagina]`. */
+export function whatsappCampaignValue(tracking: WhatsAppTracking = {}): string {
+  const base = tracking.campaign ?? "home";
+  const carSlug = whatsappCarSlug(tracking.car ?? tracking.content);
+  if (!carSlug || base.endsWith(`-${carSlug}`)) return base;
+  return `${base}-${carSlug}`;
+}
+
 /** Anexa UTM sem reescrever o `text` já encoded (decodeURIComponent precisa de %20). */
 export function applyWhatsAppUtm(
   href: string,
   tracking: WhatsAppTracking = {},
 ) {
   if (tracking.origin !== undefined) href = applyWhatsAppOrigin(href, tracking.origin);
-  const campaign = tracking.campaign ?? "home";
+  const campaign = whatsappCampaignValue(tracking);
   const extra = [
     `utm_source=${encodeURIComponent(WHATSAPP_UTM_SOURCE)}`,
     `utm_medium=${encodeURIComponent(WHATSAPP_UTM_MEDIUM)}`,
