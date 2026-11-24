@@ -18,6 +18,7 @@ export type VehicleFormProps = {
 };
 export const STATUSES = [
   { value: "disponivel", label: "Disponível" },
+  { value: "aguardando_entrega", label: "Vendido, aguardando entrega" },
   { value: "reservado", label: "Reservado" },
   { value: "vendido", label: "Vendido" },
 ];

@@ -23,7 +23,7 @@ export function quickPriceError(input: {
   status?: string | null;
   description?: string | null;
 }): string | null {
-  if (input.status === "vendido") {
+  if (input.status === "vendido" || input.status === "aguardando_entrega") {
     return "Veículo vendido não muda de preço.";
   }
   const price = parseQuickPrice(input.raw);

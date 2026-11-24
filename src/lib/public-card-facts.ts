@@ -1,4 +1,5 @@
 import { formatCurrencyBRL, formatKmBR, formatVehicleLabel } from "@/lib/format";
+import { isSoldOrAwaitingDelivery } from "@/lib/public-stock";
 import { resolveTransmission, shortVersion } from "@/lib/vehicle-display";
 
 /**
@@ -23,7 +24,7 @@ export type PublicCardFactsInput = {
   transmission?: string | null;
   locationCity?: string | null;
   price?: number | null;
-  /** Carro vendido nunca mostra preço. */
+  /** Carro vendido ou aguardando entrega nunca mostra preço. */
   status?: string | null;
 };
 
@@ -47,7 +48,7 @@ export function publicCardFacts(input: PublicCardFactsInput): PublicCardFacts {
   const version = shortVersion(input.version, model);
   const price = finiteNumber(input.price);
   const priceLabel =
-    input.status !== "vendido" && price != null && price > 0
+    !isSoldOrAwaitingDelivery(input.status) && price != null && price > 0
       ? formatCurrencyBRL(price)
       : "";
 

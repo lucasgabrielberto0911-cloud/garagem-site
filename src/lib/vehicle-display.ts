@@ -24,6 +24,7 @@ import {
 } from "@/lib/hot-lead";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { sanitizeAccessory } from "@/lib/vehicle-accessories";
+import { isSoldOrAwaitingDelivery } from "@/lib/public-stock";
 
 export const MAX_DESTAQUE_BADGES = 3;
 
@@ -534,7 +535,7 @@ export function formatWhatsAppPageOriginTag(pageOrigin?: string | null): string 
  */
 export function buildWhatsAppCarMessage(input: WhatsAppCarMessageInput): string {
   const normalizedStatus = (input.status ?? "").trim().toLowerCase();
-  const isSold = Boolean(input.sold) || normalizedStatus === "vendido";
+  const isSold = Boolean(input.sold) || isSoldOrAwaitingDelivery(normalizedStatus);
   const isReserved =
     !isSold && (Boolean(input.reserved) || normalizedStatus === "reservado");
   const isMoto =
@@ -656,7 +657,7 @@ export function formatVehicleWhatsAppMessage(input: {
 }) {
   const label = collapseWhitespace(buildVehicleFullLabel(input));
   const usableLabel = label && !/^\d{4}$/.test(label) ? label : "";
-  const isSold = input.status === "vendido";
+  const isSold = isSoldOrAwaitingDelivery(input.status);
   const isReserved = input.status === "reservado";
   const price = input.price;
   const priceLabel =
@@ -699,14 +700,14 @@ export function collapseDuplicateAccessories(items: string[]) {
   return result;
 }
 
-export function featuredBadgeIds<T extends { id: string; featured?: boolean }>(
-  vehicles: T[],
-  limit = MAX_DESTAQUE_BADGES,
-) {
+export function featuredBadgeIds<
+  T extends { id: string; featured?: boolean; status?: string | null },
+>(vehicles: T[], limit = MAX_DESTAQUE_BADGES) {
   const ids = new Set<string>();
   if (limit <= 0) return ids;
   for (const vehicle of vehicles) {
     if (!vehicle.featured) continue;
+    if (vehicle.status && vehicle.status !== "disponivel") continue;
     ids.add(vehicle.id);
     if (ids.size >= limit) break;
   }

@@ -24,6 +24,7 @@ const STATUS_LABEL: Record<
   { label: string; tone: "brand" | "warning" | "neutral" }
 > = {
   disponivel: { label: "Disponível", tone: "brand" },
+  aguardando_entrega: { label: "Vendido, aguardando entrega", tone: "brand" },
   reservado: { label: "Reservado", tone: "warning" },
   vendido: { label: "Vendido", tone: "neutral" },
 };

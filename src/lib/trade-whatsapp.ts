@@ -355,7 +355,7 @@ export function toTradeInterestVehicle(
     photos?: VehicleCardPhoto[];
   } | null | undefined,
 ): TradeInterestVehicle | null {
-  if (!vehicle || vehicle.status === "vendido") return null;
+  if (!vehicle || vehicle.status === "vendido" || vehicle.status === "aguardando_entrega") return null;
   const display = formatVehicleDisplay({
     id: vehicle.id,
     brand: vehicle.brand,

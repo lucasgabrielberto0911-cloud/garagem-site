@@ -552,9 +552,10 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
    linha não crescer e as linhas do subgrid continuarem alinhadas entre os cards. */
 .listing-card-brand-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.25rem 0.5rem;
   margin: 0 0 0.2rem;
   min-height: 1.125rem;
 }
@@ -568,8 +569,9 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 }
 .listing-card-badges {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 100%;
 }
 /* Itens do subgrid com min-width:0: o selo nowrap não pode alargar a coluna 1fr (cards da linha iguais). */
 .listing-card .listing-card-main > * { min-width: 0; }
@@ -588,9 +590,17 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 .listing-card-badge--new,
 .listing-card-badge--drop { color: #ff6b6e; }
 .listing-card-badge--drop { background: rgba(232, 24, 28, 0.15); }
+.listing-card-badge--awaiting {
+  background: rgba(232, 24, 28, 0.15);
+  color: #ff6b6e;
+  white-space: normal;
+  font-size: 0.6875rem;
+  letter-spacing: 0.015em;
+}
 .listing-card-badge--muted { background: rgba(255, 255, 255, 0.08); color: #c1c1c8; }
 /* Só selos com fundo levam padding lateral; texto solto fica alinhado à margem do card. */
 .listing-card-badges > .listing-card-badge--drop,
+.listing-card-badges > .listing-card-badge--awaiting,
 .listing-card-badges > .listing-card-badge--muted { padding-inline: 0.4rem; }
 .listing-card-name { padding: 0.75rem 0.625rem 0.25rem; min-width: 0; }
 .listing-card-brand {
@@ -674,7 +684,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   text-transform: none;
   white-space: nowrap;
 }
-.listing-card .listing-card-interest a:hover { background: #1fbe5a; }
+.listing-card .listing-card-interest a[aria-label^="Tenho interesse"]:hover { background: #1fbe5a; }
 
 /* No celular, ajuda fica no cabeçalho e deixa as duas margens dos cards livres. */
 .mobile-header-help { display: none; }

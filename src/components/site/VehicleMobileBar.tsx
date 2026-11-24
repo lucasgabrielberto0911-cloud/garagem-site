@@ -61,6 +61,7 @@ export function VehicleMobileBar({
   category,
   soldHref = "/estoque",
   soldLabel = "Ver estoque",
+  soldVariant = "cta",
 }: {
   vehicleId: string;
   vehicleSlug?: string;
@@ -84,6 +85,7 @@ export function VehicleMobileBar({
   category?: string;
   soldHref?: string;
   soldLabel?: string;
+  soldVariant?: "cta" | "subtle";
 }) {
   const isMoto = category === "moto";
   const viewedCars = useHotLeadViewedCars(!sold);
@@ -122,7 +124,11 @@ export function VehicleMobileBar({
           <Link
             href={soldHref}
             prefetch={false}
-            className="pointer-events-auto flex h-14 w-full items-center justify-center rounded-xl bg-brand px-5 font-display text-base font-semibold text-cream shadow-lg touch-manipulation"
+            className={
+              soldVariant === "subtle"
+                ? "pointer-events-auto flex h-12 w-full items-center justify-center rounded-xl bg-ink px-5 font-display text-sm font-semibold text-cream shadow-lg touch-manipulation transition hover:bg-white/10"
+                : "pointer-events-auto flex h-14 w-full items-center justify-center rounded-xl bg-brand px-5 font-display text-base font-semibold text-cream shadow-lg touch-manipulation"
+            }
           >
             {soldLabel}
           </Link>

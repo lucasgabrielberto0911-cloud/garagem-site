@@ -50,6 +50,8 @@ export function catalogStatusFor(
 
   if (vehicle.status === "reservado") {
     reasons.push("Reservado");
+  } else if (vehicle.status === "aguardando_entrega") {
+    reasons.push("Vendido, aguardando entrega");
   } else if (vehicle.status === "vendido") {
     reasons.push("Vendido");
   } else if (vehicle.status !== CATALOG_FEED_WHERE.status) {

@@ -218,7 +218,9 @@ function tabStatusFilter(tab: VehiclesTab) {
   if (tab === "destaques") {
     return { featured: true, status: { in: ["disponivel", "reservado"] } };
   }
-  return { status: { in: ["disponivel", "reservado"] } };
+  return {
+    status: { in: ["disponivel", "reservado", "aguardando_entrega"] },
+  };
 }
 
 function tokenSearchClause(token: string): Prisma.VehicleWhereInput {
@@ -333,7 +335,9 @@ export async function getAdminVehiclesPage(options: {
   const sort = options.sort ?? "recent";
   const dir = options.dir ?? (sort === "recent" ? "desc" : "asc");
   const statusFilter =
-    options.status === "disponivel" || options.status === "reservado"
+    options.status === "disponivel" ||
+    options.status === "reservado" ||
+    options.status === "aguardando_entrega"
       ? { status: options.status }
       : tabStatusFilter(options.tab);
   const parkedFilter = await resolveParkedWhere(
@@ -396,6 +400,7 @@ export type AdminVehicleStats = {
 export type AdminVehicleStatsRow = {
   available?: unknown;
   reserved?: unknown;
+  awaitingDelivery?: unknown;
   sold?: unknown;
   featured?: unknown;
   parked?: unknown;
@@ -422,12 +427,13 @@ export function mapAdminVehicleStatsRow(
 ): AdminVehicleStats {
   const available = statNum(row?.available);
   const reserved = statNum(row?.reserved);
+  const awaitingDelivery = statNum(row?.awaitingDelivery);
   const ownedAvailable = statNum(row?.ownedAvailable);
   return {
     available,
     reserved,
     sold: statNum(row?.sold),
-    estoqueCount: available + reserved,
+    estoqueCount: available + reserved + awaitingDelivery,
     vendidosCount: statNum(row?.sold),
     stockValue: statNum(row?.stockValue),
     ownedAvailable,
@@ -460,6 +466,7 @@ async function loadAdminVehicleStatsSql(): Promise<AdminVehicleStats> {
     SELECT
       count(*) FILTER (WHERE v.status = 'disponivel')::int AS "available",
       count(*) FILTER (WHERE v.status = 'reservado')::int AS "reserved",
+      count(*) FILTER (WHERE v.status = 'aguardando_entrega')::int AS "awaitingDelivery",
       count(*) FILTER (WHERE v.status = 'vendido')::int AS "sold",
       count(*) FILTER (WHERE v.status = 'disponivel' AND v.featured)::int AS "featured",
       count(*) FILTER (
@@ -548,7 +555,7 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
     available,
     reserved: count("reservado"),
     sold: count("vendido"),
-    estoqueCount: available + count("reservado"),
+    estoqueCount: available + count("reservado") + count("aguardando_entrega"),
     vendidosCount: count("vendido"),
     stockValue: stockValue._sum.price ?? 0,
     ownedAvailable,

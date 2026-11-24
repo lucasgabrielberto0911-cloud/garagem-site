@@ -1,7 +1,10 @@
 import { vehicleIdsWithPriceDrop } from "@/lib/vehicle-price-history";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
-import { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/public-stock";
+import {
+  PUBLIC_VEHICLE_CARD_SELECT,
+  isSoldOrAwaitingDelivery,
+} from "@/lib/public-stock";
 import type { VehicleCardRecord } from "@/lib/stock-query";
 
 const PUBLIC_VEHICLE_CARD_SELECT_LEGACY = {
@@ -32,7 +35,7 @@ function withCardDefaults(row: VehicleCardRecord): VehicleCardRecord {
 /** Preenche `priceDrop` (valor em R$) só com histórico real; tabela ausente = sem selo. */
 async function withPriceDrops(cards: VehicleCardRecord[]) {
   const drops = await vehicleIdsWithPriceDrop(
-    cards.filter((card) => card.status !== "vendido"),
+    cards.filter((card) => !isSoldOrAwaitingDelivery(card.status)),
   );
   if (drops.size === 0) return cards;
   return cards.map((card) => (drops.has(card.id) ? { ...card, priceDrop: drops.get(card.id) } : card));

@@ -435,6 +435,7 @@ export function trackVehiclesWhatsAppLead(
     (sum, vehicle) =>
       !vehicle.sold &&
       vehicle.status !== "vendido" &&
+      vehicle.status !== "aguardando_entrega" &&
       typeof vehicle.price === "number" &&
       Number.isFinite(vehicle.price) &&
       vehicle.price > 0
