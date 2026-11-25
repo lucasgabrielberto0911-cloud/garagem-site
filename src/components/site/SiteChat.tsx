@@ -1217,6 +1217,14 @@ export function SiteChat() {
         id: lastChatCards?.[0]?.id ?? vehicleContext?.id,
         path: lastChatCards?.[0]?.href ?? vehicleContext?.path,
       }),
+      car: headerLeadVehicle
+        ? {
+            id: headerLeadVehicle.id,
+            path: headerLeadVehicle.path,
+            brand: headerLeadVehicle.brand,
+            model: headerLeadVehicle.model || headerLeadVehicle.label,
+          }
+        : undefined,
     },
   );
   const showSuggestions = !started && !pending;

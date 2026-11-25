@@ -255,6 +255,14 @@ function chatWhatsAppTrack(vehicle?: ChatWhatsAppVehicle | null) {
       id: vehicle?.id,
       path: vehicle?.path,
     }),
+    car: vehicle
+      ? {
+          id: vehicle.id,
+          path: vehicle.path,
+          brand: vehicle.brand,
+          model: vehicle.model || vehicle.label,
+        }
+      : undefined,
   };
 }
 

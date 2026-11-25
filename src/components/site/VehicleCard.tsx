@@ -21,7 +21,7 @@ import {
   type VehicleCardRecord,
 } from "@/lib/stock-query";
 import { formatVehicleDisplay } from "@/lib/vehicle-display";
-import type { WhatsAppCampaign } from "@/lib/site";
+import { whatsappCampaignFromPath, type WhatsAppCampaign } from "@/lib/site";
 import {
   buildWhatsAppCarMessage,
   type WhatsAppCarPageOrigin,
@@ -38,7 +38,10 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   vendido: { label: "Vendido", className: "listing-card-badge--muted" },
 };
 
-function cardWhatsAppMeta(pageOrigin: WhatsAppCarPageOrigin): {
+function cardWhatsAppMeta(
+  pageOrigin: WhatsAppCarPageOrigin,
+  returnTo?: string,
+): {
   campaign: WhatsAppCampaign;
   trackingLabel: string;
 } {
@@ -47,6 +50,12 @@ function cardWhatsAppMeta(pageOrigin: WhatsAppCarPageOrigin): {
   }
   if (pageOrigin === "favoritos") {
     return { campaign: "favoritos", trackingLabel: "favoritos-card" };
+  }
+  if (returnTo && returnTo !== "/estoque" && !returnTo.startsWith("/estoque?")) {
+    return {
+      campaign: whatsappCampaignFromPath(returnTo),
+      trackingLabel: "vehicle-card",
+    };
   }
   return { campaign: "estoque", trackingLabel: "vehicle-card" };
 }
@@ -229,7 +238,7 @@ export function VehicleCard({
             year={vehicle.yearModel}
             path={display.path}
             pageOrigin={pageOrigin}
-            {...cardWhatsAppMeta(pageOrigin)}
+            {...cardWhatsAppMeta(pageOrigin, returnTo)}
           />
         ) : null}
       </div>

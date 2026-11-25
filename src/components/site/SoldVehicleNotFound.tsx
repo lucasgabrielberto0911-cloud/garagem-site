@@ -58,6 +58,7 @@ export function SoldVehicleNotFound({
               trackingLabel="vendido-link-antigo"
               campaign="ficha"
               content="vendido-link-antigo"
+              slug={parsed.model ?? undefined}
               className="w-full sm:w-auto"
             >
               Pedir parecido no WhatsApp
