@@ -86,18 +86,22 @@ test("desktop: ficha técnica e opcionais na coluna principal, card só com o es
   const fatos = aside.locator("[data-key-facts] dt");
   await expect(fatos).toHaveText(["Ano", "KM", "Câmbio", "Combustível", "Cor"]);
 
-  // Card: botão principal maior; financiamento, troca, vídeo e visita à vista e discretos.
+  // Card: botão principal maior; Agendar visita único; financiamento, troca e vídeo à vista e discretos.
   const principal = aside.getByRole("link", { name: "Falar no WhatsApp", exact: true });
   await expect(principal).toBeVisible();
+  await expect(aside.getByRole("link", { name: /Agendar visita/ })).toHaveCount(1);
+  const agendar = aside.getByRole("link", { name: "Agendar visita", exact: true });
+  await expect(agendar).toBeVisible();
   const financiamento = aside.getByRole("link", { name: /financiamento deste veículo/ });
   await expect(financiamento).toBeVisible();
   await expect(financiamento).toHaveText("Perguntar sobre financiamento");
   await expect(aside.getByRole("link", { name: "Tirar dúvidas no WhatsApp", exact: true })).toBeVisible();
   const [bp, bf] = await Promise.all([principal.boundingBox(), financiamento.boundingBox()]);
   expect(bp!.height).toBeGreaterThan(bf!.height);
+  await expect(aside.locator("[data-ficha-vistoriado]")).toHaveText("Vistoriado pela Garagem");
   const confianca = aside.locator("[data-trust-notes]");
   await expect(confianca.getByText("Garantia de 3 meses")).toBeVisible();
-  await expect(confianca.getByText("Vistoria da loja", { exact: true })).toBeVisible();
+  await expect(confianca.getByText("Vistoriado pela Garagem", { exact: true })).toBeHidden();
   await expect(confianca.getByText("Linhares/ES", { exact: true })).toBeVisible();
   await expect(aside).not.toContainText(/parcela|simul/i);
   await expect(aside.getByRole("button", { name: "Copiar link do anúncio" })).toHaveCount(0);

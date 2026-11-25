@@ -722,8 +722,10 @@ test("assistente confirma na hora chave reserva, manual do proprietário e víde
 
   const fakeSales = 1342;
   assert.equal(formatSoldStatLabel(fakeSales), "+1.342");
-  assert.match(formatSobreHeaderDescription(fakeSales), /Mais de 1\.342 veículos negociados\./);
-  assert.match(formatSobreHistoryParagraph(fakeSales), /Foram mais de 1\.342 veículos entregues/);
+  assert.match(formatSobreHeaderDescription(fakeSales), /1.342 veículos negociados\./);
+  assert.match(formatSobreHistoryParagraph(fakeSales), /Foram 1.342 veículos entregues/);
+  assert.doesNotMatch(formatSobreHeaderDescription(fakeSales), /Mais de 1\.342/);
+  assert.doesNotMatch(formatSobreHistoryParagraph(fakeSales), /mais de 1\.342/);
 
   assert.equal(formatSoldStatLabel(0), "0");
   assert.doesNotMatch(formatSobreHeaderDescription(0), /\d[\d.]*\s+veículos/);

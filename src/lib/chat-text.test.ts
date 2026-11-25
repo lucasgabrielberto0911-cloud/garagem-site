@@ -290,7 +290,7 @@ test("botão do WhatsApp segue a pergunta do visitante, não a resposta", () => 
   const finance = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "qual a parcela?" })?.href ?? "");
   assert.match(finance, /HB20S.*saber sobre o financiamento/s);
   const visit = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "quero agendar visita" })?.href ?? "");
-  assert.match(visit, /HB20S.*de perto/s);
+  assert.match(visit, /Quero agendar uma visita para ver o .*HB20S.*Qual o melhor dia e horário\?/s);
   const photos = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "tem mais fotos?" })?.href ?? "");
   assert.match(photos, /HB20S.*mais fotos dele/s);
 

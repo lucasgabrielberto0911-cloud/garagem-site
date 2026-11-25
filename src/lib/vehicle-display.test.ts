@@ -333,7 +333,10 @@ test("WhatsApp troca, vídeo e visita no tom natural", () => {
   assert.match(video, /queria um vídeo dele/);
 
   const visit = formatVehicleWhatsAppMessage({ ...base, intent: "visit" });
-  assert.match(visit, /quero ver ele de perto/);
+  assert.match(
+    visit,
+    /^Oi! Quero agendar uma visita para ver o Honda HR-V EX 1\.8 Flex ONE 2018 \(R\$\s*89\.900\)\. Qual o melhor dia e horário\?/,
+  );
 });
 
 test("vendido não leva preço em nenhuma intenção de WhatsApp", () => {

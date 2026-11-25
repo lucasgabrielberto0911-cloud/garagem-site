@@ -43,5 +43,6 @@ test("sugestões rápidas de horário completam o agendamento e estão na ficha 
   assert.match(panel, /VISIT_TIME_OPTIONS/);
   assert.match(actions, /trackingLabel: "ficha-visit"/);
   assert.match(actions, /label: "Agendar visita"/);
-  assert.match(ficha, /visit=\{whatsapp\.visit\}/);
+  assert.match(ficha, /message=\{whatsapp\.visit\}/);
+  assert.match(ficha, /visit:\s*whatsapp\.visit/);
 });

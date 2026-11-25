@@ -541,6 +541,16 @@ export default async function VehicleDetailPage({
                 </p>
               )}
 
+              {!soldOrAwaiting ? (
+                <p
+                  data-ficha-vistoriado=""
+                  className="hidden items-center gap-2 font-display text-sm font-semibold leading-snug text-cream lg:flex"
+                >
+                  <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-brand-light" />
+                  <span>Vistoriado pela Garagem</span>
+                </p>
+              ) : null}
+
               <VehicleKeyFacts facts={keyFacts} color={keyColor} onInk="lg" hideYearBelowLg={yearBadge !== SPEC_EMPTY} specAnchor={!hasMobileFichaSpecs(specs)} />
 
               {!soldOrAwaiting ? (
@@ -622,7 +632,37 @@ export default async function VehicleDetailPage({
                     </p>
                   </div>
 
-                  {/* Financiamento, troca, vídeo e visita: à vista, em estilo discreto para não competir com o botão principal. */}
+                  <div className="hidden lg:block">
+                    <VehicleLeadHit
+                      contentId={vehicle.id}
+                      contentName={fullLabel}
+                      value={sold ? undefined : vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
+                      {...autoHit}
+                      catalog={inCatalog}
+                      status={vehicle.status}
+                      sold={sold}
+                    >
+                      <WhatsAppButton
+                        size="md"
+                        variant="outline"
+                        className="w-full"
+                        trackingLabel="ficha-agendar"
+                        campaign="ficha"
+                        content={fichaTrack.content}
+                        vehicleId={vehicle.id}
+                        slug={canonicalSlug}
+                        pageOrigin="ficha"
+                        message={whatsapp.visit}
+                      >
+                        Agendar visita
+                      </WhatsAppButton>
+                    </VehicleLeadHit>
+                  </div>
+
+                  {/* Financiamento, troca e vídeo: à vista, em estilo discreto para não competir com o botão principal. */}
                   <div data-ficha-more-actions="" className="hidden border-t border-white/[0.12] pt-3 lg:block">
                     <VehicleQuickActions
                       contentId={vehicle.id}
@@ -640,7 +680,6 @@ export default async function VehicleDetailPage({
                       video={whatsapp.video}
                       finance={whatsapp.finance}
                       trade={whatsapp.trade}
-                      visit={whatsapp.visit}
                       hasVideo={!!vehicle.hasVideo}
                       variant="secondary"
                       className=""

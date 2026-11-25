@@ -68,7 +68,7 @@ export function formatSobreHeaderDescription(
 ): string {
   const count = normalizePositiveSales(sales);
   const soldSentence =
-    count > 0 ? ` Mais de ${formatNumberBR(count)} veículos negociados.` : "";
+    count > 0 ? ` ${formatNumberBR(count)} veículos negociados.` : "";
   return `Mais de 20 anos de mercado.${soldSentence} Seminovos com procedência e negociação clara. Atendemos Linhares, Aracruz e Grande Vitória.`;
 }
 
@@ -79,7 +79,7 @@ export function formatSobreHistoryParagraph(
   const count = normalizePositiveSales(sales);
   const lead =
     count > 0
-      ? `Foram mais de ${formatNumberBR(count)} veículos entregues — cada um com atenção à procedência, à documentação e ao que o cliente realmente precisava.`
+      ? `Foram ${formatNumberBR(count)} veículos entregues — cada um com atenção à procedência, à documentação e ao que o cliente realmente precisava.`
       : "Cada veículo é entregue com atenção à procedência, à documentação e ao que o cliente realmente precisava.";
   return `${lead} Crescemos ouvindo quem compra, quem vende e quem volta para indicar um amigo.`;
 }

@@ -184,7 +184,7 @@ export function formatCustomerVehicleWhatsAppText(input: {
       return `Oi! ${seen} e queria um vídeo${label ? ` ${input.isMoto ? "dela" : "dele"}` : ""}.`;
     case "visit":
       return label
-        ? `Oi! ${seen} e quero ver ${input.isMoto ? "ela" : "ele"} de perto.`
+        ? `Oi! Quero agendar uma visita para ver ${article} ${label}${priceLabel ? ` (${priceLabel})` : ""}. Qual o melhor dia e horário?`
         : `Oi! ${seen} e quero conhecer o estoque.`;
     case "question": {
       const topic = (input.topic ?? "").replace(/\s+/g, " ").trim();
