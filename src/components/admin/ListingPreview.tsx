@@ -41,14 +41,26 @@ export function ListingPreview(props: ListingPreviewProps) {
       data-testid="listing-preview"
       className="mx-auto w-full max-w-xs overflow-hidden border border-white/10 bg-ink"
     >
-      <div className="relative aspect-[4/3] bg-asphalt">
+      <div className="relative aspect-[4/3] overflow-hidden bg-asphalt">
         {props.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={props.coverUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <>
+            {/* Fundo desfocado: foto vertical ou quadrada não deixa barra preta. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={props.coverUrl}
+              alt=""
+              aria-hidden="true"
+              data-testid="listing-preview-blur"
+              className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={props.coverUrl}
+              alt=""
+              data-testid="listing-preview-photo"
+              className="relative h-full w-full object-contain"
+            />
+          </>
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-sm text-muted">
             Sem foto de capa

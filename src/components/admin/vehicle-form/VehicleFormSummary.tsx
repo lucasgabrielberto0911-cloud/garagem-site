@@ -14,7 +14,7 @@ export function VehicleFormSummary({
   form: VehicleFormModel;
   listingScore?: VehicleFormProps["listingScore"];
 }) {
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const {
     step,
     brand,

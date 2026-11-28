@@ -26,6 +26,17 @@ test("prévia usa a foto local e mostra o preço", () => {
   assert.match(out, /2020/);
 });
 
+test("prévia usa moldura 4:3 com fundo desfocado e foto inteira", () => {
+  const out = html();
+  assert.match(out, /aspect-\[4\/3\]/);
+  assert.match(out, /data-testid="listing-preview-blur"[^>]*blur-2xl/);
+  assert.match(out, /data-testid="listing-preview-photo"[^>]*object-contain/);
+});
+
+test("prévia sem foto não renderiza fundo desfocado", () => {
+  assert.doesNotMatch(html({ coverUrl: "" }), /listing-preview-blur/);
+});
+
 test("prévia de carro vendido não mostra preço", () => {
   const out = html({ status: "vendido" });
   assert.doesNotMatch(out, /120\.000|R\$/);
