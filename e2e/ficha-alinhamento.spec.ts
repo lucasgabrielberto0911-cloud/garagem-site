@@ -45,16 +45,23 @@ for (const sample of [samples[0], { ...samples[0], id: "ce2esold0000000000000000
       } else {
         expect(Math.abs(foto.x - (width - foto.x - foto.width))).toBeLessThanOrEqual(1);
         await expect(page.getByRole("link", { name: "Voltar aos resultados" })).toBeVisible();
+        expect(await page.locator(".ficha-aside").evaluate(el => getComputedStyle(el).position)).toBe("static");
       }
 
       if (width < 1024) continue;
-      // Um scroll só: o card do anúncio sobe junto com a página.
-      const painelAntes = (await page.locator(".ficha-aside").boundingBox())!;
+      // Desktop: coluna lateral sticky (top-24 = 96px) até o fim da grade, com um scroll só na página.
+      const aside = page.locator(".ficha-aside");
+      expect(await aside.evaluate(el => getComputedStyle(el).position)).toBe("sticky");
+      expect(await aside.evaluate(el => getComputedStyle(el).top)).toBe("96px");
+      const painelAntes = (await aside.boundingBox())!;
       await page.mouse.wheel(0, 600);
       await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(300);
       const rolou = await page.evaluate(() => scrollY);
-      const painelDepois = (await page.locator(".ficha-aside").boundingBox())!;
-      expect(Math.abs(painelAntes.y - painelDepois.y - rolou)).toBeLessThanOrEqual(2);
+      const painelDepois = (await aside.boundingBox())!;
+      const gradeDepois = (await aside.locator("xpath=..").boundingBox())!;
+      const limiteFundo = gradeDepois.y + gradeDepois.height - painelDepois.height;
+      const esperadoY = Math.max(painelAntes.y - rolou, Math.min(96, limiteFundo));
+      expect(Math.abs(painelDepois.y - esperadoY)).toBeLessThanOrEqual(2);
       await page.evaluate(() => scrollTo(0, 0));
       // Sem abas, os links diretos para as seções continuam funcionando.
       await page.goto(`${vehiclePath(sample)}#especificacoes`);

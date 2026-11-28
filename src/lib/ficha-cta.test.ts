@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
+import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import { VehicleMobileBlocks, VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
@@ -753,18 +754,75 @@ test("garantia usa o dado do veículo nas duas telas e fala veículo, não carro
   assert.doesNotMatch(desktop, /Garantia de 3 meses/);
 });
 
-test("desktop rola junto: card do anúncio sem sticky, sem coluna com scroll próprio e sem abas", () => {
+test("desktop: coluna lateral com lg:sticky no preço/WhatsApp, sem esconder conteúdo nem quebrar galeria ou barra mobile", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const css = readSrc("app/globals.css");
-  const asideTag = page.slice(page.indexOf("<aside"), page.indexOf(">", page.indexOf("<aside")));
-  assert.doesNotMatch(asideTag, /sticky/);
+  const asideStart = page.indexOf('<aside className="ficha-aside');
+  assert.ok(asideStart > 0);
+  const asideTagEnd = page.indexOf(">", asideStart);
+  const asideEnd = page.indexOf("</aside>", asideTagEnd);
+  const asideTag = page.slice(asideStart, asideTagEnd + 1);
+  const asideInner = page.slice(asideTagEnd + 1, asideEnd);
+  const rootTag = page.slice(page.indexOf("data-ficha-page"), page.indexOf(">", page.indexOf("data-ficha-page")) + 1);
+
+  // Sticky só no desktop (lg:) com top-24 (abaixo do header fixo) e self-start no item do grid.
+  assert.match(asideTag, /\blg:sticky\b/);
+  assert.match(asideTag, /\blg:top-24\b/);
+  assert.match(asideTag, /\blg:self-start\b/);
+  assert.match(asideTag, /\bmin-w-0\b/);
+  assert.doesNotMatch(asideTag, /(?:^|[\s"])sticky(?=[\s"])/);
+
+  // Não esconde conteúdo: sem scroll interno/corte e sem sticky num card filho que cobriria VehicleConditions.
+  assert.doesNotMatch(asideTag, /overflow-(?:hidden|auto|scroll)|max-h-/);
+  assert.doesNotMatch(asideInner, /\bsticky\b/);
   assert.doesNotMatch(page, /overflow-y-(auto|scroll)/);
+  assert.doesNotMatch(rootTag, /overflow-hidden/);
+  assert.match(asideInner, /data-ficha-price=""/);
+  assert.match(asideInner, /Falar no WhatsApp/);
+  assert.match(asideInner, /<VehicleConditions/);
+
+  // Grade de duas colunas preserva min-w-0 na coluna da galeria para não quebrar fotos 4:3 nem miniaturas.
+  assert.match(page, /lg:grid lg:grid-cols-\[1\.1fr_1fr\] lg:items-start lg:gap-8/);
+  assert.match(page, /className="ficha-mobile-fold min-w-0 lg:order-1"[\s\S]{0,600}<VehicleGallery/);
+
   assert.doesNotMatch(css, /\.ficha-section-nav|--ficha-section-nav/);
   assert.doesNotMatch(css, /\.ficha-aside\s*\{/);
   // Aviso de cookies no canto direito do computador: nunca sobre a galeria.
   assert.match(css, /@media \(min-width: 1024px\) \{\s*body:has\(\[data-ficha-page\]\) \.site-consent \{\s*left: auto;\s*right: 1\.5rem;/);
-  // A barra de WhatsApp do celular continua.
+
+  // Celular mantém a barra fixa atual do WhatsApp (oculta em lg:), sem preço quando vendido.
   assert.match(page, /<VehicleMobileBar/);
+  const mobileAvailable = renderToStaticMarkup(
+    createElement(VehicleMobileBar, {
+      vehicleId: "cm00000000000000000000001",
+      contentName: "Honda Civic LXR 2015",
+      brand: "Honda",
+      model: "Civic",
+      year: 2015,
+      price: 74900,
+    }),
+  );
+  assert.match(mobileAvailable, /data-vehicle-mobile-bar=""/);
+  assert.match(mobileAvailable, /\bfixed\b[\s\S]*\bbottom-0\b[\s\S]*\blg:hidden\b/);
+  assert.match(mobileAvailable, /data-mobile-bar-price=""/);
+  assert.match(mobileAvailable, /Chamar no WhatsApp/);
+
+  const mobileSold = renderToStaticMarkup(
+    createElement(VehicleMobileBar, {
+      vehicleId: "cm00000000000000000000001",
+      contentName: "Honda Civic LXR 2015",
+      brand: "Honda",
+      model: "Civic",
+      year: 2015,
+      price: 0,
+      sold: true,
+      soldHref: "#mesma-faixa",
+      soldLabel: "Ver opções",
+    }),
+  );
+  assert.match(mobileSold, /\blg:hidden\b/);
+  assert.doesNotMatch(mobileSold, /data-mobile-bar-price|R\$/);
+  assert.match(mobileSold, /Ver opções/);
 });
 
 test("preço da ficha em vermelho com glow suave e sem reflexo sobre o texto, desligado sem movimento", () => {
